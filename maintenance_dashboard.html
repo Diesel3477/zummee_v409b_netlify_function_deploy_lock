@@ -1,0 +1,2673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>window.ZUMMEE_BUILD="2026-03-27-1";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Maintenance Control Center</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="shared/supabase-client.js?v=2026-04-08-2"></script>
+  
+  <link rel="stylesheet" href="shared/header.css?v=2026-03-27-1">
+  <script>
+    window.SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+    window.SUPABASE_ANON_KEY = 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
+    async function getDashboardClient(){
+      try{ if(typeof ensureSupabase === 'function'){ const c = await ensureSupabase(); if(c && typeof c.from === 'function') return c; } }catch(_e){}
+      try{ if(window.sb && typeof window.sb.from === 'function') return window.sb; }catch(_e){}
+      try{ if(window.supabaseClient && typeof window.supabaseClient.from === 'function') return window.supabaseClient; }catch(_e){}
+      try{
+        if(window.supabase && typeof window.supabase.createClient === 'function'){
+          const c = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, {
+            auth:{ persistSession:false, autoRefreshToken:false, detectSessionInUrl:false }
+          });
+          window.supabaseClient = window.supabaseClient || c;
+          window.sb = window.sb || c;
+          return c;
+        }
+      }catch(_e){}
+      return null;
+    }
+
+    let __staffAccessCache = null;
+    async function requireStaffAccess(){
+      if(__staffAccessCache && __staffAccessCache.ok){ return __staffAccessCache; }
+      const fail = function(target){
+        try{ window.location.replace(target); }catch(_e){ window.location.href = target; }
+        return { ok:false };
+      };
+      const sb = await getDashboardClient();
+      if(!sb || !sb.auth || typeof sb.auth.getSession !== 'function'){
+        return fail('login.html');
+      }
+      const sessionRes = await sb.auth.getSession();
+      const user = sessionRes && sessionRes.data && sessionRes.data.session ? sessionRes.data.session.user : null;
+      if(!user){ return fail('login.html'); }
+
+      const ud = await sb
+        .from('userdirectory')
+        .select('role')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
+
+      const role = String((ud && ud.data && ud.data.role) || '').trim();
+      if(role === 'Resident'){
+        return fail('resident_portal.html');
+      }
+      __staffAccessCache = { ok:true, role:role, user:user };
+      return __staffAccessCache;
+    }
+  </script>
+  
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+    :root{
+      --brand:#0f3554; --bg:#f4f6fa; --card:#fff; --muted:#5d6b7a; --border:#d9e1ea;
+      --warn:#fff1c9; --danger:#fee2e2; --ok:#d9f2e3; --info:#dbeafe;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:#17324c}
+    #zummeeHeaderMount{display:block}
+    main{max-width:1280px;margin:26px auto;padding:0 16px 46px}
+    .card{background:linear-gradient(180deg, rgba(188,220,255,.36) 0%, rgba(164,205,249,.22) 100%);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.52);border-radius:28px;padding:22px;box-shadow:0 18px 42px rgba(15,53,84,.12)}
+    .topRow{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap}
+    h1{margin:0;font-size:clamp(30px,5vw,42px);line-height:1.04;color:var(--brand)}
+    .sub{color:var(--muted);font-size:14px}
+    .actions{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:11px 18px;border-radius:999px;border:2px solid var(--brand);background:#fff;color:var(--brand);text-decoration:none;font-size:15px;font-weight:800;cursor:pointer}
+    .btn.primary{background:var(--brand);color:#fff}
+    .heroStats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:18px}
+    .heroStat{background:linear-gradient(180deg, rgba(255,255,255,.48) 0%, rgba(219,236,255,.24) 100%);border:1px solid rgba(255,255,255,.55);border-radius:22px;padding:18px}
+    .heroStat .label{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:800}
+    .heroStat .value{font-size:34px;font-weight:900;color:var(--brand);margin-top:6px}
+    .heroStat.warn{background:linear-gradient(180deg,#fff9ea 0%,#fff4d6 100%)}
+    .heroStat.danger{background:linear-gradient(180deg,#fff4f4 0%,#ffe6e6 100%)}
+    .grid{display:grid;grid-template-columns:1.1fr 1fr;gap:18px;margin-top:18px}
+    .stack{display:grid;gap:18px}
+    h2{margin:0 0 10px;color:var(--brand);font-size:24px}
+    .helper{color:var(--muted);font-size:14px}
+    .list{display:grid;gap:12px;margin-top:14px}
+    .item{border:1px solid rgba(15,53,84,.10);border-radius:18px;padding:14px 16px;background:#fff}
+    .itemHeader{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .itemTitle{font-size:16px;font-weight:800;color:#17324c}
+    .itemMeta{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+    .itemLink{display:inline-flex;align-items:center;justify-content:center;margin-top:12px;padding:9px 14px;border-radius:999px;border:2px solid var(--brand);background:#fff;color:var(--brand);text-decoration:none;font-size:13px;font-weight:800}
+    .pill{display:inline-flex;align-items:center;padding:7px 10px;border-radius:999px;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.03em}
+    .pill.submitted,.pill.under_review{background:var(--danger);color:#8c1d18}
+    .pill.awaiting_assignment,.pill.assigned{background:var(--warn);color:#785700}
+    .pill.assigned_to_vendor,.pill.in_progress,.pill.active{background:var(--info);color:#17406f}
+    .pill.completed,.pill.closed,.pill.done{background:var(--ok);color:#11653a}
+    .tag{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:800;background:#f3f6fa;color:#476079}
+    .empty{padding:16px;border:1px dashed rgba(15,53,84,.18);border-radius:18px;color:var(--muted);background:#fbfdff}
+    .tableWrap{overflow:auto;border:1px solid rgba(15,53,84,.12);border-radius:18px;background:#fff;margin-top:14px}
+    table{width:100%;border-collapse:collapse;min-width:720px}
+    th,td{padding:14px 16px;border-bottom:1px solid rgba(15,53,84,.08);text-align:left;vertical-align:top}
+    th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+    .photoGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-top:14px}
+    .photoCard{border:1px solid rgba(15,53,84,.10);border-radius:18px;background:#fff;padding:10px}
+    .photoCard img{width:100%;height:120px;object-fit:cover;border-radius:12px;display:block;background:#eef3f8}
+    .photoCard a{text-decoration:none;color:inherit}
+    .photoMeta{font-size:12px;color:var(--muted);margin-top:8px}
+    .message{margin-top:16px;font-weight:700}
+    .message.ok{color:#11653a}
+    .message.err{color:#8c1d18}
+
+    .residentQueueSection{margin-top:18px}
+    .queueStats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-top:16px}
+    .queueStat{border:1px solid rgba(15,53,84,.10);border-radius:20px;padding:16px;background:#fff;cursor:pointer}
+    .queueStat .k{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:800}
+    .queueStat .v{font-size:28px;font-weight:900;color:var(--brand);margin-top:6px}
+    .queueStat.active{outline:3px solid rgba(15,53,84,.16)}
+    .queueFilters{display:grid;grid-template-columns:1.1fr repeat(3,180px) 1fr;gap:12px;margin:16px 0 18px}
+    .input,.select,.textarea{width:100%;min-height:46px;padding:11px 14px;border-radius:16px;border:1px solid rgba(15,53,84,.14);background:#fff;color:#17324c;font:inherit}
+    .textarea{min-height:100px;resize:vertical}
+    .queueGrid{display:grid;grid-template-columns:1.15fr .95fr;gap:18px}
+    .queueTableWrap{overflow:auto;border:1px solid rgba(15,53,84,.12);border-radius:18px;background:#fff}
+    .queueTable tr.clickable{cursor:pointer}
+    .queueTable tr.clickable:hover{background:#f7fafc}
+    .queueTable tr.selected{background:#eef5ff;box-shadow:inset 0 0 0 1px rgba(47,111,237,.12)}
+    .queueTable tr.selected td:first-child{border-left:4px solid #2f6fed}
+    .queueTable tr:hover td{background:#f9fbfe}
+    .queueTable td.subjectCol{min-width:280px}
+    .queueTable th.subjectCol{min-width:280px}
+    #queueRows td{vertical-align:middle}
+    .vendorResp{display:inline-block;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;border:1px solid #d9e1ea;background:#f8fbff;color:#17324d;max-width:220px}
+    .vendorResp.awaiting{background:#fff8e8;border-color:#f0d9a7;color:#8a5a00}
+    .vendorResp.accepted{background:#ecf8f1;border-color:#b9dfc7;color:#17663a}
+    .vendorResp.completed{background:#eef4fb;border-color:#c9d8ea;color:#17324d}
+    .vendorResp.overdue{background:#fdecec;border-color:#e7b4b4;color:#a12626}
+    .detailPane{border:1px solid rgba(15,53,84,.10);border-radius:18px;background:#fff;padding:16px;min-height:480px}
+    .detailHead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+    .detailGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0}
+    .detailBox{background:#f9fbfd;border:1px solid rgba(15,53,84,.08);border-radius:16px;padding:14px}
+    .detailLabel{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:800;margin-bottom:6px}
+    .detailValue{font-size:16px;font-weight:800;color:#17324c;word-break:break-word}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    .muted{color:var(--muted);font-size:13px}
+    .queueStatusLine{margin-top:10px;color:var(--muted);font-size:14px}
+    .detailPane.sticky{position:sticky;top:18px}
+    .mccActionCard{margin-top:14px;border:1px solid rgba(15,53,84,.10);border-radius:18px;background:#fff;padding:16px}
+    .mccActionTitle{font-size:16px;font-weight:900;color:var(--brand);margin-bottom:12px}
+    .mccField{display:grid;gap:6px;margin-bottom:12px}
+    .mccField label{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:800}
+    .mccActionMsg{min-height:18px;color:var(--muted);font-size:13px;margin-top:10px}
+    .mccActionMsg.ok{color:#11653a;font-weight:700}
+    .mccActionMsg.err{color:#8c1d18;font-weight:700}
+
+    .mcc-board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin-top:18px}
+    .mcc-board-col.card{padding:16px 16px 14px;background:linear-gradient(180deg, rgba(196,224,255,.34) 0%, rgba(167,207,255,.18) 100%)}
+    .mcc-board-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+    .mcc-board-title{font-size:14px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:var(--brand)}
+    .mcc-board-count{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:34px;padding:0 10px;border-radius:999px;background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.6);font-size:14px;font-weight:900;color:var(--brand)}
+    .mcc-board-list{display:grid;gap:10px;min-height:220px;max-height:560px;overflow:auto;padding-right:4px}
+    .mcc-mini-card{position:relative;overflow:hidden;border-radius:18px;padding:12px 12px 10px;background:rgba(255,255,255,.42);border:1px solid rgba(255,255,255,.58);box-shadow:0 10px 22px rgba(15,53,84,.08);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);cursor:pointer;transition:transform .15s ease, box-shadow .15s ease}
+    .mcc-mini-card::after{content:"";position:absolute;top:-20%;left:-40%;width:60%;height:160%;background:linear-gradient(115deg,transparent 0%,rgba(255,255,255,0) 35%,rgba(255,255,255,.28) 50%,rgba(255,255,255,0) 65%,transparent 100%);transform:translateX(-180%) skewX(-18deg);pointer-events:none;opacity:0}
+    .mcc-mini-card:hover::after{opacity:1;animation:mccGlassSweep .9s ease forwards}
+    .mcc-mini-card:hover{transform:translateY(-2px);box-shadow:0 14px 26px rgba(15,53,84,.10)}
+    .mcc-mini-card:active{transform:scale(.985)}
+    .mcc-mini-card > *{position:relative;z-index:2}
+    .mcc-mini-title{font-size:14px;font-weight:900;color:#17324c;margin:0 0 4px;line-height:1.22}
+    .mcc-mini-meta{font-size:12px;color:var(--muted);line-height:1.3;margin-bottom:6px}
+    .mcc-mini-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:2px}
+    .mcc-mini-link{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:8px 12px;border-radius:999px;border:1.5px solid rgba(15,53,84,.24);background:rgba(255,255,255,.48);color:var(--brand);text-decoration:none;font-size:12px;font-weight:900}
+        .mcc-mini-tags .tag{font-size:11px;padding:4px 8px;border-radius:999px}
+    .mcc-mini-tags .pill{padding:4px 8px;font-size:11px}
+.mcc-empty{padding:16px;border:1px dashed rgba(15,53,84,.16);border-radius:16px;background:rgba(255,255,255,.32);color:var(--muted);font-size:13px}
+    .mcc-board-tip{margin-top:10px;color:var(--muted);font-size:13px;font-weight:700}
+    .mcc-board-list.drag-over{outline:2px dashed rgba(47,111,237,.38);background:rgba(255,255,255,.18);}
+    .mcc-mini-card{cursor:grab;}
+    .mcc-mini-card.dragging{opacity:.55;transform:scale(.98);cursor:grabbing;}
+    .mcc-mini-card.priority-urgent{border-left:4px solid #ef4444;}
+    .mcc-mini-card.priority-high{border-left:4px solid #f59e0b;}
+    .mcc-mini-card.priority-normal{border-left:4px solid #60a5fa;}
+    .mcc-mini-card.priority-low{border-left:4px solid #34d399;}
+    .mcc-vendor-section{margin-top:18px;}
+    .mcc-vendor-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:14px}
+    .mcc-vendor-card{position:relative;overflow:hidden;padding:18px;border-radius:22px;background:linear-gradient(180deg, rgba(198,226,255,.36) 0%, rgba(171,209,255,.20) 100%);border:1px solid rgba(255,255,255,.55);box-shadow:0 12px 26px rgba(15,53,84,.10);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+    .mcc-vendor-card::after{content:"";position:absolute;top:-20%;left:-40%;width:60%;height:160%;background:linear-gradient(115deg,transparent 0%,rgba(255,255,255,0) 35%,rgba(255,255,255,.24) 50%,rgba(255,255,255,0) 65%,transparent 100%);transform:translateX(-180%) skewX(-18deg);pointer-events:none;opacity:0}
+    .mcc-vendor-card:hover::after{opacity:1;animation:mccGlassSweep .9s ease forwards}
+    .mcc-vendor-card > *{position:relative;z-index:2;}
+    .mcc-vendor-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
+    .mcc-vendor-name{font-size:18px;font-weight:900;color:var(--brand);line-height:1.2}
+    .mcc-vendor-sub{font-size:12px;color:var(--muted);font-weight:700}
+    .mcc-vendor-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    .mcc-vendor-stat{padding:10px;border-radius:16px;background:rgba(255,255,255,.34);border:1px solid rgba(255,255,255,.52)}
+    .mcc-vendor-stat .k{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:800}
+    .mcc-vendor-stat .v{margin-top:4px;font-size:22px;font-weight:900;color:var(--brand)}
+    .mcc-vendor-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+    @media (max-width:980px){ .mcc-vendor-grid{grid-template-columns:1fr;} }
+
+    @media (max-width:980px){
+      .queueStats{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .queueFilters{grid-template-columns:1fr 1fr}
+      .queueGrid{grid-template-columns:1fr}
+      .detailGrid{grid-template-columns:1fr}
+
+      .heroStats{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .grid{grid-template-columns:1fr}
+      .mcc-board{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+    @media (max-width:640px){
+      .heroStats{grid-template-columns:1fr}
+      .mcc-board{grid-template-columns:1fr}
+      main{padding:0 12px 34px}
+    }
+  
+    body{background:radial-gradient(circle at top, rgba(191,219,254,.32), transparent 42%), linear-gradient(180deg,#eef5ff 0%,#f7fbff 48%,#f3f7fb 100%);}
+    .card,.heroStat,.item,.detailPane,.mccActionCard,.photoCard,.queueTableWrap,.tableWrap{background:rgba(255,255,255,.68);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.55);box-shadow:0 18px 42px rgba(15,53,84,.10);}
+    .heroStat{position:relative;overflow:hidden;}
+    .heroStat::after,.item::after,.detailPane::after,.mccActionCard::after{content:"";position:absolute;top:-20%;left:-40%;width:60%;height:160%;background:linear-gradient(115deg,transparent 0%,rgba(255,255,255,0) 35%,rgba(255,255,255,.28) 50%,rgba(255,255,255,0) 65%,transparent 100%);transform:translateX(-180%) skewX(-18deg);pointer-events:none;opacity:0;}
+    .heroStat:hover::after,.item:hover::after,.detailPane:hover::after,.mccActionCard:hover::after{opacity:1;animation:mccGlassSweep .9s ease forwards;}
+    @keyframes mccGlassSweep{0%{transform:translateX(-180%) skewX(-18deg);}100%{transform:translateX(300%) skewX(-18deg);}}
+    .item,.heroStat,.detailPane,.mccActionCard{position:relative;overflow:hidden;}
+    .item>*,.heroStat>*,.detailPane>*,.mccActionCard>*{position:relative;z-index:2;}
+    .liveChip{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.7);color:#17324c;font-size:12px;font-weight:800;}
+    .liveDot{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 rgba(34,197,94,.45);animation:mccPulse 1.8s infinite;}
+    @keyframes mccPulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.45);}70%{box-shadow:0 0 0 10px rgba(34,197,94,0);}100%{box-shadow:0 0 0 0 rgba(34,197,94,0);}}
+    .topRow .sub strong{color:#0f3554;}
+
+  
+/* MCC drag polish */
+.mcc-column{
+  transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease, background .18s ease;
+}
+.mcc-column.drag-target{
+  border-color: rgba(255,255,255,.58) !important;
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,.18) inset,
+    0 14px 28px rgba(28,92,170,.22),
+    0 0 28px rgba(122,182,255,.20) !important;
+  transform: translateY(-2px);
+  background: rgba(255,255,255,.26) !important;
+}
+.mcc-column.drag-target .mcc-column-header{
+  color:#0f3b66;
+}
+.mcc-card{
+  transition: transform .16s ease, box-shadow .16s ease, opacity .16s ease;
+}
+.mcc-card.dragging{
+  opacity:.7;
+  transform: scale(1.02) rotate(1deg);
+  box-shadow: 0 16px 28px rgba(20,57,108,.20), inset 0 1px rgba(255,255,255,.55) !important;
+}
+.mcc-drop-placeholder{
+  height: 88px;
+  border-radius: 16px;
+  border: 2px dashed rgba(51,120,209,.45);
+  background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.10));
+  box-shadow: inset 0 1px rgba(255,255,255,.35);
+}
+
+
+/* Awaiting vendor cards: make them more square like completed cards */
+#mccAwaitingVendorList .mcc-mini-card{
+  min-height: 176px;
+  padding: 12px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+#mccAwaitingVendorList .mcc-mini-title{
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.2;
+  max-height: 3.6em;
+}
+#mccAwaitingVendorList .mcc-mini-meta{
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.22;
+  max-height: 3.66em;
+}
+#mccAwaitingVendorList .mcc-mini-tags{
+  margin-top: 8px;
+}
+
+
+/* Awaiting Vendor cards: match Completed card footprint */
+#mccAwaitingVendorList .mcc-mini-card{
+  height: 140px !important;
+  min-height: 140px !important;
+  max-height: 140px !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  padding: 10px 12px !important;
+  box-sizing: border-box !important;
+}
+#mccAwaitingVendorList .mcc-mini-title{
+  font-size: 14px !important;
+  line-height: 1.18 !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+  max-height: 2.36em !important;
+  margin-bottom: 6px !important;
+}
+#mccAwaitingVendorList .mcc-mini-meta{
+  font-size: 12px !important;
+  line-height: 1.2 !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+  max-height: 2.4em !important;
+}
+#mccAwaitingVendorList .mcc-mini-tags{
+  margin-top: 6px !important;
+}
+
+
+/* Open column red when items exist */
+.mcc-col.open.has-items{
+  background: linear-gradient(180deg,#ffe5e5,#ffc9c9) !important;
+  border:1px solid #ff9b9b !important;
+}
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+
+.mh2-actions .mh2-btn--ghost{display:none !important;}
+</style>
+<style>
+/* --- MCC visual alignment with Manager Hub --- */
+body{
+  background:#eef3f8 !important;
+}
+
+/* Blue glass container instead of full-page blue */
+.mcc-container{
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,.25), transparent 40%),
+    radial-gradient(circle at 80% 10%, rgba(255,255,255,.18), transparent 35%),
+    linear-gradient(180deg,#6ea2d6 0%,#5a8fc8 40%,#4a79b7 100%);
+
+  border-radius:26px;
+  padding:32px;
+  margin:30px auto;
+  max-width:1400px;
+
+  box-shadow:
+    0 30px 60px rgba(0,0,0,.18),
+    inset 0 1px rgba(255,255,255,.4);
+}
+
+/* spacing improvement for columns */
+.mcc-board{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:24px;
+  margin-top:28px;
+}
+
+.mcc-column{
+  padding:16px;
+}
+
+.mcc-card{
+  margin-bottom:14px;
+}
+
+/* Open column red when items exist */
+.mcc-col.open.has-items{
+  background: linear-gradient(180deg,#ffe5e5,#ffc9c9) !important;
+  border:1px solid #ff9b9b !important;
+}
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+
+<style>
+/* Manager Hub style background */
+body{
+ background:#eef3f8 !important;
+}
+
+/* MCC glass container like manager hub cards */
+.mcc-shell{
+ max-width:1400px;
+ margin:30px auto;
+ padding:28px;
+ border-radius:26px;
+
+ background:
+ radial-gradient(circle at 15% 10%, rgba(255,255,255,.35), transparent 40%),
+ radial-gradient(circle at 85% 5%, rgba(255,255,255,.25), transparent 35%),
+ linear-gradient(180deg,#6ea2d6 0%,#5b90ca 40%,#4c7fbf 100%);
+
+ box-shadow:
+ 0 30px 60px rgba(0,0,0,.18),
+ inset 0 1px rgba(255,255,255,.4);
+}
+
+/* Open column red when items exist */
+.mcc-col.open.has-items{
+  background: linear-gradient(180deg,#ffe5e5,#ffc9c9) !important;
+  border:1px solid #ff9b9b !important;
+}
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+
+
+<style>
+/* MCC column contrast + subtle interactivity polish */
+.mcc-column{
+  background: rgba(255,255,255,0.45) !important;
+  backdrop-filter: blur(8px) !important;
+  border-radius: 18px !important;
+  border: 1px solid rgba(255,255,255,0.55) !important;
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.6),
+    0 6px 18px rgba(0,0,0,.08) !important;
+  padding: 14px !important;
+}
+
+.mcc-column-header{
+  font-weight: 700 !important;
+  color: #1f3f5c !important;
+  letter-spacing: .04em;
+  margin-bottom: 10px !important;
+}
+
+.mcc-empty{
+  background: rgba(255,255,255,0.35) !important;
+  border-radius: 14px !important;
+  border: 1px dashed rgba(70,120,200,.25) !important;
+}
+
+/* 6-line clickable/alive polish */
+.mcc-card{
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease !important;
+}
+.mcc-card:hover{
+  transform: translateY(-2px) !important;
+  box-shadow: 0 10px 22px rgba(0,0,0,.16), inset 0 1px rgba(255,255,255,.55) !important;
+  background: rgba(255,255,255,.42) !important;
+}
+
+/* Open column red when items exist */
+.mcc-col.open.has-items{
+  background: linear-gradient(180deg,#ffe5e5,#ffc9c9) !important;
+  border:1px solid #ff9b9b !important;
+}
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+
+
+<style>
+/* Correct MCC column selectors so the visual change actually applies */
+.mcc-board-col.card{
+  background: rgba(255,255,255,0.46) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255,255,255,0.58) !important;
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.62),
+    0 8px 22px rgba(0,0,0,.08) !important;
+}
+
+.mcc-board-head{
+  margin-bottom: 14px !important;
+}
+
+.mcc-board-title{
+  color:#1f3f5c !important;
+}
+
+.mcc-board-list{
+  gap:14px !important;
+}
+
+.mcc-empty{
+  background: rgba(255,255,255,0.35) !important;
+  border:1px dashed rgba(70,120,200,.25) !important;
+  border-radius:14px !important;
+}
+
+/* clickable/alive polish on the actual MCC work order cards */
+.mcc-mini-card{
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease !important;
+}
+.mcc-mini-card:hover{
+  transform: translateY(-2px) !important;
+  background: rgba(255,255,255,.48) !important;
+  box-shadow: 0 12px 24px rgba(15,53,84,.16) !important;
+}
+
+/* Open column red when items exist */
+.mcc-col.open.has-items{
+  background: linear-gradient(180deg,#ffe5e5,#ffc9c9) !important;
+  border:1px solid #ff9b9b !important;
+}
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+
+
+<style>
+.mcc-age-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  min-height:28px;
+  padding:5px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.01em;
+  background:rgba(80,120,200,.15);
+  color:#1f3f5c;
+  border:1px solid rgba(80,120,200,.18);
+}
+.mcc-age-pill.warning{
+  background:rgba(255,193,7,.18);
+  color:#7a5400;
+  border-color:rgba(255,193,7,.22);
+}
+.mcc-age-pill.urgent{
+  background:rgba(255,77,77,.16);
+  color:#8b1f1f;
+  border-color:rgba(255,77,77,.22);
+}
+
+/* Open column red when items exist */
+.mcc-col.open.has-items{
+  background: linear-gradient(180deg,#ffe5e5,#ffc9c9) !important;
+  border:1px solid #ff9b9b !important;
+}
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+
+<link rel="stylesheet" href="shared/zummee-design-system.css?v=2026-03-27-1"/>
+
+<style id="mccMobileLayoutPatch">
+/* MCC mobile portrait layout cleanup */
+@media (max-width: 768px){
+  html, body{
+    overflow-x:hidden !important;
+  }
+  main{
+    max-width:100% !important;
+    width:100% !important;
+    margin:16px auto !important;
+    padding:0 12px 28px !important;
+    overflow-x:hidden !important;
+  }
+  .mcc-shell,
+  .mcc-container{
+    width:100% !important;
+    max-width:100% !important;
+    margin:16px 0 22px !important;
+    padding:16px !important;
+    border-radius:24px !important;
+    overflow:hidden !important;
+    box-sizing:border-box !important;
+  }
+  .topRow{
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:12px !important;
+    align-items:start !important;
+  }
+  .actions{
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:10px !important;
+    width:100% !important;
+  }
+  .actions .btn{
+    width:100% !important;
+  }
+  .heroStats{
+    grid-template-columns:1fr 1fr !important;
+    gap:12px !important;
+  }
+  .grid,
+  .stack,
+  .detailGrid,
+  .queueGrid,
+  .queueFilters{
+    grid-template-columns:1fr !important;
+  }
+  .mcc-board{
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:14px !important;
+    width:100% !important;
+    margin-top:16px !important;
+  }
+  .mcc-board-col.card{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    margin:0 !important;
+    padding:14px !important;
+  }
+  .mcc-board-head{
+    margin-bottom:10px !important;
+  }
+  .mcc-board-list{
+    min-height:0 !important;
+    max-height:none !important;
+    overflow:visible !important;
+    padding-right:0 !important;
+  }
+  .mcc-mini-card{
+    width:100% !important;
+    max-width:100% !important;
+  }
+  .mcc-board-tip{
+    margin-top:8px !important;
+    margin-bottom:12px !important;
+  }
+}
+
+/* Open column red when items exist */
+.mcc-col.open.has-items{
+  background: linear-gradient(180deg,#ffe5e5,#ffc9c9) !important;
+  border:1px solid #ff9b9b !important;
+}
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+
+
+<style id="mccCollapsibleSectionsV1">
+.mcc-collapsible .mcc-collapse-head{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;}
+.mcc-collapsible .mcc-collapse-head h2{margin:0;}
+.mcc-collapse-toggle{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:999px;border:1px solid rgba(255,255,255,0.45);background:rgba(255,255,255,0.18);color:#15324d;cursor:pointer;flex:0 0 auto;}
+.mcc-collapse-chevron{display:inline-block;font-size:18px;line-height:1;transition:transform .18s ease;}
+.mcc-collapsible.is-collapsed .mcc-collapse-chevron{transform:rotate(-90deg);}
+.mcc-collapsible .mcc-collapse-body{margin-top:14px;max-height:2200px;opacity:1;overflow:hidden;transition:max-height .28s ease, opacity .22s ease, margin-top .22s ease;will-change:max-height,opacity;}
+.mcc-collapsible.is-collapsed .mcc-collapse-body{max-height:0;opacity:0;overflow:hidden;margin-top:0;pointer-events:none;}
+.mcc-collapsible.is-collapsed{padding-bottom:18px;}
+.mcc-collapsible .actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.residentQueueCtaRow{display:flex;justify-content:flex-start;align-items:center;margin-bottom:14px;}
+.mcc-collapsible .mcc-collapse-toggle:hover{transform:translateY(-1px);background:rgba(255,255,255,0.24);}
+.mcc-collapsible .mcc-collapse-toggle{transition:transform .16s ease, background .16s ease, box-shadow .16s ease;}
+.mcc-collapsible .mcc-collapse-head{transition:opacity .16s ease;}
+.mcc-collapsible .mcc-collapse-head:active .mcc-collapse-toggle{transform:scale(.97);}
+@media (max-width: 1024px){
+  .mcc-collapse-toggle{width:34px;height:34px;}
+  .residentQueueCtaRow{margin-bottom:12px;}
+}
+
+/* Open column red when items exist */
+.mcc-col.open.has-items{
+  background: linear-gradient(180deg,#ffe5e5,#ffc9c9) !important;
+  border:1px solid #ff9b9b !important;
+}
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+
+<style id="mccLowerSectionsUniformIpadV1">
+@media (max-width: 1024px){
+  section.grid{
+    display:block !important;
+    width:100% !important;
+    max-width:100% !important;
+    margin-top:18px !important;
+  }
+  section.grid > .stack{
+    display:block !important;
+    width:100% !important;
+    max-width:100% !important;
+    margin:0 !important;
+    padding:0 !important;
+  }
+  section.grid > .stack:first-child{
+    margin-bottom:18px !important;
+  }
+  section.grid > .stack > section.card{
+    display:block !important;
+    width:100% !important;
+    max-width:100% !important;
+    box-sizing:border-box !important;
+    margin:0 0 18px 0 !important;
+  }
+  section.grid > .stack > section.card:last-child{
+    margin-bottom:0 !important;
+  }
+}
+
+/* Open column red when items exist */
+.mcc-col.open.has-items{
+  background: linear-gradient(180deg,#ffe5e5,#ffc9c9) !important;
+  border:1px solid #ff9b9b !important;
+}
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style>
+/* MCC header override */
+.zm-communityLabel{display:none !important;}
+#zummeeCommunitySelect{
+  background:#ffffff !important;
+  color:#0f2f4a !important;
+  border:1px solid rgba(0,0,0,0.15) !important;
+  width:240px !important;
+  max-width:240px !important;
+}
+
+/* Open column red when items exist */
+.mcc-col.open.has-items{
+  background: linear-gradient(180deg,#ffe5e5,#ffc9c9) !important;
+  border:1px solid #ff9b9b !important;
+}
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style>
+/* FORCE white dropdown */
+#zummeeCommunitySelect{
+  background:#ffffff !important;
+  background-color:#ffffff !important;
+  color:#0f2f4a !important;
+  border:1px solid rgba(0,0,0,0.2) !important;
+  box-shadow:none !important;
+  backdrop-filter:none !important;
+}
+#zummeeCommunitySelect option{
+  background:#ffffff !important;
+  color:#000 !important;
+}
+
+/* Open column red when items exist */
+.mcc-col.open.has-items{
+  background: linear-gradient(180deg,#ffe5e5,#ffc9c9) !important;
+  border:1px solid #ff9b9b !important;
+}
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+  <script src="community_state_stable.js"></script>
+<style>
+/* FORCE white text in Status & Details section */
+#boardSubmittedItemsSection,
+#boardSubmittedItemsSection *:not(button),
+#boardMemberHubStatus,
+#boardMemberHubStatus *:not(button),
+#annualMeetingApprovals,
+#annualMeetingApprovals *:not(button) {
+  color: #ffffff !important;
+}
+
+/* Secondary text (slightly dimmed white) */
+#boardSubmittedItemsSection .muted,
+#boardMemberHubStatus .muted,
+#annualMeetingApprovals .muted {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style>
+/* HARD OVERRIDE — force white text in dark section */
+.hub-zone:last-of-type,
+.hub-zone:last-of-type *:not(button):not(.badge):not(.pill) {
+  color: #ffffff !important;
+}
+
+/* Slightly softer for secondary text */
+.hub-zone:last-of-type .muted,
+.hub-zone:last-of-type p,
+.hub-zone:last-of-type span {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+</head>
+<body data-header-mode="simple" class="zummee-shell-theme zummee-mobile-card-header">
+<div class='mcc-shell'>
+  <div id="zummeeHeaderMount"></div>
+<script src="shared/header.js?v=2026-04-08-2"></script>
+<style id="zummeeSubpageHeaderForce">
+#zummeeCommunitySelect, #zummeeCommunitySelect *{ color:#0f2f4a !important; }
+#zummeeCommunitySelect option{ color:#0f2f4a !important; background:#ffffff !important; }
+#zummeeCommunitySelect{ background:#ffffff !important; background-color:#ffffff !important; color:#000000 !important; font-weight:700 !important; }
+.zummee-modern-picker__button{ background:#ffffff !important; background-color:#ffffff !important; color:#000000 !important; border:1px solid rgba(15,47,74,0.25) !important; }
+.zummee-modern-picker__menu{ background:#ffffff !important; }
+.zummee-modern-picker__item{ color:#0f2f4a !important; }
+
+/* Open column red when items exist */
+.mcc-col.open.has-items{
+  background: linear-gradient(180deg,#ffe5e5,#ffc9c9) !important;
+  border:1px solid #ff9b9b !important;
+}
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+
+  <main>
+    <section class="card">
+      <div class="topRow">
+        <div>
+          <h1>Maintenance Control Center</h1>
+          <div class="sub">Focus on what needs attention now and what is aging into risk. Realtime updates when work orders change, plus 30-second fallback refresh.</div>
+        </div>
+        <div class="actions">
+          <span class="liveChip"><span class="liveDot"></span> Live board</span>
+          <a class="btn" href="resident_work_orders.html">Open Work Orders</a>
+          <a class="btn primary" href="maintenance_updates.html">Open Maintenance Updates</a>
+        </div>
+      </div>
+
+      <div class="heroStats">
+        <div class="heroStat danger">
+          <div class="label">New</div>
+          <div class="value" id="statNeedsAction">0</div>
+        </div>
+        <div class="heroStat warn">
+          <div class="label">Sent to Vendor</div>
+          <div class="value" id="statAwaiting">0</div>
+        </div>
+        <div class="heroStat">
+          <div class="label">Active</div>
+          <div class="value" id="statInProgress">0</div>
+        </div>
+        <div class="heroStat">
+          <div class="label">Completed</div>
+          <div class="value" id="statCompletedWeek">0</div>
+        </div>
+      </div>
+
+      <div id="dashboardMsg" class="message"></div>
+      <div class="sub" id="mccLastUpdated" style="margin-top:8px">Waiting for first sync…</div>
+    </section>
+
+    <div class="mcc-board-tip">Drag a work order card between columns to update its status.</div>
+    <section class="mcc-board" aria-label="Maintenance workflow board">
+      <section class="mcc-board-col card">
+        <div class="mcc-board-head">
+          <div class="mcc-board-title">Open</div>
+          <div class="mcc-board-count" id="mccOpenCount">0</div>
+        </div>
+        <div class="mcc-board-list" id="mccOpenList" data-drop-status="submitted"><div class="mcc-empty">Loading new work orders…</div></div>
+      </section>
+      <section class="mcc-board-col card">
+        <div class="mcc-board-head">
+          <div class="mcc-board-title">Awaiting Vendor</div>
+          <div class="mcc-board-count" id="mccAwaitingVendorCount">0</div>
+        </div>
+        <div class="mcc-board-list" id="mccAwaitingVendorList" data-drop-status="assigned"><div class="mcc-empty">Loading vendor queue…</div></div>
+      </section>
+      <section class="mcc-board-col card">
+        <div class="mcc-board-head">
+          <div class="mcc-board-title">Active</div>
+          <div class="mcc-board-count" id="mccInProgressCount">0</div>
+        </div>
+        <div class="mcc-board-list" id="mccInProgressList" data-drop-status="active"><div class="mcc-empty">Loading active work orders…</div></div>
+      </section>
+      <section class="mcc-board-col card">
+        <div class="mcc-board-head">
+          <div class="mcc-board-title">Completed</div>
+          <div class="mcc-board-count" id="mccCompletedCount">0</div>
+        </div>
+        <div class="mcc-board-list" id="mccCompletedList" data-drop-status="completed"><div class="mcc-empty">Loading completed work orders…</div></div>
+      </section>
+    </section>
+
+
+    <section class="card mcc-vendor-section mcc-collapsible" data-collapse-key="vendor-performance">
+      <div class="topRow mcc-collapse-head" role="button" tabindex="0" aria-expanded="false">
+        <div>
+          <h2>Vendor Performance</h2>
+          <div class="helper">Quick view of vendor workload and recent completion performance.</div>
+        </div>
+        <button class="mcc-collapse-toggle" type="button" aria-label="Toggle Vendor Performance">
+          <span class="mcc-collapse-chevron">▾</span>
+        </button>
+      </div>
+      <div class="mcc-collapse-body">
+        <div class="mcc-vendor-grid" id="mccVendorPerformanceGrid">
+          <div class="mcc-empty">Loading vendor performance…</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card residentQueueSection mcc-collapsible" data-collapse-key="resident-work-orders">
+      <div class="topRow mcc-collapse-head" role="button" tabindex="0" aria-expanded="false">
+        <div>
+          <h2 style="margin:0">Resident Work Orders</h2>
+          <div class="helper">Queue requests for your assigned companies and open any request to review details.</div>
+          <div id="queueStatusLine" class="queueStatusLine">Loading resident work orders…</div>
+        </div>
+        <div class="actions">
+          <button class="mcc-collapse-toggle" type="button" aria-label="Toggle Resident Work Orders">
+            <span class="mcc-collapse-chevron">▾</span>
+          </button>
+        </div>
+      </div>
+      <div class="mcc-collapse-body">
+        <div class="residentQueueCtaRow">
+          <a class="btn" href="resident_work_orders.html">Open Full Work Order Manager</a>
+        </div>
+        <div class="queueStats">
+          <button class="queueStat" data-qstatus="submitted" type="button"><div class="k">New</div><div class="v" id="qSubmitted">0</div></button>
+          <button class="queueStat" data-qstatus="reviewing" type="button"><div class="k">Sent to Vendor</div><div class="v" id="qReviewing">0</div></button>
+          <button class="queueStat" data-qstatus="in_progress" type="button"><div class="k">Active</div><div class="v" id="qInProgress">0</div></button>
+          <button class="queueStat" data-qstatus="completed" type="button"><div class="k">Completed</div><div class="v" id="qCompleted">0</div></button>
+          <button class="queueStat" data-qstatus="overdue" type="button"><div class="k">Overdue</div><div class="v" id="qOverdue">0</div></button>
+        </div>
+
+        <div class="queueFilters">
+          <input id="queueSearch" class="input" placeholder="Search resident, subject, unit, request ID" />
+          <select id="queueCompany" class="select"><option value="">All Companies</option></select>
+          <select id="queueCommunity" class="select"><option value="">All Communities</option></select>
+          <select id="queuePriority" class="select">
+            <option value="">All Priorities</option>
+            <option value="low">Low</option>
+            <option value="normal">Normal</option>
+            <option value="high">High</option>
+            <option value="emergency">Emergency</option>
+          </select>
+          <select id="queueStatus" class="select">
+            <option value="">All Statuses</option>
+            <option value="submitted">Submitted</option>
+            <option value="reviewing">Reviewing</option>
+            <option value="assigned">Assigned</option>
+            <option value="in_progress">Active</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+
+        <div class="queueGrid">
+          <div class="queueTableWrap">
+            <table class="queueTable">
+              <thead>
+                <tr>
+                  <th>Community</th>
+                  <th>Unit</th>
+                  <th>Resident</th>
+                  <th class="subjectCol">Subject</th>
+                  <th>Vendor Response</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="queueRows"><tr><td colspan="8"><div class="empty">Loading resident work orders…</div></td></tr></tbody>
+            </table>
+          </div>
+          <div class="detailPane sticky" id="queueDetailPane">
+            <div class="empty">Choose a work order to view details.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="stack">
+        <section class="card mcc-collapsible" data-collapse-key="needs-action-now">
+          <div class="mcc-collapse-head" role="button" tabindex="0" aria-expanded="false">
+            <div>
+              <h2>New</h2>
+              <div class="helper">Urgent or aging requests that need manager attention.</div>
+            </div>
+            <button class="mcc-collapse-toggle" type="button" aria-label="Toggle Needs Action Now"><span class="mcc-collapse-chevron">▾</span></button>
+          </div>
+          <div class="mcc-collapse-body">
+            <div id="needsActionList" class="list"></div>
+          </div>
+        </section>
+
+        <section class="card mcc-collapsible" data-collapse-key="awaiting-assignment">
+          <div class="mcc-collapse-head" role="button" tabindex="0" aria-expanded="false">
+            <div>
+              <h2>Sent to Vendor</h2>
+              <div class="helper">Submitted requests not yet assigned to a vendor.</div>
+            </div>
+            <button class="mcc-collapse-toggle" type="button" aria-label="Toggle Awaiting Assignment"><span class="mcc-collapse-chevron">▾</span></button>
+          </div>
+          <div class="mcc-collapse-body">
+            <div id="awaitingList" class="list"></div>
+          </div>
+        </section>
+
+        <section class="card mcc-collapsible" data-collapse-key="recently-completed">
+          <div class="mcc-collapse-head" role="button" tabindex="0" aria-expanded="false">
+            <div>
+              <h2>Recently Completed</h2>
+              <div class="helper">Work orders completed in the last 7 days.</div>
+            </div>
+            <button class="mcc-collapse-toggle" type="button" aria-label="Toggle Recently Completed"><span class="mcc-collapse-chevron">▾</span></button>
+          </div>
+          <div class="mcc-collapse-body">
+            <div id="completedTable" class="tableWrap"></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="stack">
+        <section class="card mcc-collapsible" data-collapse-key="in-progress-by-vendor">
+          <div class="mcc-collapse-head" role="button" tabindex="0" aria-expanded="false">
+            <div>
+              <h2>In Progress by Vendor</h2>
+              <div class="helper">Active work orders grouped by assigned vendor.</div>
+            </div>
+            <button class="mcc-collapse-toggle" type="button" aria-label="Toggle In Progress by Vendor"><span class="mcc-collapse-chevron">▾</span></button>
+          </div>
+          <div class="mcc-collapse-body">
+            <div id="vendorGroups" class="list"></div>
+          </div>
+        </section>
+
+        <section class="card mcc-collapsible" data-collapse-key="overdue-alerts">
+          <div class="mcc-collapse-head" role="button" tabindex="0" aria-expanded="false">
+            <div>
+              <h2>Overdue Alerts</h2>
+              <div class="helper">Requests aging without completion or vendor follow-up.</div>
+            </div>
+            <button class="mcc-collapse-toggle" type="button" aria-label="Toggle Overdue Alerts"><span class="mcc-collapse-chevron">▾</span></button>
+          </div>
+          <div class="mcc-collapse-body">
+            <div id="overdueAlerts" class="list"></div>
+          </div>
+        </section>
+
+        <section class="card mcc-collapsible" data-collapse-key="photo-review">
+          <div class="mcc-collapse-head" role="button" tabindex="0" aria-expanded="false">
+            <div>
+              <h2>Photo Review</h2>
+              <div class="helper">Latest resident and vendor completion photos.</div>
+            </div>
+            <button class="mcc-collapse-toggle" type="button" aria-label="Toggle Photo Review"><span class="mcc-collapse-chevron">▾</span></button>
+          </div>
+          <div class="mcc-collapse-body">
+            <div id="photoReview"></div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    let workOrders = [];
+    let workOrderPhotos = [];
+
+    let queueRows = [];
+    let queueSelected = null;
+    let queueStatusChip = '';
+    const communityNameMap = new Map();
+    const companyNameMap = new Map();
+
+    function requestLabel(row){
+      const seed = String(row?.id || '').replace(/-/g,'').slice(0,8).toUpperCase() || '00000000';
+      return 'RWO-' + seed;
+    }
+    function statusNorm(v){ return String(v || '').trim().toLowerCase().replace(/\s+/g,'_'); }
+    function statusPill(v){ const s=statusNorm(v)||'submitted'; return `<span class="pill ${s}">${escStatusLabel(s)}</span>`; }
+    function escStatusLabel(s){ return String(s||'submitted').replaceAll('_',' '); }
+    function priorityPill(v){ const p=String(v||'normal').toLowerCase(); const cls=p==='emergency'?'submitted':(p==='high'?'awaiting_assignment':'assigned_to_vendor'); return `<span class="pill ${cls}">${p}</span>`; }
+    function communityNameFor(id){ return communityNameMap.get(String(id||'')) || String(id||'—'); }
+    function companyNameFor(id){ return companyNameMap.get(String(id||'')) || String(id||'—'); }
+    async function hydrateNames(rows){
+      const client = await getDashboardClient(); if(!client) return;
+      const compIds=[...new Set(rows.map(r=>String(r.company_id||'').trim()).filter(Boolean))];
+      try{
+        const access = await requireStaffAccess();
+        const user = access && access.user ? access.user : null;
+        const baseRole = String((access && access.role) || '').trim().toLowerCase();
+        let profile = { role: baseRole, user_id: user && user.id ? String(user.id) : '' };
+        try{
+          if(user && user.id){
+            const ud = await client
+              .from('userdirectory')
+              .select('role,company_id,auth_user_id')
+              .eq('auth_user_id', user.id)
+              .maybeSingle();
+            if(ud && !ud.error && ud.data){
+              profile = Object.assign({}, profile, ud.data || {}, { user_id: user.id, id: user.id, auth_user_id: user.id });
+            }
+          }
+        }catch(_e){}
+
+        const role = String(profile.role || '').trim().toLowerCase();
+        const dept = String('').trim().toLowerCase();
+        const isPriv = role.includes('admin') || role.includes('supervisor') || role.includes('companyadmin') ||
+                       dept.includes('admin') || dept.includes('supervisor') || dept.includes('companyadmin');
+        const companyId = (profile && (profile.company_id || profile.companyId)) || null;
+        const company = String(profile.company_name || '').trim();
+
+        let communityRows = [];
+
+        if(isPriv){
+          let q = client.from('PropertyCommunities').select('id,name');
+          if(companyId) q = q.eq('company_id', companyId);
+          else if(company) q = q.eq('company', company);
+          const {data} = await q.order('name', { ascending: true });
+          communityRows = Array.isArray(data) ? data : [];
+        }else{
+          const uid = String(profile.user_id || profile.auth_user_id || profile.id || '').trim();
+          let assignedIds = [];
+          try{
+            if(uid){
+              let qa = client.from('CommunityAssignments').select('community_id').eq('user_id', uid);
+              if(companyId) qa = qa.eq('company_id', companyId);
+              const assignRes = await qa;
+              if(assignRes && !assignRes.error && Array.isArray(assignRes.data)){
+                assignedIds = assignRes.data.map(r=>String(r.community_id||'').trim()).filter(Boolean);
+              }
+            }
+          }catch(_e){}
+
+          if(assignedIds.length){
+            let q = client.from('PropertyCommunities').select('id,name').in('id', assignedIds);
+            if(companyId) q = q.eq('company_id', companyId);
+            else if(company) q = q.eq('company', company);
+            const {data} = await q.order('name', { ascending: true });
+            communityRows = Array.isArray(data) ? data : [];
+            const set = new Set(assignedIds.map(String));
+            communityRows = communityRows.filter(r => r && set.has(String(r.id || '').trim()));
+          }else{
+            communityRows = [];
+          }
+        }
+
+        communityNameMap.clear();
+        (communityRows||[]).forEach(r=>communityNameMap.set(String(r.id||'').trim(), String(r.name||r.id||'').trim()));
+      }catch(_e){}
+      try{
+        if(compIds.length){
+          const {data}=await client.from('Companies').select('id,name');
+          (data||[])
+            .filter(r=>compIds.includes(String(r.id||'').trim()))
+            .forEach(r=>companyNameMap.set(String(r.id||'').trim(), String(r.name||r.id||'').trim()));
+        }
+      }catch(_e){}
+    }
+    function setQueueStatusLine(t){ const el=document.getElementById('queueStatusLine'); if(el) el.textContent=t||''; }
+    function getQueueCommunityEl(){ return document.getElementById('queueCommunity') || document.getElementById('queueCommunitySelect'); }
+
+
+    function setMsg(text, ok){
+      const el = document.getElementById('dashboardMsg');
+      if(!el) return;
+      el.textContent = text || '';
+      el.className = 'message ' + (ok ? 'ok' : 'err');
+    }
+
+    function updateLastUpdated(prefix){
+      const el = document.getElementById('mccLastUpdated');
+      if(!el) return;
+      const now = new Date();
+      const stamp = now.toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
+      el.textContent = (prefix ? String(prefix).trim() + ' · ' : 'Last synced · ') + stamp;
+    }
+
+
+    function fmtDate(v){
+      try{
+        if(!v) return '';
+        return new Date(v).toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+      }catch(_e){ return ''; }
+    }
+
+    function ageDays(v){
+      try{
+        if(!v) return 0;
+        const ms = Date.now() - new Date(v).getTime();
+        return Math.max(0, Math.floor(ms / 86400000));
+      }catch(_e){ return 0; }
+    }
+
+    function norm(v){ return String(v || '').trim().toLowerCase(); }
+
+    function headerCommunitySelect(){
+      try{ return document.getElementById('zummeeHdrCommunitySelect') || document.getElementById('zummeeCommunitySelect'); }catch(_e){ return null; }
+    }
+
+    function syncHeaderCommunityOptions(){
+      try{
+        const hdr = headerCommunitySelect();
+        const q = getQueueCommunityEl();
+        if(!hdr || !q) return;
+        const opts = Array.from(q.options || []);
+        if(!opts.length) return;
+        const current = String((hdr.value || localStorage.getItem('activeCommunityId') || q.value || '')).trim();
+        hdr.innerHTML = '';
+        opts.forEach(function(opt){
+          const clone = document.createElement('option');
+          clone.value = String(opt.value || '').trim();
+          clone.textContent = String(opt.textContent || '').trim();
+          hdr.appendChild(clone);
+        });
+        if(current && Array.from(hdr.options).some(function(o){ return String(o.value || '').trim() === current; })){
+          hdr.value = current;
+        }else if(q.value){
+          hdr.value = String(q.value || '').trim();
+        }
+      }catch(_e){}
+    }
+
+    function getActiveCommunityId(){
+      try{
+        return String((headerCommunitySelect() && headerCommunitySelect().value) || localStorage.getItem('activeCommunityId') || '').trim();
+      }catch(_e){ return ''; }
+    }
+
+    async function dashboardApi(path){
+      const client = await getDashboardClient();
+      if(!client) throw new Error('Supabase client not available.');
+      const res = await fetch(window.SUPABASE_URL + '/rest/v1/' + path, {
+        method: 'GET',
+        headers: {
+          'apikey': window.SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + window.SUPABASE_ANON_KEY,
+          'Accept': 'application/json'
+        }
+      });
+      const raw = await res.text();
+      let data = null;
+      try{ data = raw ? JSON.parse(raw) : null; }catch(_e){ data = raw; }
+      if(!res.ok){
+        throw new Error((data && (data.message || data.error)) || 'Dashboard load failed.');
+      }
+      return Array.isArray(data) ? data : [];
+    }
+
+
+    async function getDashboardAccessToken(){
+      try{
+        const sb = await getDashboardClient();
+        if(sb && sb.auth && typeof sb.auth.getSession === 'function'){
+          const sessionRes = await sb.auth.getSession();
+          const token = sessionRes?.data?.session?.access_token || sessionRes?.session?.access_token || '';
+          if(token) return token;
+        }
+      }catch(_e){}
+      try{
+        const auth = JSON.parse(localStorage.getItem('sb-zummee-auth') || '{}') || {};
+        const token = auth?.access_token || auth?.currentSession?.access_token || auth?.session?.access_token || '';
+        if(token) return token;
+      }catch(_e){}
+      return '';
+    }
+
+    async function invokeDashboardEdgeFunction(functionName, payload){
+      const base = (window.SUPABASE_URL || 'https://slcwuuwyrgnmlmxpcaim.supabase.co').replace(/\/$/, '');
+      const token = await getDashboardAccessToken();
+      const headers = {
+        'Content-Type': 'application/json',
+        'apikey': String(window.SUPABASE_ANON_KEY || '')
+      };
+      if(token) headers['Authorization'] = 'Bearer ' + token;
+      const res = await fetch(base + '/functions/v1/' + functionName, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload || {})
+      });
+      const raw = await res.text();
+      let parsed = null;
+      try{ parsed = raw ? JSON.parse(raw) : null; }catch(_e){ parsed = raw; }
+      if(!res.ok){
+        const msg = (parsed && (parsed.error || parsed.message)) || (typeof parsed === 'string' ? parsed : '') || ('HTTP ' + res.status);
+        throw new Error(msg);
+      }
+      return parsed;
+    }
+
+    function getDashboardManagerName(){
+      try{
+        const auth = JSON.parse(localStorage.getItem('sb-zummee-auth') || '{}') || {};
+        const name = String(auth?.user?.user_metadata?.name || auth?.user?.name || localStorage.getItem('zummee_name') || '').trim();
+        if(name) return name;
+      }catch(_e){}
+      try{
+        const sess = JSON.parse(localStorage.getItem('zummee_session_v1') || '{}') || {};
+        const name = String(sess?.name || sess?.email || '').trim();
+        if(name) return name;
+      }catch(_e){}
+      return 'Property Management';
+    }
+
+    function getDashboardManagerPhone(){
+      try{
+        const auth = JSON.parse(localStorage.getItem('sb-zummee-auth') || '{}') || {};
+        const phone = String(auth?.user?.user_metadata?.phone || auth?.user?.phone || localStorage.getItem('zummee_phone') || '').trim();
+        if(phone) return phone;
+      }catch(_e){}
+      try{
+        const sess = JSON.parse(localStorage.getItem('zummee_session_v1') || '{}') || {};
+        const phone = String(sess?.phone || '').trim();
+        if(phone) return phone;
+      }catch(_e){}
+      return '';
+    }
+
+    function getDashboardCompanyName(){
+      try{
+        const auth = JSON.parse(localStorage.getItem('sb-zummee-auth') || '{}') || {};
+        const company = String(auth?.user?.user_metadata?.company || localStorage.getItem('zummee_company') || '').trim();
+        if(company) return company;
+      }catch(_e){}
+      return String(localStorage.getItem('zummee_company') || '').trim() || 'Property Management';
+    }
+
+    function getScopedRows(rows){
+      const cid = getActiveCommunityId();
+      return (Array.isArray(rows) ? rows : []).filter(r => {
+        if(!cid) return true;
+        const rowCid = String(r.community_id || '').trim();
+        return !rowCid || rowCid === cid;
+      });
+    }
+
+    function buildItem(row, extraTags){
+      const status = norm(row.status);
+      const pri = norm(row.priority);
+      const daysOpen = ageDays(row.created_at || row.updated_at);
+      const tags = []
+        .concat(extraTags || [])
+        .concat(daysOpen >= 2 ? [`<span class="tag">${daysOpen}d open</span>`] : [])
+        .concat(pri ? [`<span class="tag">${pri}</span>`] : [])
+        .concat(status ? [`<span class="pill ${status}">${status.replaceAll('_',' ')}</span>`] : []);
+      const openHref = `resident_work_orders.html?open_work_order_id=${encodeURIComponent(String(row.id || ''))}`;
+      return `
+        <div class="item">
+          <div class="itemHeader">
+            <div>
+              <div class="itemTitle">${row.subject || 'Work order'}</div>
+              <div class="helper">${communityNameFor(row.community_id)} • Unit ${row.unit_number || 'N/A'} • ${row.resident_name || 'Resident'}</div>
+            </div>
+            <div class="helper">${fmtDate(row.created_at || row.updated_at)}</div>
+          </div>
+          <div class="itemMeta">${tags.join('')}</div>
+          <a class="itemLink" href="${openHref}">Open Work Order</a>
+        </div>
+      `;
+    }
+
+    function buildMccMiniCard(row){
+      const pri = String(row.priority || row.urgency || 'normal').toLowerCase().trim() || 'normal';
+      const href = `resident_work_orders.html?open_work_order_id=${encodeURIComponent(String(row.id || ''))}`;
+      return `
+        <div class="mcc-mini-card priority-${pri}" draggable="true" data-order-id="${String(row.id || '')}" data-href="${href}" tabindex="0" role="button" aria-label="Open work order ${String(row.subject || 'Work order').replace(/"/g,'&quot;')}">
+          <div class="mcc-mini-title">${row.subject || 'Work order'}</div>
+          <div class="mcc-mini-meta">${communityNameFor(row.community_id)} • Unit ${row.unit_number || 'N/A'} • ${row.resident_name || 'Resident'}</div>
+          <div class="mcc-mini-tags">
+            ${pri ? `<span class="tag">${pri}</span>` : ''}
+            ${row.assigned_vendor_name ? `<span class="tag">👤 ${row.assigned_vendor_name}</span>` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderMccBoard(rows){
+      const open = [];
+      const awaiting = [];
+      const progress = [];
+      const completed = [];
+      (Array.isArray(rows) ? rows : []).forEach(function(r){
+        const s = norm(r.status || r.request_status);
+        const card = buildMccMiniCard(r);
+        if(['submitted','under_review','reviewing'].includes(s)) open.push(card);
+        else if(['sent_to_vendor','awaiting_vendor','assigned'].includes(s)) awaiting.push(card);
+        else if(['active','in_progress','assigned_to_vendor'].includes(s)) progress.push(card);
+        else if(['completed','closed','done'].includes(s)) completed.push(card);
+        else open.push(card);
+      });
+
+      const map = [
+        ['mccOpenList','mccOpenCount',open,'No new work orders.'],
+        ['mccAwaitingVendorList','mccAwaitingVendorCount',awaiting,'Nothing has been sent to a vendor.'],
+        ['mccInProgressList','mccInProgressCount',progress,'No active work orders right now.'],
+        ['mccCompletedList','mccCompletedCount',completed,'No completed work orders yet.']
+      ];
+
+      map.forEach(function(entry){
+        const listId = entry[0], countId = entry[1], items = entry[2], emptyText = entry[3];
+        const listEl = document.getElementById(listId);
+        const countEl = document.getElementById(countId);
+        if(countEl) countEl.textContent = String(items.length);
+        if(listEl) listEl.innerHTML = items.length ? items.slice(0,12).join('') : `<div class="mcc-empty">${emptyText}</div>`;
+      });
+    }
+
+
+    function bindMccDragAndDrop(){
+      document.querySelectorAll('.mcc-mini-card[draggable="true"]').forEach(function(card){
+        let dragMoved = false;
+        card.addEventListener('dragstart', function(e){
+          dragMoved = true;
+          card.classList.add('dragging');
+          try{ e.dataTransfer.setData('text/plain', card.getAttribute('data-order-id') || ''); e.dataTransfer.effectAllowed='move'; }catch(_e){}
+        });
+        card.addEventListener('dragend', function(){ setTimeout(function(){ dragMoved = false; }, 0); card.classList.remove('dragging'); document.querySelectorAll('.mcc-board-list.drag-over').forEach(function(el){ el.classList.remove('drag-over'); }); });
+        card.addEventListener('click', function(){ if(card.classList.contains('dragging') || dragMoved) return; const href = card.getAttribute('data-href'); const orderId = card.getAttribute('data-order-id'); try{ if(orderId) localStorage.setItem('selectedWorkOrderId', String(orderId)); }catch(_e){} if(href) window.location.href = href; });
+        card.addEventListener('keydown', function(e){ if((e.key==='Enter' || e.key===' ') && !card.classList.contains('dragging')){ e.preventDefault(); const href = card.getAttribute('data-href'); const orderId = card.getAttribute('data-order-id'); try{ if(orderId) localStorage.setItem('selectedWorkOrderId', String(orderId)); }catch(_e){} if(href) window.location.href = href; } });
+      });
+      document.querySelectorAll('.mcc-board-list[data-drop-status]').forEach(function(list){
+        list.addEventListener('dragover', function(e){ e.preventDefault(); list.classList.add('drag-over'); try{ e.dataTransfer.dropEffect='move'; }catch(_e){} });
+        list.addEventListener('dragleave', function(){ list.classList.remove('drag-over'); });
+        list.addEventListener('drop', async function(e){
+          e.preventDefault();
+          list.classList.remove('drag-over');
+          const orderId = e.dataTransfer ? e.dataTransfer.getData('text/plain') : '';
+          const newStatus = String(list.getAttribute('data-drop-status') || '').trim();
+          if(!orderId || !newStatus) return;
+          const row = (Array.isArray(workOrders)?workOrders:[]).find(function(r){ return String(r.id||'')===String(orderId); });
+          if(!row) return;
+          const current = norm(row.status || row.request_status);
+          if(current === newStatus) return;
+          try{
+            const sb = await getDashboardClient();
+            if(!sb) throw new Error('Supabase client unavailable.');
+            setMsg('Updating work order status…', true);
+            const patch = { status:newStatus };
+            if(newStatus === 'completed'){ patch.completed_at = new Date().toISOString(); }
+            const upd = await sb.from('resident_work_orders').update(patch).eq('id', row.id).select('*').maybeSingle();
+            if(upd && upd.error) throw upd.error;
+            if(upd && upd.data){
+              workOrders = workOrders.map(function(w){ return String(w.id)===String(row.id) ? Object.assign({}, w, upd.data) : w; });
+            }
+            const scoped = getScopedRows(workOrders);
+            renderMccBoard(scoped);
+            renderVendorPerformance(scoped);
+            renderNeedsAction(scoped);
+            renderAwaiting(scoped);
+            renderInProgress(scoped);
+            renderCompleted(scoped);
+            renderOverdue(scoped);
+            renderQueueSection(Array.isArray(workOrders) ? workOrders.slice() : []);
+            setMsg('Work order moved successfully.', true);
+            updateLastUpdated('Board updated');
+          }catch(err){
+            console.error(err);
+            setMsg((err && err.message) ? err.message : 'Unable to move work order.', false);
+          }
+        });
+      });
+    }
+
+    function renderVendorPerformance(rows){
+      const box = document.getElementById('mccVendorPerformanceGrid');
+      if(!box) return;
+      const groups = {};
+      (Array.isArray(rows)?rows:[]).forEach(function(r){
+        const vendor = String(r.assigned_vendor_name || r.assigned_vendor_email || '').trim();
+        if(!vendor) return;
+        const s = norm(r.status || r.request_status);
+        const g = groups[vendor] || {name:vendor, open:0, active:0, completed:0, totalAge:0, agingCount:0, community:new Set()};
+        if(['assigned','awaiting_vendor','awaiting_assignment'].includes(s)) g.open += 1;
+        if(['active','assigned_to_vendor','in_progress'].includes(s)) g.active += 1;
+        if(['completed','closed','done'].includes(s)) g.completed += 1;
+        if(!['completed','closed','done'].includes(s)){
+          g.totalAge += ageDays(r.created_at || r.updated_at);
+          g.agingCount += 1;
+        }
+        if(r.community_id) g.community.add(communityNameFor(r.community_id));
+        groups[vendor] = g;
+      });
+      const vendors = Object.values(groups).sort(function(a,b){ return (b.open+b.active+b.completed) - (a.open+a.active+a.completed); }).slice(0,6);
+      if(!vendors.length){ box.innerHTML = '<div class="mcc-empty">No assigned vendors yet.</div>'; return; }
+      box.innerHTML = vendors.map(function(v){
+        const avgAge = v.agingCount ? (v.totalAge / v.agingCount).toFixed(1) : '0.0';
+        const activeLoad = v.open + v.active;
+        const communityLabel = Array.from(v.community).filter(Boolean).slice(0,2).join(' • ') || 'No community linked';
+        return `
+          <div class="mcc-vendor-card">
+            <div class="mcc-vendor-head">
+              <div>
+                <div class="mcc-vendor-name">👤 ${v.name}</div>
+                <div class="mcc-vendor-sub">${communityLabel}</div>
+              </div>
+              <span class="tag">${activeLoad} active</span>
+            </div>
+            <div class="mcc-vendor-stats">
+              <div class="mcc-vendor-stat"><div class="k">Open</div><div class="v">${v.open}</div></div>
+              <div class="mcc-vendor-stat"><div class="k">Active</div><div class="v">${v.active}</div></div>
+              <div class="mcc-vendor-stat"><div class="k">Avg Age</div><div class="v">${avgAge}d</div></div>
+            </div>
+            <div class="mcc-vendor-list">
+              <span class="tag">Completed ${v.completed}</span>
+              ${activeLoad >= 3 ? '<span class="tag">Busy</span>' : '<span class="tag">Available</span>'}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderNeedsAction(rows){
+      const box = document.getElementById('needsActionList');
+      if(!box) return;
+      const items = rows.filter(r => {
+        const s = norm(r.status);
+        return ['submitted','under_review','reviewing'].includes(s);
+      }).sort((a,b) => new Date(b.created_at||0)-new Date(a.created_at||0));
+      box.innerHTML = items.length ? items.slice(0,8).map(r => buildItem(r)).join('') : '<div class="empty">No new work orders.</div>';
+      document.getElementById('statNeedsAction').textContent = String(items.length);
+    }
+
+    function renderAwaiting(rows){
+      const box = document.getElementById('awaitingList');
+      if(!box) return;
+      const items = rows.filter(r => {
+        const s = norm(r.status);
+        return ['sent_to_vendor','awaiting_vendor','assigned'].includes(s);
+      }).sort((a,b) => new Date(b.created_at||0)-new Date(a.created_at||0));
+      box.innerHTML = items.length ? items.slice(0,8).map(r => buildItem(r)).join('') : '<div class="empty">Nothing has been sent to a vendor.</div>';
+      document.getElementById('statAwaiting').textContent = String(items.length);
+    }
+
+    function renderInProgress(rows){
+      const box = document.getElementById('vendorGroups');
+      if(!box) return;
+      const items = rows.filter(r => ['active','in_progress','assigned_to_vendor'].includes(norm(r.status)));
+      document.getElementById('statInProgress').textContent = String(items.length);
+      if(!items.length){
+        box.innerHTML = '<div class="empty">No in-progress work orders.</div>';
+        return;
+      }
+      const groups = {};
+      items.forEach(r => {
+        const key = String(r.assigned_vendor_name || r.assigned_vendor_email || 'Unassigned Vendor').trim();
+        groups[key] = groups[key] || [];
+        groups[key].push(r);
+      });
+      box.innerHTML = Object.entries(groups).map(([vendor, rows]) => `
+        <div class="item">
+          <div class="itemHeader">
+            <div class="itemTitle">${vendor}</div>
+            <div class="tag">${rows.length} open</div>
+          </div>
+          <div class="itemMeta">
+            ${rows.slice(0,4).map(r => `<span class="tag">${r.unit_number || 'N/A'} • ${r.subject || 'Work order'}</span>`).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderCompleted(rows){
+      const box = document.getElementById('completedTable');
+      if(!box) return;
+      const items = rows.filter(r => {
+        const s = norm(r.status);
+        const recent = ageDays(r.updated_at || r.created_at) <= 7;
+        return ['completed','closed','done'].includes(s) && recent;
+      }).sort((a,b) => new Date(b.updated_at||b.created_at||0)-new Date(a.updated_at||a.created_at||0)).slice(0,10);
+      document.getElementById('statCompletedWeek').textContent = String(items.length);
+      if(!items.length){
+        box.innerHTML = '<div class="empty" style="margin:14px">No work orders completed in the last 7 days.</div>';
+        return;
+      }
+      box.innerHTML = `
+        <table>
+          <thead>
+            <tr><th>Community</th><th>Unit</th><th>Issue</th><th>Vendor</th><th>Completed</th></tr>
+          </thead>
+          <tbody>
+            ${items.map(r => `
+              <tr>
+                <td>${communityNameFor(r.community_id)}</td>
+                <td>${r.unit_number || 'N/A'}</td>
+                <td>${r.subject || 'Work order'}</td>
+                <td>${r.assigned_vendor_name || r.assigned_vendor_email || '—'}</td>
+                <td>${fmtDate(r.updated_at || r.created_at)}<br><a class="itemLink" style="margin-top:8px;padding:7px 12px;font-size:12px" href="resident_work_orders.html?open_work_order_id=${encodeURIComponent(String(r.id || ''))}">Open</a></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderOverdue(rows){
+      const box = document.getElementById('overdueAlerts');
+      if(!box) return;
+      const items = rows.filter(r => {
+        const s = norm(r.status);
+        const days = ageDays(r.created_at || r.updated_at);
+        if(['completed','closed','done'].includes(s)) return false;
+        if(['submitted','under_review','awaiting_assignment','assigned'].includes(s) && days >= 2) return true;
+        if(['active','assigned_to_vendor','in_progress'].includes(s) && days >= 3) return true;
+        return false;
+      }).sort((a,b) => ageDays(b.created_at || b.updated_at) - ageDays(a.created_at || a.updated_at)).slice(0,8);
+
+      box.innerHTML = items.length
+        ? items.map(r => buildItem(r, [ageDays(r.created_at || r.updated_at) >= 3 ? '<span class="tag">follow-up needed</span>' : '<span class="tag">reminder due</span>'])).join('')
+        : '<div class="empty">No overdue alerts right now.</div>';
+    }
+
+    function renderPhotos(rows, photos){
+      const box = document.getElementById('photoReview');
+      if(!box) return;
+      const ids = new Set(rows.map(r => String(r.id)));
+      const filteredPhotos = (Array.isArray(photos) ? photos : []).filter(p => ids.has(String(p.work_order_id || ''))).slice(0,12);
+      if(!filteredPhotos.length){
+        box.innerHTML = '<div class="empty">No work order photos uploaded yet.</div>';
+        return;
+      }
+      const byId = {};
+      rows.forEach(r => { byId[String(r.id)] = r; });
+      function signedUrl(path){
+        return 'https://slcwuuwyrgnmlmxpcaim.supabase.co/storage/v1/object/authenticated/work-order-photos/' + path;
+      }
+      box.innerHTML = '<div class="photoGrid">' + filteredPhotos.map(p => {
+        const row = byId[String(p.work_order_id || '')] || {};
+        return `
+          <div class="photoCard">
+            <a href="${signedUrl(p.file_path || '')}" target="_blank" rel="noopener">
+              <img src="${signedUrl(p.file_path || '')}" alt="${p.file_name || 'Photo'}">
+            </a>
+            <div class="photoMeta">
+              ${p.uploader_type === 'vendor' ? 'Completion Photo' : 'Resident Photo'}<br>
+              ${row.unit_number || 'N/A'} • ${row.subject || 'Work order'}<br>
+              ${fmtDate(p.created_at)}
+            </div>
+          </div>
+        `;
+      }).join('') + '</div>';
+    }
+
+
+    function populateQueueFilters(rows){
+      const companySel=document.getElementById('queueCompany');
+      const communitySel=getQueueCommunityEl();
+      const currentCompany=companySel?.value||String(localStorage.getItem('activeCompanyId')||'').trim();
+      const companies=[...new Set(rows.map(r=>String(r.company_id||'').trim()).filter(Boolean))];
+      if(companySel){
+        companySel.innerHTML='<option value="">All Companies</option>' + companies.map(id=>`<option value="${id}" ${currentCompany===id?'selected':''}>${companyNameFor(id)}</option>`).join('');
+      }
+      const communities=Array.from(communityNameMap.keys()).filter(Boolean).sort(function(a,b){
+        return communityNameFor(a).localeCompare(communityNameFor(b));
+      });
+      const curComm=(communitySel?.value||getActiveCommunityId()||'').trim();
+      if(communitySel){
+        communitySel.innerHTML='<option value="">All Communities</option>' + communities.map(id=>`<option value="${id}" ${curComm===id?'selected':''}>${communityNameFor(id)}</option>`).join('');
+        if(curComm && Array.from(communitySel.options).some(function(o){ return String(o.value||'').trim()===curComm; })){
+          communitySel.value = curComm;
+        }
+      }
+      syncHeaderCommunityOptions();
+    }
+    function queueFilteredRows(){
+      const search=String(document.getElementById('queueSearch')?.value||'').trim().toLowerCase();
+      const company=document.getElementById('queueCompany')?.value || String(localStorage.getItem('activeCompanyId')||'').trim();
+      const community=getQueueCommunityEl()?.value || '';
+      const priority=String(document.getElementById('queuePriority')?.value||'').trim().toLowerCase();
+      const status=String(document.getElementById('queueStatus')?.value||queueStatusChip||'').trim().toLowerCase();
+      return queueRows.filter(r=>{
+        const rs=statusNorm(r.status);
+        const overdue=ageDays(r.submitted_at)>=3 && rs!=='completed';
+        if(company && String(r.company_id||'').trim()!==company) return false;
+        if(community && String(r.community_id||'').trim()!==community) return false;
+        if(priority && String(r.priority||'').trim().toLowerCase()!==priority) return false;
+        if(status){
+          if(status==='overdue'){ if(!overdue) return false; }
+          else if(rs!==status) return false;
+        }
+        if(search){
+          const blob=[requestLabel(r), communityNameFor(r.community_id), r.unit_number, r.resident_name, r.subject].join(' ').toLowerCase();
+          if(!blob.includes(search)) return false;
+        }
+        return true;
+      });
+    }
+    function renderQueueStats(rows){
+      const counts={submitted:0,reviewing:0,in_progress:0,completed:0,overdue:0};
+      rows.forEach(r=>{ const s=statusNorm(r.status); if(s==='submitted' || s==='under_review' || s==='reviewing'){ counts.submitted++; } else if(s==='sent_to_vendor' || s==='awaiting_vendor' || s==='assigned'){ counts.reviewing++; } else if(s==='active' || s==='in_progress' || s==='assigned_to_vendor'){ counts.in_progress++; } else if(s==='completed' || s==='closed' || s==='done'){ counts.completed++; } if(ageDays(r.submitted_at)>=3 && !['completed','closed','done'].includes(s)) counts.overdue++; });
+      ['submitted','reviewing','in_progress','completed','overdue'].forEach(k=>{ const el=document.getElementById('q'+(k==='in_progress'?'InProgress':k.charAt(0).toUpperCase()+k.slice(1))); if(el) el.textContent=counts[k]||0; });
+      document.querySelectorAll('.queueStat').forEach(btn=>btn.classList.toggle('active', btn.dataset.qstatus===queueStatusChip));
+    }
+
+async function loadMccVendors(communityId){
+  const selectEl=document.getElementById('mccVendorSelect');
+  const phoneEl=document.getElementById('mccVendorPhone');
+  const emailEl=document.getElementById('mccVendorEmail');
+  if(selectEl){ selectEl.innerHTML='<option value="">Select Vendor</option>'; }
+  if(phoneEl) phoneEl.textContent='—';
+  if(emailEl) emailEl.textContent='—';
+  window.mccVendors = [];
+  window.mccSelectedVendor = null;
+  if(!communityId) return;
+  try{
+    const sb=await getDashboardClient();
+    const q=await sb.from('Vendors').select('id,name,type,phone,email,community_id').eq('community_id', String(communityId)).order('name',{ascending:true});
+    if(q && q.error) throw q.error;
+    window.mccVendors = Array.isArray(q.data) ? q.data : [];
+    if(selectEl){
+      window.mccVendors.forEach(function(v){
+        var opt=document.createElement('option');
+        opt.value=String(v.id||'');
+        opt.textContent=v.type ? (v.name + ' (' + v.type + ')') : (v.name || 'Vendor');
+        selectEl.appendChild(opt);
+      });
+    }
+  }catch(err){
+    console.error('Vendor load failed', err);
+  }
+}
+
+function syncMccVendorPreview(vendor, row){
+  const phoneEl=document.getElementById('mccVendorPhone');
+  const emailEl=document.getElementById('mccVendorEmail');
+  if(phoneEl) phoneEl.textContent=(vendor && vendor.phone) || (row && row.vendor_phone) || '—';
+  if(emailEl) emailEl.textContent=(vendor && vendor.email) || (row && row.vendor_email) || '—';
+}
+
+    function renderQueueDetail(row){
+      const pane=document.getElementById('queueDetailPane'); if(!pane) return;
+      if(!row){ pane.innerHTML='<div class="empty">Choose a work order to view details.</div>'; return; }
+      pane.innerHTML=`
+        <div class="detailHead">
+          <div>
+            <div class="detailLabel">Request ID</div>
+            <div class="detailValue" style="font-size:28px">${requestLabel(row)}</div>
+            <div class="muted" style="margin-top:6px">Submitted ${fmtDate(row.submitted_at)}</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">${priorityPill(row.priority)} ${statusPill(row.status)}</div>
+        </div>
+        <div class="detailGrid">
+          <div class="detailBox"><div class="detailLabel">Company</div><div class="detailValue">${companyNameFor(row.company_id)}</div></div>
+          <div class="detailBox"><div class="detailLabel">Community</div><div class="detailValue">${communityNameFor(row.community_id)}</div></div>
+          <div class="detailBox"><div class="detailLabel">Unit</div><div class="detailValue">${row.unit_number||'—'}</div></div>
+          <div class="detailBox"><div class="detailLabel">Resident</div><div class="detailValue">${row.resident_name||'—'}</div></div>
+          <div class="detailBox"><div class="detailLabel">Email</div><div class="detailValue">${row.resident_email||'—'}</div></div>
+          <div class="detailBox"><div class="detailLabel">Phone</div><div class="detailValue">${row.resident_phone||'—'}</div></div>
+          <div class="detailBox"><div class="detailLabel">Category</div><div class="detailValue">${row.category||'—'}</div></div>
+          <div class="detailBox"><div class="detailLabel">Priority</div><div class="detailValue">${String(row.priority||'normal')}</div></div>
+        </div>
+        <div class="detailBox"><div class="detailLabel">Subject</div><div class="detailValue">${row.subject||'Resident Work Order'}</div></div>
+        <div class="detailBox" style="margin-top:12px"><div class="detailLabel">Description</div><div class="detailValue" style="font-weight:500;white-space:pre-wrap">${row.description||'—'}</div></div>
+        <div class="mccActionCard">
+          <div class="mccActionTitle">Manager Actions</div>
+          <div class="mccField">
+            <label for="mccStatusSelect">Status</label>
+            <select id="mccStatusSelect" class="select">
+              <option value="submitted">Submitted</option>
+              <option value="reviewing">Reviewing</option>
+              <option value="assigned">Assigned</option>
+              <option value="in_progress">Active</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+          <div class="toolbar">
+            <button id="saveStatusBtn" class="btn primary" type="button">Save Status</button>
+            <a class="btn" href="resident_work_orders.html">Open Full Detail Manager</a>
+          </div>
+          <div id="mccActionMsg" class="mccActionMsg"></div>
+        </div>
+        <div class="mccActionCard" style="margin-top:12px">
+          <div class="mccActionTitle">Vendor Assignment</div>
+          <div class="mccField">
+            <label for="mccVendorSelect">Vendor</label>
+            <select id="mccVendorSelect" class="select">
+              <option value="">Select Vendor</option>
+            </select>
+          </div>
+          <div class="detailGrid" style="margin:0 0 12px 0">
+            <div class="detailBox"><div class="detailLabel">Vendor Phone</div><div id="mccVendorPhone" class="detailValue" style="font-size:15px">—</div></div>
+            <div class="detailBox"><div class="detailLabel">Vendor Email</div><div id="mccVendorEmail" class="detailValue" style="font-size:15px">—</div></div>
+          </div>
+          <div class="toolbar">
+            <button id="saveVendorAssignmentBtn" class="btn primary" type="button">Save Assignment</button>
+          </div>
+          <div id="mccVendorMsg" class="mccActionMsg"></div>
+        </div>
+        <div class="mccActionCard" style="margin-top:12px">
+          <div class="mccActionTitle">Internal Notes</div>
+          <div class="mccField">
+            <label for="mccInternalNotes">Manager Notes</label>
+            <textarea id="mccInternalNotes" class="input" style="min-height:110px;padding:12px;resize:vertical"></textarea>
+          </div>
+          <div class="toolbar">
+            <button id="saveInternalNotesBtn" class="btn primary" type="button">Save Notes</button>
+          </div>
+          <div id="mccNotesMsg" class="mccActionMsg"></div>
+        </div>
+`;
+      const statusEl=document.getElementById('mccStatusSelect');
+      if(statusEl) statusEl.value=statusNorm(row.status);
+      const notesEl=document.getElementById('mccInternalNotes');
+      if(notesEl) notesEl.value = row.internal_notes || '';
+
+      loadMccVendors(row.community_id).then(function(){
+        const vendorSelect=document.getElementById('mccVendorSelect');
+        const existing=(window.mccVendors||[]).find(function(v){ return String(v.id||'')===String(row.vendor_id||''); }) || null;
+        window.mccSelectedVendor = existing;
+        if(vendorSelect && row.vendor_id){ vendorSelect.value=String(row.vendor_id); }
+        syncMccVendorPreview(existing, row);
+        if(vendorSelect){
+          vendorSelect.addEventListener('change', function(){
+            var vendor=(window.mccVendors||[]).find(function(v){ return String(v.id||'')===String(vendorSelect.value||''); }) || null;
+            window.mccSelectedVendor = vendor;
+            syncMccVendorPreview(vendor, row);
+          });
+        }
+      });
+      const saveBtn=document.getElementById('saveStatusBtn');
+      if(saveBtn){
+        saveBtn.addEventListener('click', async ()=>{
+          const msgEl=document.getElementById('mccActionMsg');
+          const newStatus=statusEl ? statusEl.value : 'submitted';
+          if(!row.id){ if(msgEl){ msgEl.textContent='Select a work order first.'; msgEl.className='mccActionMsg err'; } return; }
+          if(msgEl){ msgEl.textContent='Saving...'; msgEl.className='mccActionMsg'; }
+          const oldText=saveBtn.textContent;
+          saveBtn.disabled=true;
+          saveBtn.textContent='Saving...';
+          try{
+            const sb=await getDashboardClient();
+            const upd=await sb.from('resident_work_orders').update({ status:newStatus }).eq('id', row.id).select('*').single();
+            if(upd && upd.error) throw upd.error;
+            if(upd && upd.data){
+              workOrders = workOrders.map(w=>String(w.id)===String(row.id)?Object.assign({}, w, upd.data):w);
+              queueSelected = Object.assign({}, row, upd.data);
+              const head=document.querySelector('#queueDetailPane .detailHead div[style*="display:flex"]');
+              if(head){ head.innerHTML = `${priorityPill(queueSelected.priority)} ${statusPill(queueSelected.status)}`; }
+            }
+            if(msgEl){ msgEl.textContent='Status updated.'; msgEl.className='mccActionMsg ok'; }
+            const queueRowsForRender = Array.isArray(workOrders) ? workOrders.slice() : [];
+            renderQueueSection(queueRowsForRender);
+            renderMccBoard(scoped);
+            renderVendorPerformance(scoped);
+            bindMccDragAndDrop();
+            renderNeedsAction(scoped);
+            renderAwaiting(scoped);
+            renderInProgress(scoped);
+            renderCompleted(scoped);
+            renderOverdue(scoped);
+            renderPhotos(scoped);
+            setMsg('Dashboard updated.', true);
+        updateLastUpdated('Dashboard synced');
+          }catch(err){
+            console.error(err);
+            if(msgEl){ msgEl.textContent=(err && err.message) ? err.message : 'Unable to save status.'; msgEl.className='mccActionMsg err'; }
+          }finally{
+            saveBtn.disabled=false;
+            saveBtn.textContent=oldText;
+          }
+        });
+      }
+
+      const saveVendorBtn=document.getElementById('saveVendorAssignmentBtn');
+      if(saveVendorBtn){
+        saveVendorBtn.addEventListener('click', async ()=>{
+          const msgEl=document.getElementById('mccVendorMsg');
+          const vendor=window.mccSelectedVendor;
+          if(!row.id){ if(msgEl){ msgEl.textContent='Select a work order first.'; msgEl.className='mccActionMsg err'; } return; }
+          if(!vendor){ if(msgEl){ msgEl.textContent='Select a vendor first.'; msgEl.className='mccActionMsg err'; } return; }
+          if(!String(vendor.email || '').trim()){ if(msgEl){ msgEl.textContent='Selected vendor does not have an email address.'; msgEl.className='mccActionMsg err'; } return; }
+          const oldText=saveVendorBtn.textContent;
+          saveVendorBtn.disabled=true;
+          saveVendorBtn.textContent='Saving...';
+          if(msgEl){ msgEl.textContent=''; msgEl.className='mccActionMsg'; }
+          try{
+            const sb=await getDashboardClient();
+            const payload={
+              vendor_id: vendor.id,
+              vendor_name: vendor.name || null,
+              vendor_phone: vendor.phone || null,
+              vendor_email: vendor.email || null,
+              assigned_at: new Date().toISOString()
+            };
+            const current=statusNorm(row.status);
+            const assignmentEligibleStatuses = ['submitted','reviewing','under_review','awaiting_assignment','open','new','unassigned'];
+            if(assignmentEligibleStatuses.includes(current)){ payload.status='assigned'; }
+            const shouldDispatch = String(row.vendor_id||'')!==String(vendor.id||'') || !row.vendor_dispatched_at;
+            const upd=await sb.from('resident_work_orders').update(payload).eq('id', row.id).select('*').single();
+            if(upd && upd.error) throw upd.error;
+            if(upd && upd.data){
+              workOrders = workOrders.map(function(w){ return String(w.id)===String(row.id) ? Object.assign({}, w, upd.data) : w; });
+              queueSelected = Object.assign({}, row, upd.data);
+            }
+
+            let vendorMsg='Vendor assigned.';
+            let vendorMsgClass='mccActionMsg ok';
+            if(shouldDispatch){
+              if(msgEl){ msgEl.textContent='Vendor assigned. Sending dispatch email...'; msgEl.className='mccActionMsg'; }
+              try{
+                const currentRow = Object.assign({}, row, (upd && upd.data) || {});
+                const emailResult = await invokeDashboardEdgeFunction('assign-vendor-email', {
+                  work_order_id: currentRow.id || null,
+                  vendor_name: vendor.name || '',
+                  vendor_email: vendor.email || '',
+                  manager_name: getDashboardManagerName(),
+                  manager_phone: getDashboardManagerPhone(),
+                  company_name: getDashboardCompanyName(),
+                  community_name: communityNameFor(currentRow.community_id),
+                  community_id: currentRow.community_id || null,
+                  vendor_note: currentRow.internal_notes || '',
+                  resident_name: currentRow.resident_name || '',
+                  resident_email: currentRow.resident_email || '',
+                  resident_phone: currentRow.resident_phone || '',
+                  unit_number: currentRow.unit_number || '',
+                  subject: currentRow.subject || 'Resident Work Order',
+                  description: currentRow.description || '',
+                  priority: currentRow.priority || '',
+                  status: currentRow.status || payload.status || 'assigned'
+                });
+
+                const dispatchPatch = {
+                  status: 'assigned',
+                  vendor_dispatched_at: new Date().toISOString(),
+                  vendor_dispatch_status: 'sent',
+                  vendor_dispatch_error: null
+                };
+                try{
+                  const dispatchUpd = await sb.from('resident_work_orders').update(dispatchPatch).eq('id', row.id).select('*').single();
+                  if(dispatchUpd && !dispatchUpd.error && dispatchUpd.data){
+                    workOrders = workOrders.map(function(w){ return String(w.id)===String(row.id) ? Object.assign({}, w, dispatchUpd.data) : w; });
+                    queueSelected = Object.assign({}, queueSelected || row, dispatchUpd.data);
+                  }
+                }catch(_dispatchPatchErr){}
+
+                vendorMsg = (emailResult && emailResult.resident_email_sent)
+                  ? 'Vendor assigned, vendor notified, and resident notified by email.'
+                  : 'Vendor assigned and vendor notified by email. Work order moved to Assigned.';
+              }catch(emailErr){
+                const errorText = (emailErr && emailErr.message) ? emailErr.message : 'Dispatch email failed.';
+                try{
+                  await sb.from('resident_work_orders').update({
+                    vendor_dispatch_status: 'failed',
+                    vendor_dispatch_error: errorText
+                  }).eq('id', row.id);
+                }catch(_dispatchErr){}
+                vendorMsg = 'Vendor assigned, but dispatch email was not sent: ' + errorText;
+                vendorMsgClass='mccActionMsg err';
+              }
+            }else{
+              vendorMsg = 'Vendor assignment saved. Dispatch already sent earlier.';
+            }
+
+            if(msgEl){ msgEl.textContent=vendorMsg; msgEl.className=vendorMsgClass; }
+            const queueRowsForRender = Array.isArray(workOrders) ? workOrders.slice() : [];
+            renderQueueSection(queueRowsForRender);
+            renderMccBoard(scoped);
+            renderVendorPerformance(scoped);
+            bindMccDragAndDrop();
+            renderNeedsAction(scoped);
+            renderAwaiting(scoped);
+            renderInProgress(scoped);
+            renderCompleted(scoped);
+            renderOverdue(scoped);
+            renderPhotos(scoped);
+            setMsg('Dashboard updated.', true);
+        updateLastUpdated('Dashboard synced');
+          }catch(err){
+            console.error(err);
+            if(msgEl){ msgEl.textContent=(err && err.message) ? err.message : 'Unable to save vendor assignment.'; msgEl.className='mccActionMsg err'; }
+          }finally{
+            saveVendorBtn.disabled=false;
+            saveVendorBtn.textContent=oldText;
+          }
+        });
+      }
+
+      const saveNotesBtn=document.getElementById('saveInternalNotesBtn');
+      if(saveNotesBtn){
+        saveNotesBtn.addEventListener('click', async ()=>{
+          const msgEl=document.getElementById('mccNotesMsg');
+          const notesEl=document.getElementById('mccInternalNotes');
+          if(!row.id){ if(msgEl){ msgEl.textContent='Select a work order first.'; msgEl.className='mccActionMsg err'; } return; }
+          const oldText=saveNotesBtn.textContent;
+          saveNotesBtn.disabled=true;
+          saveNotesBtn.textContent='Saving...';
+          if(msgEl){ msgEl.textContent=''; msgEl.className='mccActionMsg'; }
+          try{
+            const sb=await getDashboardClient();
+            const upd=await sb.from('resident_work_orders').update({ internal_notes: notesEl ? notesEl.value : '' }).eq('id', row.id).select('*').single();
+            if(upd && upd.error) throw upd.error;
+            if(upd && upd.data){
+              workOrders = workOrders.map(function(w){ return String(w.id)===String(row.id) ? Object.assign({}, w, upd.data) : w; });
+              queueSelected = Object.assign({}, row, upd.data);
+              if(notesEl) notesEl.value = queueSelected.internal_notes || '';
+            }
+            if(msgEl){ msgEl.textContent='Notes saved.'; msgEl.className='mccActionMsg ok'; }
+          }catch(err){
+            console.error(err);
+            if(msgEl){ msgEl.textContent=(err && err.message) ? err.message : 'Unable to save notes.'; msgEl.className='mccActionMsg err'; }
+          }finally{
+            saveNotesBtn.disabled=false;
+            saveNotesBtn.textContent=oldText;
+          }
+        });
+      }
+    }
+
+
+    function timeAgo(iso){
+      if(!iso) return "";
+      const diffMs = Date.now() - new Date(iso).getTime();
+      if(!Number.isFinite(diffMs) || diffMs < 0) return "";
+      const mins = Math.floor(diffMs / 60000);
+      if(mins < 1) return "just now";
+      if(mins < 60) return `${mins}m ago`;
+      const hrs = Math.floor(mins / 60);
+      const remMins = mins % 60;
+      if(hrs < 24){
+        return remMins ? `${hrs}h ${remMins}m ago` : `${hrs}h ago`;
+      }
+      const days = Math.floor(hrs / 24);
+      return `${days}d ago`;
+    }
+
+    function vendorResponseText(r){
+      if(!r || !r.assigned_vendor_name) return "";
+      if(r.status === "completed") return "Completed";
+      if(r.vendor_response_status === "accepted"){
+        return `Vendor Accepted${r.vendor_accepted_at ? ` • ${timeAgo(r.vendor_accepted_at)}` : ""}`;
+      }
+      if(r.vendor_response_status === "awaiting_response" || r.vendor_dispatch_status === "sent"){
+        return `Awaiting Vendor${r.vendor_dispatched_at ? ` • Sent ${timeAgo(r.vendor_dispatched_at)}` : ""}`;
+      }
+      return "";
+    }
+
+    function vendorResponseClass(r){
+      if(!r || !r.assigned_vendor_name) return "";
+      if(r.status === "completed") return "vendorResp completed";
+      if(r.vendor_response_status === "accepted") return "vendorResp accepted";
+      if(r.vendor_response_status === "awaiting_response" || r.vendor_dispatch_status === "sent"){
+        const dispatchedMs = r.vendor_dispatched_at ? (Date.now() - new Date(r.vendor_dispatched_at).getTime()) : 0;
+        const isLate = dispatchedMs >= (2 * 60 * 60 * 1000);
+        return isLate ? "vendorResp overdue" : "vendorResp awaiting";
+      }
+      return "vendorResp";
+    }
+
+    function renderQueueSection(rows){
+      queueRows=rows.slice();
+      populateQueueFilters(rows);
+      renderQueueStats(rows);
+      const filtered=queueFilteredRows();
+      const tbody=document.getElementById('queueRows'); if(!tbody) return;
+      tbody.innerHTML=filtered.length?filtered.map(r=>`<tr class="clickable ${queueSelected&&String(queueSelected.id)===String(r.id)?'selected':''}" data-id="${r.id}"><td>${communityNameFor(r.community_id)}</td><td>${r.unit_number||'—'}</td><td>${r.resident_name||'—'}</td><td class="subjectCol"><strong>${r.subject||'Resident Work Order'}</strong><div class="muted" style="margin-top:4px">${(r.description||'').slice(0,70)}</div></td><td>${vendorResponseText(r) ? `<span class="${vendorResponseClass(r)}">${vendorResponseText(r)}</span>` : ''}</td><td>${priorityPill(r.priority)}</td><td>${statusPill(r.status)}</td></tr>`).join(''):`<tr><td colspan="7"><div class="empty">No work orders match the current filters.</div></td></tr>`;
+      setQueueStatusLine(filtered.length + ' request' + (filtered.length===1?'':'s') + ' shown.');
+      const keep=filtered.find(r=>queueSelected && String(r.id)===String(queueSelected.id));
+      queueSelected=keep || filtered[0] || null;
+      renderQueueDetail(queueSelected);
+      tbody.querySelectorAll('tr.clickable').forEach(tr=>tr.addEventListener('click',()=>{ const row=filtered.find(r=>String(r.id)===String(tr.dataset.id)); queueSelected=row||null; renderQueueSection(rows); }));
+    }
+
+    async function loadDashboard(){
+      try{
+        const access = await requireStaffAccess();
+        if(!access || !access.ok){ return; }
+        setMsg('Loading dashboard…', true);
+        
+        const sb = await getDashboardClient();
+        let rows = [];
+        if(sb && sb.from){
+          const q = await sb.from('resident_work_orders').select('*').order('submitted_at',{ascending:false});
+          if(q && !q.error) rows = q.data || [];
+        }
+
+        const photos = await dashboardApi('work_order_photos?select=*&order=created_at.desc');
+        workOrders = Array.isArray(rows) ? rows : [];
+        workOrderPhotos = Array.isArray(photos) ? photos : [];
+        await hydrateNames(workOrders);
+        const scoped = getScopedRows(workOrders);
+        const queueRowsForRender = Array.isArray(workOrders) ? workOrders.slice() : [];
+
+        renderQueueSection(queueRowsForRender);
+        syncHeaderCommunityOptions();
+        renderMccBoard(scoped);
+        renderVendorPerformance(scoped);
+        bindMccDragAndDrop();
+        renderNeedsAction(scoped);
+        renderAwaiting(scoped);
+        renderInProgress(scoped);
+        renderCompleted(scoped);
+        renderOverdue(scoped);
+        renderPhotos(scoped, workOrderPhotos);
+
+        setMsg('Dashboard updated.', true);
+        updateLastUpdated('Dashboard synced');
+      }catch(err){
+        setMsg(err && err.message ? err.message : 'Unable to load dashboard.', false);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const access = await requireStaffAccess();
+      if(!access || !access.ok){ return; }
+      const sb = await getDashboardClient();
+      try{
+        if(typeof mountZummeeHeader === 'function'){
+          mountZummeeHeader({
+            title: 'Maintenance Control Center',
+            subtitle: 'Manager maintenance control center'
+          });
+        }
+      }catch(_e){}
+
+      const hdrSelect = headerCommunitySelect();
+      if(hdrSelect){
+        hdrSelect.addEventListener('change', function(){
+          try{
+            const q = getQueueCommunityEl();
+            const v = String(hdrSelect.value || '').trim();
+            localStorage.setItem('activeCommunityId', v);
+            if(q){
+              q.value = v;
+              q.dispatchEvent(new Event('change', { bubbles:true }));
+            }
+          }catch(_e){}
+          loadDashboard();
+        });
+      }
+      ['queueSearch','queueCompany','queueCommunity','queueCommunitySelect','queuePriority','queueStatus'].forEach(function(id){ var el=document.getElementById(id); if(el){ el.addEventListener('input', function(){ renderQueueSection(Array.isArray(workOrders) ? workOrders.slice() : []); syncHeaderCommunityOptions(); }); el.addEventListener('change', function(){ renderQueueSection(Array.isArray(workOrders) ? workOrders.slice() : []); syncHeaderCommunityOptions(); }); } });
+      document.querySelectorAll('.queueStat').forEach(function(btn){ btn.addEventListener('click', function(){ queueStatusChip = (queueStatusChip===btn.dataset.qstatus?'':btn.dataset.qstatus); var sel=document.getElementById('queueStatus'); if(sel) sel.value=''; renderQueueSection(Array.isArray(workOrders) ? workOrders.slice() : []); }); });
+      window.addEventListener('resident-work-orders:changed', loadDashboard);
+      loadDashboard();
+      try{
+        if(sb && typeof sb.channel === 'function'){
+          const channel = sb
+            .channel('mcc-live-work-orders')
+            .on('postgres_changes', { event:'*', schema:'public', table:'resident_work_orders' }, function(){
+              updateLastUpdated('Realtime change detected');
+              loadDashboard();
+            })
+            .subscribe();
+          window.__mccRealtimeChannel = channel;
+        }
+      }catch(_realtimeErr){}
+      setInterval(loadDashboard, 30000);
+    });
+  </script>
+
+<script>
+(function(){
+  function enhanceMccDragDrop(){
+    const columns = Array.from(document.querySelectorAll('.mcc-column'));
+    if(!columns.length) return;
+
+    let activeCard = null;
+    let placeholder = null;
+
+    function ensurePlaceholder(){
+      if(!placeholder){
+        placeholder = document.createElement('div');
+        placeholder.className = 'mcc-drop-placeholder';
+      }
+      return placeholder;
+    }
+
+    function clearTargets(){
+      columns.forEach(col => col.classList.remove('drag-target'));
+      if(placeholder && placeholder.parentNode){
+        placeholder.parentNode.removeChild(placeholder);
+      }
+    }
+
+    function makeCardsDraggable(){
+      document.querySelectorAll('.mcc-card').forEach(card => {
+        if(card.dataset.dragEnhanced === '1') return;
+        card.dataset.dragEnhanced = '1';
+        card.setAttribute('draggable', 'true');
+
+        card.addEventListener('dragstart', function(e){
+          activeCard = card;
+          card.classList.add('dragging');
+          try{ e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', card.dataset.workOrderId || 'drag'); }catch(_e){}
+          setTimeout(() => { card.style.visibility = 'hidden'; }, 0);
+        });
+
+        card.addEventListener('dragend', function(){
+          card.classList.remove('dragging');
+          card.style.visibility = '';
+          activeCard = null;
+          clearTargets();
+        });
+      });
+    }
+
+    columns.forEach(col => {
+      const list = col.querySelector('.mcc-list') || col;
+
+      col.addEventListener('dragenter', function(e){
+        e.preventDefault();
+        if(!activeCard) return;
+        col.classList.add('drag-target');
+      });
+
+      col.addEventListener('dragover', function(e){
+        e.preventDefault();
+        if(!activeCard) return;
+        col.classList.add('drag-target');
+        const ph = ensurePlaceholder();
+        const after = Array.from(list.querySelectorAll('.mcc-card:not(.dragging)')).find(el => {
+          const rect = el.getBoundingClientRect();
+          return e.clientY < rect.top + rect.height / 2;
+        });
+        if(after){
+          list.insertBefore(ph, after);
+        }else{
+          list.appendChild(ph);
+        }
+      });
+
+      col.addEventListener('dragleave', function(e){
+        if(!col.contains(e.relatedTarget)){
+          col.classList.remove('drag-target');
+        }
+      });
+
+      col.addEventListener('drop', function(e){
+        e.preventDefault();
+        clearTargets();
+      });
+    });
+
+    makeCardsDraggable();
+
+    // Re-run after board refreshes
+    const board = document.querySelector('.mcc-board');
+    if(board && !board.dataset.observeDrag){
+      board.dataset.observeDrag = '1';
+      const mo = new MutationObserver(() => makeCardsDraggable());
+      mo.observe(board, { childList:true, subtree:true });
+    }
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', enhanceMccDragDrop);
+  }else{
+    enhanceMccDragDrop();
+  }
+
+try{
+  document.addEventListener('click', function(e){
+    var link = e.target && e.target.closest ? e.target.closest('a[href*="resident_work_orders.html?open_work_order_id="]') : null;
+    if(!link) return;
+    try{
+      var m = String(link.getAttribute('href') || '').match(/[?&]open_work_order_id=([^&]+)/);
+      if(m && m[1]) localStorage.setItem('selectedWorkOrderId', decodeURIComponent(m[1]));
+    }catch(_e){}
+  }, true);
+}catch(_e){}
+
+})();
+</script>
+
+</div>
+
+<script id="mccCollapsibleSectionsScriptV1">
+(function(){
+  function initMccCollapsibles(){
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.mcc-collapsible[data-collapse-key]'));
+    sections.forEach(function(section){
+      var key = 'mcc_collapse_' + (section.getAttribute('data-collapse-key') || '');
+      var head = section.querySelector('.mcc-collapse-head');
+      var toggle = section.querySelector('.mcc-collapse-toggle');
+      if (!head || !toggle) return;
+
+      var apply = function(collapsed){
+        section.classList.toggle('is-collapsed', collapsed);
+        head.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      };
+
+      var stored = null;
+      try{ stored = localStorage.getItem(key); }catch(_e){}
+      apply(stored !== 'open');
+
+      var onToggle = function(ev){
+        if (ev && ev.target && (ev.target.closest('a') || ev.target.closest('button:not(.mcc-collapse-toggle)') || ev.target.closest('input') || ev.target.closest('select') || ev.target.closest('textarea'))) return;
+        var collapsed = !section.classList.contains('is-collapsed');
+        apply(collapsed);
+        try{ localStorage.setItem(key, collapsed ? 'closed' : 'open'); }catch(_e){}
+      };
+
+      head.addEventListener('click', onToggle);
+      head.addEventListener('keydown', function(ev){
+        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onToggle(ev); }
+      });
+      toggle.addEventListener('click', function(ev){ ev.preventDefault(); ev.stopPropagation(); onToggle(ev); });
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initMccCollapsibles);
+  else initMccCollapsibles();
+
+try{
+  document.addEventListener('click', function(e){
+    var link = e.target && e.target.closest ? e.target.closest('a[href*="resident_work_orders.html?open_work_order_id="]') : null;
+    if(!link) return;
+    try{
+      var m = String(link.getAttribute('href') || '').match(/[?&]open_work_order_id=([^&]+)/);
+      if(m && m[1]) localStorage.setItem('selectedWorkOrderId', decodeURIComponent(m[1]));
+    }catch(_e){}
+  }, true);
+}catch(_e){}
+
+})();
+</script>
+
+<script id="mccHeaderTitleClearScript">
+document.addEventListener('DOMContentLoaded', function () {
+  function clearMccHeaderTitle() {
+    var headerTitle = document.getElementById('zummeeHeaderTitles');
+    if (headerTitle) headerTitle.innerHTML = '';
+  }
+  clearMccHeaderTitle();
+  setTimeout(clearMccHeaderTitle, 0);
+  setTimeout(clearMccHeaderTitle, 150);
+  setTimeout(clearMccHeaderTitle, 500);
+});
+</script>
+
+
+<script id="openColumnStateScript">
+function updateOpenColumnState(){
+  const openCol = document.querySelector('.mcc-col.open');
+  const badge = openCol ? openCol.querySelector('.mcc-col-count, .count, .badge') : null;
+  if(!openCol) return;
+  let count = 0;
+  if(badge){
+    const n = parseInt(badge.innerText.trim());
+    if(!isNaN(n)) count = n;
+  }
+  if(count>0){ openCol.classList.add('has-items'); }
+  else{ openCol.classList.remove('has-items'); }
+}
+document.addEventListener('DOMContentLoaded', ()=>{
+  setTimeout(updateOpenColumnState,200);
+  setTimeout(updateOpenColumnState,800);
+});
+</script>
+
+<script src="company_logo_sync.js"></script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>
+

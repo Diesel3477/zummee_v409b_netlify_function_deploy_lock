@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Profile · Zummee</title>
+  <link rel="icon" type="image/png" href="zummee_mark_32.png">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="shared/supabase-client.js?v=2026-04-27-profile-v265"></script>
+  
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+    :root{
+      --ink:#17325f;
+      --muted:#6b7f9f;
+      --line:#9fc2ff;
+      --blue:#2f63ff;
+      --surface-a:rgba(255,255,255,.98);
+      --surface-b:rgba(244,249,254,.95);
+      --shadow:0 10px 24px rgba(18,42,67,.06),0 0 0 1px rgba(96,165,250,.22),0 8px 22px rgba(59,130,246,.12);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);background:linear-gradient(180deg,#f7fbff 0%,#edf3f8 100%)}
+    button,input,select{font:inherit}
+    .page{max-width:1180px;margin:0 auto;padding:22px 18px 42px}
+    .shell{position:relative;border:1px solid rgba(37,99,235,.42);border-radius:30px;background:linear-gradient(180deg,var(--surface-a),var(--surface-b));box-shadow:var(--shadow);overflow:hidden}
+    .shell:before,.section:before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;box-shadow:inset 0 0 0 1px rgba(147,197,253,.35)}
+    .hero{position:relative;display:flex;align-items:flex-start;justify-content:space-between;gap:22px;padding:22px 26px;border-bottom:1px solid rgba(37,99,235,.18);background:linear-gradient(180deg,var(--surface-a),var(--surface-b))}
+    .eyebrow{font-size:13px;letter-spacing:.18em;text-transform:uppercase;font-weight:900;color:#6c85a2;margin-bottom:2px}
+    h1{font-size:40px;line-height:1;margin:0;font-weight:950;color:var(--ink)}
+    .role-pill{display:inline-flex;align-items:center;justify-content:center;margin-top:14px;padding:8px 16px;min-height:40px;border:1px solid rgba(90,132,197,.25);border-radius:999px;background:#fff;font-size:15px;font-weight:900;color:#1d3a68}
+    .hero-logo-wrap{display:flex;align-items:flex-start;justify-content:flex-end;min-width:220px;min-height:74px}
+    #companyLogo{display:none;max-width:260px;height:74px;object-fit:contain;filter:drop-shadow(0 8px 16px rgba(18,42,67,.06))}
+    #companyLogo.is-visible{display:block}
+    .content{padding:26px}
+    .grid{display:grid;grid-template-columns:1.35fr .85fr;gap:24px;align-items:start}
+    .section{position:relative;border:1px solid rgba(37,99,235,.42);border-radius:30px;background:linear-gradient(180deg,var(--surface-a),var(--surface-b));box-shadow:var(--shadow);padding:26px;overflow:hidden}
+    .section-head{position:relative;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}
+    h2{font-size:31px;line-height:1.05;margin:0;font-weight:950;color:var(--ink)}
+    .actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap}
+    .btn{min-height:52px;border-radius:999px;padding:0 24px;border:1px solid rgba(37,99,235,.42);background:#fff;color:var(--ink);font-weight:950;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .16s ease, box-shadow .16s ease, opacity .16s ease}
+    .btn:hover{transform:translateY(-1px)}
+    .btn.dark{background:var(--ink);border-color:var(--ink);color:#fff;box-shadow:0 10px 22px rgba(23,50,95,.18)}
+    .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 12px 22px rgba(46,99,255,.18)}
+    .btn.hidden{display:none!important}
+    .form-grid{position:relative;display:grid;grid-template-columns:1fr;gap:14px}
+    .field label{display:block;margin:0 0 8px;font-size:15px;font-weight:850;color:#6c819d}
+    .control{width:100%;min-height:54px;border:1px solid #d9e3f2;border-radius:18px;background:#fff;color:var(--ink);padding:0 16px;font-size:18px;box-shadow:inset 0 1px 0 rgba(255,255,255,.72);outline:none}
+    .control:focus{border-color:#6ea8ff;box-shadow:0 0 0 3px rgba(110,168,255,.16)}
+    .control[readonly],.control:disabled{opacity:1;background:#f8fbff;color:#17325f;-webkit-text-fill-color:#17325f;cursor:default}
+    select.control:disabled{appearance:none;background-image:none}
+    .save-row{position:relative;margin-top:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    .mode-note{position:relative;margin:14px 0 0;padding:12px 14px;border:1px solid rgba(37,99,235,.20);border-radius:18px;background:rgba(255,255,255,.72);color:var(--muted);font-size:15px;line-height:1.4}
+    .security p{position:relative;margin:8px 0 16px;color:var(--muted);font-size:17px;line-height:1.45}
+    .status{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:50;display:none;max-width:min(92vw,620px);padding:12px 16px;border-radius:16px;background:#111827;color:#fff;box-shadow:0 18px 40px rgba(0,0,0,.22);font-weight:800}
+    .modal-backdrop{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.48);padding:20px}
+    .modal{width:min(520px,92vw);border-radius:22px;background:#fff;border:1px solid rgba(37,99,235,.28);box-shadow:0 24px 70px rgba(0,0,0,.24);padding:24px}
+    .modal h3{margin:0 0 8px;font-size:24px;color:var(--ink)}
+    .modal p{margin:0 0 18px;color:var(--muted);line-height:1.4}
+    .modal-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+    @media(max-width:860px){.page{padding:18px 14px 34px}.hero{padding:20px;gap:16px}.hero-logo-wrap{min-width:180px}.grid{grid-template-columns:1fr}.section{padding:22px}.section-head{align-items:flex-start}.actions{justify-content:flex-end}h1{font-size:34px}h2{font-size:28px}#companyLogo{max-width:220px;height:64px}}
+    @media(max-width:640px){.hero{flex-direction:column}.hero-logo-wrap{justify-content:flex-start;min-height:52px}.section-head{flex-direction:column}.actions{width:100%;justify-content:flex-start}.btn{width:100%}#companyLogo{height:54px;max-width:210px}.control{font-size:16px}.content{padding:18px}.section{border-radius:24px}}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="shell" aria-labelledby="profileTitle">
+      <header class="hero">
+        <div>
+          <div class="eyebrow">Account</div>
+          <h1 id="profileTitle">Profile</h1>
+          <div id="rolePill" class="role-pill">Loading profile…</div>
+        </div>
+        <div class="hero-logo-wrap"><img id="companyLogo" alt="Company logo" decoding="async" fetchpriority="high"></div>
+      </header>
+
+      <div class="content">
+        <div class="grid">
+          <section class="section" aria-labelledby="accountDetailsTitle">
+            <div class="section-head">
+              <h2 id="accountDetailsTitle">Account details</h2>
+              <div class="actions">
+                <a class="btn" id="backToHub" href="manager_hub.html">Back to Hub</a>
+                <button class="btn dark" id="signOutBtn" type="button">Sign out</button>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <div class="field"><label for="name">Name</label><input class="control" id="name" autocomplete="name"></div>
+              <div class="field"><label for="phone">Phone</label><input class="control" id="phone" inputmode="tel" autocomplete="tel"></div>
+              <div class="field"><label for="email">Email</label><input class="control" id="email" type="email" autocomplete="email"></div>
+              <div class="field"><label for="company">Management Company</label><select class="control" id="company"><option value="">Loading…</option></select></div>
+              <div class="field"><label for="department">Department</label><select class="control" id="department"><option value="">Select a department…</option><option>Community Manager</option><option>Community Admin</option><option>Accounting</option><option>Supervisor</option><option>Admin</option></select></div>
+            </div>
+
+            <div class="save-row"><button class="btn primary" id="saveProfileBtn" type="button">Save profile</button></div>
+            <div class="mode-note" id="modeNote">Loading account permissions…</div>
+          </section>
+
+          <section class="section security" aria-labelledby="securityTitle">
+            <h2 id="securityTitle">Security</h2>
+            <p>Need to change your password? Send yourself a reset link.</p>
+            <button class="btn primary" id="resetBtn" type="button">Email me a reset link</button>
+            <p style="font-size:15px;margin-top:14px">The reset link will be sent to your login email.</p>
+          </section>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="status" id="status" role="status" aria-live="polite"></div>
+  <div class="modal-backdrop" id="signOutModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="signOutTitle">
+      <h3 id="signOutTitle">Sign out</h3>
+      <p>Are you sure you want to sign out?</p>
+      <div class="modal-actions">
+        <button class="btn" id="cancelSignOut" type="button">Cancel</button>
+        <button class="btn dark" id="confirmSignOut" type="button">Sign out</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  'use strict';
+  var SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
+  var state = { user:null, profile:null, directory:null, role:'', privileged:false, companyId:'', email:'' };
+  function $(id){ return document.getElementById(id); }
+  function trim(v){ return String(v == null ? '' : v).trim(); }
+  function showStatus(msg){ var el=$('status'); if(!el) return; el.textContent=msg; el.style.display='block'; clearTimeout(window.__profileStatusTimer); window.__profileStatusTimer=setTimeout(function(){ el.style.display='none'; },2800); }
+  function client(){
+    try{ if(window.supabaseClient && typeof window.supabaseClient.from === 'function') return window.supabaseClient; }catch(_e){}
+    try{ if(window.ZummeeSupabaseClient && typeof window.ZummeeSupabaseClient.from === 'function') return window.ZummeeSupabaseClient; }catch(_e){}
+    try{ if(window.sb && typeof window.sb.from === 'function') return window.sb; }catch(_e){}
+    try{ if(window.supabase && typeof window.supabase.createClient === 'function'){ window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth:{ storageKey:'sb-zummee-auth', storage:window.localStorage, persistSession:true, autoRefreshToken:true, detectSessionInUrl:true } }); return window.sb; } }catch(_e){}
+    return null;
+  }
+  function formatPhone(raw){ var d=trim(raw).replace(/\D/g,''); if(d.length===11 && d[0]==='1') d=d.slice(1); d=d.slice(0,10); if(!d) return ''; if(d.length<4) return '('+d; if(d.length<7) return '('+d.slice(0,3)+') '+d.slice(3); return '('+d.slice(0,3)+') '+d.slice(3,6)+'-'+d.slice(6); }
+  function roleLabel(){ var p=state.profile||{}, d=state.directory||{}; return trim(d.role)||trim(p.role)||trim(p.department)||'Employee'; }
+  function isPrivilegedRole(role, department){ var r=trim(role).toLowerCase(), dep=trim(department).toLowerCase(); return ['admin','supervisor'].indexOf(r)>=0 || ['admin','supervisor'].indexOf(dep)>=0; }
+  async function getSession(sb){
+    var res = await sb.auth.getSession();
+    var session = res && res.data ? res.data.session : null;
+    if(!session){ try{ await sb.auth.refreshSession(); }catch(_e){} res = await sb.auth.getSession(); session = res && res.data ? res.data.session : null; }
+    return session;
+  }
+  async function maybeSingle(sb, table, select, col, val){
+    try{ var r = await sb.from(table).select(select).eq(col,val).maybeSingle(); if(r && !r.error && r.data) return r.data; }catch(_e){}
+    return null;
+  }
+  async function loadCompanies(sb){
+    var sel=$('company'); if(!sel) return;
+    var current=trim(sel.value); var rows=[];
+    try{ var r=await sb.from('companies').select('id,name,active').order('name',{ascending:true}); if(r && !r.error && Array.isArray(r.data)) rows=r.data; }catch(_e){}
+    if(!rows.length){ try{ var r2=await sb.from('Companies').select('id,name,active').order('name',{ascending:true}); if(r2 && !r2.error && Array.isArray(r2.data)) rows=r2.data; }catch(_e){} }
+    var html='<option value="">Select a company…</option>';
+    rows.filter(function(row){ return row && (row.active !== false); }).forEach(function(row){ var nm=trim(row.name), id=trim(row.id); if(!nm) return; html += '<option value="'+escapeHtml(nm)+'" data-company-id="'+escapeHtml(id)+'">'+escapeHtml(nm)+'</option>'; });
+    sel.innerHTML=html;
+    var desired = trim((state.profile && state.profile.company) || current || '');
+    if(desired){
+      var exists=Array.prototype.some.call(sel.options,function(o){return trim(o.value)===desired;});
+      if(!exists){ var opt=document.createElement('option'); opt.value=desired; opt.textContent=desired; sel.insertBefore(opt, sel.firstChild.nextSibling); }
+      sel.value=desired;
+    }
+  }
+  function escapeHtml(s){ return trim(s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function setField(id,val){ var el=$(id); if(el) el.value = val || ''; }
+  function populate(){
+    var p=state.profile||{}, d=state.directory||{};
+    setField('name', trim(p.name)||trim(p.full_name)||trim(d.name)||trim(d.full_name)||trim(state.user && state.user.user_metadata && state.user.user_metadata.name));
+    setField('phone', formatPhone(trim(p.phone)||trim(d.phone)));
+    setField('email', trim(p.email)||trim(d.email)||state.email);
+    setField('company', trim(p.company)||trim(d.company)||trim(state.user && state.user.user_metadata && state.user.user_metadata.company));
+    setField('department', trim(p.department)||trim(d.department)||trim(p.role)||trim(d.role));
+    var role=roleLabel();
+    state.role=role;
+    state.privileged=isPrivilegedRole(role, $('department') && $('department').value);
+    var pill=$('rolePill'); if(pill) pill.textContent = role;
+    applyMode();
+  }
+  function applyMode(){
+    var editable = !!state.privileged;
+    ['name','phone','email','company','department'].forEach(function(id){
+      var el=$(id); if(!el) return;
+      if(editable){ el.disabled=false; if(id==='email') el.readOnly=true; else el.readOnly=false; }
+      else { if(el.tagName==='SELECT') el.disabled=true; else el.readOnly=true; }
+    });
+    var save=$('saveProfileBtn'); if(save) save.classList.toggle('hidden', !editable);
+    var note=$('modeNote'); if(note) note.textContent = editable ? 'Supervisor/Admin mode: account details can be updated here.' : 'Employee view: profile details are read-only and managed by a Supervisor or Admin.';
+  }
+  function parseLogoRef(raw){ raw=trim(raw); if(!raw) return null; if(/^https?:\/\//i.test(raw)||/^data:image\//i.test(raw)) return {url:raw}; if(raw.indexOf('|')!==-1){ var p=raw.split('|'); return {bucket:p.shift()||'company_logos', path:p.join('|')}; } return {bucket:'company_logos', path:raw}; }
+  async function logoUrl(sb, ref){ if(!ref) return ''; if(ref.url) return ref.url; if(ref.bucket && ref.path && sb.storage && sb.storage.from){ var pub=sb.storage.from(ref.bucket).getPublicUrl(ref.path); return trim(pub && pub.data && pub.data.publicUrl); } return ''; }
+  async function loadLogo(sb){
+    var img=$('companyLogo'); if(!img) return;
+    try{
+      var companyId = trim(state.companyId || (state.profile && state.profile.company_id) || (state.directory && state.directory.company_id));
+      var companyName = trim((state.profile && state.profile.company) || (state.directory && state.directory.company) || $('company').value);
+      var row=null;
+      if(companyId) row = await maybeSingle(sb,'companies','id,name,logo_path','id',companyId);
+      if(!row && companyName){ try{ var r=await sb.from('companies').select('id,name,logo_path').ilike('name',companyName).maybeSingle(); if(r && !r.error) row=r.data; }catch(_e){} }
+      if(!row && companyName){ try{ var r2=await sb.from('Companies').select('id,name,logo_path').ilike('name',companyName).maybeSingle(); if(r2 && !r2.error) row=r2.data; }catch(_e){} }
+      var url = await logoUrl(sb, parseLogoRef(row && row.logo_path));
+      if(!url){ img.classList.remove('is-visible'); img.removeAttribute('src'); return; }
+      img.onload=function(){ img.classList.add('is-visible'); };
+      img.onerror=function(){ img.classList.remove('is-visible'); img.removeAttribute('src'); };
+      img.alt = trim(row && row.name) || 'Company logo';
+      img.src = url;
+    }catch(_e){ img.classList.remove('is-visible'); img.removeAttribute('src'); }
+  }
+  async function saveProfile(){
+    if(!state.privileged){ showStatus('This profile is read-only for employees.'); return; }
+    var sb=client(); if(!sb || !state.user) return;
+    var payload={ id:state.user.id, name:trim($('name').value), phone:trim($('phone').value), email:trim($('email').value), company:trim($('company').value), department:trim($('department').value) };
+    if(!payload.name || !payload.company || !payload.department){ showStatus('Please complete all required fields.'); return; }
+    try{ var r=await sb.from('profiles').upsert([payload],{onConflict:'id'}); if(r && r.error) throw r.error; showStatus('Profile saved.'); }
+    catch(e){ showStatus('Save failed: '+(e.message||e)); }
+  }
+  async function doSignOut(){
+    var sb=client();
+    try{ if(window.ZummeeAuth && typeof window.ZummeeAuth.signOut==='function'){ var r=window.ZummeeAuth.signOut(); if(r && r.then) await r; } else if(sb && sb.auth){ await sb.auth.signOut(); } }catch(_e){}
+    try{ [localStorage,sessionStorage].forEach(function(store){ for(var i=store.length-1;i>=0;i--){ var k=store.key(i)||''; if(k==='sb-zummee-auth'||/^sb-.*-auth-token$/.test(k)||/^sb-zummee-auth/.test(k)) store.removeItem(k); } }); }catch(_e){}
+    window.location.replace('login.html');
+  }
+  function bind(){
+    var phone=$('phone'); if(phone){ phone.addEventListener('input',function(){ phone.value=formatPhone(phone.value); try{ phone.setSelectionRange(phone.value.length,phone.value.length); }catch(_e){} }); }
+    var save=$('saveProfileBtn'); if(save) save.addEventListener('click',saveProfile);
+    var reset=$('resetBtn'); if(reset) reset.addEventListener('click',async function(){ var sb=client(); var email=trim($('email').value)||state.email; if(!sb||!email){ showStatus('No login email found.'); return; } try{ var r=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+'/login.html'}); if(r && r.error) throw r.error; showStatus('Password reset email sent.'); }catch(e){ showStatus('Reset failed: '+(e.message||e)); } });
+    var modal=$('signOutModal');
+    $('signOutBtn').addEventListener('click',function(){ modal.style.display='flex'; modal.setAttribute('aria-hidden','false'); });
+    $('cancelSignOut').addEventListener('click',function(){ modal.style.display='none'; modal.setAttribute('aria-hidden','true'); });
+    $('confirmSignOut').addEventListener('click',doSignOut);
+    modal.addEventListener('click',function(e){ if(e.target===modal){ modal.style.display='none'; modal.setAttribute('aria-hidden','true'); } });
+    document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ modal.style.display='none'; modal.setAttribute('aria-hidden','true'); } });
+  }
+  async function init(){
+    bind();
+    var sb=client();
+    if(!sb){ showStatus('Supabase did not load. Refresh the page.'); return; }
+    var session=await getSession(sb);
+    if(!session || !session.user){ window.location.replace('login.html'); return; }
+    state.user=session.user; state.email=trim(session.user.email);
+    try{ localStorage.setItem('zummee_user_id_v1',state.user.id); }catch(_e){}
+    state.profile = await maybeSingle(sb,'profiles','*','id',state.user.id) || {};
+    state.directory = await maybeSingle(sb,'userdirectory','*','auth_user_id',state.user.id) || {};
+    state.companyId = trim(state.profile.company_id || state.directory.company_id || '');
+    await loadCompanies(sb);
+    populate();
+    await loadLogo(sb);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true}); else init();
+})();
+</script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

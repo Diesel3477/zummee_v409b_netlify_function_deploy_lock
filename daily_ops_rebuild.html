@@ -1,0 +1,3040 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Operations Portal</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+    :root{
+      --bg:#eef4f8;
+      --bg-top:#f7fbff;
+      --ink:#17324d;
+      --muted:#5b7187;
+      --muted-strong:#486178;
+      --line:rgba(23,50,77,.10);
+      --line-strong:rgba(23,50,77,.16);
+      --card:#ffffff;
+      --card-soft:rgba(255,255,255,.82);
+      --gold1:#fff0b8;
+      --gold2:#f5d56a;
+      --gold-shell-top:rgba(255,247,221,.98);
+      --gold-shell-bottom:rgba(248,233,166,.92);
+      --blue1:#dcecff;
+      --blue2:#7fa8d7;
+      --blue-shell-top:rgba(255,255,255,.98);
+      --blue-shell-bottom:rgba(246,250,253,.95);
+      --green1:#e3f8ea;
+      --accent:#2f5b8f;
+      --shadow:0 16px 40px rgba(18,42,67,.10);
+      --shadow-soft:0 10px 24px rgba(18,42,67,.05);
+      --radius:24px;
+      --radius-lg:28px;
+      --radius-md:20px;
+      --space-1:8px;
+      --space-2:12px;
+      --space-3:16px;
+      --space-4:20px;
+      --space-5:24px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:linear-gradient(180deg,var(--bg-top) 0%, var(--bg) 100%);color:var(--ink);font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif}
+    body{min-height:100vh}
+    .shell{max-width:1240px;margin:0 auto;padding:16px 18px 44px}
+    .hero{position:relative;z-index:20;margin-bottom:12px;padding:12px 14px;border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,.94),rgba(248,251,254,.90));backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.88);box-shadow:0 14px 28px rgba(18,42,67,.10)}
+    .heroTop{display:flex;align-items:end;justify-content:space-between;gap:14px;flex-wrap:wrap}
+    .heroIdentity{display:none}
+    .eyebrow{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border-radius:999px;background:rgba(47,91,143,.10);color:#2f5b8f;font-size:11px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;width:max-content}
+    h1{display:none;margin:0;font-size:22px;line-height:1.02;letter-spacing:-.03em}
+    .sub{display:none;margin:0;color:var(--muted);font-size:13px;max-width:760px;line-height:1.32}
+    .heroActions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end;flex:0 0 auto}
+    .btn{appearance:none;border:none;border-radius:14px;padding:11px 15px;font-weight:800;font-size:14px;cursor:pointer;transition:transform .16s ease, box-shadow .16s ease, opacity .16s ease;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap}
+    .btn:hover{transform:translateY(-1px)}
+    .btn.primary{background:#2f5b8f;color:#fff;box-shadow:0 10px 20px rgba(47,91,143,.18)}
+    .btn.secondary{background:#fff;color:var(--ink);border:1px solid var(--line)}
+    .btn.ghost{background:rgba(47,91,143,.08);color:#2f5b8f}
+    .toolbar{display:none}
+    .fieldCard{background:rgba(255,255,255,.82);border:1px solid rgba(255,255,255,.88);box-shadow:0 8px 18px rgba(18,42,67,.05);border-radius:16px;padding:10px 12px}
+    .metricsStrip{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .metric{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.82);border:1px solid rgba(255,255,255,.88);box-shadow:0 8px 18px rgba(18,42,67,.05);border-radius:16px;padding:10px 12px;min-width:140px}
+    .metric.compact{min-width:auto;padding:8px 12px;box-shadow:none;border-color:var(--line);background:#fff}
+    .label{display:block;font-size:11px;font-weight:900;color:#60758a;text-transform:uppercase;letter-spacing:.09em;margin-bottom:6px}
+    select{width:100%;height:44px;border-radius:14px;border:1px solid var(--line);padding:0 14px;background:#fff;color:var(--ink);font-size:15px;font-weight:700}
+    .metricValue{font-size:24px;font-weight:900;letter-spacing:-.03em;line-height:1}
+    .metricText{display:flex;flex-direction:column;gap:2px}
+    .metricName{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#5a7189}
+    .metricNote{margin:0;font-size:12px;color:var(--muted);line-height:1.2}
+    .metricLabelInline{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#5a7189;white-space:nowrap}
+    .metricsRow{margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.82);border:1px solid rgba(255,255,255,.88);box-shadow:0 8px 18px rgba(18,42,67,.05)}
+    .metricsTitle{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.09em;color:#5a7189;margin-right:4px}
+    .metricDivider{width:1px;height:18px;background:rgba(23,50,77,.10)}
+    .metricChip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#fff;border:1px solid var(--line);white-space:nowrap}
+    .metricChip .name{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#5a7189}
+    .metricChip .value{font-size:18px;font-weight:900;letter-spacing:-.02em;color:var(--ink)}
+
+    .grid{display:grid;grid-template-columns:1.1fr 1fr;gap:18px}
+    .designBar{display:none}
+    .designChip{padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.86);box-shadow:0 8px 18px rgba(18,42,67,.05)}
+    .designChip .label{margin-bottom:4px}
+    .designChipValue{font-size:13px;font-weight:800;color:var(--muted-strong);line-height:1.4}
+    .sectionShell{background:linear-gradient(180deg,var(--blue-shell-top),var(--blue-shell-bottom));border:1px solid rgba(255,255,255,.84);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;min-height:220px}
+    .sectionShell.featured{background:linear-gradient(180deg,var(--gold-shell-top),var(--gold-shell-bottom));border-color:rgba(244,220,120,.68)}
+    .sectionHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .sectionIdentity{max-width:680px}
+    .sectionKicker{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(23,50,77,.06);color:#4d6580;font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+    .sectionShell.featured .sectionKicker{background:rgba(255,255,255,.55);color:#7d6114}
+    .sectionTitle{font-size:26px;font-weight:900;letter-spacing:-.03em;line-height:1.05;margin-top:12px}
+    .sectionSub{margin-top:8px;font-size:14px;color:var(--muted);line-height:1.45;max-width:640px}
+    .sectionBody{margin-top:16px}
+    .statusPill{display:inline-flex;align-items:center;justify-content:center;min-width:40px;height:34px;padding:0 12px;border-radius:999px;background:#fff;border:1px solid var(--line);font-weight:900}
+    .empty{margin-top:16px;padding:18px;border-radius:18px;background:#fff;border:1px dashed rgba(23,50,77,.14);color:var(--muted);font-weight:700}
+    .tableWrap{margin-top:16px;overflow:auto;border-radius:18px;border:1px solid rgba(23,50,77,.08);background:#fff}
+    table{width:100%;border-collapse:collapse;min-width:760px}
+    th,td{padding:14px 12px;border-bottom:1px solid rgba(23,50,77,.08);text-align:left;vertical-align:top}
+    th{font-size:12px;color:#60758a;text-transform:uppercase;letter-spacing:.08em;background:rgba(247,250,252,.98)}
+    td{font-size:14px;color:var(--ink)}
+    .contactActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+    .mini{display:inline-flex;align-items:center;justify-content:center;padding:7px 10px;border-radius:999px;background:rgba(47,91,143,.08);color:#2f5b8f;text-decoration:none;font-weight:800;font-size:12px}
+    .recordList{display:grid;gap:14px;margin-top:18px}
+    .record{padding:18px;border-radius:20px;background:#fff;border:1px solid rgba(23,50,77,.09);box-shadow:0 10px 24px rgba(18,42,67,.05)}
+    .recordTitle{font-size:22px;font-weight:900;letter-spacing:-.02em}
+    .recordMeta{display:flex;flex-wrap:wrap;gap:10px 12px;margin-top:12px}
+    .metaPill{display:inline-flex;align-items:center;padding:8px 12px;border-radius:999px;background:#f7fafc;border:1px solid rgba(23,50,77,.08);font-size:13px;font-weight:800;color:#35516e}
+    .loader{margin-top:16px;padding:18px;border-radius:18px;background:rgba(255,255,255,.88);border:1px solid rgba(23,50,77,.08);color:#486178;font-weight:800}
+    .foot{margin-top:18px;font-size:13px;color:#60758a}
+    @media (max-width:980px){
+      .heroTop{align-items:stretch}
+      .heroActions{justify-content:flex-start;width:100%}
+      .heroTop .compactControl{max-width:none;min-width:0;flex:1 1 100%}
+      .grid{grid-template-columns:1fr}
+    }
+    @media (max-width:640px){
+      .shell{padding:12px 10px 32px}
+      .hero{padding:14px}
+      .metricsStrip{gap:8px}
+      .metricsRow{padding:10px}
+      .metricChip{padding:6px 9px}
+      .cardTitle{font-size:23px}
+    }
+  
+    .compactControl{background:rgba(255,255,255,.82);border:1px solid rgba(255,255,255,.88);box-shadow:0 8px 18px rgba(18,42,67,.05);border-radius:16px;padding:10px 12px;flex:1 1 420px;max-width:740px;min-width:280px}
+    .heroTop .compactControl{margin-inline:auto}
+    .compactHeaderSpacer{display:none}
+    .betaNote{font-size:12px;font-weight:800;color:var(--muted);line-height:1.2}
+
+    .supervisor-record--target{border-color:rgba(49,103,177,.38) !important;box-shadow:0 0 0 4px rgba(112,168,255,.18), 0 18px 40px rgba(48,97,165,.12) !important;transform:translateY(-1px)}
+
+.zummee-popup-backdrop{position:fixed;inset:0;background:rgba(10,24,42,.38);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:20px;z-index:99999;}
+.zummee-popup-backdrop.is-open{display:flex;}
+.zummee-popup-card{width:min(560px,calc(100vw - 32px));background:linear-gradient(180deg,rgba(244,249,255,.96),rgba(232,242,255,.94));border:1px solid rgba(255,255,255,.72);box-shadow:0 20px 48px rgba(27,52,83,.26), inset 0 1px 0 rgba(255,255,255,.85);border-radius:28px;padding:24px 24px 20px;color:#17324d;}
+.zummee-popup-eyebrow{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.82);font-size:12px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:#9c7a10;margin-bottom:14px;}
+.zummee-popup-title{font-size:18px;font-weight:900;line-height:1.2;margin:0 0 10px;color:#18314c;}
+.zummee-popup-message{font-size:18px;line-height:1.55;color:#35516e;margin:0;white-space:pre-wrap;}
+.zummee-popup-actions{display:flex;justify-content:flex-end;gap:12px;margin-top:24px;flex-wrap:wrap;}
+.zummee-popup-btn{appearance:none;border:none;border-radius:999px;padding:14px 24px;font-size:17px;font-weight:900;cursor:pointer;transition:transform .15s ease, box-shadow .15s ease, opacity .15s ease;}
+.zummee-popup-btn:hover{transform:translateY(-1px);}
+.zummee-popup-btn:active{transform:translateY(0);}
+.zummee-popup-btn--secondary{background:rgba(255,255,255,.75);color:#35516e;border:1px solid rgba(23,50,77,.10);box-shadow:0 10px 20px rgba(35,65,98,.10);}
+.zummee-popup-btn--primary{background:linear-gradient(180deg,#2d65a8,#214f88);color:#fff;box-shadow:0 14px 26px rgba(33,79,136,.24);}
+.zummee-popup-btn--danger{background:linear-gradient(180deg,#cc4e52,#b83c41);color:#fff;box-shadow:0 14px 26px rgba(184,60,65,.24);}
+@media (max-width: 700px){.zummee-popup-card{padding:22px 18px 18px;border-radius:24px;}.zummee-popup-message{font-size:17px;}.zummee-popup-actions{justify-content:stretch;}.zummee-popup-btn{flex:1;min-width:0;}}
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+
+.mh2-actions .mh2-btn--ghost{display:none !important;}
+
+/* v38 Operations Portal name/layout polish */
+.dailyOpsTitle{max-width:720px !important;}
+.dailyOpsMainCard .dailyOpsTitleRow{align-items:center !important;}
+ (max-width:760px){.dailyOpsTitle{font-size:32px !important;}}
+
+
+    /* v51 role lock: supervisor communication authoring is hidden until supervisor/admin role is confirmed */
+    .supervisor-only-authoring{display:none !important;}
+    body.zummee-can-author-supervisor-comms .supervisor-only-authoring{display:block !important;}
+    body.zummee-can-author-supervisor-comms .supervisor-only-authoring.supervisor-comm-form{display:block !important;}
+    body:not(.zummee-can-author-supervisor-comms) .supervisor-author-action{display:none !important;}
+
+  </style>
+<style>
+/* FORCE white text in Status & Details section */
+#boardSubmittedItemsSection,
+#boardSubmittedItemsSection *:not(button),
+#boardMemberHubStatus,
+#boardMemberHubStatus *:not(button),
+#annualMeetingApprovals,
+#annualMeetingApprovals *:not(button) {
+  color: #ffffff !important;
+}
+
+/* Secondary text (slightly dimmed white) */
+#boardSubmittedItemsSection .muted,
+#boardMemberHubStatus .muted,
+#annualMeetingApprovals .muted {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style>
+/* HARD OVERRIDE — force white text in dark section */
+.hub-zone:last-of-type,
+.hub-zone:last-of-type *:not(button):not(.badge):not(.pill) {
+  color: #ffffff !important;
+}
+
+/* Slightly softer for secondary text */
+.hub-zone:last-of-type .muted,
+.hub-zone:last-of-type p,
+.hub-zone:last-of-type span {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+
+
+/* v37 actual Daily Ops new-layout rebuild */
+.shell{max-width:1240px;margin:0 auto;padding:16px 18px 44px;}
+.hero.dailyOpsMainCard{margin:0 0 28px 0 !important;padding:32px 34px 30px !important;border-radius:28px !important;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(250,252,255,.96)) !important;border:2px solid rgba(141,190,255,.72) !important;box-shadow:0 18px 42px rgba(35,91,143,.10) !important;}
+.dailyOpsTitleRow{display:flex;align-items:flex-start;justify-content:space-between;gap:22px;margin-bottom:26px;}
+.dailyOpsTitleBlock{min-width:0;}
+.dailyOpsTitle{display:block !important;margin:0 !important;color:#17324d !important;font-size:28px !important;line-height:1.08 !important;font-weight:800 !important;letter-spacing:-.02em !important;text-align:left !important;}
+.dailyOpsCompanyLogo{height:64px;max-width:190px;object-fit:contain;display:block;}
+.dailyOpsCompanyLogo[hidden]{display:none !important;}
+.dailyOpsControlsRow{display:grid;grid-template-columns:minmax(0,1fr) 190px;gap:18px;align-items:center;margin-bottom:22px;}
+.dailyOpsCommunityControl{padding:0 !important;background:transparent !important;border:0 !important;box-shadow:none !important;max-width:none !important;min-width:0 !important;margin:0 !important;}
+.dailyOpsCommunityControl .label{display:none !important;}
+.dailyOpsCommunityControl select,#communitySelect{height:66px !important;border-radius:22px !important;border:2px solid rgba(141,190,255,.78) !important;background:#f3f7fb !important;color:#17324d !important;font-size:22px !important;font-weight:900 !important;padding:0 24px !important;box-shadow:none !important;}
+.dailyOpsHubBtn{height:66px !important;border-radius:22px !important;border:2px solid rgba(141,190,255,.78) !important;background:#f8fbff !important;color:#17324d !important;font-size:22px !important;font-weight:900 !important;padding:0 24px !important;box-shadow:none !important;}
+.metricsRow{justify-content:center !important;align-items:center !important;background:transparent !important;border:0 !important;box-shadow:none !important;padding:0 !important;margin:18px auto 0 !important;gap:12px !important;width:100% !important;}
+.metricChip{border:1.5px solid rgba(141,190,255,.66) !important;background:rgba(255,255,255,.92) !important;box-shadow:0 8px 18px rgba(35,91,143,.06) !important;}
+.sectionShell{background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(250,252,255,.96)) !important;border:2px solid rgba(141,190,255,.72) !important;border-radius:28px !important;box-shadow:0 18px 42px rgba(35,91,143,.10) !important;padding:28px !important;margin-top:26px !important;}
+.sectionShell.featured{background:linear-gradient(135deg,rgba(255,244,193,.98),rgba(255,255,255,.94) 58%,rgba(255,246,211,.92)) !important;border-color:rgba(230,190,78,.74) !important;}
+.sectionKicker,.sectionSub{display:none !important;}
+.sectionHeader{align-items:center !important;}
+.sectionTitle{font-size:30px !important;color:#17324d !important;margin-top:0 !important;}
+.statusPill{height:42px !important;min-width:54px !important;border-radius:999px !important;background:#f3f7fb !important;border:1.5px solid rgba(141,190,255,.64) !important;color:#17324d !important;font-size:18px !important;}
+.tableWrap,.record{border:1.5px solid rgba(141,190,255,.46) !important;box-shadow:none !important;}
+.foot{display:none !important;}
+@media (max-width:760px){.shell{padding:14px 12px 34px;}.hero.dailyOpsMainCard{padding:26px 24px 24px !important;}.dailyOpsTitle{font-size:28px !important;}.dailyOpsCompanyLogo{height:52px;max-width:150px;}.dailyOpsControlsRow{grid-template-columns:1fr 150px;gap:12px;}.dailyOpsCommunityControl select,#communitySelect,.dailyOpsHubBtn{height:58px !important;font-size:18px !important;border-radius:20px !important;}.sectionShell{padding:22px !important;}}
+
+
+
+/* v48 ACTUAL: match Operations Portal controls to other rebuilt pages */
+.hero.dailyOpsMainCard .dailyOpsControlsRow{
+  grid-template-columns:minmax(0,1fr) 160px !important;
+  gap:16px !important;
+  align-items:center !important;
+  margin-bottom:18px !important;
+}
+.hero.dailyOpsMainCard .dailyOpsCommunityControl select,
+.hero.dailyOpsMainCard #communitySelect{
+  height:50px !important;
+  min-height:50px !important;
+  border-radius:16px !important;
+  font-size:18px !important;
+  font-weight:800 !important;
+  padding:0 18px !important;
+  line-height:50px !important;
+}
+.hero.dailyOpsMainCard .dailyOpsHubBtn{
+  height:50px !important;
+  min-height:50px !important;
+  max-height:50px !important;
+  border-radius:16px !important;
+  font-size:18px !important;
+  font-weight:800 !important;
+  padding:0 20px !important;
+  line-height:50px !important;
+  min-width:130px !important;
+}
+@media (max-width:900px){
+  .hero.dailyOpsMainCard .dailyOpsControlsRow{
+    grid-template-columns:minmax(0,1fr) 132px !important;
+    gap:12px !important;
+  }
+  .hero.dailyOpsMainCard .dailyOpsCommunityControl select,
+  .hero.dailyOpsMainCard #communitySelect,
+  .hero.dailyOpsMainCard .dailyOpsHubBtn{
+    height:44px !important;
+    min-height:44px !important;
+    max-height:44px !important;
+    border-radius:14px !important;
+    font-size:16px !important;
+    line-height:44px !important;
+  }
+  .hero.dailyOpsMainCard .dailyOpsHubBtn{
+    min-width:112px !important;
+    padding:0 16px !important;
+  }
+}
+</style>
+
+<style id="operations-metrics-center-final">
+  .metricsRow{
+    display:flex !important;
+    flex-wrap:wrap !important;
+    justify-content:center !important;
+    align-items:center !important;
+    gap:12px !important;
+    margin:18px auto 0 !important;
+    width:100% !important;
+  }
+</style>
+
+<style id="operations-board-members-align-v55">
+  /* v55: keep Board Members aligned with the same right edge as the other Operations Portal sections */
+  #boardCard{
+    width:100% !important;
+    max-width:100% !important;
+    margin-left:auto !important;
+    margin-right:auto !important;
+    box-sizing:border-box !important;
+    overflow:hidden !important;
+  }
+  #boardCard .sectionBody,
+  #boardCard #boardMount{
+    width:100% !important;
+    max-width:100% !important;
+    box-sizing:border-box !important;
+    overflow:hidden !important;
+  }
+  #boardCard .tableWrap{
+    width:100% !important;
+    max-width:100% !important;
+    box-sizing:border-box !important;
+    overflow-x:auto !important;
+  }
+  #boardCard table{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    table-layout:fixed !important;
+  }
+  #boardCard th,
+  #boardCard td{
+    overflow-wrap:anywhere !important;
+    word-break:normal !important;
+  }
+  @media (max-width:760px){
+    #boardCard table{min-width:0 !important;}
+    #boardCard th, #boardCard td{padding-left:10px !important;padding-right:10px !important;}
+  }
+</style>
+
+<style id="operations-board-members-columns-v56">
+  /* v56: tighter Board Members columns so email stays on one line on iPad */
+  #boardCard table{
+    table-layout:fixed !important;
+    width:100% !important;
+  }
+  #boardCard th,
+  #boardCard td{
+    box-sizing:border-box !important;
+    vertical-align:top !important;
+  }
+  #boardCard th:nth-child(1),
+  #boardCard td:nth-child(1){ width:14% !important; }
+  #boardCard th:nth-child(2),
+  #boardCard td:nth-child(2){ width:12% !important; }
+  #boardCard th:nth-child(3),
+  #boardCard td:nth-child(3){ width:20% !important; }
+  #boardCard th:nth-child(4),
+  #boardCard td:nth-child(4){ width:18% !important; }
+  #boardCard th:nth-child(5),
+  #boardCard td:nth-child(5){ width:36% !important; }
+  #boardCard td:nth-child(5){
+    white-space:nowrap !important;
+    overflow:visible !important;
+    word-break:normal !important;
+    overflow-wrap:normal !important;
+  }
+  #boardCard td:nth-child(5) .contactActions{
+    margin-top:8px !important;
+  }
+  #boardCard td:nth-child(4) .contactActions{
+    margin-top:8px !important;
+  }
+  @media (max-width: 760px){
+    #boardCard th:nth-child(1), #boardCard td:nth-child(1){ width:16% !important; }
+    #boardCard th:nth-child(2), #boardCard td:nth-child(2){ width:12% !important; }
+    #boardCard th:nth-child(3), #boardCard td:nth-child(3){ width:18% !important; }
+    #boardCard th:nth-child(4), #boardCard td:nth-child(4){ width:16% !important; }
+    #boardCard th:nth-child(5), #boardCard td:nth-child(5){ width:38% !important; font-size:14px !important; }
+  }
+</style>
+
+
+<style id="operations-board-members-v57-actions">
+  #boardCard table{ table-layout:fixed !important; width:100% !important; }
+  #boardCard th:nth-child(1), #boardCard td:nth-child(1){ width:13% !important; }
+  #boardCard th:nth-child(2), #boardCard td:nth-child(2){ width:16% !important; white-space:normal !important; overflow-wrap:normal !important; word-break:normal !important; }
+  #boardCard th:nth-child(3), #boardCard td:nth-child(3){ width:22% !important; }
+  #boardCard th:nth-child(4), #boardCard td:nth-child(4){ width:18% !important; }
+  #boardCard th:nth-child(5), #boardCard td:nth-child(5){ width:31% !important; }
+  #boardCard th{ white-space:nowrap !important; }
+  #boardCard td:nth-child(5){ white-space:nowrap !important; overflow:visible !important; word-break:normal !important; overflow-wrap:normal !important; }
+  .boardSectionActions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
+  .boardAddBtn{height:42px;border-radius:999px;padding:0 16px;font-weight:900;}
+  .boardMemberNameLine{display:flex;flex-direction:column;gap:8px;align-items:flex-start;}
+  .boardEditBtn{border:none;border-radius:999px;padding:7px 12px;background:rgba(47,91,143,.09);color:#2f5b8f;font-weight:900;cursor:pointer;font-size:12px;}
+  .boardModalBackdrop{position:fixed;inset:0;background:rgba(15,23,42,.28);backdrop-filter:blur(4px);z-index:9998;display:none;align-items:center;justify-content:center;padding:22px;}
+  .boardModalBackdrop.isOpen{display:flex;}
+  .boardModal{width:min(620px,100%);background:#fff;border:1px solid rgba(141,190,255,.64);border-radius:24px;box-shadow:0 24px 60px rgba(23,50,77,.24);padding:22px;}
+  .boardModalHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
+  .boardModalHeader h3{margin:0;color:#17324d;font-size:24px;line-height:1.1;}
+  .boardModalGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .boardModalGrid .full{grid-column:1 / -1;}
+  .boardModal input{width:100%;height:46px;border-radius:14px;border:1px solid rgba(23,50,77,.14);padding:0 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;box-sizing:border-box;}
+  .boardModalActions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px;flex-wrap:wrap;}
+  @media (max-width:760px){
+    #boardCard th:nth-child(1), #boardCard td:nth-child(1){ width:14% !important; }
+    #boardCard th:nth-child(2), #boardCard td:nth-child(2){ width:15% !important; font-size:13px !important; }
+    #boardCard th:nth-child(3), #boardCard td:nth-child(3){ width:21% !important; }
+    #boardCard th:nth-child(4), #boardCard td:nth-child(4){ width:17% !important; }
+    #boardCard th:nth-child(5), #boardCard td:nth-child(5){ width:33% !important; font-size:14px !important; }
+    .boardModalGrid{grid-template-columns:1fr;}
+    .boardModalGrid .full{grid-column:auto;}
+  }
+</style>
+
+<style id="operations-board-member-subtle-green-v83-corrected">
+  /* v83 corrected: only individual board member records get a subtle green tint. The section/table/header stay neutral. */
+  #boardCard #boardMount.tableWrap{
+    background:rgba(255,255,255,.72) !important;
+    border-color:rgba(141,190,255,.70) !important;
+    box-shadow:0 14px 34px rgba(23,50,77,.08) !important;
+  }
+  #boardCard table{
+    border-collapse:separate !important;
+    border-spacing:0 8px !important;
+    background:transparent !important;
+  }
+  #boardCard thead th{
+    color:#17324d !important;
+    background:rgba(255,255,255,.62) !important;
+    border-bottom:1px solid rgba(141,190,255,.45) !important;
+  }
+  #boardCard tbody tr.boardMemberRecordGreen{
+    background:transparent !important;
+    box-shadow:0 8px 18px rgba(23,50,77,.06) !important;
+  }
+  #boardCard tbody tr.boardMemberRecordGreen td{
+    background:linear-gradient(135deg, rgba(232,248,239,.94), rgba(217,244,229,.88)) !important;
+    color:#17324d !important;
+    border-top:1px solid rgba(76,154,108,.28) !important;
+    border-bottom:1px solid rgba(76,154,108,.28) !important;
+  }
+  #boardCard tbody tr.boardMemberRecordGreen td:first-child{
+    border-left:1px solid rgba(76,154,108,.28) !important;
+    border-top-left-radius:16px !important;
+    border-bottom-left-radius:16px !important;
+  }
+  #boardCard tbody tr.boardMemberRecordGreen td:last-child{
+    border-right:1px solid rgba(76,154,108,.28) !important;
+    border-top-right-radius:16px !important;
+    border-bottom-right-radius:16px !important;
+  }
+  #boardCard tbody tr.boardMemberRecordGreen td,
+  #boardCard tbody tr.boardMemberRecordGreen strong{
+    color:#17324d !important;
+  }
+  #boardCard tbody tr.boardMemberRecordGreen .boardEditBtn,
+  #boardCard tbody tr.boardMemberRecordGreen .mini{
+    background:rgba(255,255,255,.82) !important;
+    color:#245c3e !important;
+    border:1px solid rgba(76,154,108,.22) !important;
+    box-shadow:0 5px 12px rgba(23,50,77,.08) !important;
+  }
+</style>
+
+
+<style id="operations-board-modal-field-fix-v58-actual">
+.boardModal,.boardModal *{box-sizing:border-box !important;}
+.boardModalGrid>div{min-width:0 !important;}
+.boardModal input,.boardModal select,.boardModal textarea{width:100% !important;max-width:100% !important;min-width:0 !important;}
+.boardModal input[type="date"]{appearance:auto !important;-webkit-appearance:auto !important;}
+@media (max-width:900px){.boardModalBackdrop{padding:18px !important;align-items:center !important;}.boardModal{width:min(720px, calc(100vw - 36px)) !important;max-width:calc(100vw - 36px) !important;max-height:calc(100dvh - 48px) !important;overflow:auto !important;padding:22px !important;}.boardModalGrid{grid-template-columns:1fr !important;gap:14px !important;}.boardModalGrid .full{grid-column:1 / -1 !important;}.boardModal input{height:46px !important;}}
+</style>
+<style id="operations-board-modal-term-row-v59-final">
+  .boardModalGrid{
+    grid-template-columns:minmax(0, 1fr) minmax(0, 1fr) !important;
+    gap:14px 16px !important;
+  }
+  .boardModalGrid > div{
+    min-width:0 !important;
+  }
+  .boardModalRow.full{
+    grid-column:1 / -1 !important;
+    display:grid !important;
+    grid-template-columns:minmax(0, 1fr) minmax(0, 1fr) !important;
+    gap:16px !important;
+    width:100% !important;
+    min-width:0 !important;
+    align-items:start !important;
+  }
+  .boardModalRow .field{
+    min-width:0 !important;
+    width:100% !important;
+  }
+  .boardModalRow input[type="date"]{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+  }
+  @media (max-width:760px){
+    .boardModalGrid{grid-template-columns:1fr !important;}
+    .boardModalRow.full{grid-template-columns:1fr !important;}
+  }
+</style>
+
+<style id="operations-board-modal-term-stack-v60-final">
+  /* v60: definitive iPad-safe fix for Board Member modal term date fields */
+  #boardMemberModal .boardModalRow.full{
+    grid-column:1 / -1 !important;
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    gap:16px !important;
+    width:100% !important;
+    max-width:100% !important;
+    overflow:hidden !important;
+    box-sizing:border-box !important;
+  }
+  #boardMemberModal .boardModalRow.full .field{
+    min-width:0 !important;
+    max-width:100% !important;
+    width:100% !important;
+    overflow:hidden !important;
+    box-sizing:border-box !important;
+  }
+  #boardMemberTermBeginInput,
+  #boardMemberTermEndInput{
+    display:block !important;
+    width:100% !important;
+    inline-size:100% !important;
+    max-width:100% !important;
+    max-inline-size:100% !important;
+    min-width:0 !important;
+    min-inline-size:0 !important;
+    box-sizing:border-box !important;
+  }
+  @media (max-width:900px){
+    #boardMemberModal .boardModalRow.full{
+      grid-template-columns:1fr !important;
+      gap:12px !important;
+    }
+  }
+</style>
+
+<style id="operations-board-modal-term-definitive-v61">
+  #boardMemberModal .boardModal{width:min(680px, calc(100vw - 64px)) !important;max-width:calc(100vw - 64px) !important;overflow:hidden !important;}
+  #boardMemberModal .boardModalGrid{display:grid !important;grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;column-gap:18px !important;row-gap:14px !important;width:100% !important;max-width:100% !important;overflow:hidden !important;}
+  #boardMemberModal .boardModalGrid > div{min-width:0 !important;max-width:100% !important;box-sizing:border-box !important;}
+  #boardMemberModal .boardModalGrid .full{grid-column:1 / -1 !important;}
+  #boardMemberModal .boardTermRow{grid-column:1 / -1 !important;display:grid !important;grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;column-gap:18px !important;row-gap:12px !important;width:100% !important;max-width:100% !important;min-width:0 !important;overflow:hidden !important;box-sizing:border-box !important;}
+  #boardMemberModal .boardTermField{min-width:0 !important;max-width:100% !important;width:100% !important;overflow:hidden !important;box-sizing:border-box !important;}
+  #boardMemberModal input#boardMemberTermBeginInput,#boardMemberModal input#boardMemberTermEndInput{display:block !important;height:46px !important;width:100% !important;max-width:100% !important;min-width:0 !important;box-sizing:border-box !important;border:1px solid rgba(23,50,77,.14) !important;border-radius:14px !important;background:#fff !important;color:#17324d !important;padding:0 14px !important;font-size:15px !important;font-weight:700 !important;line-height:46px !important;-webkit-appearance:none !important;appearance:none !important;}
+  #boardMemberModal input#boardMemberTermBeginInput::-webkit-date-and-time-value,#boardMemberModal input#boardMemberTermEndInput::-webkit-date-and-time-value{text-align:left !important;min-height:46px !important;}
+  #boardMemberModal input#boardMemberTermBeginInput::-webkit-calendar-picker-indicator,#boardMemberModal input#boardMemberTermEndInput::-webkit-calendar-picker-indicator{margin-left:auto !important;}
+  /* v62: board member position is a dropdown, styled to match modal fields */
+  #boardMemberModal select#boardMemberPositionInput{
+    width:100% !important;
+    height:46px !important;
+    border-radius:14px !important;
+    border:1px solid rgba(23,50,77,.14) !important;
+    background:#fff !important;
+    color:#17324d !important;
+    padding:0 14px !important;
+    font-size:15px !important;
+    font-weight:700 !important;
+    box-sizing:border-box !important;
+    -webkit-appearance:auto !important;
+    appearance:auto !important;
+  }
+
+  @media (max-width:640px){#boardMemberModal .boardModal{width:calc(100vw - 36px) !important;max-width:calc(100vw - 36px) !important;}#boardMemberModal .boardModalGrid,#boardMemberModal .boardTermRow{grid-template-columns:1fr !important;}}
+</style>
+<style id="important-dates-due-date-fix-v78b">
+  #importantDatesCard .importantDatesFormGrid{display:grid !important;grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;gap:14px !important;align-items:end !important;}
+  #importantDatesCard .importantDatesFormGrid > div{min-width:0 !important;box-sizing:border-box !important;}
+  #importantDatesCard input,#importantDatesCard select{max-width:100% !important;min-width:0 !important;box-sizing:border-box !important;}
+  #importantDateInput{-webkit-appearance:none !important;appearance:none !important;text-align:center !important;line-height:46px !important;padding-top:0 !important;padding-bottom:0 !important;}
+  @media (max-width: 720px){#importantDatesCard .importantDatesFormGrid{grid-template-columns:1fr !important;}#importantDatesCard .importantDatesFormGrid [style*="grid-column"]{grid-column:auto !important;}}
+</style>
+
+<style id="supervisor-comms-moved-off-daily-ops">
+  #supervisorCommForm,
+  .supervisor-only-authoring.supervisor-comm-form,
+  #testSupervisorDbSaveBtn,
+  #supervisorCommsDebugStatus { display:none !important; }
+</style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero dailyOpsMainCard">
+      <div class="dailyOpsTitleRow">
+        <div class="dailyOpsTitleBlock">
+          <h1 class="dailyOpsTitle">Operations Portal</h1>
+        </div>
+        <img id="dailyOpsCompanyLogo" class="dailyOpsCompanyLogo" alt="Management company logo" hidden>
+      </div>
+      <div class="dailyOpsControlsRow">
+        <div class="compactControl dailyOpsCommunityControl">
+          <select id="communitySelect" aria-label="Active community"></select>
+        </div>
+        <a class="btn secondary dailyOpsHubBtn" href="manager_hub.html">Hub</a>
+      </div>
+      <div class="metricsRow">
+                <div class="metricChip"><span class="name">Board</span><span class="value" id="boardMetric">—</span></div>
+        <div class="metricChip"><span class="name">Supervisor</span><span class="value" id="supervisorCommsMetric">—</span></div>
+        <div class="metricChip"><span class="name">Records</span><span class="value" id="recordsMetric">—</span></div>
+        <div class="metricChip"><span class="name">Reminders</span><span class="value" id="remindersMetric">—</span></div>
+        <div class="metricChip"><span class="name">Notes</span><span class="value" id="quickNotesMetric">—</span></div>
+        <div class="metricChip"><span class="name">Vendors</span><span class="value" id="vendorsMetric">—</span></div>
+        <div class="metricChip"><span class="name">Dates</span><span class="value" id="importantDatesMetric">—</span></div>
+        <div class="metricChip"><span class="name">Access</span><span class="value" id="accessCodesMetric">—</span></div>
+        <div class="metricChip"><span class="name">Modules</span><span class="value" id="moduleCount">8</span></div>
+      </div>
+    </section>
+
+    <section class="designBar" style="display:none;">
+      <div class="designChip">
+        <div class="label">Design system</div>
+        <div class="designChipValue">Reusable section shells, shared spacing, and standard iPad-friendly controls now drive this beta page.</div>
+      </div>
+      <div class="designChip">
+        <div class="label">Change safety</div>
+        <div class="designChipValue">Each module owns its own load, render, and events so updates stay isolated instead of risking the whole page.</div>
+      </div>
+      <div class="designChip">
+        <div class="label">Presentation goal</div>
+        <div class="designChipValue">Everything migrated into v2 should be polished enough to present and simple enough to change later.</div>
+      </div>
+    </section>
+
+
+    <section class="sectionShell featured" id="supervisorCommsCard" style="margin-top:18px;">
+      <div class="sectionHeader">
+        <div class="sectionIdentity">
+          <div class="sectionKicker">Priority module · supervisor accountability stream</div>
+          <div class="sectionTitle">Supervisor Communications</div>
+          <div class="sectionSub">Track supervisor directives, recurring requirements, compliance items, and reminders by community. This module is designed to become the primary source for future Manager Hub action alerts.</div>
+        </div>
+        <div class="statusPill" id="supervisorCommsCountPill">0</div>
+      </div>
+      <div class="sectionBody">
+        <div class="tableWrap supervisor-only-authoring supervisor-comm-form" id="supervisorCommForm" style="padding:16px;border-style:solid;">
+          <div style="display:grid;grid-template-columns:minmax(180px,1.1fr) minmax(130px,.7fr) minmax(130px,.7fr) minmax(130px,.7fr) minmax(200px,1fr) auto;gap:12px;align-items:end;">
+            <div>
+              <label class="label" for="supervisorCommTitleInput">Title</label>
+              <input id="supervisorCommTitleInput" type="text" placeholder="Monthly inspection, board packet, etc." style="width:100%;height:46px;border-radius:14px;border:1px solid rgba(23,50,77,.10);padding:0 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;">
+            </div>
+            <div>
+              <label class="label" for="supervisorCommTypeInput">Type</label>
+              <select id="supervisorCommTypeInput" style="width:100%;height:46px;border-radius:14px;border:1px solid rgba(23,50,77,.10);padding:0 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;">
+                <option value="Required Task">Required Task</option>
+                <option value="Compliance">Compliance</option>
+                <option value="Reminder">Reminder</option>
+              </select>
+            </div>
+            <div>
+              <label class="label" for="supervisorCommScopeInput">Scope</label>
+              <select id="supervisorCommScopeInput" style="width:100%;height:46px;border-radius:14px;border:1px solid rgba(23,50,77,.10);padding:0 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;">
+                <option value="Community">Community</option>
+                <option value="Company-wide">Company-wide</option>
+              </select>
+            </div>
+            <div>
+              <label class="label" for="supervisorCommRuleInput">Due rule</label>
+              <select id="supervisorCommRuleInput" style="width:100%;height:46px;border-radius:14px;border:1px solid rgba(23,50,77,.10);padding:0 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;">
+                <option value="Specific Date">Specific Date</option>
+                <option value="Weekly">Weekly</option>
+                <option value="Monthly">Monthly</option>
+              </select>
+            </div>
+            <div>
+              <label class="label" for="supervisorCommNotesInput">Notes</label>
+              <input id="supervisorCommNotesInput" type="text" placeholder="Optional instructions or requirement notes" style="width:100%;height:46px;border-radius:14px;border:1px solid rgba(23,50,77,.10);padding:0 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;">
+            </div>
+            <div>
+              <label class="label" for="supervisorCommDateInput">Due date</label>
+              <input id="supervisorCommDateInput" type="date" style="width:100%;height:46px;border-radius:14px;border:1px solid rgba(23,50,77,.10);padding:0 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;">
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:12px;">
+            <button class="btn ghost" type="button" id="testSupervisorDbSaveBtn">Test DB save</button>
+            <button class="btn primary" type="button" id="saveSupervisorCommBtn">Save communication</button>
+          </div>
+          <div id="supervisorCommsDebugStatus" style="margin-top:10px;font-size:13px;font-weight:700;color:#35516e;">DB test status: not run</div>
+        </div>
+        <div id="supervisorCommsMount" class="loader">Loading supervisor communications…</div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="sectionShell" id="boardCard" style="grid-column:1 / -1;">
+        <div class="sectionHeader">
+          <div class="sectionIdentity">
+            <div class="sectionKicker">Stable module · isolated render path</div>
+            <div class="sectionTitle">Board Members</div>
+            <div class="sectionSub">This v2 module owns only its own community-aware fetch and render path. It does not depend on the giant Daily Ops page script.</div>
+          </div>
+          <div class="boardSectionActions">
+            <button class="btn ghost boardAddBtn" type="button" id="addBoardMemberBtn">Add board member</button>
+            <div class="statusPill" id="boardCountPill">0</div>
+          </div>
+        </div>
+        <div class="sectionBody">
+          <div id="boardMount" class="loader">Loading board members…</div>
+        </div>
+      </article>
+
+    </section>
+
+    <section class="sectionShell" id="vendorsCard" style="margin-top:18px;">
+      <div class="sectionHeader">
+        <div class="sectionIdentity">
+          <div class="sectionKicker">Fresh module · community-specific local state</div>
+          <div class="sectionTitle">Vendors</div>
+          <div class="sectionSub">This v2 vendors module is isolated from the live Daily Ops page. It stores vendors per selected community so we can test a heavier operational module without risking the rest of the app.</div>
+        </div>
+        <div class="statusPill" id="vendorsCountPill">0</div>
+      </div>
+      <div class="sectionBody">
+        <div class="tableWrap" style="padding:16px;border-style:solid;">
+          <div style="display:grid;grid-template-columns:1.1fr .9fr;gap:12px;align-items:end;">
+            <div>
+              <label class="label" for="vendorNameInput">Vendor name</label>
+              <input id="vendorNameInput" type="text" placeholder="Enter vendor name" style="width:100%;height:46px;border-radius:14px;border:1px solid rgba(23,50,77,.10);padding:0 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;">
+            </div>
+            <div>
+              <label class="label" for="vendorCategoryInput">Category</label>
+              <select id="vendorCategoryInput" style="width:100%;height:46px;border-radius:14px;border:1px solid rgba(23,50,77,.10);padding:0 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;">
+                <option value="">Select category</option>
+                <option value="Plumbing">Plumbing</option>
+                <option value="Electrical">Electrical</option>
+                <option value="HVAC">HVAC</option>
+                <option value="General Contractor">General Contractor</option>
+                <option value="Roofing">Roofing</option>
+                <option value="Landscaping">Landscaping</option>
+                <option value="Janitorial / Cleaning">Janitorial / Cleaning</option>
+                <option value="Pest Control">Pest Control</option>
+                <option value="Pool Maintenance">Pool Maintenance</option>
+                <option value="Elevator">Elevator</option>
+                <option value="Fire / Life Safety">Fire / Life Safety</option>
+                <option value="Security / Access Control">Security / Access Control</option>
+                <option value="Gate / Garage Door">Gate / Garage Door</option>
+                <option value="Irrigation">Irrigation</option>
+                <option value="Painting">Painting</option>
+                <option value="Flooring">Flooring</option>
+                <option value="Masonry / Concrete">Masonry / Concrete</option>
+                <option value="Tree Service">Tree Service</option>
+                <option value="Waste / Trash">Waste / Trash</option>
+                <option value="Towing">Towing</option>
+                <option value="Insurance">Insurance</option>
+                <option value="Legal">Legal</option>
+                <option value="Accounting">Accounting</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label class="label" for="vendorPhoneInput">Phone</label>
+              <input id="vendorPhoneInput" type="text" placeholder="111-111-1111" style="width:100%;height:46px;border-radius:14px;border:1px solid rgba(23,50,77,.10);padding:0 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;">
+            </div>
+            <div>
+              <label class="label" for="vendorEmailInput">Email</label>
+              <input id="vendorEmailInput" type="email" placeholder="vendor@email.com" style="width:100%;height:46px;border-radius:14px;border:1px solid rgba(23,50,77,.10);padding:0 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;">
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+            <button class="btn primary" type="button" id="saveVendorBtn">Save vendor</button>
+          </div>
+        </div>
+        <div id="vendorsMount" class="loader">Loading vendors…</div>
+      </div>
+    </section>
+
+
+
+    <section class="sectionShell featured" id="importantDatesCard" style="margin-top:18px;">
+      <div class="sectionHeader">
+        <div class="sectionIdentity">
+          <div class="sectionKicker">Fresh module · renewals + compliance tracker</div>
+          <div class="sectionTitle">Important Dates</div>
+          <div class="sectionSub">Track vendor contract renewals, insurance, fire inspections, elevator dates, pool permits, backflow, alarms, and other recurring compliance items for each community. This module is designed to feed future Manager Hub live alerts for due soon and overdue items.</div>
+        </div>
+        <div class="statusPill" id="importantDatesCountPill">0</div>
+      </div>
+      <div class="sectionBody">
+        <div class="tableWrap" style="padding:16px;border-style:solid;">
+          <div class="importantDatesFormGrid" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:end;">
+            <div>
+              <label class="label" for="importantTypeInput">Type</label>
+              <select id="importantTypeInput" style="width:100%;height:46px;border-radius:14px;border:1px solid rgba(23,50,77,.10);padding:0 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;">
+                <option value="Contract Renewal">Contract Renewal</option>
+                <option value="Insurance Renewal">Insurance Renewal</option>
+                <option value="Fire Inspection">Fire Inspection</option>
+                <option value="Elevator">Elevator</option>
+                <option value="Pool">Pool</option>
+                <option value="Backflow">Backflow</option>
+                <option value="Alarm">Alarm</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label class="label" for="importantVendorInput">Vendor / Company</label>
+              <input id="importantVendorInput" type="text" placeholder="Vendor or company name" style="width:100%;height:46px;border-radius:14px;border:1px solid rgba(23,50,77,.10);padding:0 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;">
+            </div>
+            <div style="grid-column:1 / span 2;">
+              <label class="label" for="importantDescInput">Description</label>
+              <input id="importantDescInput" type="text" placeholder="Contract details, permit notes, inspection scope, etc." style="width:100%;height:46px;border-radius:14px;border:1px solid rgba(23,50,77,.10);padding:0 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;">
+            </div>
+            <div class="importantDateDueField">
+              <label class="label" for="importantDateInput">Due date</label>
+              <input id="importantDateInput" type="date" style="width:100%;max-width:100%;min-width:0;height:46px;border-radius:14px;border:1px solid rgba(23,50,77,.10);padding:0 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;box-sizing:border-box;-webkit-appearance:none;appearance:none;">
+            </div>
+            <div class="importantDateRecurringField">
+              <label class="label" for="importantRecurringInput">Recurring</label>
+              <select id="importantRecurringInput" style="width:100%;height:46px;border-radius:14px;border:1px solid rgba(23,50,77,.10);padding:0 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;">
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+            <div>
+              <label class="label" for="importantFrequencyInput">Frequency</label>
+              <select id="importantFrequencyInput" style="width:100%;height:46px;border-radius:14px;border:1px solid rgba(23,50,77,.10);padding:0 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;">
+                <option value="Yearly">Yearly</option>
+                <option value="Quarterly">Quarterly</option>
+                <option value="Monthly">Monthly</option>
+                <option value="Custom">Custom</option>
+                <option value="One Time">One Time</option>
+              </select>
+            </div>
+            <div>
+              <label class="label" for="importantLeadInput">Reminder lead time</label>
+              <select id="importantLeadInput" style="width:100%;height:46px;border-radius:14px;border:1px solid rgba(23,50,77,.10);padding:0 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;">
+                <option value="30">30 days</option>
+                <option value="14">14 days</option>
+                <option value="7">7 days</option>
+                <option value="3">3 days</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+            <button class="btn primary" type="button" id="saveImportantDateBtn">Save important date</button>
+          </div>
+        </div>
+        <div id="importantDatesMount" class="loader">Loading important dates…</div>
+      </div>
+    </section>
+
+
+    <section class="sectionShell" id="accessCodesCard" style="margin-top:18px;">
+      <div class="sectionHeader">
+        <div class="sectionIdentity">
+          <div class="sectionKicker">Fresh module · operational access tracker</div>
+          <div class="sectionTitle">Access Codes</div>
+          <div class="sectionSub">Store gate, pool, gym, building, and other access codes per community. Tap a code to copy it or text it from the saved record.</div>
+        </div>
+        <div class="statusPill" id="accessCodesCountPill">0</div>
+      </div>
+      <div class="sectionBody">
+        <div class="tableWrap" style="padding:16px;border-style:solid;">
+          <div class="accessCodesFormRow" style="display:grid;grid-template-columns:minmax(190px,1.2fr) minmax(90px,.4fr) minmax(150px,.9fr) minmax(160px,.95fr) auto;gap:12px;align-items:end;">
+            <div>
+              <label class="label" for="accessCodeNameInput">Name</label>
+              <input id="accessCodeNameInput" type="text" placeholder="Gate, Pool, Gym..." style="width:100%;height:46px;border-radius:14px;border:1px solid rgba(23,50,77,.10);padding:0 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;">
+            </div>
+            <div>
+              <label class="label" for="accessCodeValueInput">Code</label>
+              <input id="accessCodeValueInput" type="text" inputmode="numeric" placeholder="1234" style="width:100%;height:46px;border-radius:14px;border:1px solid rgba(23,50,77,.10);padding:0 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;">
+            </div>
+            <div>
+              <label class="label" for="accessCodeNotesInput">Notes</label>
+              <input id="accessCodeNotesInput" type="text" placeholder="Optional notes or instructions" style="width:100%;height:46px;border-radius:14px;border:1px solid rgba(23,50,77,.10);padding:0 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;">
+            </div>
+            <div style="display:flex;align-items:flex-end;justify-content:flex-end;">
+              <button class="btn primary" type="button" id="saveAccessCodeBtn">Save access code</button>
+            </div>
+          </div>
+        </div>
+        <div id="accessCodesMount" class="loader">Loading access codes…</div>
+      </div>
+    </section>
+
+    <section class="sectionShell" id="remindersCard" style="margin-top:18px;">
+      <div class="sectionHeader remindersHeaderRow">
+        <div class="sectionIdentity">
+          <div class="sectionTitle">Reminders</div>
+        </div>
+        <div class="remindersHeaderActions">
+          <button class="btn primary reminderHeaderSaveBtn" type="button" id="saveReminderBtn">Save reminder</button>
+          <div class="statusPill" id="remindersCountPill">0</div>
+        </div>
+      </div>
+      <div class="sectionBody">
+        <div class="tableWrap reminderFormWrap">
+          <div id="reminderEntryForm" class="reminderEntryForm reminderEntryCompact">
+            <div class="reminderStackField reminderTitleCompact">
+              <label class="label" for="reminderTitle">Reminder</label>
+              <input id="reminderTitle" type="text" placeholder="Enter reminder">
+            </div>
+            <div class="reminderStackField reminderDateCompact">
+              <label class="label" for="reminderDate">Due date</label>
+              <input id="reminderDate" type="date">
+            </div>
+          </div>
+        </div>
+        <div id="remindersMount" class="loader">Loading reminders…</div>
+      </div>
+    </section>
+
+    <section class="sectionShell" id="quickNotesCard" style="margin-top:18px;">
+      <div class="sectionHeader">
+        <div class="sectionIdentity">
+          <div class="sectionKicker">Fresh module · community-specific local state</div>
+          <div class="sectionTitle">Quick Notes</div>
+          <div class="sectionSub">This v2 quick notes module is isolated from the live Daily Ops page. It saves per selected community and proves a lightweight note workflow in the new modular structure.</div>
+        </div>
+        <div class="statusPill" id="quickNotesCountPill">0</div>
+      </div>
+      <div class="sectionBody">
+        <div class="tableWrap" style="padding:16px;border-style:solid;">
+          <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;">
+            <div>
+              <label class="label" for="quickNoteInput">Quick note</label>
+              <textarea id="quickNoteInput" rows="3" placeholder="Add a quick note for this community" style="width:100%;min-height:88px;border-radius:14px;border:1px solid rgba(23,50,77,.10);padding:12px 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;resize:vertical;"></textarea>
+            </div>
+            <button class="btn primary" type="button" id="saveQuickNoteBtn">Save note</button>
+          </div>
+        </div>
+        <div id="quickNotesMount" class="loader">Loading quick notes…</div>
+      </div>
+    </section>
+
+
+    <div class="foot">Current beta goal: prove a stable modular Daily Ops foundation without touching the live page. Design rule for every new section: premium enough to present, isolated enough to change safely. Next sections to migrate: Access Codes and other compliance-friendly operational modules.</div>
+  </div>
+
+
+
+  <div class="boardModalBackdrop" id="boardMemberModal" aria-hidden="true">
+    <div class="boardModal" role="dialog" aria-modal="true" aria-labelledby="boardMemberModalTitle">
+      <div class="boardModalHeader">
+        <h3 id="boardMemberModalTitle">Board Member</h3>
+        <button class="btn ghost" type="button" id="closeBoardMemberModalBtn">Close</button>
+      </div>
+      <input type="hidden" id="boardMemberIdInput">
+      <div class="boardModalGrid">
+        <div class="full"><label class="label" for="boardMemberNameInput">Name</label><input id="boardMemberNameInput" type="text" placeholder="Board member name"></div>
+        <div><label class="label" for="boardMemberPositionInput">Position</label><select id="boardMemberPositionInput" aria-label="Board member position">
+          <option value="">Choose position</option>
+          <option value="President">President</option>
+          <option value="Vice President">Vice President</option>
+          <option value="Treasurer">Treasurer</option>
+          <option value="Secretary">Secretary</option>
+          <option value="Director">Director</option>
+          <option value="Member at Large">Member at Large</option>
+          <option value="Chair">Chair</option>
+          <option value="Vice Chair">Vice Chair</option>
+        </select></div>
+        <div><label class="label" for="boardMemberPhoneInput">Phone</label><input id="boardMemberPhoneInput" type="text" placeholder="111-111-1111"></div>
+        <div class="boardTermRow">
+          <div class="boardTermField">
+            <label class="label" for="boardMemberTermBeginInput">Term start</label>
+            <input id="boardMemberTermBeginInput" type="date">
+          </div>
+          <div class="boardTermField">
+            <label class="label" for="boardMemberTermEndInput">Term end</label>
+            <input id="boardMemberTermEndInput" type="date">
+          </div>
+        </div>
+        <div class="full"><label class="label" for="boardMemberEmailInput">Email</label><input id="boardMemberEmailInput" type="email" placeholder="name@email.com"></div>
+      </div>
+      <div class="boardModalActions">
+        <button class="btn ghost" type="button" id="cancelBoardMemberBtn">Cancel</button>
+        <button class="btn primary" type="button" id="saveBoardMemberBtn">Save board member</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DEFAULT_SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+    const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsY3d1dXd5cmdubWxteHBjYWltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMjI5MTAsImV4cCI6MjA4NDU5ODkxMH0.3pZZLufFv5SUHREjgPys-q8SnYVMzHona-yeXMVHuOg';
+    const SUPABASE_URL = window.SUPABASE_URL || localStorage.getItem('SUPABASE_URL') || DEFAULT_SUPABASE_URL;
+    const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || localStorage.getItem('SUPABASE_ANON_KEY') || DEFAULT_SUPABASE_ANON_KEY;
+
+    const sb = (window.supabase && window.supabase.createClient)
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true,
+            storage: window.localStorage,
+            storageKey: 'sb-zummee-auth'
+          }
+        })
+      : null;
+    window.sb = sb;
+
+    const AUTH_STORAGE_KEYS = ['sb-zummee-auth', 'sb-slcwuuwyrgnmlmxpcaim-auth-token', 'supabase.auth.token'];
+
+    function readAuthPayloadFromStorage(){
+      for(const key of AUTH_STORAGE_KEYS){
+        try{
+          const raw = localStorage.getItem(key);
+          if(!raw) continue;
+          const parsed = safeJson(raw, null);
+          if(parsed) return parsed;
+        }catch(_e){}
+      }
+      return null;
+    }
+
+    async function restoreSupabaseSessionFromStorage(){
+      if(!sb || !sb.auth) return null;
+      try{
+        const current = await sb.auth.getSession();
+        if(current?.data?.session) return current.data.session;
+      }catch(_e){}
+      const payload = readAuthPayloadFromStorage();
+      const candidate = payload?.currentSession || payload?.session || payload || null;
+      const access_token = candidate?.access_token || candidate?.provider_token || '';
+      const refresh_token = candidate?.refresh_token || '';
+      if(!access_token || !refresh_token || typeof sb.auth.setSession !== 'function') return null;
+      try{
+        const restored = await sb.auth.setSession({ access_token, refresh_token });
+        if(restored?.data?.session) return restored.data.session;
+      }catch(err){
+        console.warn('restoreSupabaseSessionFromStorage failed', err);
+      }
+      return null;
+    }
+
+    const Store = {
+      activeCommunityId: '',
+      activeCommunityName: '',
+      communities: [],
+      userId: '',
+      companyId: '',
+      cache: { board: new Map(), records: new Map(), reminders: new Map(), quickNotes: new Map(), vendors: new Map(), accessCodes: new Map() },
+      editingReminderId: '',
+      editingQuickNoteId: '',
+      editingVendorId: '',
+      editingImportantDateId: '',
+      editingAccessCodeId: '',
+      editingBoardMemberId: '',
+      currentUserRole: '',
+      canAuthorSupervisorComms: false
+    };
+
+    function byId(id){ return document.getElementById(id); }
+    function safeJson(v, fb){ try{ return JSON.parse(v); }catch(_e){ return fb; } }
+    function escapeHtml(v){ return String(v == null ? '' : v).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
+    function uniqBy(items, keyFn){ const seen = new Set(); return (items||[]).filter(item => { const k = keyFn(item); if(seen.has(k)) return false; seen.add(k); return true; }); }
+    function readCurrentUserId(){
+      const candidates = [];
+      try{ candidates.push(localStorage.getItem('activeUserId')); }catch(_e){}
+      try{ candidates.push(localStorage.getItem('currentUserId')); }catch(_e){}
+      try{ candidates.push(localStorage.getItem('zummee_user_id')); }catch(_e){}
+      try{ const p = safeJson(localStorage.getItem('zummee_profile_v1')||'{}',{}); candidates.push(p.uid, p.user_id, p.id); }catch(_e){}
+      try{ const sess = safeJson(localStorage.getItem('supabase.auth.token')||'{}',{}); candidates.push(sess?.currentSession?.user?.id, sess?.user?.id); }catch(_e){}
+      try{
+        for(let i=0;i<localStorage.length;i++){
+          const key = localStorage.key(i) || '';
+          if(!/auth-token/i.test(key)) continue;
+          const raw = localStorage.getItem(key) || '{}';
+          const tok = safeJson(raw, {});
+          candidates.push(tok?.currentSession?.user?.id, tok?.user?.id, tok?.session?.user?.id);
+        }
+      }catch(_e){}
+      return String(candidates.find(Boolean) || '').trim();
+    }
+    function readCurrentCompanyId(){
+      const candidates = [];
+      try{ candidates.push(localStorage.getItem('activeCompanyId')); }catch(_e){}
+      try{ candidates.push(localStorage.getItem('currentCompanyId')); }catch(_e){}
+      try{ candidates.push(localStorage.getItem('zummee_company_id')); }catch(_e){}
+      try{ const p = safeJson(localStorage.getItem('zummee_profile_v1')||'{}',{}); candidates.push(p.company_id); }catch(_e){}
+      return String(candidates.find(Boolean) || '').trim();
+    }
+    function readCurrentCompanyName(){
+      const candidates = [];
+      try{ candidates.push(localStorage.getItem('activeCompanyName')); }catch(_e){}
+      try{ candidates.push(localStorage.getItem('currentCompanyName')); }catch(_e){}
+      try{ candidates.push(localStorage.getItem('companyName')); }catch(_e){}
+      try{ candidates.push(localStorage.getItem('company_name')); }catch(_e){}
+      try{ candidates.push(localStorage.getItem('zummee_selected_company_name_v1')); }catch(_e){}
+      try{ candidates.push(localStorage.getItem('zummeeActiveCompanyName')); }catch(_e){}
+      try{ const p = safeJson(localStorage.getItem('zummee_profile_v1')||'{}',{}); candidates.push(p.companyName, p.company_name); }catch(_e){}
+      const direct = String(candidates.find(v => String(v||'').trim()) || '').trim();
+      if(direct) return direct;
+      try{
+        for(let i=0;i<localStorage.length;i++){
+          const key = localStorage.key(i) || '';
+        }
+      }catch(_e){}
+      try{
+        for(let i=0;i<localStorage.length;i++){
+          const key = localStorage.key(i) || '';
+          if(key.indexOf('zummee_company_communities_v1__') !== 0) continue;
+          const suffix = key.slice('zummee_company_communities_v1__'.length).trim();
+          if(suffix) return suffix;
+        }
+      }catch(_e){}
+      return '';
+    }
+    function readCommunityCandidates(){
+      const all = [];
+      const pushCommunity = (item) => {
+        if(!item || typeof item !== 'object') return;
+        const id = String(item.id || item.community_id || item.communityId || '').trim();
+        const name = String(item.name || item.community_name || item.communityName || item.label || item.text || '').trim();
+        if(id && name) all.push({ id, name });
+      };
+      const parseValue = (raw) => {
+        const val = safeJson(raw, null);
+        if(Array.isArray(val)) val.forEach(pushCommunity);
+        else if(val && typeof val === 'object'){
+          if(Array.isArray(val.communities)) val.communities.forEach(pushCommunity);
+          else if(Array.isArray(val.items)) val.items.forEach(pushCommunity);
+          else if(Array.isArray(val.data)) val.data.forEach(pushCommunity);
+        }
+      };
+      const keys = new Set();
+      const companyName = readCurrentCompanyName();
+      if(companyName) keys.add('zummee_company_communities_v1__' + companyName);
+      keys.add('zummee_company_communities_v1');
+      keys.add('zummee_company_communities');
+      try{
+        for(let i=0;i<localStorage.length;i++){
+          const key = localStorage.key(i) || '';
+          if(key.indexOf('zummee_company_communities_v1__') === 0) keys.add(key);
+        }
+      }catch(_e){}
+      Array.from(keys).forEach(key => {
+        try{ const raw = localStorage.getItem(key); if(raw) parseValue(raw); }catch(_e){}
+      });
+      try{
+        const currentName = String(localStorage.getItem('activeCommunityName') || localStorage.getItem('currentCommunityName') || '').trim();
+        const currentId = String(localStorage.getItem('activeCommunityId') || localStorage.getItem('currentCommunityId') || localStorage.getItem('zummee_community_id') || localStorage.getItem('zummee_selected_community_id') || '').trim();
+        if(currentName && currentId) all.push({ id: currentId, name: currentName });
+      }catch(_e){}
+      return uniqBy(all.filter(x => x.id && x.name), x => x.id);
+    }
+    async function ensureUser(){
+      Store.userId = readCurrentUserId();
+      Store.companyId = readCurrentCompanyId();
+      if((Store.userId && Store.companyId) || !sb) return;
+      try{
+        const sess = await sb.auth.getSession();
+        const user = sess?.data?.session?.user;
+        if(!Store.userId) Store.userId = String(user?.id || '').trim();
+      }catch(_e){}
+      try{
+        const res = await sb.auth.getUser();
+        const user = res?.data?.user;
+        if(!Store.userId) Store.userId = String(user?.id || '').trim();
+      }catch(_e){}
+    }
+    function syncCommunityToStorage(){
+      try{ if(Store.activeCommunityId) localStorage.setItem('activeCommunityId', Store.activeCommunityId); }catch(_e){}
+      try{ if(Store.activeCommunityName) localStorage.setItem('activeCommunityName', Store.activeCommunityName); }catch(_e){}
+      try{ if(Store.activeCommunityId) localStorage.setItem('currentCommunityId', Store.activeCommunityId); }catch(_e){}
+      try{ if(Store.activeCommunityName) localStorage.setItem('currentCommunityName', Store.activeCommunityName); }catch(_e){}
+      try{ if(Store.activeCommunityId) localStorage.setItem('zummee_community_id', Store.activeCommunityId); }catch(_e){}
+      try{ if(Store.activeCommunityId) localStorage.setItem('zummee_selected_community_id', Store.activeCommunityId); }catch(_e){}
+    }
+    async function fetchCommunitiesFromSupabase(){
+      if(!sb) return [];
+      await ensureUser();
+      const out = [];
+      const pushRows = (rows, target) => {
+        (rows||[]).forEach(row => target.push({
+          id: String((row && (row.id || row.community_id)) || '').trim(),
+          name: String((row && (row.name || row.community_name || row.community)) || '').trim()
+        }));
+      };
+
+      let role = String(Store.currentUserRole || '').trim().toLowerCase();
+      try{
+        if(!role && Store.userId){
+          const pr = await sb.from('profiles').select('role').eq('id', Store.userId).maybeSingle();
+          role = String((pr && pr.data && pr.data.role) || '').trim().toLowerCase();
+          if(role) Store.currentUserRole = role;
+        }
+      }catch(_e){}
+
+      const assigned = [];
+      try{
+        const userId = Store.userId;
+        if(userId){
+          const q = await sb.from('community_assignments')
+            .select('community_id, community_name, employee_id')
+            .eq('employee_id', userId)
+            .limit(200);
+          if(!q.error && q.data && q.data.length) pushRows(q.data, assigned);
+        }
+      }catch(_e){}
+
+      // Production rule: employees are scoped only to community_assignments.
+      if(role === 'employee'){
+        return uniqBy(assigned.filter(x => x.id || x.name), x => (x.id || ('name:' + x.name.toLowerCase())));
+      }
+
+      pushRows(assigned, out);
+      try{
+        const company = Store.companyId;
+        if(company){
+          for(const col of ['company_id','company_name']){
+            try{
+              const q = await sb.from('company_communities').select('community_id, community_name').eq(col, company).limit(200);
+              if(!q.error && q.data?.length) pushRows(q.data, out);
+            }catch(_e){}
+          }
+        }
+      }catch(_e){}
+      try{
+        const q3 = await sb.from('communities').select('id,name,community_name').limit(200);
+        if(!q3.error) pushRows(q3.data, out);
+      }catch(_e){}
+      return uniqBy(out.filter(x => x.id || x.name), x => (x.id || ('name:' + x.name.toLowerCase())));
+    }
+    function renderCommunityOptions(){
+      const select = byId('communitySelect');
+      if(!Store.communities.length){
+        select.innerHTML = '<option value="">No communities found</option>';
+        Store.activeCommunityId = '';
+        Store.activeCommunityName = '';
+        return;
+      }
+      const currentId = String(localStorage.getItem('activeCommunityId') || localStorage.getItem('currentCommunityId') || localStorage.getItem('zummee_community_id') || localStorage.getItem('zummee_selected_community_id') || '').trim();
+      const currentName = String(localStorage.getItem('activeCommunityName') || localStorage.getItem('currentCommunityName') || '').trim().toLowerCase();
+      const match = Store.communities.find(c => (c.id && c.id === currentId) || (c.name && c.name.toLowerCase() === currentName)) || Store.communities[0];
+      Store.activeCommunityId = match.id || '';
+      Store.activeCommunityName = match.name || '';
+      select.innerHTML = Store.communities.map(c => {
+        const value = encodeURIComponent(JSON.stringify(c));
+        const selected = ((c.id && c.id === Store.activeCommunityId) || ((!c.id || !Store.activeCommunityId) && c.name === Store.activeCommunityName)) ? ' selected' : '';
+        return `<option value="${value}"${selected}>${escapeHtml(c.name || c.id || 'Community')}</option>`;
+      }).join('');
+      syncCommunityToStorage();
+    }
+    function attachCommunitySelect(){
+      byId('communitySelect').addEventListener('change', async (e) => {
+        const obj = safeJson(decodeURIComponent(e.target.value), {});
+        Store.activeCommunityId = String(obj.id || '').trim();
+        Store.activeCommunityName = String(obj.name || '').trim();
+        syncCommunityToStorage();
+        await loadModules();
+      });
+    }
+    function setMetric(id, value){ byId(id).textContent = String(value); }
+    function mountEmpty(el, message){ el.innerHTML = `<div class="empty">${escapeHtml(message)}</div>`; }
+
+    /* v79 Daily Ops Cloud State Guard: Supabase first, localStorage fallback. */
+    const OPS_CLOUD_SECTIONS = ['reminders', 'quickNotes', 'vendors', 'importantDates', 'accessCodes'];
+    Store.opsState = Store.opsState || { reminders:[], quickNotes:[], vendors:[], importantDates:[], accessCodes:[] };
+    Store.opsStateLoadedFor = '';
+    Store.opsCloudSaveTimer = null;
+    Store.opsCloudLastError = '';
+    function opsCommunityKey(){ return String(Store.activeCommunityId || ('name:' + (Store.activeCommunityName || 'unknown').toLowerCase())).trim(); }
+    function normalizeOpsState(state){ const src = state && typeof state === 'object' ? state : {}; const out = { ...src }; OPS_CLOUD_SECTIONS.forEach(section => { out[section] = Array.isArray(src[section]) ? src[section] : []; }); return out; }
+    function getOpsCloudClient(){ return (window.sb && typeof window.sb.from === 'function') ? window.sb : (sb && typeof sb.from === 'function' ? sb : null); }
+    function getOpsCloudUserId(){ return String(Store.userId || readCurrentUserId() || '').trim(); }
+    function getOpsCloudCommunityId(){ return String(Store.activeCommunityId || '').trim(); }
+    function localReadRows(keyFn){ try{ const arr = safeJson(localStorage.getItem(keyFn()) || '[]', []); return Array.isArray(arr) ? arr : []; }catch(_e){ return []; } }
+    function setOpsSectionRows(section, rows){ Store.opsState = normalizeOpsState(Store.opsState); Store.opsState[section] = Array.isArray(rows) ? rows : []; }
+    function getOpsSectionRows(section, keyFn){ Store.opsState = normalizeOpsState(Store.opsState); const rows = Store.opsState[section]; if(Store.opsStateLoadedFor === opsCommunityKey() && Array.isArray(rows)) return rows; return localReadRows(keyFn); }
+    function writeOpsSectionRows(section, keyFn, rows){ const cleanRows = Array.isArray(rows) ? rows : []; setOpsSectionRows(section, cleanRows); try{ localStorage.setItem(keyFn(), JSON.stringify(cleanRows)); }catch(_e){} scheduleOpsCloudSave(); }
+    function mergeRowsById(cloudRows, localRows){ const map = new Map(); [...(Array.isArray(cloudRows)?cloudRows:[]), ...(Array.isArray(localRows)?localRows:[])].forEach(row => { if(!row || typeof row !== 'object') return; const id = String(row.id || row._id || '').trim() || ('row_' + Math.random().toString(36).slice(2)); const existing = map.get(id); const oldTime = existing ? Date.parse(existing.updatedAt || existing.updated_at || existing.createdAt || existing.created_at || 0) || 0 : -1; const newTime = Date.parse(row.updatedAt || row.updated_at || row.createdAt || row.created_at || 0) || 0; if(!existing || newTime >= oldTime) map.set(id, { ...row, id }); }); return Array.from(map.values()); }
+    async function loadOpsCloudState(){ await ensureUser(); const client = getOpsCloudClient(); const userId = getOpsCloudUserId(); const communityId = getOpsCloudCommunityId(); const communityKey = opsCommunityKey(); const fallback = { reminders: localReadRows(remindersStorageKey), quickNotes: localReadRows(quickNotesStorageKey), vendors: localReadRows(vendorsStorageKey), importantDates: localReadRows(importantDatesStorageKey), accessCodes: localReadRows(accessCodesStorageKey) }; Store.opsState = normalizeOpsState(fallback); if(!client || !userId || !communityId){ Store.opsStateLoadedFor = communityKey; return Store.opsState; } try{ const res = await readDailyOpsCloudRow(client, userId, communityId); if(res && res.error) throw res.error; const rawState = res && res.data ? (res.data.state || res.data.data || {}) : {}; const dbState = normalizeOpsState(rawState); OPS_CLOUD_SECTIONS.forEach(section => { const keyFn = { reminders:remindersStorageKey, quickNotes:quickNotesStorageKey, vendors:vendorsStorageKey, importantDates:importantDatesStorageKey, accessCodes:accessCodesStorageKey }[section]; const merged = mergeRowsById(dbState[section], fallback[section]); setOpsSectionRows(section, merged); try{ localStorage.setItem(keyFn(), JSON.stringify(merged)); }catch(_e){} }); Store.opsStateLoadedFor = communityKey; if(!res || !res.data) scheduleOpsCloudSave(50); }catch(err){ console.warn('Daily Ops cloud load failed; using local fallback', err); Store.opsCloudLastError = String(err && err.message || err || 'Cloud load failed'); Store.opsStateLoadedFor = communityKey; } return Store.opsState; }
+    function isMissingCloudColumnError(err, column){ const msg = String(err && (err.message || err.details || err.hint || err.code) || '').toLowerCase(); return !!(msg && msg.includes(column.toLowerCase()) && (msg.includes('column') || msg.includes('schema cache') || msg.includes('does not exist'))); }
+    async function readDailyOpsCloudRow(client, userId, communityId){ const preferred = Store.opsCloudColumn || 'state'; const fallbackColumn = preferred === 'state' ? 'data' : 'state'; let res = await client.from('daily_ops_state').select(preferred + ',updated_at').eq('user_id', userId).eq('community_id', communityId).maybeSingle(); if(res && res.error && isMissingCloudColumnError(res.error, preferred)){ Store.opsCloudColumn = fallbackColumn; res = await client.from('daily_ops_state').select(fallbackColumn + ',updated_at').eq('user_id', userId).eq('community_id', communityId).maybeSingle(); } else { Store.opsCloudColumn = preferred; } return res; }
+    function scheduleOpsCloudSave(delay){ if(Store.opsCloudSaveTimer) clearTimeout(Store.opsCloudSaveTimer); Store.opsCloudSaveTimer = setTimeout(saveOpsCloudState, typeof delay === 'number' ? delay : 450); }
+    async function saveDailyOpsCloudPayload(client, payload, column){ const body = { user_id:payload.user_id, community_id:payload.community_id, updated_at:payload.updated_at }; body[column] = payload.state; return client.from('daily_ops_state').upsert(body, { onConflict:'user_id,community_id' }).select('updated_at').maybeSingle(); }
+    async function saveOpsCloudState(){ Store.opsCloudSaveTimer = null; await ensureUser(); const client = getOpsCloudClient(); const userId = getOpsCloudUserId(); const communityId = getOpsCloudCommunityId(); if(!client || !userId || !communityId) return false; try{ const payload = { user_id:userId, community_id:communityId, state:normalizeOpsState(Store.opsState), updated_at:new Date().toISOString() }; let column = Store.opsCloudColumn || 'state'; let res = await saveDailyOpsCloudPayload(client, payload, column); if(res && res.error && isMissingCloudColumnError(res.error, column)){ column = column === 'state' ? 'data' : 'state'; Store.opsCloudColumn = column; res = await saveDailyOpsCloudPayload(client, payload, column); } if(res && res.error) throw res.error; Store.opsCloudLastError = ''; try{ window.dispatchEvent(new CustomEvent('dailyops:state-saved', { detail:{ community_id:communityId }})); }catch(_e){} return true; }catch(err){ console.error('Daily Ops cloud save failed', err); Store.opsCloudLastError = String(err && err.message || err || 'Cloud save failed'); return false; } }
+    async function runDailyOpsSupabaseSectionTest(){ await ensureUser(); const client = getOpsCloudClient(); const userId = getOpsCloudUserId(); const communityId = getOpsCloudCommunityId(); if(!client || !userId || !communityId){ console.error('Daily Ops Supabase test cannot run without Supabase, user, and community.', { hasClient:!!client, userId, communityId }); return { ok:false, reason:'Missing Supabase client, signed-in user, or active community.' }; } const stamp = Date.now(); const before = normalizeOpsState(Store.opsState); const now = new Date().toISOString(); const today = now.slice(0,10); const testRows = { reminders:{ id:'test_rem_'+stamp, title:'Supabase test reminder', date:today, updatedAt:now }, quickNotes:{ id:'test_note_'+stamp, note:'Supabase test quick note', updatedAt:now }, vendors:{ id:'test_vendor_'+stamp, name:'Supabase Test Vendor', category:'General Contractor', phone:'111-111-1111', email:'test@example.com', updatedAt:now }, importantDates:{ id:'test_date_'+stamp, type:'Contract Renewal', vendor:'Supabase Test Vendor', description:'Supabase test important date', date:today, recurring:'yes', frequency:'Yearly', leadTime:'30', updatedAt:now }, accessCodes:{ id:'test_access_'+stamp, name:'Supabase Test Code', code:'1234', notes:'Supabase test access code', updatedAt:now } }; OPS_CLOUD_SECTIONS.forEach(section => setOpsSectionRows(section, [testRows[section], ...(Array.isArray(before[section]) ? before[section] : [])])); const saved = await saveOpsCloudState(); const read = await readDailyOpsCloudRow(client, userId, communityId); const raw = read && read.data ? (read.data.state || read.data.data || {}) : {}; const after = normalizeOpsState(raw); const results = OPS_CLOUD_SECTIONS.map(section => ({ section, ok: Array.isArray(after[section]) && after[section].some(row => row && row.id === testRows[section].id) })); Store.opsState = before; await saveOpsCloudState(); await loadOpsCloudState(); loadRemindersModule(); loadQuickNotesModule(); loadVendorsModule(); loadImportantDatesModule(); loadAccessCodesModule(); const ok = !!saved && !(read && read.error) && results.every(r => r.ok); const summary = { ok, column:Store.opsCloudColumn || 'state', saved, readError: read && read.error ? read.error.message || String(read.error) : '', results }; console.table(results); console.log('Daily Ops Supabase section test', summary); return summary; }
+    window.runDailyOpsSupabaseSectionTest = runDailyOpsSupabaseSectionTest;
+
+    function formatZummeePhone(value){
+      const digits = String(value || '').replace(/\D/g, '').slice(0, 10);
+      if(digits.length <= 3) return digits;
+      if(digits.length <= 6) return digits.slice(0,3) + '-' + digits.slice(3);
+      return digits.slice(0,3) + '-' + digits.slice(3,6) + '-' + digits.slice(6,10);
+    }
+    function boardMemberDialDigits(value){
+      return String(value || '').replace(/\D/g, '').slice(0, 10);
+    }
+    function bindBoardMemberPhoneFormatter(){
+      const input = byId('boardMemberPhoneInput');
+      if(!input || input.dataset.phoneFormatterBound) return;
+      input.dataset.phoneFormatterBound = '1';
+      input.setAttribute('inputmode', 'numeric');
+      input.setAttribute('autocomplete', 'tel');
+      input.setAttribute('maxlength', '12');
+      input.setAttribute('placeholder', '111-111-1111');
+      input.addEventListener('input', () => { input.value = formatZummeePhone(input.value); });
+      input.addEventListener('blur', () => { input.value = formatZummeePhone(input.value); });
+      input.addEventListener('paste', () => { setTimeout(() => { input.value = formatZummeePhone(input.value); }, 0); });
+    }
+
+    function normalizeBoardMembers(rows){
+      return (rows||[]).map(row => ({
+        id: String(row?.id || '').trim(),
+        community_id: String(row?.community_id || Store.activeCommunityId || '').trim(),
+        name: String(row?.full_name || row?.name || '').trim(),
+        position: String(row?.position || '').trim(),
+        term_begin: String(row?.term_begin || row?.termBegin || '').trim(),
+        term_end: String(row?.term_end || row?.termEnd || '').trim(),
+        phone: formatZummeePhone(row?.phone || ''),
+        email: String(row?.email || '').trim(),
+        created_at: row?.created_at || ''
+      })).filter(r => r.name || r.position || r.phone || r.email || r.term_begin || r.term_end);
+    }
+    async function loadBoardMembersModule(){
+      const mount = byId('boardMount');
+      mount.className = 'loader';
+      mount.textContent = 'Loading board members…';
+      const cacheKey = Store.activeCommunityId || ('name:' + Store.activeCommunityName.toLowerCase());
+      if(Store.cache.board.has(cacheKey)){
+        renderBoardMembers(Store.cache.board.get(cacheKey));
+      }
+      if(!sb || !Store.activeCommunityId){
+        if(!Store.activeCommunityId) mountEmpty(mount, 'Choose a community to load board members.');
+        setMetric('boardMetric', 0); byId('boardCountPill').textContent = '0';
+        return;
+      }
+      try{
+        const q = await sb.from('board_member_directory')
+          .select('id,community_id,full_name,position,email,phone,term_begin,term_end,created_at')
+          .eq('community_id', Store.activeCommunityId)
+          .order('created_at', { ascending:true });
+        if(q.error) throw q.error;
+        const rows = normalizeBoardMembers(q.data || []);
+        Store.cache.board.set(cacheKey, rows);
+        renderBoardMembers(rows);
+      }catch(err){
+        console.error('Daily Ops v2 board members failed', err);
+        mountEmpty(mount, 'Unable to load board members right now.');
+      }
+    }
+
+    function setBoardMemberPositionValue(value){
+      const select = byId('boardMemberPositionInput');
+      if(!select) return;
+      const clean = String(value || '').trim();
+      if(!clean){ select.value = ''; return; }
+      const exists = Array.from(select.options).some(option => option.value === clean);
+      if(!exists){
+        const custom = document.createElement('option');
+        custom.value = clean;
+        custom.textContent = clean;
+        custom.dataset.customPosition = 'true';
+        select.appendChild(custom);
+      }
+      select.value = clean;
+    }
+    function openBoardMemberModal(row){
+      row = row || {};
+      Store.editingBoardMemberId = String(row.id || '');
+      byId('boardMemberModalTitle').textContent = Store.editingBoardMemberId ? 'Edit Board Member' : 'Add Board Member';
+      byId('boardMemberIdInput').value = Store.editingBoardMemberId;
+      byId('boardMemberNameInput').value = row.name || '';
+      setBoardMemberPositionValue(row.position || '');
+      bindBoardMemberPhoneFormatter();
+      byId('boardMemberPhoneInput').value = formatZummeePhone(row.phone || '');
+      byId('boardMemberEmailInput').value = row.email || '';
+      byId('boardMemberTermBeginInput').value = row.term_begin || '';
+      byId('boardMemberTermEndInput').value = row.term_end || '';
+      const modal = byId('boardMemberModal');
+      if(modal){ modal.classList.add('isOpen'); modal.setAttribute('aria-hidden','false'); }
+    }
+    function closeBoardMemberModal(){
+      Store.editingBoardMemberId = '';
+      const modal = byId('boardMemberModal');
+      if(modal){ modal.classList.remove('isOpen'); modal.setAttribute('aria-hidden','true'); }
+    }
+    async function saveBoardMemberFromModal(){
+      if(!sb) return alert('Database is not ready yet.');
+      if(!Store.activeCommunityId) return alert('Choose a community first.');
+      const payload = {
+        community_id: Store.activeCommunityId,
+        full_name: byId('boardMemberNameInput').value.trim(),
+        position: byId('boardMemberPositionInput').value.trim(),
+        phone: formatZummeePhone(byId('boardMemberPhoneInput').value),
+        email: byId('boardMemberEmailInput').value.trim(),
+        term_begin: byId('boardMemberTermBeginInput').value || null,
+        term_end: byId('boardMemberTermEndInput').value || null
+      };
+      if(!payload.full_name) return alert('Please enter a board member name.');
+      if(payload.phone && boardMemberDialDigits(payload.phone).length !== 10) return alert('Phone number must be in 111-111-1111 format.');
+      try{
+        let q;
+        if(Store.editingBoardMemberId){
+          q = await sb.from('board_member_directory').update(payload).eq('id', Store.editingBoardMemberId);
+        }else{
+          q = await sb.from('board_member_directory').insert(payload);
+        }
+        if(q.error) throw q.error;
+        Store.cache.board.delete(Store.activeCommunityId || ('name:' + Store.activeCommunityName.toLowerCase()));
+        closeBoardMemberModal();
+        await loadBoardMembersModule();
+      }catch(err){
+        console.error('Board member save failed', err);
+        alert('Unable to save board member right now.');
+      }
+    }
+    function attachBoardMemberControls(){
+      const addBtn = byId('addBoardMemberBtn');
+      if(addBtn && !addBtn.dataset.bound){ addBtn.dataset.bound='1'; addBtn.addEventListener('click', () => openBoardMemberModal({})); }
+      const closeBtn = byId('closeBoardMemberModalBtn');
+      if(closeBtn && !closeBtn.dataset.bound){ closeBtn.dataset.bound='1'; closeBtn.addEventListener('click', closeBoardMemberModal); }
+      const cancelBtn = byId('cancelBoardMemberBtn');
+      if(cancelBtn && !cancelBtn.dataset.bound){ cancelBtn.dataset.bound='1'; cancelBtn.addEventListener('click', closeBoardMemberModal); }
+      bindBoardMemberPhoneFormatter();
+      const saveBtn = byId('saveBoardMemberBtn');
+      if(saveBtn && !saveBtn.dataset.bound){ saveBtn.dataset.bound='1'; saveBtn.addEventListener('click', saveBoardMemberFromModal); }
+      const modal = byId('boardMemberModal');
+      if(modal && !modal.dataset.bound){ modal.dataset.bound='1'; modal.addEventListener('click', (e) => { if(e.target === modal) closeBoardMemberModal(); }); }
+    }
+    function renderBoardMembers(rows){
+      const mount = byId('boardMount');
+      rows = Array.isArray(rows) ? rows : [];
+      setMetric('boardMetric', rows.length);
+      byId('boardCountPill').textContent = String(rows.length);
+      attachBoardMemberControls();
+      if(!rows.length){ mountEmpty(mount, 'No board members found for this community yet.'); return; }
+      mount.className = 'tableWrap';
+      mount.innerHTML = `
+        <table>
+          <thead><tr><th>Name</th><th>Position</th><th>Term</th><th>Phone</th><th>Email</th></tr></thead>
+          <tbody>
+            ${rows.map(row => `
+              <tr class="boardMemberRecordGreen">
+                <td><div class="boardMemberNameLine"><strong>${escapeHtml(row.name || '—')}</strong><button class="boardEditBtn" type="button" data-id="${escapeHtml(row.id)}">Edit</button></div></td>
+                <td>${escapeHtml(row.position || '—')}</td>
+                <td>${escapeHtml((row.term_begin || '—') + (row.term_end ? (' → ' + row.term_end) : ''))}</td>
+                <td>${escapeHtml(formatZummeePhone(row.phone) || '-')}${row.phone ? `<div class="contactActions"><a class="mini" href="tel:${escapeHtml(boardMemberDialDigits(row.phone))}">Call</a><a class="mini" href="sms:${escapeHtml(boardMemberDialDigits(row.phone))}">Text</a></div>` : ''}</td>
+                <td>${escapeHtml(row.email || '—')}${row.email ? `<div class="contactActions"><a class="mini" href="mailto:${escapeHtml(row.email)}">Email</a></div>` : ''}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>`;
+      mount.querySelectorAll('.boardEditBtn').forEach(btn => btn.addEventListener('click', () => {
+        const row = rows.find(r => String(r.id) === String(btn.dataset.id));
+        if(row) openBoardMemberModal(row);
+      }));
+    }
+    async function loadAnnualRecordsModule(){
+      const mount = byId('recordsMount');
+      if(!mount) return;
+      mount.className = 'loader';
+      mount.textContent = 'Loading annual meeting records…';
+      const cacheKey = Store.activeCommunityId || ('name:' + Store.activeCommunityName.toLowerCase());
+      if(Store.cache.records.has(cacheKey)){
+        renderAnnualRecords(Store.cache.records.get(cacheKey));
+      }
+      if(!sb){ mountEmpty(mount, 'Supabase is unavailable on this beta page.'); return; }
+      try{
+        await ensureUser();
+        const q = sb.from('annual_meeting_packet_requests')
+          .select('*')
+          .eq('status', 'approved')
+          .order('approved_at', { ascending:false })
+          .limit(20);
+        if(Store.companyId) q.eq('company_id', Store.companyId);
+        const res = await q;
+        if(res.error) throw res.error;
+        const rows = (res.data || []).filter(row => {
+          const employeeId = String(row?.employee_user_id || '').trim();
+          if(Store.userId && employeeId && employeeId !== Store.userId) return false;
+          let payload = row?.packet_payload || {};
+          if(typeof payload === 'string') payload = safeJson(payload, {});
+          const rowCommunityId = String(row?.community_id || row?.communityId || payload?.communityId || payload?.community_id || '').trim();
+          const rowCommunityName = String(row?.community_name || row?.communityName || payload?.communityName || payload?.community_name || payload?.associationLegalName || '').trim().toLowerCase();
+          if(Store.activeCommunityId) return rowCommunityId === Store.activeCommunityId;
+          return !!(Store.activeCommunityName && rowCommunityName === Store.activeCommunityName.toLowerCase());
+        });
+        Store.cache.records.set(cacheKey, rows);
+        renderAnnualRecords(rows);
+      }catch(err){
+        console.error('Daily Ops v2 annual records failed', err);
+        mountEmpty(mount, 'Unable to load annual meeting records right now.');
+      }
+    }
+    function renderAnnualRecords(rows){
+      const mount = byId('recordsMount');
+      const pill = byId('recordsCountPill');
+      if(!mount) return;
+      rows = Array.isArray(rows) ? rows : [];
+      setMetric('recordsMetric', rows.length);
+      if(pill) pill.textContent = String(rows.length);
+      if(!rows.length){ mountEmpty(mount, 'No approved annual meeting records yet for this community.'); return; }
+      mount.className = 'recordList';
+      mount.innerHTML = rows.map(row => {
+        let payload = row?.packet_payload || {};
+        if(typeof payload === 'string') payload = safeJson(payload, {});
+        const communityName = String(row?.community_name || row?.communityName || payload?.communityName || payload?.associationLegalName || Store.activeCommunityName || 'Community Association').trim();
+        const meetingDate = String(payload?.nextAnnualMeetingDate || '—').trim() || '—';
+        const meetingTime = String(payload?.meetingTime || '').trim();
+        const approvedAt = row?.approved_at ? new Date(row.approved_at).toLocaleString() : '—';
+        return `
+          <article class="record">
+            <div class="eyebrow" style="background:rgba(23,50,77,.06);color:#4d6580;">Archived meeting record</div>
+            <div class="recordTitle" style="margin-top:12px;">${escapeHtml(communityName)}</div>
+            <div class="cardSub" style="margin-top:8px;">Approved on ${escapeHtml(approvedAt)}</div>
+            <div class="recordMeta">
+              <div class="metaPill">Meeting ${escapeHtml(meetingDate)}${meetingTime ? ' at ' + escapeHtml(meetingTime) : ''}</div>
+              <div class="metaPill" style="background:#dbeafe;border-color:#bfdbfe;color:#17324d;">Approved & Archived</div>
+            </div>
+            <div class="contactActions" style="margin-top:16px;">
+              <button class="btn ghost" type="button" onclick="window.location.href='annual_packet_preview.html'">Open preview page</button>
+            </div>
+          </article>`;
+      }).join('');
+    }
+
+    function remindersStorageKey(){
+      return `dailyOpsV2:reminders:${Store.activeCommunityId || ('name:' + (Store.activeCommunityName || 'unknown').toLowerCase())}`;
+    }
+    function readReminderRows(){
+      return getOpsSectionRows('reminders', remindersStorageKey);
+    }
+    function writeReminderRows(rows){
+      writeOpsSectionRows('reminders', remindersStorageKey, rows);
+    }
+    function resetReminderForm(){
+      Store.editingReminderId = '';
+      byId('reminderTitle').value = '';
+      byId('reminderDate').value = '';
+      byId('saveReminderBtn').textContent = 'Save reminder';
+    }
+    function renderReminders(rows){
+      const mount = byId('remindersMount');
+      rows = Array.isArray(rows) ? rows : [];
+      setMetric('remindersMetric', rows.length);
+      byId('remindersCountPill').textContent = String(rows.length);
+      if(!rows.length){ mountEmpty(mount, 'No reminders for this community yet.'); return; }
+      mount.className = 'recordList';
+      mount.innerHTML = rows.map(row => `
+        <article class="record">
+          <div class="recordTitle" style="font-size:18px;">${escapeHtml(row.title || 'Reminder')}</div>
+          <div class="recordMeta">
+            <div class="metaPill">Due ${escapeHtml(row.date || '—')}</div>
+            <div class="metaPill" style="background:${row.overdue ? 'rgba(255,234,234,.95)' : '#f7fafc'};color:${row.overdue ? '#8f2f2f' : '#35516e'};border-color:rgba(23,50,77,.08);">${row.overdue ? 'Overdue' : 'Scheduled'}</div>
+          </div>
+          <div class="contactActions" style="margin-top:14px;">
+            <button class="btn ghost reminder-load" type="button" data-id="${escapeHtml(row.id)}">Load into form</button>
+            <button class="btn secondary reminder-delete" type="button" data-id="${escapeHtml(row.id)}">Delete</button>
+          </div>
+        </article>
+      `).join('');
+      mount.querySelectorAll('.reminder-load').forEach(btn => btn.addEventListener('click', () => {
+        const row = rows.find(r => r.id === btn.dataset.id);
+        if(!row) return;
+        Store.editingReminderId = row.id;
+        byId('reminderTitle').value = row.title || '';
+        byId('reminderDate').value = row.date || '';
+        byId('saveReminderBtn').textContent = 'Update reminder';
+      }));
+      mount.querySelectorAll('.reminder-delete').forEach(btn => btn.addEventListener('click', () => {
+        const next = rows.filter(r => r.id !== btn.dataset.id);
+        writeReminderRows(next);
+        if(Store.editingReminderId === btn.dataset.id) resetReminderForm();
+        loadRemindersModule();
+      }));
+    }
+    function loadRemindersModule(){
+      const mount = byId('remindersMount');
+      if(!Store.activeCommunityId && !Store.activeCommunityName){ mountEmpty(mount, 'Choose a community to load reminders.'); setMetric('remindersMetric', 0); byId('remindersCountPill').textContent = '0'; return; }
+      const today = new Date().toISOString().slice(0,10);
+      const rows = readReminderRows().map(row => ({ ...row, overdue: !!(row.date && row.date < today) }));
+      renderReminders(rows);
+    }
+    function attachRemindersModule(){
+      byId('saveReminderBtn').addEventListener('click', () => {
+        const title = String(byId('reminderTitle').value || '').trim();
+        const date = String(byId('reminderDate').value || '').trim();
+        if(!title){ alert('Enter a reminder first.'); return; }
+        const rows = readReminderRows();
+        const id = Store.editingReminderId || ('rem_' + Date.now());
+        const nextRow = { id, title, date, updatedAt: new Date().toISOString() };
+        const next = Store.editingReminderId ? rows.map(r => r.id === id ? nextRow : r) : [nextRow, ...rows];
+        writeReminderRows(next);
+        resetReminderForm();
+        loadRemindersModule();
+      });
+    }
+    function quickNotesStorageKey(){
+      return `dailyOpsV2:quickNotes:${Store.activeCommunityId || ('name:' + (Store.activeCommunityName || 'unknown').toLowerCase())}`;
+    }
+    function readQuickNoteRows(){
+      return getOpsSectionRows('quickNotes', quickNotesStorageKey);
+    }
+    function writeQuickNoteRows(rows){
+      writeOpsSectionRows('quickNotes', quickNotesStorageKey, rows);
+    }
+    function resetQuickNoteForm(){
+      Store.editingQuickNoteId = '';
+      byId('quickNoteInput').value = '';
+      byId('saveQuickNoteBtn').textContent = 'Save note';
+    }
+    function renderQuickNotes(rows){
+      const mount = byId('quickNotesMount');
+      rows = Array.isArray(rows) ? rows : [];
+      setMetric('quickNotesMetric', rows.length);
+      byId('quickNotesCountPill').textContent = String(rows.length);
+      if(!rows.length){ mountEmpty(mount, 'No quick notes for this community yet.'); return; }
+      mount.className = 'recordList';
+      mount.innerHTML = rows.map(row => `
+        <article class="record">
+          <div class="recordTitle" style="font-size:18px;white-space:pre-wrap;">${escapeHtml(row.note || 'Quick note')}</div>
+          <div class="recordMeta">
+            <div class="metaPill">Saved ${escapeHtml(row.updatedAt ? new Date(row.updatedAt).toLocaleString() : 'recently')}</div>
+            <div class="metaPill" style="background:#f8fbff;color:#35516e;border-color:rgba(23,50,77,.08);">Community note</div>
+          </div>
+          <div class="contactActions" style="margin-top:14px;">
+            <button class="btn ghost quicknote-load" type="button" data-id="${escapeHtml(row.id)}">Load into form</button>
+            <button class="btn secondary quicknote-delete" type="button" data-id="${escapeHtml(row.id)}">Delete</button>
+          </div>
+        </article>
+      `).join('');
+      mount.querySelectorAll('.quicknote-load').forEach(btn => btn.addEventListener('click', () => {
+        const row = rows.find(r => r.id === btn.dataset.id);
+        if(!row) return;
+        Store.editingQuickNoteId = row.id;
+        byId('quickNoteInput').value = row.note || '';
+        byId('saveQuickNoteBtn').textContent = 'Update note';
+      }));
+      mount.querySelectorAll('.quicknote-delete').forEach(btn => btn.addEventListener('click', () => {
+        const next = rows.filter(r => r.id !== btn.dataset.id);
+        writeQuickNoteRows(next);
+        if(Store.editingQuickNoteId === btn.dataset.id) resetQuickNoteForm();
+        loadQuickNotesModule();
+      }));
+    }
+    function loadQuickNotesModule(){
+      const mount = byId('quickNotesMount');
+      if(!Store.activeCommunityId && !Store.activeCommunityName){ mountEmpty(mount, 'Choose a community to load quick notes.'); setMetric('quickNotesMetric', 0); byId('quickNotesCountPill').textContent = '0'; return; }
+      renderQuickNotes(readQuickNoteRows());
+    }
+    function attachQuickNotesModule(){
+      byId('saveQuickNoteBtn').addEventListener('click', () => {
+        const note = String(byId('quickNoteInput').value || '').trim();
+        if(!note){ alert('Enter a quick note first.'); return; }
+        const rows = readQuickNoteRows();
+        const id = Store.editingQuickNoteId || ('note_' + Date.now());
+        const nextRow = { id, note, updatedAt: new Date().toISOString() };
+        const next = Store.editingQuickNoteId ? rows.map(r => r.id === id ? nextRow : r) : [nextRow, ...rows];
+        writeQuickNoteRows(next);
+        resetQuickNoteForm();
+        loadQuickNotesModule();
+      });
+    }
+
+
+    function vendorsStorageKey(){
+      return `dailyOpsV2:vendors:${Store.activeCommunityId || ('name:' + (Store.activeCommunityName || 'unknown').toLowerCase())}`;
+    }
+    function readVendorRows(){
+      return getOpsSectionRows('vendors', vendorsStorageKey);
+    }
+    function writeVendorRows(rows){
+      writeOpsSectionRows('vendors', vendorsStorageKey, rows);
+    }
+    function ensureVendorCategoryOption(category){
+      const select = byId('vendorCategoryInput');
+      const value = String(category || '').trim();
+      if(!select || !value) return;
+      const exists = Array.from(select.options || []).some(opt => String(opt.value || opt.textContent || '').trim().toLowerCase() === value.toLowerCase());
+      if(!exists){
+        const opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = value;
+        select.appendChild(opt);
+      }
+    }
+    function resetVendorForm(){
+      Store.editingVendorId = '';
+      byId('vendorNameInput').value = '';
+      byId('vendorCategoryInput').value = '';
+      byId('vendorPhoneInput').value = '';
+      byId('vendorEmailInput').value = '';
+      byId('saveVendorBtn').textContent = 'Save vendor';
+    }
+    function renderVendors(rows){
+      const mount = byId('vendorsMount');
+      rows = Array.isArray(rows) ? rows : [];
+      setMetric('vendorsMetric', rows.length);
+      byId('vendorsCountPill').textContent = String(rows.length);
+      if(!rows.length){ mountEmpty(mount, 'No vendors for this community yet.'); return; }
+      mount.className = 'recordList';
+      mount.innerHTML = rows.map(row => `
+        <article class="record">
+          <div class="recordTitle" style="font-size:18px;">${escapeHtml(row.name || 'Vendor')}</div>
+          <div class="recordMeta">
+            <div class="metaPill">${escapeHtml(row.category || 'General')}</div>
+            ${row.phone ? `<div class="metaPill">${escapeHtml(row.phone)}</div>` : ''}
+            ${row.email ? `<div class="metaPill">${escapeHtml(row.email)}</div>` : ''}
+          </div>
+          <div class="contactActions" style="margin-top:14px;">
+            <button class="btn ghost vendor-load" type="button" data-id="${escapeHtml(row.id)}">Load into form</button>
+            <button class="btn secondary vendor-delete" type="button" data-id="${escapeHtml(row.id)}">Delete</button>
+          </div>
+        </article>
+      `).join('');
+      mount.querySelectorAll('.vendor-load').forEach(btn => btn.addEventListener('click', () => {
+        const row = rows.find(r => r.id === btn.dataset.id);
+        if(!row) return;
+        Store.editingVendorId = row.id;
+        byId('vendorNameInput').value = row.name || '';
+        ensureVendorCategoryOption(row.category || '');
+        byId('vendorCategoryInput').value = row.category || '';
+        byId('vendorPhoneInput').value = row.phone || '';
+        byId('vendorEmailInput').value = row.email || '';
+        byId('saveVendorBtn').textContent = 'Update vendor';
+      }));
+      mount.querySelectorAll('.vendor-delete').forEach(btn => btn.addEventListener('click', () => {
+        const next = rows.filter(r => r.id !== btn.dataset.id);
+        writeVendorRows(next);
+        if(Store.editingVendorId === btn.dataset.id) resetVendorForm();
+        loadVendorsModule();
+      }));
+    }
+    function loadVendorsModule(){
+      const mount = byId('vendorsMount');
+      if(!Store.activeCommunityId && !Store.activeCommunityName){ mountEmpty(mount, 'Choose a community to load vendors.'); setMetric('vendorsMetric', 0); byId('vendorsCountPill').textContent = '0'; return; }
+      renderVendors(readVendorRows());
+    }
+    function attachVendorsModule(){
+      byId('saveVendorBtn').addEventListener('click', () => {
+        const name = String(byId('vendorNameInput').value || '').trim();
+        const category = String(byId('vendorCategoryInput').value || '').trim();
+        const phone = String(byId('vendorPhoneInput').value || '').trim();
+        const email = String(byId('vendorEmailInput').value || '').trim();
+        if(!name){ alert('Enter a vendor name first.'); return; }
+        const rows = readVendorRows();
+        const id = Store.editingVendorId || ('vendor_' + Date.now());
+        const nextRow = { id, name, category, phone, email, updatedAt: new Date().toISOString() };
+        const next = Store.editingVendorId ? rows.map(r => r.id === id ? nextRow : r) : [nextRow, ...rows];
+        writeVendorRows(next);
+        resetVendorForm();
+        loadVendorsModule();
+      });
+    }
+
+    function importantDatesStorageKey(){
+      return `dailyOpsV2:importantDates:${Store.activeCommunityId || ('name:' + (Store.activeCommunityName || 'unknown').toLowerCase())}`;
+    }
+    function readImportantDateRows(){
+      return getOpsSectionRows('importantDates', importantDatesStorageKey);
+    }
+    function writeImportantDateRows(rows){
+      writeOpsSectionRows('importantDates', importantDatesStorageKey, rows);
+    }
+    function resetImportantDateForm(){
+      Store.editingImportantDateId = '';
+      byId('importantTypeInput').value = 'Contract Renewal';
+      byId('importantVendorInput').value = '';
+      byId('importantDescInput').value = '';
+      byId('importantDateInput').value = '';
+      byId('importantRecurringInput').value = 'yes';
+      byId('importantFrequencyInput').value = 'Yearly';
+      byId('importantLeadInput').value = '30';
+      byId('saveImportantDateBtn').textContent = 'Save important date';
+    }
+    function computeImportantDateStatus(row){
+      const due = String(row.date || '').trim();
+      if(!due) return 'Needs Review';
+      const lead = Number(row.leadTime || 30);
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const dueDate = new Date(due + 'T00:00:00');
+      if(Number.isNaN(dueDate.getTime())) return 'Needs Review';
+      const diffDays = Math.floor((dueDate - today) / 86400000);
+      if(diffDays < 0) return 'Overdue';
+      if(diffDays <= lead) return 'Due Soon';
+      return 'Upcoming';
+    }
+    function importantStatusPill(status){
+      const map = {
+        'Overdue': 'background:#ffe6e8;color:#9f2334;border-color:rgba(159,35,52,.16);',
+        'Due Soon': 'background:#fff6de;color:#946200;border-color:rgba(148,98,0,.16);',
+        'Upcoming': 'background:#e9f6ee;color:#1e7a4c;border-color:rgba(30,122,76,.16);',
+        'Needs Review': 'background:#eef5ff;color:#2d5f9a;border-color:rgba(45,95,154,.16);'
+      };
+      return map[status] || map['Needs Review'];
+    }
+    function renderImportantDates(rows){
+      const mount = byId('importantDatesMount');
+      rows = Array.isArray(rows) ? rows : [];
+      setMetric('importantDatesMetric', rows.length);
+      byId('importantDatesCountPill').textContent = String(rows.length);
+      if(!rows.length){ mountEmpty(mount, 'No important dates for this community yet.'); return; }
+      const sorted = rows.slice().sort((a,b) => String(a.date||'9999-12-31').localeCompare(String(b.date||'9999-12-31')));
+      mount.className = 'recordList';
+      mount.innerHTML = sorted.map(row => {
+        const status = computeImportantDateStatus(row);
+        return `
+        <article class="record">
+          <div class="recordTitle" style="font-size:18px;">${escapeHtml(row.type || 'Important Date')}</div>
+          <div class="recordMeta">
+            <div class="metaPill" style="${importantStatusPill(status)}">${escapeHtml(status)}</div>
+            ${row.vendor ? `<div class="metaPill">${escapeHtml(row.vendor)}</div>` : ''}
+            ${row.date ? `<div class="metaPill">Due ${escapeHtml(new Date(row.date + 'T00:00:00').toLocaleDateString())}</div>` : ''}
+            ${row.recurring === 'yes' ? `<div class="metaPill">${escapeHtml(row.frequency || 'Recurring')}</div>` : `<div class="metaPill">One Time</div>`}
+            <div class="metaPill">Lead ${escapeHtml(String(row.leadTime || 30))}d</div>
+          </div>
+          ${row.description ? `<div class="recordSub" style="margin-top:10px;">${escapeHtml(row.description)}</div>` : ''}
+          <div class="contactActions" style="margin-top:14px;">
+            <button class="btn ghost important-load" type="button" data-id="${escapeHtml(row.id)}">Load into form</button>
+            <button class="btn secondary important-delete" type="button" data-id="${escapeHtml(row.id)}">Delete</button>
+          </div>
+        </article>
+      `;}).join('');
+      mount.querySelectorAll('.important-load').forEach(btn => btn.addEventListener('click', () => {
+        const row = sorted.find(r => r.id === btn.dataset.id);
+        if(!row) return;
+        Store.editingImportantDateId = row.id;
+        byId('importantTypeInput').value = row.type || 'Contract Renewal';
+        byId('importantVendorInput').value = row.vendor || '';
+        byId('importantDescInput').value = row.description || '';
+        byId('importantDateInput').value = row.date || '';
+        byId('importantRecurringInput').value = row.recurring || 'yes';
+        byId('importantFrequencyInput').value = row.frequency || 'Yearly';
+        byId('importantLeadInput').value = String(row.leadTime || 30);
+        byId('saveImportantDateBtn').textContent = 'Update important date';
+      }));
+      mount.querySelectorAll('.important-delete').forEach(btn => btn.addEventListener('click', () => {
+        const next = rows.filter(r => r.id !== btn.dataset.id);
+        writeImportantDateRows(next);
+        if(Store.editingImportantDateId === btn.dataset.id) resetImportantDateForm();
+        loadImportantDatesModule();
+      loadAccessCodesModule();
+      }));
+    }
+    function loadImportantDatesModule(){
+      const mount = byId('importantDatesMount');
+      if(!Store.activeCommunityId && !Store.activeCommunityName){ mountEmpty(mount, 'Choose a community to load important dates.'); setMetric('importantDatesMetric', 0); byId('importantDatesCountPill').textContent = '0'; return; }
+      renderImportantDates(readImportantDateRows());
+    }
+    function attachImportantDatesModule(){
+      byId('saveImportantDateBtn').addEventListener('click', () => {
+        const type = String(byId('importantTypeInput').value || '').trim();
+        const vendor = String(byId('importantVendorInput').value || '').trim();
+        const description = String(byId('importantDescInput').value || '').trim();
+        const date = String(byId('importantDateInput').value || '').trim();
+        const recurring = String(byId('importantRecurringInput').value || 'yes').trim();
+        const frequency = String(byId('importantFrequencyInput').value || 'Yearly').trim();
+        const leadTime = Number(byId('importantLeadInput').value || 30) || 30;
+        if(!type){ alert('Choose a type first.'); return; }
+        if(!description && !vendor){ alert('Add a vendor/company or a description first.'); return; }
+        const rows = readImportantDateRows();
+        const id = Store.editingImportantDateId || ('imp_' + Date.now());
+        const nextRow = { id, type, vendor, description, date, recurring, frequency, leadTime, updatedAt: new Date().toISOString() };
+        const next = Store.editingImportantDateId ? rows.map(r => r.id === id ? nextRow : r) : [nextRow, ...rows];
+        writeImportantDateRows(next);
+        resetImportantDateForm();
+        loadImportantDatesModule();
+      loadAccessCodesModule();
+      });
+    }
+    function openAccessCodeText(row){
+      const community = Store.activeCommunityName || row.communityName || 'the community';
+      const label = String(row && row.name || 'Access code').trim();
+      const code = String(row && row.code || '').trim();
+      const message = encodeURIComponent(`${community} - ${label} code: ${code}${row && row.notes ? ` (${String(row.notes).trim()})` : ''}`);
+      const smsHref = `sms:?body=${message}`;
+      try{
+        window.location.href = smsHref;
+      }catch(_e){
+        window.open(smsHref, '_self');
+      }
+    }
+
+    function supervisorCompanyScopeKey(){
+      const company = getSupervisorCompanyKey() || 'default-company';
+      return `dailyOpsV2:supervisorComms:company:${String(company).toLowerCase()}`;
+    }
+    function supervisorCommunityScopeKey(){
+      return `dailyOpsV2:supervisorComms:community:${Store.activeCommunityId || ('name:' + (Store.activeCommunityName || 'unknown').toLowerCase())}`;
+    }
+    function readSupervisorCommRows(scope){
+      return [];
+    }
+    function writeSupervisorCommRows(scope, rows){
+      return;
+    }
+    function supervisorSharedPrefKey(scope){
+      const company = String(getSupervisorCompanyKey() || 'default-company').trim().toLowerCase();
+      const community = String(Store.activeCommunityId || ('name:' + (Store.activeCommunityName || 'unknown').toLowerCase())).trim();
+      return scope === 'Company-wide'
+        ? ('daily_ops_v2_supervisor_comms__company__' + company)
+        : ('daily_ops_v2_supervisor_comms__community__' + community);
+    }
+    async function loadSupervisorCommRowsShared(scope){
+      return [];
+    }
+    async function saveSupervisorCommRowsShared(scope, rows){
+      return true;
+    }
+    function readAllSupervisorCommRows(){
+      return [];
+    }
+    function clearLegacySupervisorCommCache(){
+      try{ localStorage.removeItem(supervisorCompanyScopeKey()); }catch(_e){}
+      try{ localStorage.removeItem(supervisorCommunityScopeKey()); }catch(_e){}
+    }
+    function resetSupervisorCommForm(){
+      Store.editingSupervisorCommId = '';
+      Store.editingSupervisorCommScope = '';
+      byId('supervisorCommTitleInput').value = '';
+      byId('supervisorCommTypeInput').value = 'Required Task';
+      byId('supervisorCommScopeInput').value = 'Community';
+      byId('supervisorCommRuleInput').value = 'Specific Date';
+      byId('supervisorCommNotesInput').value = '';
+      byId('supervisorCommDateInput').value = '';
+      byId('saveSupervisorCommBtn').textContent = 'Save communication';
+    }
+    function getSupervisorCommStatus(row){
+      if(row.completedAt) return {label:'Completed', tone:'completed'};
+      const today = new Date(); today.setHours(0,0,0,0);
+      const due = row.date ? new Date(row.date + 'T00:00:00') : null;
+      if(!due || isNaN(due)) return {label:'Needs Review', tone:'review'};
+      const diff = Math.round((due - today)/86400000);
+      if(diff < 0) return {label:'Overdue', tone:'overdue'};
+      if(diff <= 7) return {label:'Due Soon', tone:'soon'};
+      return {label:'Upcoming', tone:'upcoming'};
+    }
+    function supervisorStatusPill(status){
+      const map = {
+        completed:'background:rgba(226,252,236,.95);color:#1b6b3d;border-color:rgba(27,107,61,.12);',
+        overdue:'background:rgba(255,234,234,.95);color:#8f2f2f;border-color:rgba(143,47,47,.12);',
+        soon:'background:rgba(255,244,214,.95);color:#8b6100;border-color:rgba(139,97,0,.12);',
+        review:'background:#eef2f7;color:#35516e;border-color:rgba(23,50,77,.08);',
+        upcoming:'background:#eff6ff;color:#234b7a;border-color:rgba(35,75,122,.12);'
+      };
+      return map[status] || map.upcoming;
+    }
+
+    async function completeSupervisorCommunication(dbId, opts){
+      opts = opts || {};
+      dbId = String(dbId || '').trim();
+      if(!dbId) return;
+      if(!opts.skipConfirm){
+        const ok = await zummeePopupConfirm('Mark this supervisor communication complete?', { title:'Complete communication', okText:'Mark Complete', cancelText:'Cancel' });
+        if(!ok) return;
+      }
+      const client = getSupervisorClient();
+      if(!client){
+        await zummeePopupAlert('Supabase is not available right now.', { title:'Supabase unavailable' });
+        return;
+      }
+      try{
+        const user = await getSupervisorSessionUser();
+        const completedBy = user && user.id ? String(user.id) : '';
+        if(!completedBy){
+          await zummeePopupAlert('Please sign out and sign back in, then try again.', { title:'Session unavailable', okText:'OK', danger:true });
+          return;
+        }
+        const communityId = String(getSupervisorActiveCommunityId() || Store.activeCommunityId || 'community').trim();
+        const payload = {
+          message_id: dbId,
+          user_id: completedBy,
+          community_id: communityId || 'community',
+          completed_at: new Date().toISOString()
+        };
+        const result = await client
+          .from('supervisor_message_completions')
+          .insert([payload])
+          .select('id');
+        if(result && result.error){
+          console.error('completeSupervisorCommunication completion insert failed', result.error);
+          await zummeePopupAlert('Complete failed. The completion table or policy is not ready yet.', { title:'Complete failed', okText:'OK', danger:true });
+          return;
+        }
+        await loadSupervisorCommsModule();
+        try{ window.dispatchEvent(new Event('storage')); }catch(_e){}
+        try{ document.dispatchEvent(new CustomEvent('community:changed')); }catch(_e){}
+      }catch(err){
+        console.error('completeSupervisorCommunication fatal', err);
+        await zummeePopupAlert('Complete failed due to an unexpected error.', { title:'Complete failed', okText:'OK', danger:true });
+      }
+    }
+    function scopePillStyle(scope){
+      return scope === 'Company-wide'
+        ? 'background:rgba(255,246,214,.95);color:#8b6100;border:1px solid rgba(139,97,0,.12);'
+        : 'background:#eef4fb;color:#29507f;border:1px solid rgba(41,80,127,.10);';
+    }
+    function formatSupervisorPostedAt(value){
+      if(!value) return '';
+      try{
+        const d = new Date(value);
+        if(isNaN(d)) return '';
+        return d.toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+      }catch(_e){ return ''; }
+    }
+    function getSupervisorClient(){
+      return (window.sb && typeof window.sb.from === 'function' ? window.sb : (typeof sb !== 'undefined' && sb && typeof sb.from === 'function' ? sb : null));
+    }
+    function getSupervisorActiveCommunityId(){
+      return String(
+        Store.activeCommunityId
+        || window.currentCommunityId
+        || localStorage.getItem('activeCommunityId')
+        || localStorage.getItem('currentCommunityId')
+        || localStorage.getItem('zummee_community_id')
+        || localStorage.getItem('zummee_selected_community_id')
+        || ''
+      ).trim();
+    }
+    function getSupervisorCompanyKey(){
+      try{
+        const companyId = String(
+          (typeof readCurrentCompanyId === 'function' ? readCurrentCompanyId() : '')
+          || localStorage.getItem('zummee_selected_company_id')
+          || localStorage.getItem('zummee_active_company_id')
+          || localStorage.getItem('activeCompanyId')
+          || localStorage.getItem('currentCompanyId')
+          || localStorage.getItem('zummee_company_id')
+          || ''
+        ).trim();
+        if(companyId) return companyId.toLowerCase();
+        const rawName = String(
+          (typeof readCurrentCompanyName === 'function' ? readCurrentCompanyName() : '')
+          || localStorage.getItem('zummee_selected_company_name_v1')
+          || localStorage.getItem('zummeeActiveCompanyName')
+          || localStorage.getItem('company_name')
+          || localStorage.getItem('activeCompanyName')
+          || localStorage.getItem('currentCompanyName')
+          || ''
+        ).trim().toLowerCase();
+        return rawName || '';
+      }catch(_e){ return ''; }
+    }
+    function getSupervisorDbSelectColumns(){
+      return 'id, community_id, scope, company_key, message, type, rule, notes, due_date, created_by, created_at, updated_at';
+    }
+    async function getSupervisorSessionUser(){
+      try{
+        const client = getSupervisorClient();
+        const sessionRes = client && client.auth && typeof client.auth.getSession === 'function' ? await client.auth.getSession() : null;
+        return sessionRes && sessionRes.data && sessionRes.data.session && sessionRes.data.session.user ? sessionRes.data.session.user : null;
+      }catch(_e){ return null; }
+    }
+
+    function normalizeZummeeRole(value){
+      const role = String(value || '').trim().toLowerCase();
+      if(!role) return '';
+      if(role.includes('admin')) return 'admin';
+      if(role.includes('supervisor')) return 'supervisor';
+      if(role.includes('manager')) return 'employee';
+      if(role.includes('employee')) return 'employee';
+      return role;
+    }
+    async function resolveCurrentZummeeRole(){
+      const client = getSupervisorClient();
+      const user = await getSupervisorSessionUser();
+      const uid = String(user && user.id || Store.userId || readCurrentUserId() || "").trim();
+      const signals = [];
+      const addSignal = (source, value) => { const normalized = normalizeZummeeRole(value); if(normalized) signals.push({ source, raw:String(value || ""), role:normalized }); };
+      try{ if(user){ const meta = Object.assign({}, user.app_metadata || {}, user.user_metadata || {}); ["role","user_role","account_type","type","access_level","access","department","dept"].forEach(k => addSignal("session." + k, meta[k])); if(meta.is_admin || meta.is_companyadmin) addSignal("session.flag", "admin"); if(meta.is_supervisor) addSignal("session.flag", "supervisor"); } }catch(_e){}
+      try{ const p = safeJson(localStorage.getItem("zummee_profile_v1") || "{}", {}); ["role","user_role","account_type","type","access_level","access","department","dept"].forEach(k => addSignal("localProfile." + k, p[k])); if(p.is_admin || p.is_companyadmin) addSignal("localProfile.flag", "admin"); if(p.is_supervisor) addSignal("localProfile.flag", "supervisor"); }catch(_e){}
+      try{ ["zummee_role","zummee_user_role","userRole","role","activeRole","account_type","zummee_account_type"].forEach(k => addSignal("localStorage." + k, localStorage.getItem(k))); }catch(_e){}
+      /* v90: stable supervisor authoring role resolver. Do not query optional/legacy columns; missing selected columns cause Supabase 400s. */
+      if(client && uid){
+        const checks = [
+          {table:"userdirectory", column:"auth_user_id", select:"role,approved"},
+          {table:"userdirectory", column:"id", select:"role,approved"},
+          {table:"profiles", column:"id", select:"role"}
+        ];
+        for(const check of checks){
+          try{
+            const res = await client.from(check.table).select(check.select).eq(check.column, uid).maybeSingle();
+            if(res && res.data){
+              const profile = res.data || {};
+              addSignal(check.table + "." + check.column + ".role", profile.role);
+              if(String(profile.role || "").toLowerCase().includes("admin")) addSignal(check.table + "." + check.column + ".adminRole", "admin");
+              if(String(profile.role || "").toLowerCase().includes("supervisor")) addSignal(check.table + "." + check.column + ".supervisorRole", "supervisor");
+            }
+          }catch(_e){}
+        }
+      }
+      let finalRole = "";
+      if(signals.some(s => s.role === "admin")) finalRole = "admin";
+      else if(signals.some(s => s.role === "supervisor")) finalRole = "supervisor";
+      else if(signals.some(s => s.role === "employee")) finalRole = "employee";
+      else finalRole = signals[0] ? signals[0].role : "";
+      try{ window.dailyOpsSupervisorRoleSignals = signals; }catch(_e){}
+      return finalRole;
+    }
+    async function applySupervisorCommsRoleLock(){
+      const role = await resolveCurrentZummeeRole();
+      Store.currentUserRole = role;
+      Store.canAuthorSupervisorComms = role === 'supervisor' || role === 'admin';
+      try{ window.dailyOpsSupervisorRoleDebug = { role: role, canAuthor: Store.canAuthorSupervisorComms }; }catch(_e){}
+      document.body.classList.toggle('zummee-can-author-supervisor-comms', !!Store.canAuthorSupervisorComms);
+      const form = byId('supervisorCommForm');
+      if(form){
+        form.setAttribute('aria-hidden', Store.canAuthorSupervisorComms ? 'false' : 'true');
+        form.querySelectorAll('input, select, textarea, button').forEach(el => { el.disabled = !Store.canAuthorSupervisorComms; });
+      }
+      guardSupervisorCommsAuthoring('apply-role-lock');
+      return Store.canAuthorSupervisorComms;
+    }
+    function guardSupervisorCommsAuthoring(source){
+      try{
+        const role = String(Store.currentUserRole || '').trim().toLowerCase();
+        const canAuthor = role === 'supervisor' || role === 'admin';
+        const form = byId('supervisorCommForm');
+        const report = {
+          source: source || 'manual',
+          role,
+          canAuthor,
+          formExists: !!form,
+          bodyClass: document.body.classList.contains('zummee-can-author-supervisor-comms'),
+          formDisplay: form ? getComputedStyle(form).display : '',
+          ariaHidden: form ? form.getAttribute('aria-hidden') : '',
+          disabledInputs: form ? Array.from(form.querySelectorAll('input,select,textarea,button')).filter(el => el.disabled).length : null
+        };
+        if(!canAuthor){ return report; }
+        if(!form){
+          console.error('❌ Daily Ops regression guard: supervisor communication form is missing.', report);
+          return report;
+        }
+        const style = getComputedStyle(form);
+        const isHidden = style.display === 'none' || style.visibility === 'hidden' || form.hidden || form.getAttribute('aria-hidden') === 'true';
+        const disabled = Array.from(form.querySelectorAll('input,select,textarea,button')).filter(el => el.disabled);
+        if(isHidden || disabled.length){
+          console.error('❌ Daily Ops regression guard: supervisor/admin authoring was blocked. Restoring form visibility.', report);
+          document.body.classList.add('zummee-can-author-supervisor-comms');
+          form.hidden = false;
+          form.style.display = 'block';
+          form.style.visibility = 'visible';
+          form.setAttribute('aria-hidden','false');
+          disabled.forEach(el => { el.disabled = false; });
+        }else{
+          console.log('✅ Daily Ops regression guard: supervisor authoring verified.', report);
+        }
+        return report;
+      }catch(err){
+        console.error('❌ Daily Ops regression guard failed:', err);
+        return { error: String(err && err.message || err) };
+      }
+    }
+    window.guardDailyOpsSupervisorAuthoring = guardSupervisorCommsAuthoring;
+    window.testDailyOpsSupervisorAuthoring = async function(){
+      const canAuthor = await applySupervisorCommsRoleLock();
+      const form = byId("supervisorCommForm");
+      const out = { role: Store.currentUserRole || "", canAuthor: !!canAuthor, bodyClass: document.body.classList.contains("zummee-can-author-supervisor-comms"), formExists: !!form, formDisplay: form ? getComputedStyle(form).display : "", ariaHidden: form ? form.getAttribute("aria-hidden") : "", disabledInputs: form ? Array.from(form.querySelectorAll("input,select,textarea,button")).filter(el => el.disabled).length : null, guard: guardSupervisorCommsAuthoring('test-helper'), signals: window.dailyOpsSupervisorRoleSignals || [] };
+      console.table(out.signals || []);
+      console.log("Daily Ops Supervisor Authoring Test", out);
+      return out;
+    };
+    function ensureSupervisorSaveStatusEl(){
+      let el = byId('supervisorCommSaveStatus');
+      if(el) return el;
+      const btn = byId('saveSupervisorCommBtn');
+      if(!btn || !btn.parentNode) return null;
+      el = document.createElement('div');
+      el.id = 'supervisorCommSaveStatus';
+      el.style.marginTop = '8px';
+      el.style.fontSize = '13px';
+      el.style.fontWeight = '700';
+      el.style.letterSpacing = '.01em';
+      el.style.color = '#35516e';
+      btn.parentNode.insertBefore(el, btn.nextSibling);
+      return el;
+    }
+    function setSupervisorSaveStatus(message, tone){
+      const el = ensureSupervisorSaveStatusEl();
+      if(!el) return;
+      el.textContent = message || '';
+      el.style.color = tone || '#35516e';
+    }
+    async function loadSupervisorDbRows(){
+      try{
+        const client = getSupervisorClient();
+        const communityId = getSupervisorActiveCommunityId();
+        const companyKey = getSupervisorCompanyKey();
+        if(!client) return [];
+
+        const fullColumns = getSupervisorDbSelectColumns();
+        const baseColumns = 'id, community_id, scope, company_key, message, type, rule, notes, due_date, created_by, created_at, updated_at';
+
+        const isMissingColumnError = (error) => {
+          const msg = String((error && (error.message || error.details || error.hint || error.code)) || '').toLowerCase();
+          return msg.includes('could not find') || msg.includes('column') || msg.includes('schema cache') || msg.includes('completed_at') || msg.includes('completed_by');
+        };
+
+        const runWithColumnFallback = async (buildQuery) => {
+          let result = await buildQuery(fullColumns);
+          if(result && result.error && isMissingColumnError(result.error)){
+            console.warn('supervisor_messages full column query failed; retrying with base columns', result.error);
+            result = await buildQuery(baseColumns);
+          }
+          return result || { data: [], error: null };
+        };
+
+        const communityResult = communityId
+          ? await runWithColumnFallback((columns) => client
+              .from('supervisor_messages')
+              .select(columns)
+              .eq('scope', 'Community')
+              .eq('community_id', communityId)
+              .order('created_at', { ascending:false })
+              .limit(20))
+          : { data: [], error: null };
+
+        const companyResult = companyKey
+          ? await runWithColumnFallback((columns) => client
+              .from('supervisor_messages')
+              .select(columns)
+              .eq('scope', 'Company-wide')
+              .eq('company_key', companyKey)
+              .order('created_at', { ascending:false })
+              .limit(20))
+          : await runWithColumnFallback((columns) => client
+              .from('supervisor_messages')
+              .select(columns)
+              .eq('scope', 'Company-wide')
+              .is('community_id', null)
+              .order('created_at', { ascending:false })
+              .limit(20));
+
+        if(communityResult && communityResult.error){
+          console.error('loadSupervisorDbRows community error', communityResult.error);
+        }
+        if(companyResult && companyResult.error){
+          console.error('loadSupervisorDbRows company error', companyResult.error);
+        }
+        const rawRows = []
+          .concat(Array.isArray(communityResult && communityResult.data) ? communityResult.data : [])
+          .concat(Array.isArray(companyResult && companyResult.data) ? companyResult.data : []);
+
+        const user = await getSupervisorSessionUser();
+        const userId = user && user.id ? String(user.id) : '';
+        let completedIds = new Set();
+        const messageIds = rawRows.map(row => row && row.id).filter(Boolean);
+        if(userId && messageIds.length){
+          const completionResult = await client
+            .from('supervisor_message_completions')
+            .select('message_id, completed_at')
+            .eq('user_id', userId)
+            .in('message_id', messageIds);
+          if(completionResult && completionResult.error){
+            console.warn('supervisor_message_completions query failed; showing active messages', completionResult.error);
+          }else{
+            completedIds = new Set((completionResult.data || []).map(row => String(row.message_id || '')));
+          }
+        }
+
+        return rawRows.filter(row => !completedIds.has(String(row.id || ''))).map(row => ({
+          id: row.id || ('db_' + String(row.created_at || Date.now())),
+          _dbId: row.id || '',
+          title: row.message || 'Supervisor communication',
+          type: row.type || 'Supervisor Message',
+          scope: row.scope || (row.company_key ? 'Company-wide' : 'Community'),
+          rule: row.rule || 'Needs Review',
+          notes: row.notes || '',
+          date: row.due_date || '',
+          createdAt: row.created_at || '',
+          updatedAt: row.updated_at || row.created_at || '',
+          completedAt: '',
+          completedBy: '',
+          createdBy: row.created_by || '',
+          _source: 'db',
+          _dbCommunityId: row.community_id || '',
+          _dbCompanyKey: row.company_key || ''
+        }));
+      }catch(err){
+        console.error('loadSupervisorDbRows fatal', err);
+        return [];
+      }
+    }
+    function mergeSupervisorRows(rows){
+      const seen = new Set();
+      return (Array.isArray(rows) ? rows : []).filter(row => {
+        const key = `${row && row._source === 'db' ? 'db' : 'local'}:${String(row && row.id || '')}:${String(row && row.scope || '')}`;
+        if(seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }).sort((a,b) => String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')));
+    }
+    function getSupervisorTargetFromUrl(){
+      try{
+        const params = new URLSearchParams(window.location.search || '');
+        return {
+          dbId: String(params.get('supervisor_message_id') || '').trim(),
+          localId: String(params.get('supervisor_local_id') || '').trim(),
+          scope: String(params.get('supervisor_scope') || '').trim()
+        };
+      }catch(_e){ return { dbId:'', localId:'', scope:'' }; }
+    }
+    function applySupervisorDeepLink(){
+      const target = getSupervisorTargetFromUrl();
+      const mount = byId('supervisorCommsMount');
+      if(!mount) return;
+      let selector = '';
+      if(target.dbId && window.CSS && CSS.escape){ selector = `.supervisor-record[data-db-id="${CSS.escape(target.dbId)}"]`; }
+      else if(target.localId && window.CSS && CSS.escape){ selector = `.supervisor-record[data-local-id="${CSS.escape(target.localId)}"][data-scope="${CSS.escape(target.scope || 'Community')}"]`; }
+      if(!selector) return;
+      const el = mount.querySelector(selector);
+      if(!el) return;
+      const card = byId('supervisorCommsCard');
+      if(card && typeof card.scrollIntoView === 'function') card.scrollIntoView({ behavior:'smooth', block:'start' });
+      setTimeout(() => {
+        try{ el.scrollIntoView({ behavior:'smooth', block:'center' }); }catch(_e){}
+        el.classList.add('supervisor-record--target');
+        setTimeout(() => { el.classList.remove('supervisor-record--target'); }, 2600);
+      }, 120);
+    }
+
+    function ensureZummeePopup(){
+      let backdrop = byId('zummeePopupBackdrop');
+      if(backdrop) return backdrop;
+      const wrap = document.createElement('div');
+      wrap.innerHTML = `
+        <div id="zummeePopupBackdrop" class="zummee-popup-backdrop" aria-hidden="true">
+          <div class="zummee-popup-card" role="dialog" aria-modal="true" aria-labelledby="zummeePopupTitle" aria-describedby="zummeePopupMessage">
+            <div class="zummee-popup-eyebrow">Zummee Notice</div>
+            <h3 id="zummeePopupTitle" class="zummee-popup-title">Heads up</h3>
+            <p id="zummeePopupMessage" class="zummee-popup-message">Please review this item.</p>
+            <div class="zummee-popup-actions">
+              <button type="button" id="zummeePopupCancel" class="zummee-popup-btn zummee-popup-btn--secondary">Cancel</button>
+              <button type="button" id="zummeePopupOk" class="zummee-popup-btn zummee-popup-btn--primary">OK</button>
+            </div>
+          </div>
+        </div>`;
+      document.body.appendChild(wrap.firstElementChild);
+      backdrop = byId('zummeePopupBackdrop');
+      backdrop.addEventListener('click', (e) => {
+        if(e.target === backdrop && typeof backdrop.__resolver === 'function') backdrop.__resolver(false);
+      });
+      return backdrop;
+    }
+    function closeZummeePopup(result){
+      const backdrop = byId('zummeePopupBackdrop');
+      if(!backdrop) return;
+      const resolver = backdrop.__resolver;
+      backdrop.__resolver = null;
+      backdrop.classList.remove('is-open');
+      backdrop.setAttribute('aria-hidden','true');
+      if(backdrop.__cleanup){
+        try{ backdrop.__cleanup(); }catch(_e){}
+        backdrop.__cleanup = null;
+      }
+      if(typeof resolver === 'function') resolver(result);
+    }
+    function zummeePopupAlert(message, opts){
+      opts = opts || {};
+      return new Promise(resolve => {
+        const backdrop = ensureZummeePopup();
+        const titleEl = byId('zummeePopupTitle');
+        const msgEl = byId('zummeePopupMessage');
+        const okBtn = byId('zummeePopupOk');
+        const cancelBtn = byId('zummeePopupCancel');
+        titleEl.textContent = opts.title || 'Heads up';
+        msgEl.textContent = String(message || '');
+        okBtn.textContent = opts.okText || 'OK';
+        okBtn.className = 'zummee-popup-btn ' + ((opts.danger ? 'zummee-popup-btn--danger' : 'zummee-popup-btn--primary'));
+        cancelBtn.style.display = 'none';
+        const onKey = (e) => { if(e.key === 'Escape' || e.key === 'Enter'){ e.preventDefault(); closeZummeePopup(true); } };
+        okBtn.onclick = () => closeZummeePopup(true);
+        backdrop.__cleanup = () => document.removeEventListener('keydown', onKey);
+        document.addEventListener('keydown', onKey);
+        backdrop.__resolver = (value) => resolve(!!value);
+        backdrop.classList.add('is-open');
+        backdrop.setAttribute('aria-hidden','false');
+        setTimeout(() => okBtn.focus(), 20);
+      });
+    }
+    function zummeePopupConfirm(message, opts){
+      opts = opts || {};
+      return new Promise(resolve => {
+        const backdrop = ensureZummeePopup();
+        const titleEl = byId('zummeePopupTitle');
+        const msgEl = byId('zummeePopupMessage');
+        const okBtn = byId('zummeePopupOk');
+        const cancelBtn = byId('zummeePopupCancel');
+        titleEl.textContent = opts.title || 'Please confirm';
+        msgEl.textContent = String(message || '');
+        okBtn.textContent = opts.okText || 'OK';
+        cancelBtn.textContent = opts.cancelText || 'Cancel';
+        okBtn.className = 'zummee-popup-btn ' + ((opts.danger ? 'zummee-popup-btn--danger' : 'zummee-popup-btn--primary'));
+        cancelBtn.style.display = '';
+        const onKey = (e) => {
+          if(e.key === 'Escape'){ e.preventDefault(); closeZummeePopup(false); }
+          if(e.key === 'Enter'){ e.preventDefault(); closeZummeePopup(true); }
+        };
+        okBtn.onclick = () => closeZummeePopup(true);
+        cancelBtn.onclick = () => closeZummeePopup(false);
+        backdrop.__cleanup = () => document.removeEventListener('keydown', onKey);
+        document.addEventListener('keydown', onKey);
+        backdrop.__resolver = (value) => resolve(!!value);
+        backdrop.classList.add('is-open');
+        backdrop.setAttribute('aria-hidden','false');
+        setTimeout(() => okBtn.focus(), 20);
+      });
+    }
+
+    function renderSupervisorComms(rows){
+      const mount = byId('supervisorCommsMount');
+      rows = Array.isArray(rows) ? rows : [];
+      setMetric('supervisorCommsMetric', rows.length);
+      byId('supervisorCommsCountPill').textContent = String(rows.length);
+      if(!rows.length){ mountEmpty(mount, 'No supervisor communications for this community yet.'); return; }
+      mount.className = 'recordList';
+      mount.innerHTML = rows.map(row => {
+        const status = getSupervisorCommStatus(row);
+        const scope = row.scope || 'Community';
+        const isDbBacked = row._source === 'db' && String(row._dbId || row.id || '').trim() !== '';
+        const metaParts = [row.type || 'Required Task', row.rule || 'Specific Date'];
+        if(row.date) metaParts.push('Due ' + row.date);
+        if(row.notes) metaParts.push(row.notes);
+        if(row._source === 'db'){
+          const posted = formatSupervisorPostedAt(row.createdAt);
+          if(posted) metaParts.push('Posted ' + posted);
+        }
+        const isComplete = !!row.completedAt;
+        const fullTitle = row.title || 'Supervisor communication';
+        const fullMessage = String(row.notes || '').trim();
+        const popupBody = fullMessage ? fullMessage : metaParts.join(' · ');
+        const completeButtonHtml = !isComplete ? `<button class="btn secondary supervisor-complete" type="button" data-db-id="${escapeHtml(row._dbId || row.id || '')}" style="background:#e2fcec;color:#1b6b3d;border-color:rgba(27,107,61,.18);">Mark Complete</button>` : `<span class="metaPill" style="background:rgba(226,252,236,.95);color:#1b6b3d;border:1px solid rgba(27,107,61,.12);">Completed</span>`;
+        const actionHtml = `${completeButtonHtml}${Store.canAuthorSupervisorComms ? `
+              <button class="btn secondary supervisor-delete supervisor-delete-db supervisor-author-action" type="button" data-id="${escapeHtml(row.id)}" data-db-id="${escapeHtml(row._dbId || row.id || '')}" data-scope="${escapeHtml(scope)}" data-db-backed="1">Delete</button>` : ''}`;
+        return `
+        <article class="record supervisor-record supervisor-record--db" data-local-id="" data-db-id="${escapeHtml(row._dbId || row.id || '')}" data-scope="${escapeHtml(scope)}" data-db-backed="1" data-popup-title="${escapeHtml(fullTitle)}" data-popup-body="${escapeHtml(popupBody)}" tabindex="0" role="button" aria-label="Open supervisor communication" style="padding:16px 18px;transition:box-shadow .25s ease,border-color .25s ease,transform .25s ease;cursor:pointer;">
+          <div style="display:grid;grid-template-columns:minmax(180px,1fr) auto;align-items:center;gap:12px;">
+            <div style="min-width:0;">
+              <div class="recordTitle" style="font-size:17px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(fullTitle)}</div>
+              <div style="color:#5b7088;font-size:14px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(metaParts.join(' · '))}</div>
+            </div>
+            <div class="contactActions" style="margin-top:0;display:flex;gap:8px;flex-wrap:nowrap;justify-self:end;">${actionHtml}</div>
+          </div>
+        </article>`;
+      }).join('');
+      mount.querySelectorAll('.supervisor-record--db').forEach(card => {
+        const openFullMessage = async () => {
+          const dbId = String(card.dataset.dbId || '').trim();
+          const isAlreadyComplete = !!card.querySelector('.metaPill');
+          if(dbId && !isAlreadyComplete){
+            const shouldComplete = await zummeePopupConfirm(card.dataset.popupBody || '', {
+              title: card.dataset.popupTitle || 'Supervisor communication',
+              okText:'Mark Complete',
+              cancelText:'Close'
+            });
+            if(shouldComplete){
+              await completeSupervisorCommunication(dbId, { skipConfirm:true });
+            }
+            return;
+          }
+          await zummeePopupAlert(card.dataset.popupBody || '', { title: card.dataset.popupTitle || 'Supervisor communication', okText:'Close' });
+        };
+        card.addEventListener('click', async (evt) => {
+          if(evt.target && evt.target.closest && evt.target.closest('button, a, input, textarea, select')) return;
+          await openFullMessage();
+        });
+        card.addEventListener('keydown', async (evt) => {
+          if(evt.key !== 'Enter' && evt.key !== ' ') return;
+          if(evt.target && evt.target.closest && evt.target.closest('button, a, input, textarea, select')) return;
+          evt.preventDefault();
+          await openFullMessage();
+        });
+      });
+      mount.querySelectorAll('.supervisor-complete').forEach(btn => btn.addEventListener('click', async () => {
+        await completeSupervisorCommunication(btn.dataset.dbId || '');
+      }));
+      mount.querySelectorAll('.supervisor-delete').forEach(btn => btn.addEventListener('click', async () => {
+        const scope = btn.dataset.scope || 'Community';
+        const dbId = String(btn.dataset.dbId || btn.dataset.id || '').trim();
+        if(!dbId) return;
+        const okDelete = await zummeePopupConfirm('Delete this supervisor communication everywhere? This cannot be undone.', { title:'Delete supervisor communication', okText:'Delete', cancelText:'Cancel', danger:true });
+        if(!okDelete) return;
+        const client = getSupervisorClient();
+        if(!client){
+          setSupervisorSaveStatus('Delete failed: Supabase is not available.', '#8f2f2f');
+          await zummeePopupAlert('Supabase is not available right now.', { title:'Supabase unavailable' });
+          return;
+        }
+        try{
+          setSupervisorSaveStatus('Deleting supervisor communication…', '#35516e');
+          const dbResult = await client.from('supervisor_messages').delete().eq('id', dbId).select('id');
+          if(dbResult && dbResult.error){
+            console.error('supervisor db delete failed', dbResult.error);
+            setSupervisorSaveStatus('Delete failed. The communication is still in Supabase.', '#8f2f2f');
+            await zummeePopupAlert('Delete failed. The communication is still in Supabase.', { title:'Delete failed', okText:'OK', danger:true });
+            return;
+          }
+          const deletedRows = Array.isArray(dbResult && dbResult.data) ? dbResult.data : [];
+          if(!deletedRows.length){
+            setSupervisorSaveStatus('Delete failed. The communication is still in Supabase.', '#8f2f2f');
+            await zummeePopupAlert('Delete failed. The communication is still in Supabase.', { title:'Delete failed', okText:'OK', danger:true });
+            return;
+          }
+          if(String(Store.editingSupervisorCommId || '') === dbId) resetSupervisorCommForm();
+          setSupervisorSaveStatus('Supervisor communication deleted.', '#1b6b3d');
+          await loadSupervisorCommsModule();
+          try{ window.dispatchEvent(new Event('storage')); }catch(_e){}
+          try{ document.dispatchEvent(new CustomEvent('community:changed')); }catch(_e){}
+        }catch(err){
+          console.error('supervisor db delete fatal', err);
+          setSupervisorSaveStatus('Delete failed due to an unexpected error.', '#8f2f2f');
+          await zummeePopupAlert('Delete failed due to an unexpected error.', { title:'Delete failed', okText:'OK', danger:true });
+        }
+      }));
+      setTimeout(() => applySupervisorDeepLink(), 30);
+    }
+    function mergeSupervisorCommRows(dbRows, localRows){
+      return mergeSupervisorRows(Array.isArray(dbRows) ? dbRows : []);
+    }
+    async function loadSupervisorCommsModule(){
+      const mount = byId('supervisorCommsMount');
+      if(!Store.activeCommunityId && !Store.activeCommunityName){ mountEmpty(mount, 'Choose a community to load supervisor communications.'); setMetric('supervisorCommsMetric', 0); byId('supervisorCommsCountPill').textContent = '0'; return; }
+      clearLegacySupervisorCommCache();
+      renderSupervisorComms([]);
+      try{
+        const dbRows = await loadSupervisorDbRows();
+        renderSupervisorComms(mergeSupervisorRows(dbRows));
+      }catch(err){
+        console.error('loadSupervisorCommsModule error', err);
+      }
+    }
+    async function testSupervisorDBSave(){
+      if(!Store.canAuthorSupervisorComms){ await zummeePopupAlert('Only supervisors and admins can create supervisor communications.', { title:'Supervisor access required' }); return; }
+      const statusEl = byId('supervisorCommsDebugStatus');
+      function setStatus(message, tone){
+        if(!statusEl) return;
+        statusEl.textContent = message;
+        statusEl.style.color = tone || '#35516e';
+      }
+      try{
+        const client = (window.sb && typeof window.sb.from === 'function' ? window.sb : (typeof sb !== 'undefined' && sb && typeof sb.from === 'function' ? sb : null));
+        if(!client){
+          console.log('testSupervisorDBSave: no Supabase client found');
+          setStatus('DB test status: no Supabase client found', '#8f2f2f');
+          alert('No Supabase client found');
+          return;
+        }
+        const sessionRes = await client.auth.getSession();
+        console.log('testSupervisorDBSave session', sessionRes);
+        const user = sessionRes && sessionRes.data && sessionRes.data.session && sessionRes.data.session.user;
+        if(!user){
+          setStatus('DB test status: no active session', '#8f2f2f');
+          alert('No active session');
+          return;
+        }
+        const communityId = Store.activeCommunityId || window.currentCommunityId || localStorage.getItem('activeCommunityId') || localStorage.getItem('currentCommunityId') || localStorage.getItem('zummee_community_id') || localStorage.getItem('zummee_selected_community_id') || 'test';
+        console.log('testSupervisorDBSave communityId', communityId);
+        const result = await client
+          .from('supervisor_messages')
+          .insert([{ community_id: communityId, message: 'TEST FROM BUTTON', created_by: user.id }])
+          .select();
+        console.log('testSupervisorDBSave insert result', result);
+        if(result && result.error){
+          setStatus('DB test status: insert failed', '#8f2f2f');
+          alert('Insert failed');
+          return;
+        }
+        setStatus('DB test status: insert success', '#1b6b3d');
+        alert('Insert SUCCESS');
+      }catch(err){
+        console.error('testSupervisorDBSave error', err);
+        setStatus('DB test status: error during insert', '#8f2f2f');
+        alert('Error during insert');
+      }
+    }
+    function attachSupervisorCommsModule(){
+      const testBtn = byId('testSupervisorDbSaveBtn');
+      if(testBtn && !testBtn.__bound){
+        testBtn.__bound = true;
+        testBtn.addEventListener('click', testSupervisorDBSave);
+      }
+      
+      byId('saveSupervisorCommBtn').addEventListener('click', async () => {
+        if(!Store.canAuthorSupervisorComms){ await zummeePopupAlert('Only supervisors and admins can create supervisor communications.', { title:'Supervisor access required' }); return; }
+        const title = String(byId('supervisorCommTitleInput').value || '').trim();
+        const type = String(byId('supervisorCommTypeInput').value || 'Required Task').trim();
+        const scope = String(byId('supervisorCommScopeInput').value || 'Community').trim() || 'Community';
+        const rule = String(byId('supervisorCommRuleInput').value || 'Specific Date').trim();
+        const notes = String(byId('supervisorCommNotesInput').value || '').trim();
+        const date = String(byId('supervisorCommDateInput').value || '').trim();
+        if(!title){
+          setSupervisorSaveStatus('Enter a communication title first.', '#8f2f2f');
+          await zummeePopupAlert('Enter a communication title first.', { title:'Title required' });
+          return;
+        }
+        const storeScope = Store.editingSupervisorCommId ? (Store.editingSupervisorCommScope || scope) : scope;
+        const rows = readSupervisorCommRows(storeScope);
+        const id = Store.editingSupervisorCommId || ('supcomm_' + Date.now());
+        const existing = rows.find(r => r.id === id) || null;
+        const nextRow = { id, title, type, scope, rule, notes, date, completedAt: existing ? existing.completedAt || '' : '', createdAt: existing ? existing.createdAt || new Date().toISOString() : new Date().toISOString(), updatedAt:new Date().toISOString(), _dbId: existing ? existing._dbId || '' : '', _source: existing ? existing._source || '' : '' };
+        const client = getSupervisorClient();
+        const communityId = getSupervisorActiveCommunityId();
+        const user = await getSupervisorSessionUser();
+        setSupervisorSaveStatus('Saving supervisor communication…', '#35516e');
+        try{
+          if(!client){
+            setSupervisorSaveStatus('Save failed: Supabase is not available.', '#8f2f2f');
+            await zummeePopupAlert('Supabase is not available right now.', { title:'Supabase unavailable' });
+            return;
+          }
+          if(!user || !user.id){
+            setSupervisorSaveStatus('Save failed: no active session found.', '#8f2f2f');
+            await zummeePopupAlert('Please sign in again and retry.', { title:'Session required' });
+            return;
+          }
+          if(scope === 'Community' && !communityId){
+            setSupervisorSaveStatus('Save failed: no active community selected.', '#8f2f2f');
+            await zummeePopupAlert('Choose a community before saving a supervisor communication.', { title:'Community required' });
+            return;
+          }
+          const companyKey = getSupervisorCompanyKey();
+          if(scope === 'Company-wide' && !companyKey){
+            setSupervisorSaveStatus('Save failed: no company context found for company-wide communication.', '#8f2f2f');
+            await zummeePopupAlert('Save failed: no company context found for company-wide communication.', { title:'Company context required', okText:'OK', danger:true });
+            return;
+          }
+          const dbPayload = {
+            scope,
+            company_key: scope === 'Company-wide' ? companyKey : null,
+            community_id: scope === 'Community' ? communityId : null,
+            message: title,
+            type,
+            rule,
+            notes,
+            due_date: date || null,
+            created_by: user.id,
+            updated_at: new Date().toISOString()
+          };
+          let dbResult = null;
+          if(nextRow._dbId){
+            dbResult = await client.from('supervisor_messages').update({
+              scope: dbPayload.scope,
+              company_key: dbPayload.company_key,
+              community_id: dbPayload.community_id,
+              message: dbPayload.message,
+              type: dbPayload.type,
+              rule: dbPayload.rule,
+              notes: dbPayload.notes,
+              due_date: dbPayload.due_date,
+              updated_at: dbPayload.updated_at
+            }).eq('id', nextRow._dbId).select();
+          } else {
+            dbResult = await client.from('supervisor_messages').insert([dbPayload]).select();
+          }
+          if(dbResult && dbResult.error){
+            console.error('saveSupervisorCommBtn db save error', dbResult.error);
+            setSupervisorSaveStatus('Save failed. The communication was not written to Supabase.', '#8f2f2f');
+            await zummeePopupAlert('Save failed. The communication was not written to Supabase.', { title:'Save failed', okText:'OK', danger:true });
+            return;
+          }
+          const saved = Array.isArray(dbResult && dbResult.data) ? dbResult.data[0] : (dbResult && dbResult.data ? dbResult.data : null);
+          if(!saved || !saved.id){
+            setSupervisorSaveStatus('Save failed. Supabase did not return the saved record.', '#8f2f2f');
+            await zummeePopupAlert('Save failed. Supabase did not return the saved record.', { title:'Save failed', okText:'OK', danger:true });
+            return;
+          }
+          nextRow._dbId = saved.id;
+          nextRow._source = 'db';
+          nextRow.scope = saved.scope || scope;
+          nextRow.type = saved.type || type;
+          nextRow.rule = saved.rule || rule;
+          nextRow.notes = saved.notes || notes;
+          nextRow.date = saved.due_date || date || '';
+          nextRow.createdAt = saved.created_at || nextRow.createdAt;
+          nextRow.updatedAt = saved.updated_at || saved.created_at || nextRow.updatedAt;
+          nextRow._dbCompanyKey = saved.company_key || '';
+          nextRow._dbCommunityId = saved.community_id || '';
+          clearLegacySupervisorCommCache();
+          setSupervisorSaveStatus(saved.scope === 'Company-wide'
+            ? 'Saved company-wide communication to Supabase successfully.'
+            : 'Saved to Supabase successfully.', '#1b6b3d');
+          resetSupervisorCommForm();
+          await loadSupervisorCommsModule();
+          try{ window.dispatchEvent(new Event('storage')); }catch(_e){}
+          try{ document.dispatchEvent(new CustomEvent('community:changed')); }catch(_e){}
+        }catch(err){
+          console.error('saveSupervisorCommBtn fatal', err);
+          setSupervisorSaveStatus('Save failed due to an unexpected error.', '#8f2f2f');
+          await zummeePopupAlert('Save failed due to an unexpected error.', { title:'Save failed', okText:'OK', danger:true });
+        }
+      });
+    }
+
+function accessCodesStorageKey(){
+      return `dailyOpsV2:accessCodes:${Store.activeCommunityId || ('name:' + (Store.activeCommunityName || 'unknown').toLowerCase())}`;
+    }
+    function readAccessCodeRows(){
+      return getOpsSectionRows('accessCodes', accessCodesStorageKey);
+    }
+    function writeAccessCodeRows(rows){
+      writeOpsSectionRows('accessCodes', accessCodesStorageKey, rows);
+    }
+    function resetAccessCodeForm(){
+      Store.editingAccessCodeId = '';
+      byId('accessCodeNameInput').value = '';
+      byId('accessCodeValueInput').value = '';
+      byId('accessCodeNotesInput').value = '';
+      byId('saveAccessCodeBtn').textContent = 'Save access code';
+    }
+    async function copyAccessCodeValue(code){
+      const value = String(code || '').trim();
+      if(!value) return;
+      try{
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          await navigator.clipboard.writeText(value);
+          return;
+        }
+      }catch(_e){}
+      try{
+        const ta = document.createElement('textarea');
+        ta.value = value;
+        ta.setAttribute('readonly','readonly');
+        ta.style.position = 'absolute';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+      }catch(_e){}
+    }
+    function renderAccessCodes(rows){
+      const mount = byId('accessCodesMount');
+      rows = Array.isArray(rows) ? rows : [];
+      setMetric('accessCodesMetric', rows.length);
+      byId('accessCodesCountPill').textContent = String(rows.length);
+      if(!rows.length){ mountEmpty(mount, 'No access codes for this community yet.'); return; }
+      mount.className = 'recordList';
+      mount.innerHTML = rows.map(row => `
+        <article class="record" style="padding:16px 18px;">
+          <div style="display:grid; grid-template-columns:minmax(110px, 160px) auto minmax(0,1fr) auto; align-items:center; gap:12px;">
+            <div class="recordTitle" style="font-size:17px; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(row.name || 'Access Code')}</div>
+            <button class="metaPill access-copy" type="button" data-code="${escapeHtml(row.code || '')}" style="cursor:pointer; white-space:nowrap; justify-self:start;">${escapeHtml(row.code || '—')}</button>
+            <div style="color:#5b7088; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;">${escapeHtml(row.notes || '')}</div>
+            <div class="contactActions" style="margin-top:0; margin-left:auto; display:flex; gap:8px; flex-wrap:nowrap; justify-self:end;">
+              <button class="btn ghost access-load" type="button" data-id="${escapeHtml(row.id)}">Edit</button>
+              <button class="btn ghost access-text" type="button" data-id="${escapeHtml(row.id)}">Text</button>
+              <button class="btn secondary access-delete" type="button" data-id="${escapeHtml(row.id)}">Delete</button>
+            </div>
+          </div>
+        </article>
+      `).join('');
+      mount.querySelectorAll('.access-copy').forEach(btn => btn.addEventListener('click', async () => {
+        await copyAccessCodeValue(btn.dataset.code || '');
+      }));
+      mount.querySelectorAll('.access-load').forEach(btn => btn.addEventListener('click', () => {
+        const row = rows.find(r => r.id === btn.dataset.id);
+        if(!row) return;
+        Store.editingAccessCodeId = row.id;
+        byId('accessCodeNameInput').value = row.name || '';
+        byId('accessCodeValueInput').value = row.code || '';
+        byId('accessCodeNotesInput').value = row.notes || '';
+        byId('saveAccessCodeBtn').textContent = 'Update access code';
+      }));
+      mount.querySelectorAll('.access-text').forEach(btn => btn.addEventListener('click', () => {
+        const row = rows.find(r => r.id === btn.dataset.id);
+        if(!row) return;
+        openAccessCodeText(row);
+      }));
+      mount.querySelectorAll('.access-delete').forEach(btn => btn.addEventListener('click', () => {
+        const next = rows.filter(r => r.id !== btn.dataset.id);
+        writeAccessCodeRows(next);
+        if(Store.editingAccessCodeId === btn.dataset.id) resetAccessCodeForm();
+        loadAccessCodesModule();
+      }));
+    }
+    function loadAccessCodesModule(){
+      const mount = byId('accessCodesMount');
+      if(!Store.activeCommunityId && !Store.activeCommunityName){ mountEmpty(mount, 'Choose a community to load access codes.'); setMetric('accessCodesMetric', 0); byId('accessCodesCountPill').textContent = '0'; return; }
+      renderAccessCodes(readAccessCodeRows());
+    }
+    function attachAccessCodesModule(){
+      byId('saveAccessCodeBtn').addEventListener('click', () => {
+        const name = String(byId('accessCodeNameInput').value || '').trim();
+        const code = String(byId('accessCodeValueInput').value || '').trim();
+        const notes = String(byId('accessCodeNotesInput').value || '').trim();
+        if(!name){ alert('Enter a label for this access code first.'); return; }
+        if(!code){ alert('Enter the access code first.'); return; }
+        const rows = readAccessCodeRows();
+        const id = Store.editingAccessCodeId || ('access_' + Date.now());
+        const existing = rows.find(r => r.id === id) || null;
+        const nextRow = { id, name, code, notes, createdAt: existing && existing.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString(), communityName: Store.activeCommunityName || '' };
+        const next = Store.editingAccessCodeId ? rows.map(r => r.id === id ? nextRow : r) : [nextRow, ...rows];
+        writeAccessCodeRows(next);
+        resetAccessCodeForm();
+        loadAccessCodesModule();
+      });
+    }
+
+    async function loadModules(){
+      await ensureUser();
+      await loadOpsCloudState();
+      await Promise.all([loadBoardMembersModule()]);
+      loadSupervisorCommsModule();
+      loadRemindersModule();
+      loadQuickNotesModule();
+      loadVendorsModule();
+      loadImportantDatesModule();
+      loadAccessCodesModule();
+    }
+
+
+    function parseDailyOpsLogoRef(raw){
+      raw = String(raw || '').trim();
+      if(!raw) return null;
+      if(/^https?:\/\//i.test(raw)) return { url: raw };
+      return { bucket:'company_logos', path: raw };
+    }
+    function setDailyOpsCompanyLogo(url, alt){
+      const logo = byId('dailyOpsCompanyLogo');
+      if(!logo) return;
+      const finalUrl = String(url || '').trim();
+      logo.hidden = true;
+      logo.removeAttribute('src');
+      if(!finalUrl) return;
+      logo.onload = () => { logo.hidden = false; };
+      logo.onerror = () => { logo.hidden = true; logo.removeAttribute('src'); };
+      logo.alt = String(alt || '').trim() || 'Management company logo';
+      logo.src = finalUrl;
+    }
+    async function loadDailyOpsCompanyLogo(){
+      const logo = byId('dailyOpsCompanyLogo');
+      if(!logo || !sb) return;
+      try{
+        await ensureUser();
+        const companyId = String(Store.companyId || readCurrentCompanyId() || '').trim();
+        if(!companyId) throw new Error('No company id');
+        const res = await sb.from('companies').select('logo_path,name').eq('id', companyId).maybeSingle();
+        if(res && res.error) throw res.error;
+        const row = (res && res.data) || {};
+        const ref = parseDailyOpsLogoRef(row.logo_path);
+        if(!ref) throw new Error('No company logo');
+        let url = String(ref.url || '').trim();
+        if(!url && ref.bucket && ref.path && sb.storage && sb.storage.from){
+          const pub = sb.storage.from(ref.bucket).getPublicUrl(ref.path);
+          url = String(pub && pub.data && pub.data.publicUrl || '').trim();
+        }
+        if(!url) throw new Error('No logo url');
+        setDailyOpsCompanyLogo(url, String(row.name || 'Management company logo'));
+      }catch(_err){
+        setDailyOpsCompanyLogo('', 'Management company logo');
+      }
+    }
+
+    async function init(){
+      await restoreSupabaseSessionFromStorage();
+      await ensureUser();
+      loadDailyOpsCompanyLogo();
+      Store.communities = readCommunityCandidates();
+      if(!Store.communities.length) Store.communities = await fetchCommunitiesFromSupabase();
+      renderCommunityOptions();
+      attachCommunitySelect();
+      await applySupervisorCommsRoleLock();
+      setTimeout(() => guardSupervisorCommsAuthoring('post-init-delay'), 500);
+      attachSupervisorCommsModule();
+      attachRemindersModule();
+      attachQuickNotesModule();
+      attachVendorsModule();
+      attachImportantDatesModule();
+      attachAccessCodesModule();
+      await loadModules();
+    }
+    init();
+  </script>
+
+
+
+
+<style id="reminder-layout-final-v73">
+/* v73 final: compact two-field Reminder form. Save button is only in the section header. */
+#remindersCard .remindersHeaderRow{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:14px!important;}
+#remindersCard .remindersHeaderActions{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:12px!important;flex-shrink:0!important;}
+#remindersCard .reminderHeaderSaveBtn{height:42px!important;min-width:150px!important;width:auto!important;padding:0 18px!important;border-radius:14px!important;white-space:nowrap!important;position:static!important;transform:none!important;}
+#remindersCard .reminderFormWrap{padding:14px 18px!important;border-style:solid!important;overflow:hidden!important;box-sizing:border-box!important;}
+#remindersCard #reminderEntryForm.reminderEntryForm{display:grid!important;grid-template-columns:minmax(0,1fr) 260px!important;gap:18px!important;align-items:end!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important;}
+#remindersCard .reminderTitleCompact,#remindersCard .reminderDateCompact{display:flex!important;flex-direction:column!important;min-width:0!important;max-width:100%!important;width:100%!important;position:static!important;box-sizing:border-box!important;}
+#remindersCard .reminderDateCompact{width:260px!important;max-width:260px!important;justify-self:start!important;}
+#remindersCard .reminderBottomCompact,#remindersCard .reminderActionField{display:none!important;}
+#remindersCard .label{margin:0 0 6px 0!important;line-height:1.15!important;}
+#remindersCard #reminderTitle,#remindersCard #reminderDate{display:block!important;height:44px!important;border-radius:14px!important;border:1px solid rgba(23,50,77,.12)!important;padding:0 14px!important;background:#fff!important;color:#17324d!important;font-size:15px!important;font-weight:700!important;box-sizing:border-box!important;position:static!important;transform:none!important;margin:0!important;}
+#remindersCard #reminderTitle{width:100%!important;max-width:100%!important;}
+#remindersCard #reminderDate{width:260px!important;min-width:260px!important;max-width:260px!important;-webkit-appearance:none!important;appearance:none!important;}
+@media (max-width:700px){#remindersCard #reminderEntryForm.reminderEntryForm{grid-template-columns:1fr!important;gap:12px!important;}#remindersCard .reminderDateCompact,#remindersCard #reminderDate{width:100%!important;min-width:0!important;max-width:100%!important;}#remindersCard .remindersHeaderRow{align-items:flex-start!important;}#remindersCard .reminderHeaderSaveBtn{min-width:128px!important;padding:0 14px!important;height:40px!important;}}
+</style>
+
+<style id="reminder-focus-ring-v74-actual">
+/* v74 actual: keep iPad/Safari focus ring from being clipped or partially hidden. */
+#remindersCard .sectionBody,
+#remindersCard .tableWrap,
+#remindersCard .reminderFormWrap,
+#remindersCard #reminderEntryForm,
+#remindersCard .reminderStackField,
+#remindersCard .reminderTitleCompact,
+#remindersCard .reminderDateCompact {
+  overflow: visible !important;
+}
+#remindersCard #reminderTitle,
+#remindersCard #reminderDate {
+  outline: none !important;
+  transition: border-color .16s ease, box-shadow .16s ease !important;
+}
+#remindersCard #reminderTitle:focus,
+#remindersCard #reminderDate:focus,
+#remindersCard #reminderTitle:focus-visible,
+#remindersCard #reminderDate:focus-visible {
+  outline: none !important;
+  border-color: #4f8df7 !important;
+  box-shadow: 0 0 0 4px rgba(79,141,247,.26) !important;
+}
+</style>
+
+<style id="reminder-date-vertical-center-v76">
+/* v76: vertically center the Due date value inside the date input on iPad/Safari. */
+#remindersCard #reminderDate {
+  height: 44px !important;
+  min-height: 44px !important;
+  max-height: 44px !important;
+  line-height: 44px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  display: block !important;
+  text-align: center !important;
+  text-align-last: center !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+#remindersCard #reminderDate::-webkit-date-and-time-value {
+  height: 44px !important;
+  line-height: 44px !important;
+  min-height: 44px !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  text-align: center !important;
+  width: 100% !important;
+}
+#remindersCard #reminderDate::-webkit-datetime-edit,
+#remindersCard #reminderDate::-webkit-datetime-edit-fields-wrapper {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 44px !important;
+  line-height: 44px !important;
+  padding: 0 !important;
+  margin: 0 auto !important;
+  text-align: center !important;
+}
+#remindersCard #reminderDate::-webkit-datetime-edit-text,
+#remindersCard #reminderDate::-webkit-datetime-edit-month-field,
+#remindersCard #reminderDate::-webkit-datetime-edit-day-field,
+#remindersCard #reminderDate::-webkit-datetime-edit-year-field {
+  line-height: 44px !important;
+  padding: 0 !important;
+}
+</style>
+<script src="company_logo_sync.js"></script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>
+
+<style id="reminder-date-center-v75-actual">
+/* v75 actual: center the visible Due Date value in Safari/iPad and desktop. */
+#remindersCard #reminderDate {
+  text-align: center !important;
+  text-align-last: center !important;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+}
+#remindersCard #reminderDate::-webkit-date-and-time-value {
+  text-align: center !important;
+  margin: 0 auto !important;
+  width: 100% !important;
+}
+#remindersCard #reminderDate::-webkit-datetime-edit,
+#remindersCard #reminderDate::-webkit-datetime-edit-fields-wrapper,
+#remindersCard #reminderDate::-webkit-datetime-edit-text,
+#remindersCard #reminderDate::-webkit-datetime-edit-month-field,
+#remindersCard #reminderDate::-webkit-datetime-edit-day-field,
+#remindersCard #reminderDate::-webkit-datetime-edit-year-field {
+  text-align: center !important;
+}
+</style>

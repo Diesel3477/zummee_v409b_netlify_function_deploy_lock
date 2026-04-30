@@ -1,0 +1,13 @@
+This build removes request_html from the maintenance_requests insert payload.
+
+Why:
+Your maintenance_requests table does not have a request_html column.
+The previous vendor workflow still sent that field, which caused a 400 response.
+
+What changed:
+- removed request_html from the primary maintenance_requests payload
+- removed request_html from the fallback maintenance_requests payload
+
+Expected result:
+- vendor email still sends
+- maintenance_requests POST should stop throwing the request_html schema error

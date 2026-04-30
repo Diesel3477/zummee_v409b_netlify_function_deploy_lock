@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Annual Meeting Notice Status</title>
+  <script>
+    (function(){try{var t=localStorage.getItem('mh2-theme')||localStorage.getItem('zummee-theme')||(localStorage.getItem('zummee_dark_mode')==='true'?'dark':'light');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');}catch(e){document.documentElement.setAttribute('data-theme','light');}})();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="shared/zummee-design-system.css">
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+    :root{--ink:#17325f;--muted:#6b7f9f;--line:#9fc2ff;--blue:#2f63ff;--soft:#f7fbff;--card:#ffffff;--shadow:0 10px 24px rgba(18,42,67,.06),0 0 0 1px rgba(96,165,250,.22),0 8px 22px rgba(59,130,246,.12)}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);background:linear-gradient(180deg,#f7fbff 0%,#edf3f8 100%)}button,select{font:inherit}.page{max-width:1180px;margin:0 auto;padding:22px 18px 46px}.shell{position:relative;border:1px solid rgba(37,99,235,.42);border-radius:30px;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(244,249,254,.95));box-shadow:var(--shadow);overflow:hidden}.shell:before,.panel:before,.status-card:before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;box-shadow:inset 0 0 0 1px rgba(147,197,253,.35)}
+    .hero{position:relative;display:flex;align-items:flex-start;justify-content:space-between;gap:22px;padding:22px 26px;border-bottom:1px solid rgba(37,99,235,.18);background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(244,249,254,.95))}.eyebrow{font-size:13px;letter-spacing:.18em;text-transform:uppercase;font-weight:950;color:#6c85a2;margin-bottom:4px}.title{margin:0;font-size:40px;line-height:1;font-weight:950;letter-spacing:-.04em;color:var(--ink)}.sub{max-width:720px;margin:10px 0 0;color:#627792;font-weight:800;font-size:18px;line-height:1.4}.hero-logo-wrap{display:flex;align-items:flex-start;justify-content:flex-end;min-width:220px;min-height:74px}.company-logo{display:none;max-width:260px;height:74px;object-fit:contain;filter:drop-shadow(0 8px 16px rgba(18,42,67,.06))}.company-logo.is-visible{display:block}
+    .content{padding:26px}.panel{position:relative;border:1px solid rgba(37,99,235,.42);border-radius:30px;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(244,249,254,.95));box-shadow:var(--shadow);padding:24px;margin-bottom:22px}.panel-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}.panel-title{margin:0;font-size:30px;line-height:1.05;font-weight:950;letter-spacing:-.03em;color:var(--ink)}.actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap}.btn,.hub-btn{min-height:52px;border-radius:999px;padding:0 24px;border:1px solid rgba(37,99,235,.42);background:#fff;color:var(--ink);font-weight:950;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .16s ease,box-shadow .16s ease}.btn:hover,.hub-btn:hover{transform:translateY(-1px)}.hub-btn{border:2px solid rgba(147,197,253,.85);background:#f8fbff}.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.select{min-height:46px;min-width:260px;border-radius:999px;border:1.5px solid rgba(147,197,253,.9);background:#fff;color:var(--ink);font-weight:900;padding:0 16px}.refresh{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 12px 22px rgba(46,99,255,.18)}
+    .summary-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}.mini{border:1px solid rgba(147,197,253,.65);border-radius:20px;background:#fff;padding:14px 16px}.mini-label{font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:950;color:#6c85a2}.mini-value{margin-top:4px;font-size:24px;font-weight:950;color:var(--ink)}.list{display:grid;gap:14px}.status-card{position:relative;display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:16px;align-items:center;border:1px solid rgba(37,99,235,.35);border-radius:24px;background:linear-gradient(180deg,#fff,#fbfdff);box-shadow:0 10px 24px rgba(18,42,67,.045);padding:18px}.status-icon{width:64px;height:64px;border-radius:20px;background:#f1f6ff;border:1px solid rgba(147,197,253,.72);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:950;color:#2f63ff}.status-main{min-width:0}.name{font-size:22px;font-weight:950;letter-spacing:-.025em;color:var(--ink)}.desc{margin-top:5px;color:#526b86;font-weight:800;line-height:1.4}.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.meta{border-radius:999px;background:#f8fbff;border:1px solid rgba(147,197,253,.55);padding:7px 11px;color:#48637f;font-size:12px;font-weight:950}.pill{border-radius:999px;padding:10px 13px;font-size:12px;font-weight:950;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;align-self:start}.pill.board{background:#eef6ff;color:#24598e;border:1px solid #bfdbfe}.pill.supervisor,.pill.admin{background:#fff7cc;color:#7a5600;border:1px solid #facc15}.pill.mailed,.pill.approved{background:#dcfce7;color:#166534;border:1px solid #86efac}.pill.rejected{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}.empty{padding:28px;border-radius:22px;background:#f8fbff;border:1.5px solid rgba(147,197,253,.55);text-align:center;color:#60758d;font-weight:900}.empty-title{font-size:20px;color:var(--ink);font-weight:950;margin-bottom:4px}.note{margin-top:16px;color:#64748b;font-size:14px;font-weight:800}.note strong{color:var(--ink)}
+    html[data-theme="dark"] body,body.dark-mode{background:#081426;color:#f4f8ff}html[data-theme="dark"] .shell,html[data-theme="dark"] .hero,html[data-theme="dark"] .panel,body.dark-mode .shell,body.dark-mode .hero,body.dark-mode .panel{background:linear-gradient(180deg,#10213a,#0b1b31);border-color:#3b82f6}html[data-theme="dark"] .title,html[data-theme="dark"] .panel-title,html[data-theme="dark"] .mini-value,html[data-theme="dark"] .name,html[data-theme="dark"] .empty-title,html[data-theme="dark"] .note strong,body.dark-mode .title,body.dark-mode .panel-title,body.dark-mode .mini-value,body.dark-mode .name,body.dark-mode .empty-title,body.dark-mode .note strong{color:#f4f8ff}html[data-theme="dark"] .sub,html[data-theme="dark"] .desc,html[data-theme="dark"] .note,body.dark-mode .sub,body.dark-mode .desc,body.dark-mode .note{color:#b9c8dc}html[data-theme="dark"] .hub-btn,html[data-theme="dark"] .select,html[data-theme="dark"] .btn,body.dark-mode .hub-btn,body.dark-mode .select,body.dark-mode .btn{background:#081426;color:#f4f8ff;border-color:#3b82f6}html[data-theme="dark"] .refresh,body.dark-mode .refresh{background:#2f63ff;color:#fff}html[data-theme="dark"] .mini,html[data-theme="dark"] .status-card,body.dark-mode .mini,body.dark-mode .status-card{background:linear-gradient(180deg,#132844,#0e1f36);border-color:#2c4d7a}html[data-theme="dark"] .status-icon,html[data-theme="dark"] .meta,html[data-theme="dark"] .empty,body.dark-mode .status-icon,body.dark-mode .meta,body.dark-mode .empty{background:#0b1b31;color:#dbeafe;border-color:#2c4d7a}
+    @media(max-width:860px){.page{padding:18px 14px 34px}.hero{padding:20px}.content{padding:18px}.summary-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.hero-logo-wrap{min-width:180px}.company-logo{max-width:220px;height:64px}.panel{padding:20px}.panel-head{align-items:flex-start}.title{font-size:34px}.panel-title{font-size:28px}.status-card{grid-template-columns:56px minmax(0,1fr);align-items:start}.status-icon{width:52px;height:52px;border-radius:16px}.pill{grid-column:2;justify-self:start}.select{min-width:220px}}
+    @media(max-width:640px){.hero{flex-direction:column}.hero-logo-wrap{justify-content:flex-start;min-height:52px}.panel-head{flex-direction:column}.actions{width:100%;justify-content:flex-start}.hub-btn,.btn{width:100%}.toolbar{width:100%}.select{width:100%;min-width:0}.company-logo{height:54px;max-width:210px}.summary-strip{grid-template-columns:1fr}.status-card{grid-template-columns:1fr}.status-icon{display:none}.pill{grid-column:auto}.title{font-size:31px}}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="shell">
+      <header class="hero">
+        <div>
+          <div class="eyebrow">Read-only employee view</div>
+          <h1 class="title">Annual Meeting Notice Status</h1>
+          <p class="sub">Track every notice from board review through supervisor approval and mailing.</p>
+        </div>
+        <div class="hero-logo-wrap"><img id="companyLogo" class="company-logo" alt="Company logo" decoding="async" fetchpriority="high"></div>
+      </header>
+      <div class="content">
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2 class="panel-title">Notice workflow</h2>
+              <div class="note">Status-only access for employees. <strong>Approval actions remain supervisor-only.</strong></div>
+            </div>
+            <div class="actions"><a class="hub-btn" href="manager_hub.html">Back to Hub</a></div>
+          </div>
+          <div class="toolbar"><select id="communityFilter" class="select"><option value="">All assigned communities</option></select><button id="refreshBtn" class="btn refresh" type="button">Refresh</button></div>
+        </section>
+        <section class="panel">
+          <div class="summary-strip" id="summaryStrip">
+            <div class="mini"><div class="mini-label">Records</div><div class="mini-value" id="sumRecords">—</div></div>
+            <div class="mini"><div class="mini-label">Board</div><div class="mini-value" id="sumBoard">—</div></div>
+            <div class="mini"><div class="mini-label">Supervisor</div><div class="mini-value" id="sumSupervisor">—</div></div>
+            <div class="mini"><div class="mini-label">Ready / mailed</div><div class="mini-value" id="sumReady">—</div></div>
+          </div>
+          <div id="statusList" class="list"><div class="empty"><div class="empty-title">Loading status…</div>Checking annual meeting notice records.</div></div>
+        </section>
+      </div>
+    </section>
+  </main>
+  <script src="shared/supabase-client.js?v=2026-04-08-2"></script>
+  <script>
+    function esc(v){return String(v==null?'':v).replace(/[&<>\"']/g,function(m){return({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'})[m];});}
+    function localUid(){var keys=['zummee_user_id_v1','zummeeUserId','currentUserId','userId'];for(var i=0;i<keys.length;i++){try{var v=String(localStorage.getItem(keys[i])||'').trim();if(v)return v;}catch(e){}}return '';}
+    async function ensureSb(){if(typeof window.ensureSupabaseSync==='function'){var c=window.ensureSupabaseSync();if(c)return c;}var start=Date.now();return await new Promise(function(resolve){var t=setInterval(function(){try{if(typeof window.ensureSupabaseSync==='function'){var c=window.ensureSupabaseSync();if(c){clearInterval(t);resolve(c);return;}}if(window.supabaseClient){clearInterval(t);resolve(window.supabaseClient);return;}}catch(e){}if(Date.now()-start>5000){clearInterval(t);resolve(null);}},50);});}
+    async function getProfile(sb){var uid=localUid();try{var u=await sb.auth.getUser();if(u&&u.data&&u.data.user&&u.data.user.id)uid=u.data.user.id;}catch(e){}if(!uid)return {};var q=await sb.from('profiles').select('id,role,company_id,company,selected_community_id').eq('id',uid).maybeSingle();return Object.assign({uid:uid},q&&q.data?q.data:{});}
+    function isPriv(role){role=String(role||'').toLowerCase().replace(/[_-]+/g,' ').trim();return role==='admin'||role==='company admin'||role==='companyadmin'||role==='supervisor';}
+    function labelStatus(st){st=String(st||'pending').replace(/_/g,' ').trim();return st.replace(/\b\w/g,function(c){return c.toUpperCase();});}
+    function pillClass(st){st=String(st||'').toLowerCase();if(st.indexOf('reject')>-1)return 'rejected';if(st.indexOf('mail')>-1)return 'mailed';if(st.indexOf('ready')>-1||st.indexOf('approved')>-1)return 'approved';if(st.indexOf('supervisor')>-1||st.indexOf('admin')>-1||st.indexOf('sent')>-1)return 'supervisor';return 'board';}
+    function statusIcon(st){st=String(st||'').toLowerCase();if(st.indexOf('mail')>-1)return '✉';if(st.indexOf('ready')>-1||st.indexOf('approved')>-1)return '✓';if(st.indexOf('supervisor')>-1||st.indexOf('admin')>-1||st.indexOf('sent')>-1)return '→';if(st.indexOf('reject')>-1)return '!';return '•';}
+    function statusCopy(st){st=String(st||'').toLowerCase();if(st==='pending_supervisor_approval')return 'Board approval is complete. Supervisor review is the next required step.';if(st==='approved_ready_to_send')return 'Supervisor approval is complete. The packet is ready for resident distribution / mailing workflow.';if(st==='sent_to_admin')return 'Packet has been sent to the admin/assistant for printing and mailing.';if(st==='mailed')return 'Packet has been marked mailed.';if(st.indexOf('reject')>-1)return 'The notice was rejected and needs follow-up before it can move forward.';if(st.indexOf('board')>-1)return 'The notice is still waiting on board approval.';return 'Annual meeting notice is in progress.';}
+    function fmtDate(v){if(!v)return '—';try{return new Date(v).toLocaleString([], {month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit'});}catch(e){return '—';}}
+    function setSummary(rows){rows=Array.isArray(rows)?rows:[];var counts={board:0,supervisor:0,ready:0};rows.forEach(function(r){var pc=pillClass(r.status);if(pc==='board')counts.board++;else if(pc==='supervisor')counts.supervisor++;else if(pc==='approved'||pc==='mailed')counts.ready++;});document.getElementById('sumRecords').textContent=String(rows.length);document.getElementById('sumBoard').textContent=String(counts.board);document.getElementById('sumSupervisor').textContent=String(counts.supervisor);document.getElementById('sumReady').textContent=String(counts.ready);}
+    function parseLogoRef(raw){raw=String(raw||'').trim();if(!raw)return null;if(/^https?:\/\//i.test(raw)||/^data:image\//i.test(raw))return{url:raw};if(raw.indexOf('|')!==-1){var p=raw.split('|');return{bucket:p.shift()||'company_logos',path:p.join('|')};}return{bucket:'company_logos',path:raw};}
+    async function logoUrl(sb,ref){if(!ref)return'';if(ref.url)return ref.url;if(ref.bucket&&ref.path&&sb.storage&&sb.storage.from){var pub=sb.storage.from(ref.bucket).getPublicUrl(ref.path);return String(pub&&pub.data&&pub.data.publicUrl||'').trim();}return'';}
+    async function loadLogo(sb, prof){var img=document.getElementById('companyLogo');if(!img||!sb)return;try{var row=null;if(prof&&prof.company_id){var r=await sb.from('companies').select('id,name,logo_path').eq('id',prof.company_id).maybeSingle();if(r&&!r.error)row=r.data;}if(!row&&prof&&prof.company){var r2=await sb.from('companies').select('id,name,logo_path').ilike('name',prof.company).maybeSingle();if(r2&&!r2.error)row=r2.data;}var url=await logoUrl(sb,parseLogoRef(row&&row.logo_path));if(!url){img.classList.remove('is-visible');img.removeAttribute('src');return;}img.onload=function(){img.classList.add('is-visible');};img.onerror=function(){img.classList.remove('is-visible');img.removeAttribute('src');};img.alt=(row&&row.name)||'Company logo';img.src=url;}catch(e){img.classList.remove('is-visible');img.removeAttribute('src');}}
+    async function load(){
+      var list=document.getElementById('statusList'),sel=document.getElementById('communityFilter');
+      list.innerHTML='<div class="empty"><div class="empty-title">Loading status…</div>Checking annual meeting notice records.</div>';
+      setSummary([]);
+      var sb=await ensureSb();
+      if(!sb){list.innerHTML='<div class="empty"><div class="empty-title">Supabase client not ready</div>Refresh the page once the app finishes loading.</div>';return;}
+      try{
+        var prof=await getProfile(sb);loadLogo(sb,prof);
+        var privileged=isPriv(prof.role);var allowed=[];
+        if(privileged){
+          var cq=await sb.from('property_communities').select('id,name,company_id').eq('company_id',prof.company_id).order('name',{ascending:true});
+          if(cq&&!cq.error)allowed=(cq.data||[]).map(function(r){return{id:String(r.id||''),name:String(r.name||'')}});
+        }else{
+          var aq=await sb.from('community_assignments').select('community_id,community_name').eq('employee_id',prof.uid).order('community_name',{ascending:true});
+          if(aq&&!aq.error)allowed=(aq.data||[]).map(function(r){return{id:String(r.community_id||''),name:String(r.community_name||'')}});
+        }
+        var seen={};allowed=allowed.filter(function(c){if(!c.id||seen[c.id])return false;seen[c.id]=true;return true;});
+        var current=sel.value||String(localStorage.getItem('zummeeActiveCommunityId')||localStorage.getItem('activeCommunityId')||localStorage.getItem('zummee_selected_community_id')||'').trim();
+        sel.innerHTML='<option value="">All assigned communities</option>'+allowed.map(function(c){return '<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>';}).join('');
+        if(current&&allowed.some(function(c){return c.id===current;}))sel.value=current;
+        var ids=allowed.map(function(c){return c.id;});
+        if(!ids.length){list.innerHTML='<div class="empty"><div class="empty-title">No assigned communities</div>No assigned communities were found for this account.</div>';return;}
+
+        // Use select('*') so the employee status view survives optional schema differences
+        // such as mailing columns being present in some builds and not others.
+        var q=sb.from('annual_meeting_packet_requests').select('*').order('submitted_at',{ascending:false}).limit(75);
+        if(sel.value){q=q.eq('community_id',sel.value);}
+        else if(!privileged){q=q.in('community_id',ids);}
+        else if(prof.company_id){q=q.eq('company_id',prof.company_id);}
+        var res=await q;
+        if(res&&res.error){throw res.error;}
+        var rows=(res&&res.data)||[];
+
+        // Guardrail: if Supabase returns a broad result because of a future policy/query
+        // change, still keep employees scoped to assigned communities on the client.
+        if(!privileged){var idSet={};ids.forEach(function(id){idSet[String(id)]=true;});rows=rows.filter(function(r){return idSet[String(r.community_id||'')];});}
+
+        setSummary(rows);
+        if(!rows.length){list.innerHTML='<div class="empty"><div class="empty-title">No notice records found</div>No annual meeting notice records were found for the selected community.</div>';return;}
+        list.innerHTML=rows.map(function(r){
+          var community=r.community_name||((allowed.find(function(c){return c.id===String(r.community_id||'');})||{}).name)||'Community';
+          var status=labelStatus(r.status);var pc=pillClass(r.status);
+          return '<article class="status-card"><div class="status-icon">'+esc(statusIcon(r.status))+'</div><div class="status-main"><div class="name">'+esc(community)+'</div><div class="desc">'+esc(statusCopy(r.status))+'</div><div class="meta-row"><span class="meta">Prepared by '+esc(r.employee_name||r.employee_email||'Employee')+'</span><span class="meta">Submitted '+esc(fmtDate(r.submitted_at||r.created_at))+'</span><span class="meta">Residents '+esc(String(r.resident_count||0))+'</span></div></div><div class="pill '+pc+'">'+esc(status)+'</div></article>';
+        }).join('');
+      }catch(e){
+        console.warn('annual status load failed',e);
+        list.innerHTML='<div class="empty"><div class="empty-title">Could not load notice status</div>Run ANNUAL_MEETING_EMPLOYEE_STATUS_PERMISSIONS.sql once in Supabase, then refresh this page.</div>';
+      }
+    }
+    document.getElementById('refreshBtn').addEventListener('click',load);document.getElementById('communityFilter').addEventListener('change',function(){try{localStorage.setItem('zummeeActiveCommunityId',this.value||'');}catch(e){}load();});document.addEventListener('DOMContentLoaded',load);
+  </script>
+</body>
+</html>

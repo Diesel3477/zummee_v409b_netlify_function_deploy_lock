@@ -1,0 +1,2231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>window.ZUMMEE_BUILD="2026-03-27-1";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resident Work Orders</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="shared/supabase-client.js?v=2026-04-08-2"></script>
+  <script src="shared/resident-auth.js?v=2026-03-27-1"></script>
+  <script src="shared/header.js?v=2026-04-08-2"></script>
+  <link rel="stylesheet" href="shared/header.css?v=2026-03-27-1">
+  <link rel="stylesheet" href="shared/zummee-design-system.css?v=2026-03-27-1">
+  
+  <script id="zummeeStaffGuard">
+  (async () => {
+    if (window.__zummeeStaffGuardRan) return;
+    window.__zummeeStaffGuardRan = true;
+
+    async function getClient(){
+      try{ if(typeof ensureSupabase === 'function'){ const c = await ensureSupabase(); if(c && c.auth && typeof c.auth.getSession === 'function') return c; } }catch(_e){}
+      try{ if(window.supabaseClient && window.supabaseClient.auth && typeof window.supabaseClient.auth.getSession === 'function') return window.supabaseClient; }catch(_e){}
+      try{ if(window.sb && window.sb.auth && typeof window.sb.auth.getSession === 'function') return window.sb; }catch(_e){}
+      return null;
+    }
+
+    const go = (target) => {
+      try{ window.location.replace(target); }catch(_e){ window.location.href = target; }
+    };
+
+    const sb = await getClient();
+    if(!sb){ go('login.html'); return; }
+
+    const sessionRes = await sb.auth.getSession();
+    const user = sessionRes && sessionRes.data && sessionRes.data.session ? sessionRes.data.session.user : null;
+    if(!user){ go('login.html'); return; }
+
+    const ud = await sb
+      .from('userdirectory')
+      .select('role')
+      .eq('auth_user_id', user.id)
+      .single();
+
+    const role = String((ud && ud.data && ud.data.role) || '').trim();
+    if(role === 'Resident'){ go('resident_portal.html'); return; }
+
+    document.documentElement.setAttribute('data-staff-role', role || '');
+  })();
+  </script>
+<script>
+    window.SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+    window.SUPABASE_ANON_KEY = 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
+    async function getResidentWorkOrdersClient(){
+      try{ if(typeof ensureSupabase === 'function'){ const c = await ensureSupabase(); if(c && typeof c.from === 'function') return c; } }catch(_e){}
+      try{ if(window.sb && typeof window.sb.from === 'function') return window.sb; }catch(_e){}
+      try{ if(window.supabaseClient && typeof window.supabaseClient.from === 'function') return window.supabaseClient; }catch(_e){}
+      try{ if(window.supabase && typeof window.supabase.createClient === 'function'){
+        const c = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, { auth:{ persistSession:false, autoRefreshToken:false, detectSessionInUrl:false } });
+        try{ window.supabaseClient = window.supabaseClient || c; window.sb = window.sb || c; }catch(_e){}
+        return c;
+      } }catch(_e){}
+      return null;
+    }
+  </script>
+  <script>
+    window.SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+    window.SUPABASE_ANON_KEY = 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
+    window.ZummeeResidentAuth && window.ZummeeResidentAuth.blockResidentsFromManagerPage && window.ZummeeResidentAuth.blockResidentsFromManagerPage();
+  </script>
+  
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+    :root{
+      --brand:#0f3554; --bg:#f4f6fa; --card:#ffffff; --muted:#5d6b7a; --border:#d9e1ea;
+      --warn:#fff1c9; --danger:#fee2e2; --ok:#d9f2e3; --info:#dbeafe;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:#17324c}
+    #zummeeHeaderMount{display:block}
+    header.zm-header{
+      position:sticky;
+      top:0;
+      z-index:30;
+      box-shadow:0 6px 18px rgba(15,53,84,.08);
+    }
+    main{max-width:1200px;margin:26px auto;padding:0 16px 46px}
+/* Shared header page tuning */
+    header.zm-header{
+      position:sticky;
+      top:0;
+      z-index:40;
+      box-shadow:0 6px 18px rgba(15,53,84,.08);
+    }
+    .zm-actionsRow #zummeeHdrProfile,
+    .zm-actionsRow #zummeeSignOut{
+      display:none !important;
+    }
+    .card{background:#fff;border:1px solid rgba(15,53,84,.12);border-radius:28px;padding:22px;box-shadow:0 18px 42px rgba(15,53,84,.08)}
+    .topRow{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap}
+    h1{margin:0;font-size:clamp(30px,5vw,42px);line-height:1.04;color:var(--brand)}
+    .sub{color:var(--muted);font-size:14px}
+    .actions{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:11px 18px;border-radius:999px;border:2px solid var(--brand);background:#fff;color:var(--brand);text-decoration:none;font-size:15px;font-weight:800;cursor:pointer}
+    .btn.primary{background:var(--brand);color:#fff}
+    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0}
+    .stat{border-radius:20px;padding:16px 18px;border:1px solid rgba(15,53,84,.10);background:#fff}
+    .stat .label{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:800}
+    .stat .value{font-size:30px;font-weight:900;color:var(--brand);margin-top:6px}
+.stat.clickable{cursor:pointer;transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease}
+.stat.clickable:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(15,53,84,.08)}
+.stat.is-active-filter{background:linear-gradient(180deg,#eef6ff 0%,#e2eefc 100%);border-color:rgba(15,53,84,.22)}
+    .filters{display:grid;grid-template-columns:1.15fr 180px 180px;gap:12px;margin:12px 0 18px}
+    .field label{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;font-weight:800}
+    .field input,.field select,.field textarea{width:100%;border:1.5px solid var(--border);border-radius:16px;padding:12px 14px;font-size:16px;background:#fff;color:#17324c}
+    .tableWrap{overflow:auto;border:1px solid rgba(15,53,84,.12);border-radius:18px;background:#fff}
+    table{width:100%;border-collapse:collapse;min-width:980px}
+    th,td{padding:14px 16px;border-bottom:1px solid rgba(15,53,84,.08);text-align:left;vertical-align:top}
+    th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+    .pill{display:inline-flex;align-items:center;justify-content:center;text-align:center;padding:7px 10px;border-radius:999px;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.03em}
+    .pill.submitted,.pill.under_review,.pill.manager_review{background:var(--danger);color:#8c1d18}
+    .pill.awaiting_assignment{background:var(--warn);color:#785700}
+.pill.urgent{background:#fee2e2;color:#991b1b;border:1px solid rgba(153,27,27,.18)}
+tr.row-attention td{background:rgba(255,244,244,.86)}
+tr.row-urgent td{background:linear-gradient(180deg, rgba(255,238,238,.96), rgba(255,246,246,.96))}
+.subjectBadge{display:none !important}
+.row-overdue-red td{background:rgba(255,236,236,.96) !important}
+.row-overdue-yellow td{background:rgba(255,248,226,.96) !important}
+.overdueNote{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:900;margin-left:0;letter-spacing:.03em}
+.overdueNote.red{background:rgba(153,27,27,.14);color:#991b1b;border:1px solid rgba(153,27,27,.22)}
+.overdueNote.yellow{background:rgba(180,83,9,.14);color:#92400e;border:1px solid rgba(180,83,9,.22)}
+tr.is-selected td{outline:2px solid rgba(34,197,94,.35); outline-offset:-2px; background:rgba(34,197,94,.18) !important;}
+tr.is-selected td:first-child{border-left:6px solid #22c55e !important;}
+tr.is-selected{box-shadow:0 0 0 2px rgba(34,197,94,.20) inset;}
+tr.clickableRow{cursor:pointer}
+    .pill.sent_to_vendor,.pill.assigned,.pill.assigned_to_vendor{background:var(--info);color:#17406f}
+    .pill.active,.pill.in_progress{background:#dbeafe;color:#17406f}
+    .pill.completed,.pill.closed{background:var(--ok);color:#11653a}
+    .pill.pulse-green{
+      background:#22c55e !important;
+      color:#ffffff !important;
+      animation:pulseGreenActive 1.6s infinite;
+      box-shadow:0 0 0 0 rgba(34,197,94,.55);
+    }
+    @keyframes pulseGreenActive{
+      0%{ box-shadow:0 0 0 0 rgba(34,197,94,.55); }
+      70%{ box-shadow:0 0 0 10px rgba(34,197,94,0); }
+      100%{ box-shadow:0 0 0 0 rgba(34,197,94,0); }
+    }
+    .muted{color:var(--muted)}
+    .drawer{margin-top:18px;display:grid;grid-template-columns:1.2fr .9fr;gap:18px}
+    .detailCard,.assignCard{background:#fff;border:1px solid rgba(15,53,84,.12);border-radius:22px;padding:18px}
+    .managerUpdateBox{margin-top:14px;padding:14px;border-radius:18px;background:rgba(255,255,255,.48);border:1px solid rgba(15,53,84,.12)}
+    .managerUpdateBox textarea{min-height:110px;resize:vertical}
+    .managerUpdateMeta{margin-top:8px;font-size:12px;color:var(--muted)}
+    .managerUpdateActions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+    .managerUpdateMsg{margin-top:10px;font-size:13px;font-weight:700;color:var(--brand)}
+    .managerUpdateMsg.err{color:#8c1d18}
+    .detailGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0}
+    .detailBox{background:#f9fbfd;border:1px solid rgba(15,53,84,.08);border-radius:16px;padding:14px}
+    .detailLabel{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:800;margin-bottom:6px}
+    .detailValue{font-size:16px;font-weight:700;word-break:break-word}
+    .empty{padding:20px;border:1px dashed rgba(15,53,84,.18);border-radius:18px;background:#fafcff;color:var(--muted)}
+    .message{margin-top:12px;font-weight:700}
+    .message.ok{color:#11653a}
+    .message.err{color:#8c1d18}
+    .helper{font-size:13px;color:var(--muted)}
+/* Resident Work Orders final header layout */
+    body[data-header-mode="hub"] header.zm-header{
+      align-items:flex-start !important;
+    }
+    body[data-header-mode="hub"] header.zm-header .zm-header__right{
+      display:flex !important;
+      flex-direction:column !important;
+      align-items:flex-end !important;
+      justify-content:flex-start !important;
+      gap:12px !important;
+      width:auto !important;
+      min-width:0 !important;
+      flex:0 0 auto !important;
+      margin-left:auto !important;
+    }
+    body[data-header-mode="hub"] header.zm-header .zm-communityRow{
+      display:flex !important;
+      width:auto !important;
+      justify-content:flex-end !important;
+      align-items:center !important;
+      gap:10px !important;
+      margin:0 !important;
+    }
+    body[data-header-mode="hub"] header.zm-header .zm-communityLabel{
+      font-size:20px !important;
+      line-height:1 !important;
+      white-space:nowrap !important;
+      margin:0 !important;
+    }
+    body[data-header-mode="hub"] header.zm-header #zummeeCommunitySwatch{
+      width:12px !important;
+      height:12px !important;
+      margin:0 2px 0 0 !important;
+    }
+    
+    body[data-header-mode="hub"] header.zm-header .zm-actionsRow{
+      display:flex !important;
+      width:auto !important;
+      justify-content:flex-end !important;
+      align-items:center !important;
+      gap:10px !important;
+      margin:0 !important;
+    }
+    body[data-header-mode="hub"] header.zm-header #zummeeHdrHub{
+      display:inline-flex !important;
+      min-height:42px !important;
+      padding:8px 18px !important;
+      font-size:16px !important;
+      line-height:1 !important;
+    }
+    body[data-header-mode="hub"] header.zm-header #zummeeHdrProfile,
+    body[data-header-mode="hub"] header.zm-header #zummeeSignOut{
+      display:none !important;
+    }
+    @media (max-width: 900px){
+      body[data-header-mode="hub"] header.zm-header .zm-header__right{
+        width:100% !important;
+        align-items:stretch !important;
+      }
+      body[data-header-mode="hub"] header.zm-header .zm-communityRow,
+      body[data-header-mode="hub"] header.zm-header .zm-actionsRow{
+        width:100% !important;
+        justify-content:center !important;
+      }
+      
+    }
+    @media (max-width: 980px){
+      .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .filters{grid-template-columns:1fr 1fr}
+      .drawer{grid-template-columns:1fr}
+    }
+    @media (max-width: 640px){
+      main{padding:0 12px 34px}
+      .stats,.filters{grid-template-columns:1fr}
+      .card{padding:16px;border-radius:22px}
+      .detailGrid{grid-template-columns:1fr}
+      table{min-width:860px}
+    }
+  
+/* Final header alignment fix */
+body[data-header-mode="hub"] header.zm-header{
+  align-items:center !important;
+}
+
+/* Match dropdown size to other pages */
+
+
+
+/* Tighten community dropdown to match hub pages */
+
+
+/* Final resident work orders dropdown size override */
+html body[data-header-mode="hub"] header.zm-header .zm-header__right .zm-communityRow #zummeeCommunitySelect{
+  width:220px !important;
+  min-width:220px !important;
+  max-width:220px !important;
+  font-size:17px !important;
+  padding:6px 10px !important;
+  border-radius:12px !important;
+  flex:0 0 220px !important;
+}
+@media (max-width: 900px){
+  html body[data-header-mode="hub"] header.zm-header .zm-header__right .zm-communityRow #zummeeCommunitySelect{
+    width:220px !important;
+    min-width:220px !important;
+    max-width:220px !important;
+    flex:0 0 220px !important;
+  }
+}
+
+
+    /* Resident Work Orders — blue section card system */
+    .card.zummee-section-card{color:#17324c}
+    .card.zummee-section-card h1,.card.zummee-section-card h2,.card.zummee-section-card h3{color:#17324c !important}
+    .card.zummee-section-card .sub,.card.zummee-section-card .helper,.card.zummee-section-card .muted{color:#4d6580}
+    .card.zummee-section-card .btn{background:#fff;color:#17324c;border-color:rgba(23,50,77,.16)}
+    .card.zummee-section-card .btn.primary{background:#234f80;color:#fff;border-color:#234f80}
+    .card.zummee-section-card .stat,
+    .card.zummee-section-card .detailCard,
+    .card.zummee-section-card .assignCard,
+    .card.zummee-section-card .tableWrap,
+    .card.zummee-section-card .detailBox,
+    .card.zummee-section-card .empty{background:rgba(255,255,255,.28);border-color:rgba(255,255,255,.36)}
+    .card.zummee-section-card .field input,
+    .card.zummee-section-card .field select,
+    .card.zummee-section-card .field textarea{background:rgba(255,255,255,.84);border-color:rgba(255,255,255,.32)}
+    .card.zummee-section-card table{background:transparent}
+    .card.zummee-section-card th,.card.zummee-section-card td{border-bottom:1px solid rgba(255,255,255,.28)}
+    .card.zummee-section-card tr.is-selected td{outline:2px solid rgba(34,197,94,.35); background:rgba(34,197,94,.18) !important;}
+.card.zummee-section-card tr.is-selected td:first-child{border-left:6px solid #22c55e !important;}
+
+
+    .archiveWrap{margin-top:18px}
+    .archiveHeader{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .archiveHeader h2{margin:0;color:var(--brand)}
+    .archiveGroup{margin-top:14px;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.30)}
+    .archiveGroupTitle{font-weight:800;color:#17324c;margin-bottom:10px}
+    .archiveList{display:grid;gap:10px}
+    .archiveItem{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.35);border:1px solid rgba(255,255,255,.28);cursor:pointer;transition:transform .15s ease, box-shadow .15s ease}
+    .archiveItem:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(15,47,74,.08)}
+    .archiveItemMain{min-width:0}
+    .archiveItemTitle{font-weight:700;color:#17324c}
+    .archiveItemMeta{margin-top:4px;font-size:13px;color:#4d6580;line-height:1.35}
+    .archiveItemDate{white-space:nowrap;font-size:13px;font-weight:700;color:#17324c}
+    .archiveEmpty{margin-top:10px;padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.30);color:#4d6580}
+
+
+/* Resident Work Orders header shell -> match mileage page shape */
+body[data-header-mode="subpage"] .zm-header,
+.zm-header {
+  border-radius: 28px !important;
+  padding: 18px 20px 14px !important;
+  min-height: 164px !important;
+  box-sizing: border-box !important;
+  align-items: stretch !important;
+}
+
+.zm-header__left{
+  justify-content: space-between !important;
+  padding-right: 18px !important;
+}
+
+.zm-header__titles{
+  display: flex !important;
+  align-items: flex-end !important;
+  min-height: 42px !important;
+}
+
+.zm-header__title,
+.zm-header__titles h1,
+.zm-header__titles h2,
+.zm-header__titles div{
+  margin: 0 !important;
+  line-height: 1.05 !important;
+}
+
+.zm-header__right{
+  justify-content: flex-start !important;
+  gap: 12px !important;
+  padding-top: 4px !important;
+}
+
+.zm-header__right .community-select-wrap,
+.zm-header__right .zm-community,
+.zm-header__right .zm-header__community{
+  width: 276px !important;
+  max-width: 276px !important;
+}
+
+.zm-header__right .hub-btn,
+.zm-header__right .zm-header__hub,
+.zm-header__right .btn-hub{
+  width: 214px !important;
+  align-self: flex-end !important;
+}
+
+@media (max-width: 1024px){
+  body[data-header-mode="subpage"] .zm-header,
+  .zm-header{
+    border-radius: 26px !important;
+    padding: 16px 16px 14px !important;
+    min-height: 156px !important;
+  }
+  .zm-header__left{
+    padding-right: 12px !important;
+  }
+  .zm-header__right .community-select-wrap,
+  .zm-header__right .zm-community,
+  .zm-header__right .zm-header__community{
+    width: 248px !important;
+    max-width: 248px !important;
+  }
+  .zm-header__right .hub-btn,
+  .zm-header__right .zm-header__hub,
+  .zm-header__right .btn-hub{
+    width: 200px !important;
+  }
+}
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+
+.mh2-actions .mh2-btn--ghost{display:none !important;}
+</style>
+  <script src="community_state_stable.js"></script>
+<style>
+/* FORCE white text in Status & Details section */
+#boardSubmittedItemsSection,
+#boardSubmittedItemsSection *:not(button),
+#boardMemberHubStatus,
+#boardMemberHubStatus *:not(button),
+#annualMeetingApprovals,
+#annualMeetingApprovals *:not(button) {
+  color: #ffffff !important;
+}
+
+/* Secondary text (slightly dimmed white) */
+#boardSubmittedItemsSection .muted,
+#boardMemberHubStatus .muted,
+#annualMeetingApprovals .muted {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style>
+/* HARD OVERRIDE — force white text in dark section */
+.hub-zone:last-of-type,
+.hub-zone:last-of-type *:not(button):not(.badge):not(.pill) {
+  color: #ffffff !important;
+}
+
+/* Slightly softer for secondary text */
+.hub-zone:last-of-type .muted,
+.hub-zone:last-of-type p,
+.hub-zone:last-of-type span {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+
+<style id="resident-work-orders-new-design-v31">
+body.resident-work-orders-new-layout{background:linear-gradient(180deg,#f7fbff 0%,#f4f8fd 100%) !important;color:#17324c !important;}
+body.resident-work-orders-new-layout header.zm-header,body.resident-work-orders-new-layout #zummeeHeaderMount{display:none !important;visibility:hidden !important;height:0 !important;min-height:0 !important;max-height:0 !important;margin:0 !important;padding:0 !important;overflow:hidden !important;}
+body.resident-work-orders-new-layout main{max-width:1180px !important;margin:18px auto 46px !important;padding:0 16px 46px !important;}
+body.resident-work-orders-new-layout .resident-work-orders-card{background:rgba(255,255,255,.92) !important;border:1.5px solid rgba(147,197,253,.82) !important;border-radius:28px !important;box-shadow:0 18px 42px rgba(37,99,235,.10) !important;padding:28px 32px !important;overflow:hidden !important;}
+.rwo-title-brand-row{display:flex !important;align-items:flex-start !important;justify-content:space-between !important;gap:18px !important;margin-bottom:18px !important;}
+.rwo-title-block{min-width:0 !important;flex:1 1 auto !important;text-align:left !important;}.rwo-title-block h1{margin:0 !important;font-size:clamp(30px,4.4vw,42px) !important;line-height:1.06 !important;font-weight:950 !important;letter-spacing:-.035em !important;color:#17324c !important;text-align:left !important;}.rwo-subtitle{margin-top:6px !important;color:#506985 !important;font-size:18px !important;font-weight:750 !important;line-height:1.25 !important;}
+.rwo-brand-slot{flex:0 0 auto !important;display:flex !important;justify-content:flex-end !important;align-items:flex-start !important;min-width:130px !important;min-height:54px !important;padding-top:2px !important;}.rwo-company-logo{display:none !important;width:auto !important;height:54px !important;max-width:210px !important;object-fit:contain !important;object-position:right center !important;opacity:0 !important;transition:opacity .12s ease !important;}.rwo-company-logo.logo-ready{display:block !important;opacity:1 !important;}
+.rwo-controls-row{margin:8px 0 14px !important;}.rwo-inline-controls{display:grid !important;grid-template-columns:minmax(0,1fr) 160px !important;gap:14px !important;align-items:center !important;}.rwo-inline-controls .zm-communityRow,.rwo-inline-controls .zm-actionsRow{display:flex !important;width:100% !important;margin:0 !important;padding:0 !important;align-items:center !important;justify-content:stretch !important;}.rwo-inline-controls #zummeeCommunitySelect{width:100% !important;min-width:0 !important;max-width:none !important;min-height:58px !important;padding:0 22px !important;border-radius:22px !important;border:1.5px solid rgba(147,197,253,.82) !important;background:#f1f7ff !important;color:#17324c !important;font-size:18px !important;font-weight:900 !important;box-shadow:none !important;}.rwo-inline-controls #zummeeHdrHub,.rwo-inline-controls .rwo-back-hub-btn{display:inline-flex !important;align-items:center !important;justify-content:center !important;width:100% !important;min-height:58px !important;border-radius:22px !important;border:1.5px solid rgba(147,197,253,.82) !important;background:#f8fbff !important;color:#17324c !important;text-decoration:none !important;font-size:18px !important;font-weight:900 !important;padding:0 18px !important;}
+.rwo-primary-actions{display:grid !important;grid-template-columns:1fr 1fr !important;gap:14px !important;margin:4px 0 20px !important;}.rwo-primary-actions .btn{min-height:56px !important;border-radius:999px !important;font-size:17px !important;font-weight:900 !important;border:1.5px solid rgba(147,197,253,.82) !important;box-shadow:0 10px 22px rgba(15,53,84,.08) !important;}.rwo-primary-actions .btn.primary{background:#255b91 !important;border-color:#255b91 !important;}
+body.resident-work-orders-new-layout .stats{grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:14px !important;margin:18px 0 18px !important;}body.resident-work-orders-new-layout .stat{background:linear-gradient(135deg,rgba(255,250,229,.98),rgba(255,255,255,.92)) !important;border:1.5px solid rgba(221,183,62,.42) !important;border-radius:22px !important;box-shadow:0 12px 24px rgba(212,175,55,.12) !important;min-height:106px !important;}body.resident-work-orders-new-layout .stat .label{color:#5d6b7a !important;font-size:13px !important;letter-spacing:.07em !important;}body.resident-work-orders-new-layout .stat .value{font-size:34px !important;color:#17324c !important;}
+body.resident-work-orders-new-layout .filters{display:grid !important;grid-template-columns:1.4fr .8fr .8fr !important;gap:14px !important;margin:18px 0 18px !important;}body.resident-work-orders-new-layout .field label{color:#5f5430 !important;font-size:13px !important;letter-spacing:.08em !important;}body.resident-work-orders-new-layout .field input,body.resident-work-orders-new-layout .field select,body.resident-work-orders-new-layout .field textarea{min-height:56px !important;border-radius:18px !important;border:1.5px solid rgba(15,53,84,.12) !important;background:#ffffff !important;font-size:17px !important;}
+body.resident-work-orders-new-layout .tableWrap{border:1.5px solid rgba(147,197,253,.70) !important;border-radius:22px !important;background:#ffffff !important;box-shadow:0 12px 28px rgba(15,53,84,.06) !important;}body.resident-work-orders-new-layout table{min-width:980px !important;}body.resident-work-orders-new-layout th{color:#1d2d3e !important;font-size:13px !important;font-weight:950 !important;letter-spacing:.07em !important;background:rgba(248,252,255,.92) !important;}body.resident-work-orders-new-layout tbody tr td{background:linear-gradient(135deg,rgba(255,251,231,.96),rgba(255,255,255,.94)) !important;border-bottom:1px solid rgba(221,183,62,.22) !important;}body.resident-work-orders-new-layout tbody tr:hover td{background:linear-gradient(135deg,rgba(255,246,203,.98),rgba(255,255,255,.96)) !important;}
+body.resident-work-orders-new-layout .drawer{margin-top:20px !important;display:grid !important;grid-template-columns:1.15fr .85fr !important;gap:18px !important;}body.resident-work-orders-new-layout .detailCard,body.resident-work-orders-new-layout .assignCard{background:rgba(255,255,255,.92) !important;border:1.5px solid rgba(147,197,253,.72) !important;border-radius:24px !important;box-shadow:0 12px 28px rgba(15,53,84,.06) !important;padding:20px !important;}body.resident-work-orders-new-layout .archiveWrap{margin-top:20px !important;}body.resident-work-orders-new-layout .helper{color:#60758d !important;}body.resident-work-orders-new-layout .pill{border:1px solid rgba(255,255,255,.55) !important;box-shadow:0 8px 16px rgba(15,53,84,.06) !important;}
+@media(max-width:980px){body.resident-work-orders-new-layout main{padding:0 14px 42px !important;margin-top:14px !important;}body.resident-work-orders-new-layout .resident-work-orders-card{padding:24px 24px !important;border-radius:26px !important;}.rwo-inline-controls{grid-template-columns:minmax(0,1fr) 150px !important;}body.resident-work-orders-new-layout .stats{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}body.resident-work-orders-new-layout .filters{grid-template-columns:1fr 1fr !important;}body.resident-work-orders-new-layout .drawer{grid-template-columns:1fr !important;}}
+@media(max-width:640px){body.resident-work-orders-new-layout .resident-work-orders-card{padding:20px 16px !important;}.rwo-title-brand-row{align-items:center !important;gap:10px !important;}.rwo-title-block h1{font-size:28px !important;}.rwo-subtitle{font-size:15px !important;}.rwo-company-logo{height:42px !important;max-width:145px !important;}.rwo-brand-slot{min-width:82px !important;min-height:42px !important;}.rwo-inline-controls,.rwo-primary-actions,body.resident-work-orders-new-layout .stats,body.resident-work-orders-new-layout .filters{grid-template-columns:1fr !important;}body.resident-work-orders-new-layout table{min-width:860px !important;}}
+
+/* v33 RWO clean controls: no Community label/swatch, no helper text. */
+.rwo-title-block .rwo-subtitle{display:none !important;}
+.rwo-inline-controls .zm-communityRow > :not(#zummeeCommunitySelect){display:none !important;}
+.rwo-inline-controls .zm-communityRow{gap:0 !important;}
+</style>
+
+<style id="rwo-controls-match-live-maintenance-v34">
+/* v34: Match Resident Work Orders controls to Live Maintenance Updates */
+body.resident-work-orders-new-layout .rwo-controls-row{
+  margin:16px 0 18px !important;
+}
+body.resident-work-orders-new-layout .rwo-inline-controls{
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) 160px !important;
+  gap:16px !important;
+  align-items:center !important;
+  width:100% !important;
+}
+body.resident-work-orders-new-layout .rwo-inline-controls .zm-communityRow,
+body.resident-work-orders-new-layout .rwo-inline-controls .zm-actionsRow{
+  display:flex !important;
+  width:100% !important;
+  margin:0 !important;
+  padding:0 !important;
+  align-items:center !important;
+  justify-content:stretch !important;
+}
+body.resident-work-orders-new-layout .rwo-inline-controls .zm-communityRow > :not(#zummeeCommunitySelect){
+  display:none !important;
+}
+body.resident-work-orders-new-layout .rwo-inline-controls #zummeeCommunitySelect{
+  display:block !important;
+  width:100% !important;
+  min-width:0 !important;
+  max-width:none !important;
+  height:64px !important;
+  min-height:64px !important;
+  padding:0 22px !important;
+  border-radius:24px !important;
+  border:1.5px solid rgba(178,207,244,.90) !important;
+  background:#f1f5f9 !important;
+  color:#17324c !important;
+  font-size:20px !important;
+  font-weight:900 !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.86), 0 8px 18px rgba(15,53,84,.04) !important;
+}
+body.resident-work-orders-new-layout .rwo-inline-controls #zummeeHdrHub,
+body.resident-work-orders-new-layout .rwo-inline-controls .rwo-back-hub-btn{
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:100% !important;
+  height:64px !important;
+  min-height:64px !important;
+  padding:0 22px !important;
+  border-radius:24px !important;
+  border:1.5px solid rgba(178,207,244,.90) !important;
+  background:#f1f5f9 !important;
+  color:#17324c !important;
+  box-shadow:0 8px 18px rgba(15,53,84,.07) !important;
+  text-decoration:none !important;
+  font-size:20px !important;
+  font-weight:900 !important;
+}
+@media(max-width:760px){
+  body.resident-work-orders-new-layout .rwo-inline-controls{
+    grid-template-columns:minmax(0,1fr) 150px !important;
+    gap:14px !important;
+  }
+}
+@media(max-width:520px){
+  body.resident-work-orders-new-layout .rwo-inline-controls{
+    grid-template-columns:1fr !important;
+  }
+}
+</style>
+</head>
+<body data-header-mode="hub" class="zummee-unified-layout resident-work-orders-new-layout">
+  <main>
+    <section class="card resident-work-orders-card">
+      <div class="rwo-title-brand-row">
+        <div class="rwo-title-block">
+          <h1>Resident Work Orders</h1>
+        </div>
+        <div class="rwo-brand-slot" aria-label="Management company logo">
+          <img id="residentWorkOrdersCompanyLogo" class="rwo-company-logo" alt="Management company logo" loading="eager" decoding="async" hidden>
+        </div>
+      </div>
+
+      <div class="rwo-controls-row">
+        <div class="rwo-inline-controls" id="residentWorkOrdersInlineControls" aria-label="Resident work orders page controls"></div>
+      </div>
+
+      <div class="actions zummee-page-actions rwo-primary-actions">
+        <a class="btn" id="openResidentFormBtn" href="work_order_submit.html" target="_blank" rel="noopener">Open Resident Form</a>
+        <a class="btn primary" href="maintenance_updates.html">Open Maintenance Updates</a>
+      </div>
+
+      <div class="stats">
+        <div class="stat clickable" id="statCardNew"><div class="label">Needs Review</div><div class="value" id="statNew">0</div></div>
+        <div class="stat clickable" id="statCardAssigned"><div class="label">Sent to Vendor</div><div class="value" id="statAwaiting">0</div></div>
+        <div class="stat clickable" id="statCardActive"><div class="label">Active</div><div class="value" id="statActive">0</div></div>
+        <div class="stat clickable" id="statCardDone"><div class="label">Completed</div><div class="value" id="statDone">0</div></div>
+      </div>
+
+      <div class="filters">
+        <div class="field">
+          <label for="searchBox">Search</label>
+          <input id="searchBox" type="text" placeholder="Resident, unit, subject, description..." />
+        </div>
+        <div class="field">
+          <label for="statusFilter">Status</label>
+          <select id="statusFilter">
+            <option value="">All statuses</option>
+            <option value="manager_review">Needs Manager Review</option>
+            <option value="sent_to_vendor">Sent to Vendor</option>
+            <option value="active">Active (Accepted)</option>
+            <option value="completed">Completed</option>
+            <option value="closed">Closed</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="priorityFilter">Priority</label>
+          <select id="priorityFilter">
+            <option value="">All priorities</option>
+            <option value="low">Low</option>
+            <option value="normal">Normal</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="sub" id="statusLine">Loading resident work orders...</div>
+      <div class="tableWrap zummee-glass-panel">
+        <table>
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Unit</th>
+              <th>Resident</th>
+              <th>Subject</th>
+              <th>Priority</th>
+              <th>Submitted</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+
+      <div class="drawer">
+        <section class="detailCard zummee-glass-panel">
+          <h2 style="margin:0;color:var(--brand)">Request Details</h2>
+          <div class="helper" style="margin-top:6px">Select a row to review the submission.</div>
+          <div id="openedRequestBanner" class="helper" style="margin-top:10px;font-weight:800;color:var(--brand)"></div>
+          <div class="field" style="margin-top:12px;max-width:260px">
+            <label for="detailStatus">Status</label>
+            <select id="detailStatus">
+              <option value="manager_review">Needs Manager Review</option>
+              <option value="sent_to_vendor">Sent to Vendor</option>
+              <option value="active">Active (Accepted)</option>
+              <option value="completed">Completed</option>
+              <option value="closed">Closed</option>
+            </select>
+          </div>
+          <div class="field" style="margin-top:12px;max-width:260px">
+            <label for="detailPriority">Priority</label>
+            <select id="detailPriority">
+              <option value="low">Low</option>
+              <option value="normal">Normal</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+          <div id="detailPane" class="empty" style="margin-top:14px">Choose a work order to view details.</div>
+          <div class="managerUpdateBox">
+            <div class="field">
+              <label for="managerUpdateNote">Manager Update for Board Members</label>
+              <textarea id="managerUpdateNote" placeholder="Add a manager update that will appear on the Board Member Hub live maintenance activity."></textarea>
+            </div>
+            <div id="managerUpdateMeta" class="managerUpdateMeta">Select a work order to add a manager update.</div>
+            <div class="managerUpdateActions">
+              <button class="btn primary" id="saveManagerUpdateBtn" type="button">Save Manager Update</button>
+            </div>
+            <div id="managerUpdateMsg" class="managerUpdateMsg"></div>
+          </div>
+        </section>
+
+        <section class="assignCard zummee-glass-panel">
+          <h2 style="margin:0;color:var(--brand)">Manager Review &amp; Vendor Routing</h2>
+          <div class="helper" style="margin:6px 0 14px">Review the resident request, choose a vendor, then approve and route it. The vendor email includes an Accept Job button that moves the request to Active when accepted.</div>
+
+          <div class="field">
+            <label for="vendorName">Vendor</label>
+            <select id="vendorName">
+              <option value="">Select vendor</option>
+            </select>
+          </div>
+          <div class="field" style="margin-top:12px">
+            <label for="vendorEmail">Vendor Email</label>
+            <input id="vendorEmail" type="email" placeholder="Auto-populates from Daily Ops vendor list" />
+          </div>
+          <div class="field" style="margin-top:12px">
+            <label for="assignStatus">Update Resident Work Order Status</label>
+            <select id="assignStatus">
+              <option value="sent_to_vendor">Sent to Vendor</option>
+            </select>
+          </div>
+          <div class="field" style="margin-top:12px">
+            <label for="assignNotes">Note to Vendor</label>
+            <textarea id="assignNotes" placeholder="Optional note that will be included with the vendor request."></textarea>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+            <button class="btn primary" id="assignBtn" type="button">Approve &amp; Route to Vendor</button>
+            <button class="btn" id="completeBtn" type="button">Mark Complete</button>
+          </div>
+          <div id="assignMsg" class="message"></div>
+<div class="helper" style="margin-top:10px">Vendor emails now include an Accept Job button. Once accepted, the work order moves to Active automatically.</div>
+        </section>
+      </div>
+
+      <section class="detailCard zummee-glass-panel archiveWrap">
+        <div class="archiveHeader">
+          <div>
+            <h2>Completed Archive</h2>
+            <div class="helper" style="margin-top:6px">Completed work orders leave the active feed after 2 days and move here by month.</div>
+          </div>
+        </div>
+        <div id="completedArchive"></div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const rowsEl = document.getElementById('rows');
+    const completedArchiveEl = document.getElementById('completedArchive');
+    const statusLine = document.getElementById('statusLine');
+    const searchBox = document.getElementById('searchBox');
+    const statusFilter = document.getElementById('statusFilter');
+    const priorityFilter = document.getElementById('priorityFilter');
+    const detailPane = document.getElementById('detailPane');
+    const assignBtn = document.getElementById('assignBtn');
+    const completeBtn = document.getElementById('completeBtn');
+    const assignMsg = document.getElementById('assignMsg');
+    const managerUpdateNoteEl = document.getElementById('managerUpdateNote');
+    const managerUpdateMetaEl = document.getElementById('managerUpdateMeta');
+    const saveManagerUpdateBtn = document.getElementById('saveManagerUpdateBtn');
+    const managerUpdateMsgEl = document.getElementById('managerUpdateMsg');
+
+    let workOrders = [];
+    let filtered = [];
+    let selected = null;
+    function getVendorCacheForCommunity(communityId){
+      try{
+        if(!communityId) return [];
+        const key = 'daily_ops_vendors_cache_v1::' + String(communityId);
+        const raw = localStorage.getItem(key);
+        if(!raw) return [];
+        const parsed = JSON.parse(raw);
+        const vendors = Array.isArray(parsed?.vendors) ? parsed.vendors : [];
+        return vendors.map(v => ({
+          name: String(v?.name || '').trim(),
+          email: String(v?.email || '').trim(),
+          phone: String(v?.phone || '').trim(),
+          type: String(v?.type || '').trim()
+        })).filter(v => v.name);
+      }catch(_e){
+        return [];
+      }
+    }
+
+    function populateVendorDropdown(){
+      const select = document.getElementById('vendorName');
+      const emailEl = document.getElementById('vendorEmail');
+      if(!select) return;
+      const communityId = (selected && selected.community_id) || getStoredActiveCommunityId() || '';
+      const vendors = getVendorCacheForCommunity(communityId);
+
+      const currentValue = select.value || '';
+      select.innerHTML = '<option value="">Select vendor</option>';
+      vendors.forEach((v, idx) => {
+        const opt = document.createElement('option');
+        opt.value = v.name;
+        opt.textContent = v.type ? (v.name + ' — ' + v.type) : v.name;
+        opt.dataset.email = v.email || '';
+        opt.dataset.phone = v.phone || '';
+        select.appendChild(opt);
+      });
+
+      // restore selected vendor if possible
+      if(selected?.assigned_vendor_name){
+        const match = Array.from(select.options).find(o => o.value === selected.assigned_vendor_name);
+        if(match) select.value = selected.assigned_vendor_name;
+      } else if(currentValue){
+        const match = Array.from(select.options).find(o => o.value === currentValue);
+        if(match) select.value = currentValue;
+      }
+
+      const chosen = select.selectedOptions && select.selectedOptions[0] ? select.selectedOptions[0] : null;
+      if(emailEl){
+        if(chosen && chosen.dataset && chosen.dataset.email){
+          emailEl.value = chosen.dataset.email || '';
+        } else if(selected?.assigned_vendor_email){
+          emailEl.value = selected.assigned_vendor_email || '';
+        }
+      }
+    }
+    const headerCommunitySelect = () => document.getElementById('zummeeCommunitySelect');
+
+    function safeJsonParse(v, fallback){
+      try{ return JSON.parse(v); }catch(_e){ return fallback; }
+    }
+
+    function getStoredCommunities(){
+      try{
+        const userId = String(localStorage.getItem('zummee_user_id_v1') || '').trim();
+        const candidates = [
+          userId ? ('zummee_communities_v1__user__' + userId) : '',
+          userId ? ('zummee_communities_v1__user_' + userId) : '',
+          'zummee_communities_v1',
+          'zummee_communities'
+        ].filter(Boolean);
+
+        for(const key of candidates){
+          const raw = localStorage.getItem(key);
+          if(!raw) continue;
+          const arr = safeJsonParse(raw, []);
+          if(Array.isArray(arr) && arr.length) return arr;
+        }
+      }catch(_e){}
+      return [];
+    }
+
+    function getStoredActiveCommunityId(){
+      try{
+        return String(
+          localStorage.getItem('zummeeActiveCommunityId') ||
+          localStorage.getItem('activeCommunityId') ||
+          localStorage.getItem('zummee_selected_community_id') ||
+          ''
+        ).trim();
+      }catch(_e){ return ''; }
+    }
+
+    function setStoredActiveCommunity(id, name){
+      try{
+        const val = String(id || '').trim();
+        if(!val) return;
+        localStorage.setItem('zummeeActiveCommunityId', val);
+        localStorage.setItem('activeCommunityId', val);
+        localStorage.setItem('zummee_selected_community_id', val);
+        if(name){
+          localStorage.setItem('zummeeActiveCommunityName', String(name));
+          localStorage.setItem('activeCommunityName', String(name));
+        }
+        window.activeCommunityId = val;
+      }catch(_e){}
+    }
+
+    function populateHeaderCommunities(){
+      const select = headerCommunitySelect();
+      if(!select) return;
+      const communities = getStoredCommunities();
+      const normalized = communities.map((c) => {
+        const id = String(c?.id || c?.communityId || c?.value || '').trim();
+        const name = String(c?.name || c?.communityName || c?.label || c?.text || id).trim();
+        return id ? { id, name } : null;
+      }).filter(Boolean);
+
+      select.innerHTML = '';
+      if(!normalized.length){
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'No communities';
+        select.appendChild(opt);
+        select.disabled = true;
+        return;
+      }
+
+      normalized.forEach((c) => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name;
+        select.appendChild(opt);
+      });
+
+      const stored = getStoredActiveCommunityId();
+      if(stored && normalized.some(c => c.id === stored)){
+        select.value = stored;
+      } else {
+        select.value = normalized[0].id;
+        setStoredActiveCommunity(normalized[0].id, normalized[0].name);
+      }
+
+      select.disabled = false;
+    }
+
+async function getResidentAccessToken(){
+      async function maybeRefreshZummeeSession(parsed){
+        try{
+          const exp = Number(parsed?.expires_at || 0);
+          const refreshToken = String(parsed?.refresh_token || '').trim();
+          const now = Math.floor(Date.now() / 1000);
+          if(!refreshToken) return parsed;
+          if(exp && exp > (now + 60)) return parsed;
+
+          const refreshUrl = (window.SUPABASE_URL || 'https://slcwuuwyrgnmlmxpcaim.supabase.co') + '/auth/v1/token?grant_type=refresh_token';
+          const res = await fetch(refreshUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': String(window.SUPABASE_ANON_KEY || '')
+            },
+            body: JSON.stringify({ refresh_token: refreshToken })
+          });
+          const raw = await res.text();
+          let next = null;
+          try{ next = raw ? JSON.parse(raw) : null; }catch(_e){ next = null; }
+          if(res.ok && next && next.access_token){
+            const merged = Object.assign({}, parsed || {}, next);
+            try{ localStorage.setItem('sb-zummee-auth', JSON.stringify(merged)); }catch(_e){}
+            return merged;
+          }
+        }catch(_e){}
+        return parsed;
+      }
+
+      try{
+        const rawZummee = localStorage.getItem('sb-zummee-auth');
+        if(rawZummee){
+          let parsed = JSON.parse(rawZummee);
+          parsed = await maybeRefreshZummeeSession(parsed);
+          const token = parsed?.access_token || parsed?.currentSession?.access_token;
+          if(token) return String(token);
+        }
+      }catch(_e){}
+      try{
+        const storageKey = 'sb-slcwuuwyrgnmlmxpcaim-auth-token';
+        const raw = localStorage.getItem(storageKey);
+        if(raw){
+          const parsed = JSON.parse(raw);
+          const token = parsed?.access_token || parsed?.currentSession?.access_token;
+          if(token) return String(token);
+        }
+      }catch(_e){}
+      try{
+        for(let i=0; i<localStorage.length; i++){
+          const k = localStorage.key(i);
+          if(!k) continue;
+          if(/auth/i.test(k) && /supabase|zummee|sb-/i.test(k)){
+            try{
+              const raw = localStorage.getItem(k);
+              if(!raw) continue;
+              const parsed = JSON.parse(raw);
+              const token = parsed?.access_token || parsed?.currentSession?.access_token;
+              if(token) return String(token);
+            }catch(_e2){}
+          }
+        }
+      }catch(_e){}
+      try{
+        if(window.sb?.auth?.getSession){
+          const sess = await window.sb.auth.getSession();
+          const token = sess?.data?.session?.access_token;
+          if(token) return String(token);
+        }
+      }catch(_e){}
+      try{
+        if(window.supabaseClient?.auth?.getSession){
+          const sess = await window.supabaseClient.auth.getSession();
+          const token = sess?.data?.session?.access_token;
+          if(token) return String(token);
+        }
+      }catch(_e){}
+      return '';
+    }
+
+    async function residentApi(path, opts){
+      const url = (window.SUPABASE_URL || 'https://slcwuuwyrgnmlmxpcaim.supabase.co') + '/rest/v1/' + path;
+      const token = await getResidentAccessToken();
+      const headers = Object.assign({
+        'apikey': String(window.SUPABASE_ANON_KEY || ''),
+        'Content-Type': 'application/json'
+      }, (opts && opts.headers) || {});
+      if(token){
+        headers['Authorization'] = 'Bearer ' + token;
+      }
+      const res = await fetch(url, Object.assign({}, opts || {}, { headers }));
+      const raw = await res.text();
+      let parsed = null;
+      try{ parsed = raw ? JSON.parse(raw) : null; }catch(_e){ parsed = raw; }
+      if(!res.ok){
+        const msg = (parsed && parsed.message) || (parsed && parsed.error_description) || (typeof parsed === 'string' ? parsed : '') || ('HTTP ' + res.status);
+        throw new Error(msg);
+      }
+      return parsed;
+    }
+
+
+    async function invokeEdgeFunction(functionName, payload){
+      const base = (window.SUPABASE_URL || 'https://slcwuuwyrgnmlmxpcaim.supabase.co').replace(/\/$/, '');
+      const token = await getResidentAccessToken();
+      const headers = {
+        'Content-Type': 'application/json',
+        'apikey': String(window.SUPABASE_ANON_KEY || '')
+      };
+      if(token) headers['Authorization'] = 'Bearer ' + token;
+      const res = await fetch(base + '/functions/v1/' + functionName, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload || {})
+      });
+      const raw = await res.text();
+      let parsed = null;
+      try{ parsed = raw ? JSON.parse(raw) : null; }catch(_e){ parsed = raw; }
+      if(!res.ok){
+        const msg = (parsed && (parsed.error || parsed.message)) || (typeof parsed === 'string' ? parsed : '') || ('HTTP ' + res.status);
+        throw new Error(msg);
+      }
+      return parsed;
+    }
+
+
+    function getZummeeAuth(){
+      try{
+        return JSON.parse(localStorage.getItem('sb-zummee-auth') || '{}') || {};
+      }catch(_e){
+        return {};
+      }
+    }
+    function getCurrentManagerName(){
+      try{
+        const auth = getZummeeAuth();
+        const name = String(auth?.user?.user_metadata?.name || auth?.user?.name || '').trim();
+        if(name) return name;
+      }catch(_e){}
+      try{
+        const sess = JSON.parse(localStorage.getItem('zummee_session_v1') || '{}');
+        const name = String(sess?.name || sess?.email || '').trim();
+        if(name) return name;
+      }catch(_e){}
+      return 'Property Management';
+    }
+    function getCurrentUserId(){
+      try{
+        return localStorage.getItem('zummee_user_id_v1') || localStorage.getItem('zummee_user_id') || localStorage.getItem('user_id') || null;
+      }catch(_e){ return null; }
+    }
+
+    function getCurrentManagerPhone(){
+      try{
+        const auth = getZummeeAuth();
+        const phone = String(auth?.user?.user_metadata?.phone || auth?.user?.phone || '').trim();
+        if(phone) return phone;
+      }catch(_e){}
+      return '';
+    }
+    function getCurrentCompanyName(){
+      try{
+        const auth = getZummeeAuth();
+        const company = String(auth?.user?.user_metadata?.company || localStorage.getItem('zummee_company') || '').trim();
+        if(company) return company;
+      }catch(_e){}
+      return String(localStorage.getItem('zummee_company') || '').trim() || 'Property Management';
+    }
+
+    function escHtml(v){
+      return String(v == null ? '' : v)
+        .replaceAll('&','&amp;')
+        .replaceAll('<','&lt;')
+        .replaceAll('>','&gt;')
+        .replaceAll('"','&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    async function loadWorkOrderPhotos(workOrderId){
+      const gallery = document.getElementById('photoGallery');
+      if(!gallery) return;
+      if(!workOrderId){
+        gallery.innerHTML = '<div class="empty-state">Choose a work order to view photos.</div>';
+        return;
+      }
+      try{
+        const rows = await residentApi('work_order_photos?work_order_id=eq.' + encodeURIComponent(String(workOrderId)) + '&order=created_at.desc', {
+          method: 'GET'
+        });
+        const items = Array.isArray(rows) ? rows : [];
+        if(!items.length){
+          gallery.innerHTML = '<div class="empty-state">No photos uploaded yet.</div>';
+          return;
+        }
+
+        function signedUrl(path){
+          return 'https://slcwuuwyrgnmlmxpcaim.supabase.co/storage/v1/object/authenticated/work-order-photos/' + path;
+        }
+
+        const resident = items.filter(r => String(r.uploader_type || '').toLowerCase() === 'resident');
+        const vendor = items.filter(r => String(r.uploader_type || '').toLowerCase() === 'vendor');
+
+        async function deleteResidentWorkOrder(id){
+  try{
+    if(!id) return;
+    var ok = window.confirm('Delete this work order? This cannot be undone.');
+    if(!ok) return;
+
+    var sb = window.sb || (window.ensureSupabase ? await window.ensureSupabase() : null);
+    if(!sb || typeof sb.from !== 'function'){
+      alert('Unable to delete work order right now.');
+      return;
+    }
+
+    var del = await sb.from('resident_work_orders').delete().eq('id', id);
+    if(del && del.error) throw del.error;
+
+    try{
+      window.dispatchEvent(new CustomEvent('resident-work-orders:changed'));
+      document.dispatchEvent(new CustomEvent('resident-work-orders:changed'));
+    }catch(_e){}
+
+    if (typeof loadWorkOrders === 'function') {
+      await loadWorkOrders();
+    } else {
+      window.location.reload();
+    }
+  }catch(err){
+    alert('Could not delete work order. ' + ((err && (err.message||err.details||err.hint||err.code)) ? (err.message||err.details||err.hint||err.code) : 'Unknown error'));
+  }
+}
+
+window.__deleteResidentWorkOrder = deleteResidentWorkOrder;
+
+function renderGroup(title, arr){
+          if(!arr.length) return '<div class="photo-section"><h3>' + title + '</h3><div class="empty-state">No photos.</div></div>';
+          return '<div class="photo-section"><h3>' + title + '</h3><div class="photo-grid">' + arr.map(p => {
+            const src = signedUrl(p.file_path || '');
+            return '<div class="photo-card"><a href="' + src + '" target="_blank" rel="noopener"><img src="' + src + '" alt="' + escHtml(p.file_name || 'Work order photo') + '"></a><div class="photo-meta">' + escHtml(p.file_name || 'Photo') + '<br>' + escHtml(fmtDate(p.created_at) || '') + '</div></div>';
+          }).join('') + '</div></div>';
+        }
+
+        gallery.innerHTML = renderGroup('Resident Photos', resident) + renderGroup('Completion Photos', vendor);
+      }catch(err){
+        gallery.innerHTML = '<div class="empty-state">Unable to load photos.</div>';
+      }
+    }
+
+    function renderTimeline(selectedRow){
+      const el = document.getElementById('requestTimeline');
+      if(!el) return;
+      const items = [];
+      const submittedAt = selectedRow?.submitted_at || selectedRow?.created_at || '';
+      if(submittedAt) items.push({label:'Submitted by resident', at:submittedAt});
+      if(String(selectedRow?.assigned_vendor_email || selectedRow?.assigned_vendor_name || '').trim()){
+        items.push({label:'Assigned to vendor', at:selectedRow?.updated_at || submittedAt || ''});
+      }
+      const status = String(selectedRow?.status || '').toLowerCase();
+      if(status === 'active') items.push({label:'Work order marked active', at:selectedRow?.updated_at || ''});
+      if(status === 'completed') items.push({label:'Vendor marked complete', at:selectedRow?.updated_at || ''});
+      if(!items.length){
+        el.innerHTML = '<div class="empty-state">No timeline events yet.</div>';
+        return;
+      }
+      el.innerHTML = items.map(item => '<div class="timeline-item"><div class="timeline-dot"></div><div><div class="timeline-title">'+ item.label +'</div><div class="timeline-date">'+ (fmtDate(item.at) || 'Recently') +'</div></div></div>').join('');
+    }
+
+    function fmtDate(v){
+      if(!v) return '—';
+      try{
+        return new Date(v).toLocaleString();
+      }catch(_e){ return v; }
+    }
+    
+    function formatDescription(desc){
+      const raw = String(desc || '').trim();
+      if(!raw) return '';
+      const urlMatch = raw.match(/https?:\/\/[^\s<>"']+/i);
+      const url = urlMatch ? urlMatch[0] : '';
+      const before = url ? raw.replace(url, '') : raw;
+      const cleanText = before.replace(/board photo\s*:/ig, '').trim();
+      const isImage = /\.(png|jpe?g|gif|webp|heic)(\?|#|$)/i.test(url) || /\/storage\/v1\/object\/public\//i.test(url);
+
+      let body = '';
+      if(cleanText){
+        body += '<div>' + esc(cleanText).replace(/\n/g, '<br>') + '</div>';
+      }
+      if(url && isImage){
+        body += '<div style="margin-top:12px">';
+        body += '<div style="font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Photo Attached</div>';
+        body += '<a href="' + esc(url) + '" target="_blank" rel="noopener noreferrer" style="display:inline-block;text-decoration:none">';
+        body += '<img src="' + esc(url) + '" alt="Attached board photo" style="display:block;max-width:100%;max-height:260px;border-radius:14px;border:1px solid rgba(15,53,84,.12);box-shadow:0 8px 18px rgba(15,53,84,.08)" />';
+        body += '</a>';
+        body += '</div>';
+      } else if(url){
+        body += '<div style="margin-top:12px"><a href="' + esc(url) + '" target="_blank" rel="noopener noreferrer" class="btn">View Photo</a></div>';
+      }
+      return body || esc(raw).replace(/\n/g, '<br>');
+    }
+
+function esc(v){
+      return String(v == null ? '' : v)
+        .replaceAll('&','&amp;').replaceAll('<','&lt;')
+        .replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'", '&#39;');
+    }
+    
+    function normalizeStatus(value){
+      const row = (value && typeof value === 'object') ? value : null;
+      const raw = String((row ? row.status : value) || '').trim().toLowerCase();
+      const vendorAccepted = !!(row && (
+        String(row.vendor_response_status || '').toLowerCase() === 'accepted' ||
+        !!row.vendor_accepted_at
+      ));
+
+      if(raw === 'awaiting_assignment' || raw === 'under_review' || raw === 'submitted') return 'manager_review';
+      if(raw === 'assigned' || raw === 'assigned_to_vendor' || raw === 'sent_to_vendor'){
+        return vendorAccepted ? 'active' : 'sent_to_vendor';
+      }
+      if(raw === 'in_progress') return 'active';
+      if(raw === 'active') return vendorAccepted ? 'active' : (row ? 'sent_to_vendor' : 'active');
+      return raw || 'manager_review';
+    }
+
+    function setQuickFilter(mode){
+      const statusFilter = document.getElementById('statusFilter');
+      const priorityFilter = document.getElementById('priorityFilter');
+      const cards = {
+        new: document.getElementById('statCardNew'),
+        assigned: document.getElementById('statCardAssigned'),
+        active: document.getElementById('statCardActive'),
+        done: document.getElementById('statCardDone')
+      };
+      Object.values(cards).forEach(el => el && el.classList.remove('is-active-filter'));
+      if(!mode){
+        if(statusFilter) statusFilter.value = '';
+        if(priorityFilter) priorityFilter.value = '';
+      } else if(mode === 'new'){
+        if(statusFilter) statusFilter.value = 'manager_review';
+        if(priorityFilter) priorityFilter.value = '';
+        cards.new && cards.new.classList.add('is-active-filter');
+      } else if(mode === 'assigned'){
+        if(statusFilter) statusFilter.value = 'sent_to_vendor';
+        if(priorityFilter) priorityFilter.value = '';
+        cards.assigned && cards.assigned.classList.add('is-active-filter');
+      } else if(mode === 'active'){
+        if(statusFilter) statusFilter.value = 'active';
+        if(priorityFilter) priorityFilter.value = '';
+        cards.active && cards.active.classList.add('is-active-filter');
+      } else if(mode === 'done'){
+        if(statusFilter) statusFilter.value = 'completed';
+        if(priorityFilter) priorityFilter.value = '';
+        cards.done && cards.done.classList.add('is-active-filter');
+      }
+      applyFilters();
+    }
+
+function statusClass(rowOrStatus){
+      const row = (typeof rowOrStatus === 'object' && rowOrStatus) ? rowOrStatus : null;
+      const normalized = normalizeStatus(row || rowOrStatus);
+      const base = String(normalized || 'manager_review').toLowerCase().replace(/[^a-z0-9_]+/g, '_');
+      const isAcceptedActive = !!(row && normalized === 'active' && (
+        String(row.vendor_response_status || '').toLowerCase() === 'accepted' ||
+        !!row.vendor_accepted_at
+      ));
+      return isAcceptedActive ? (base + ' pulse-green') : base;
+    }
+    function statusLabel(rowOrStatus){
+      const normalized = normalizeStatus(rowOrStatus);
+      if(normalized === 'sent_to_vendor') return 'sent to vendor';
+      if(normalized === 'active') return 'active';
+      if(normalized === 'manager_review') return 'needs manager review';
+      if(normalized === 'submitted') return 'needs manager review';
+      if(normalized === 'completed') return 'completed';
+      if(normalized === 'closed') return 'closed';
+      return normalized || 'needs manager review';
+    }
+    function setMsg(msg, ok){
+      assignMsg.className = 'message ' + (ok ? 'ok' : 'err');
+      assignMsg.textContent = msg || '';
+    }
+
+    function notifyHubResidentWorkOrdersChanged(){
+      try{ window.dispatchEvent(new CustomEvent('resident-work-orders:changed')); }catch(_e){}
+      try{ document.dispatchEvent(new CustomEvent('resident-work-orders:changed')); }catch(_e){}
+    }
+    function renderStats(rows){
+      let newCount = 0, awaiting = 0, active = 0, done = 0;
+      rows.forEach(r => {
+        const s = normalizeStatus(r);
+        if(s === 'manager_review' || s === 'submitted' || s === 'under_review') newCount += 1;
+        else if(s === 'sent_to_vendor') awaiting += 1;
+        else if(s === 'active') active += 1;
+        else if(s === 'completed' || s === 'closed') done += 1;
+      });
+      const urgent = rows.filter(r => {
+        const s = normalizeStatus(r);
+        const p = String(r.priority || '').toLowerCase();
+        return p === 'urgent' && (s === 'manager_review' || s === 'submitted' || s === 'sent_to_vendor' || s === 'active');
+      }).length;
+      document.getElementById('statNew').textContent = String(newCount);
+      document.getElementById('statAwaiting').textContent = String(awaiting);
+      document.getElementById('statActive').textContent = String(active);
+      document.getElementById('statDone').textContent = String(done);
+      const awaitingBox = document.getElementById('statAwaiting')?.closest('.stat');
+      if(awaitingBox){ awaitingBox.style.background = awaiting > 0 ? 'linear-gradient(180deg,#fff9ea 0%,#fff4d6 100%)' : '#fff'; awaitingBox.style.borderColor = awaiting > 0 ? 'rgba(180,83,9,.24)' : 'rgba(15,53,84,.10)'; }
+      const newBox = document.getElementById('statNew')?.closest('.stat');
+      if(newBox){ newBox.style.background = urgent > 0 ? 'linear-gradient(180deg,#fff3f3 0%,#ffe4e4 100%)' : '#fff'; newBox.style.borderColor = urgent > 0 ? 'rgba(153,27,27,.24)' : 'rgba(15,53,84,.10)'; }
+    }
+
+
+    function setManagerUpdateMsg(msg, isOk){
+      try{
+        if(!managerUpdateMsgEl) return;
+        managerUpdateMsgEl.textContent = msg ? String(msg) : '';
+        managerUpdateMsgEl.classList.toggle('err', isOk === false);
+      }catch(_e){}
+    }
+
+    function refreshManagerUpdateEditor(row){
+      try{
+        if(managerUpdateNoteEl) managerUpdateNoteEl.value = '';
+        if(saveManagerUpdateBtn) saveManagerUpdateBtn.disabled = !row;
+        if(!row){
+          if(managerUpdateMetaEl) managerUpdateMetaEl.textContent = 'Select a work order to add a manager update.';
+          setManagerUpdateMsg('', true);
+          return;
+        }
+        var when = row && (row.manager_update_at || row.updated_at || row.submitted_at || '');
+        if(managerUpdateNoteEl){
+          managerUpdateNoteEl.value = '';
+          try{ managerUpdateNoteEl.placeholder = 'Type a new board-facing update here...'; }catch(_e){}
+        }
+        if(managerUpdateMetaEl){
+          var meta = 'This note appears on the Board Member Hub live maintenance activity.';
+          if(when){
+            try{ meta += ' Last updated ' + fmtDate(when) + '.'; }catch(_e){}
+          }
+          managerUpdateMetaEl.textContent = meta;
+        }
+        setManagerUpdateMsg('', true);
+      }catch(_e){}
+    }
+
+    function renderDetail(row){
+      const openedRequestBanner = document.getElementById('openedRequestBanner');
+      if(!row){
+        if(openedRequestBanner) openedRequestBanner.textContent = '';
+        detailPane.className = 'empty';
+        detailPane.innerHTML = 'Choose a work order to view details.';
+        refreshManagerUpdateEditor(null);
+        return;
+      }
+      if(openedRequestBanner) openedRequestBanner.textContent = 'Opened: ' + (row.subject || 'Resident Work Order') + ' · Unit ' + (row.unit_number || '—');
+      try{ const ds=document.getElementById('detailStatus'); if(ds) ds.value = normalizeStatus(row); if(ds.value==='sent_to_vendor' && !Array.from(ds.options).some(o=>o.value==='sent_to_vendor')) ds.value='submitted'; }catch(_e){}
+      try{ const dp=document.getElementById('detailPriority'); if(dp) dp.value = String(row.priority || 'normal').toLowerCase(); }catch(_e){}
+      detailPane.className = '';
+      detailPane.innerHTML = `
+        <div class="detailGrid">
+          <div class="detailBox"><div class="detailLabel">Resident</div><div class="detailValue">${esc(row.resident_name || '—')}</div></div>
+          <div class="detailBox"><div class="detailLabel">Unit</div><div class="detailValue">${esc(row.unit_number || '—')}</div></div>
+          <div class="detailBox"><div class="detailLabel">Email</div><div class="detailValue">${esc(row.resident_email || '—')}</div></div>
+          <div class="detailBox"><div class="detailLabel">Phone</div><div class="detailValue">${esc(row.resident_phone || '—')}</div></div>
+          <div class="detailBox"><div class="detailLabel">Category</div><div class="detailValue">${esc(row.category || '—')}</div></div>
+          <div class="detailBox"><div class="detailLabel">Priority</div><div class="detailValue">${esc(row.priority || 'normal')}</div></div>
+          <div class="detailBox"><div class="detailLabel">Status</div><div class="detailValue">${esc(row.status || 'submitted')}</div></div>
+          <div class="detailBox"><div class="detailLabel">Submitted</div><div class="detailValue">${esc(fmtDate(row.submitted_at))}</div></div>
+        </div>
+        <div class="detailBox" style="margin-top:12px">
+          <div class="detailLabel">Subject</div>
+          <div class="detailValue">${esc(row.subject || 'Resident Work Order')}</div>
+        </div>
+        <div class="detailBox" style="margin-top:12px">
+          <div class="detailLabel">Description</div>
+          <div class="detailValue" style="font-weight:500">${row.description ? formatDescription(row.description) : '—'}</div>
+        </div>
+      `;
+      refreshManagerUpdateEditor(row);
+    }
+
+
+    function ageHoursFromSubmitted(v){
+      try{
+        const t = new Date(v).getTime();
+        if(!t) return 0;
+        return Math.max(0, (Date.now() - t) / 36e5);
+      }catch(_e){ return 0; }
+    }
+
+    function overdueClassForRow(r){
+      const s = String((r && r.status) || '').toLowerCase();
+      if (!(s === 'submitted' || s === 'under_review' || s === 'awaiting_assignment')) return '';
+      const hours = ageHoursFromSubmitted(r && r.submitted_at);
+      if (hours >= 48) return 'row-overdue-red';
+      if (hours >= 24) return 'row-overdue-yellow';
+      return '';
+    }
+
+    function overdueLabelForRow(r){
+      const s = String((r && r.status) || '').toLowerCase();
+      if (!(s === 'submitted' || s === 'under_review' || s === 'awaiting_assignment')) return '';
+      const hours = ageHoursFromSubmitted(r && r.submitted_at);
+      if (hours >= 48) return '<div class="muted" style="margin-top:6px"><span class="overdueNote red">Over 48h unassigned</span></div>';
+      if (hours >= 24) return '<div class="muted" style="margin-top:6px"><span class="overdueNote yellow">Over 24h unassigned</span></div>';
+      return '';
+    }
+
+    function normalizeCommunityValue(v){
+      return String(v || '').trim().toLowerCase();
+    }
+
+    function rowMatchesActiveCommunity(r, activeCommunityId, activeCommunityName){
+      const activeId = String(activeCommunityId || '').trim();
+      const activeName = normalizeCommunityValue(activeCommunityName);
+      if(!activeId && !activeName) return true;
+
+      const rowCommunityId = String(r?.community_id || r?.property_community_id || '').trim();
+      const rowCommunityName = normalizeCommunityValue(
+        r?.community_name || r?.community || r?.property_community_name || r?.community_label || ''
+      );
+
+      if(activeId && rowCommunityId) return rowCommunityId === activeId;
+      if(activeName && rowCommunityName) return rowCommunityName === activeName;
+      if(activeId && !rowCommunityId && activeName && rowCommunityName) return rowCommunityName === activeName;
+      return true;
+    }
+
+
+    function completedArchiveTimestamp(row){
+      return row?.completed_at || row?.closed_at || row?.updated_at || row?.submitted_at || '';
+    }
+
+    function isArchivedCompletedRow(row){
+      const s = normalizeStatus(row);
+      if(!(s === 'completed' || s === 'closed')) return false;
+      const stamp = completedArchiveTimestamp(row);
+      if(!stamp) return false;
+      const t = new Date(stamp).getTime();
+      if(!t) return false;
+      return (Date.now() - t) > (48 * 60 * 60 * 1000);
+    }
+
+    function fmtMonthYear(v){
+      try{
+        const d = new Date(v);
+        if(isNaN(d.getTime())) return 'Unknown';
+        return d.toLocaleDateString([], { month:'long', year:'numeric' });
+      }catch(_e){ return 'Unknown'; }
+    }
+
+    function renderCompletedArchive(activeCommunityId, activeCommunityName){
+      if(!completedArchiveEl) return;
+      const archiveRows = workOrders
+        .filter(r => isArchivedCompletedRow(r))
+        .filter(r => rowMatchesActiveCommunity(r, activeCommunityId, activeCommunityName))
+        .sort((a,b) => new Date(completedArchiveTimestamp(b)).getTime() - new Date(completedArchiveTimestamp(a)).getTime());
+
+      if(!archiveRows.length){
+        completedArchiveEl.innerHTML = '<div class="archiveEmpty">No archived completed work orders for this community yet.</div>';
+        return;
+      }
+
+      const groups = new Map();
+      archiveRows.forEach(r => {
+        const key = fmtMonthYear(completedArchiveTimestamp(r));
+        if(!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(r);
+      });
+
+      completedArchiveEl.innerHTML = Array.from(groups.entries()).map(([label, rows]) => {
+        return `
+          <div class="archiveGroup">
+            <div class="archiveGroupTitle">${esc(label)} · ${rows.length}</div>
+            <div class="archiveList">
+              ${rows.map(r => `
+                <div class="archiveItem" onclick="window.__zummeeOpenResidentWorkOrder && window.__zummeeOpenResidentWorkOrder('${esc(r.id)}')">
+                  <div class="archiveItemMain">
+                    <div class="archiveItemTitle">${esc(r.subject || 'Resident Work Order')}</div>
+                    <div class="archiveItemMeta">Unit ${esc(r.unit_number || '—')} · ${esc(r.resident_name || '—')} · ${esc(r.community_name || r.community || '')}</div>
+                  </div>
+                  <div class="archiveItemDate">${esc(fmtDate(completedArchiveTimestamp(r)))}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function applyFilters(){
+      const q = String(searchBox.value || '').trim().toLowerCase();
+      const sf = String(statusFilter.value || '').trim().toLowerCase();
+      const pf = String(priorityFilter.value || '').trim().toLowerCase();
+      const headerSel = headerCommunitySelect();
+      const activeCommunityId = String((headerSel && headerSel.value) || getStoredActiveCommunityId() || '').trim();
+      const activeCommunityName = (() => {
+        try{
+          if(headerSel && headerSel.selectedOptions && headerSel.selectedOptions[0]){
+            return String(headerSel.selectedOptions[0].textContent || '').trim();
+          }
+          return String(localStorage.getItem('activeCommunityName') || localStorage.getItem('zummeeActiveCommunityName') || '').trim();
+        }catch(_e){ return ''; }
+      })();
+
+      filtered = workOrders.filter(r => {
+        const hay = [
+          r.resident_name, r.unit_number, r.subject, r.description, r.resident_email, r.category
+        ].join(' ').toLowerCase();
+        const normalizedStatus = normalizeStatus(r);
+        if(isArchivedCompletedRow(r)) return false;
+        if(q && !hay.includes(q)) return false;
+        if(!rowMatchesActiveCommunity(r, activeCommunityId, activeCommunityName)) return false;
+        if(sf && normalizedStatus !== sf) return false;
+        if(pf && String(r.priority || '').toLowerCase() !== pf) return false;
+        return true;
+      });
+
+      rowsEl.innerHTML = filtered.length ? filtered.map(r => {
+        const s = normalizeStatus(r);
+        const p = String(r.priority || '').toLowerCase();
+        const isAwaiting = s === 'sent_to_vendor';
+        const isUrgent = p === 'urgent' && (s === 'manager_review' || s === 'submitted' || s === 'sent_to_vendor' || s === 'active');
+        const overdueClass = overdueClassForRow(r);
+        const rowClass = [isAwaiting ? 'row-attention' : '', isUrgent ? 'row-urgent' : '', overdueClass].join(' ').trim();
+                const isSelected = selected && String(selected.id) === String(r.id);
+        return `
+        <tr class="${(rowClass + (isSelected ? " is-selected" : "")).trim()} clickableRow" data-id="${esc(r.id)}" onclick="window.__zummeeOpenResidentWorkOrder && window.__zummeeOpenResidentWorkOrder('${esc(r.id)}')">
+          <td><span class="pill ${statusClass(r)}">${esc(statusLabel(r) || 'submitted')}</span></td>
+          <td>${esc(r.unit_number || '—')}</td>
+          <td>${esc(r.resident_name || '—')}</td>
+          <td><strong>${esc(r.subject || 'Resident Work Order')}</strong><div class="muted" style="margin-top:4px">${esc((r.description || '').slice(0, 90))}</div>${overdueLabelForRow(r)}</td>
+          <td>${isUrgent ? '<span class="pill urgent">Urgent</span>' : esc(r.priority || 'normal')}</td>
+          <td>${esc(fmtDate(r.submitted_at))}</td>
+        </tr>`;
+      }).join('') : `<tr><td colspan="6"><div class="empty">No work orders match the current filters.</div></td></tr>`;
+
+      const activeName = activeCommunityName;
+      const urgentShown = filtered.filter(r => String(r.priority || '').toLowerCase() === 'urgent' && ['manager_review','submitted','sent_to_vendor','active'].includes(normalizeStatus(r))).length;
+      const archivedShown = workOrders.filter(r => isArchivedCompletedRow(r) && rowMatchesActiveCommunity(r, activeCommunityId, activeCommunityName)).length;
+      statusLine.textContent = filtered.length + ' work order' + (filtered.length === 1 ? '' : 's') + ' shown' + (activeName ? (' for ' + activeName) : '') + (urgentShown ? (' · ' + urgentShown + ' urgent') : '') + (archivedShown ? (' · ' + archivedShown + ' archived') : '');
+
+      if(filtered.length){
+        const stillSelected = selected && filtered.some(r => String(r.id || '') === String(selected.id || ''));
+        if(!stillSelected){
+          selected = filtered[0];
+          renderDetail(selected);
+          populateVendorDropdown();
+        }
+      } else {
+        selected = null;
+        renderDetail(null);
+      }
+
+      renderStats(filtered);
+      renderCompletedArchive(activeCommunityId, activeCommunityName);
+
+    }
+
+    function openWorkOrderById(id){
+      selected = workOrders.find(r => String(r.id) === String(id)) || null;
+      try{ localStorage.setItem('selectedWorkOrderId', String(id || '')); }catch(_e){}
+      if(!selected) return;
+      renderDetail(selected);
+      setMsg('', true);
+      const vendorNameEl = document.getElementById('vendorName');
+      const vendorEmailEl = document.getElementById('vendorEmail');
+      populateVendorDropdown();
+      if(vendorNameEl && selected?.assigned_vendor_name){ vendorNameEl.value = selected.assigned_vendor_name || ''; }
+      if(vendorEmailEl && selected?.assigned_vendor_email){ vendorEmailEl.value = selected.assigned_vendor_email || ''; }
+      try{ renderTimeline(selected); }catch(_e){}
+      try{ loadWorkOrderPhotos(selected && selected.id); }catch(_e){}
+      try{ applyFilters(); }catch(_e){}
+      try{
+        const detailCard = document.querySelector('.detailCard');
+        if(detailCard) detailCard.scrollIntoView({ behavior:'smooth', block:'start' });
+      }catch(_e){}
+    }
+    try{ window.__zummeeOpenResidentWorkOrder = openWorkOrderById; }catch(_e){}
+
+
+    async function saveManagerUpdateNote(){
+      if(!selected){
+        setManagerUpdateMsg('Open a work order first.', false);
+        return;
+      }
+      var note = managerUpdateNoteEl ? String(managerUpdateNoteEl.value || '').trim() : '';
+      if(saveManagerUpdateBtn) saveManagerUpdateBtn.disabled = true;
+      setManagerUpdateMsg('Saving manager update…', true);
+      try{
+        var rowId = encodeURIComponent(String(selected.id || ''));
+        var payloadPrimary = {
+          manager_update_note: note,
+          manager_update_at: new Date().toISOString(),
+          internal_notes: note
+        };
+        var updated = null;
+        try{
+          updated = await residentApi("resident_work_orders?id=eq." + rowId + "&select=*", {
+            method: 'PATCH',
+            headers: { 'Prefer': 'return=representation' },
+            body: JSON.stringify(payloadPrimary)
+          });
+        }catch(_e){
+          updated = await residentApi("resident_work_orders?id=eq." + rowId + "&select=*", {
+            method: 'PATCH',
+            headers: { 'Prefer': 'return=representation' },
+            body: JSON.stringify({ internal_notes: note })
+          });
+        }
+        var nextRow = Array.isArray(updated) ? (updated[0] || null) : (updated || null);
+        if(nextRow){
+          selected = nextRow;
+          workOrders = workOrders.map(function(r){ return String(r.id) === String(nextRow.id) ? nextRow : r; });
+          renderDetail(selected);
+          try{ applyFilters(); }catch(_e){}
+        } else {
+          selected.internal_notes = note;
+          selected.manager_update_note = note;
+          selected.manager_update_at = new Date().toISOString();
+          refreshManagerUpdateEditor(selected);
+        }
+        setManagerUpdateMsg(note ? 'Manager update saved. Board members will now see it in Live Maintenance Updates.' : 'Manager update cleared.', true);
+      }catch(err){
+        setManagerUpdateMsg('Unable to save manager update. ' + (err && err.message ? err.message : ''), false);
+      }finally{
+        if(saveManagerUpdateBtn) saveManagerUpdateBtn.disabled = false;
+      }
+    }
+
+    async function loadWorkOrders(){
+      statusLine.textContent = 'Loading resident work orders...';
+      try{
+        const rows = await residentApi("resident_work_orders?select=*&order=submitted_at.desc&limit=500", {
+          method: 'GET'
+        });
+        workOrders = Array.isArray(rows) ? rows : [];
+        applyFilters();
+        if(workOrders.length){
+          selected = workOrders[0];
+          renderDetail(selected);
+          populateVendorDropdown();
+
+try{
+  var openId = '';
+  try{
+    openId = String(new URLSearchParams(window.location.search || '').get('open_work_order_id') || '').trim();
+    if(!openId) openId = String(localStorage.getItem('selectedWorkOrderId') || '').trim();
+  }catch(_e){}
+  if(openId && workOrders && workOrders.length){
+    var target = workOrders.find(function(r){ return String(r.id||'') === openId; });
+    if(target){
+      selected = target;
+      try{ localStorage.setItem('selectedWorkOrderId', openId); }catch(_e){}
+      renderDetail(selected);
+      populateVendorDropdown();
+      try{ applyFilters(); }catch(_e){}
+      try{
+        var rowEl = rowsEl && rowsEl.querySelector ? rowsEl.querySelector('tr[data-id="'+CSS.escape(openId)+'"]') : null;
+        if(rowEl) rowEl.scrollIntoView({ behavior:'smooth', block:'center' });
+      }catch(_e){}
+    }
+  }
+}catch(_e){}
+
+        } else {
+          statusLine.textContent = 'No resident work orders yet.';
+          renderDetail(null);
+          try{ const vn=document.getElementById('vendorName'); if(vn) vn.innerHTML='<option value="">Select vendor</option>'; const ve=document.getElementById('vendorEmail'); if(ve) ve.value=''; }catch(_e){}
+          renderStats([]);
+          rowsEl.innerHTML = `<tr><td colspan="6"><div class="empty">No resident work orders found yet.</div></td></tr>`;
+        }
+      }catch(err){
+        workOrders = [];
+        renderStats([]);
+        renderDetail(null);
+        try{ const vn=document.getElementById('vendorName'); if(vn) vn.innerHTML='<option value="">Select vendor</option>'; const ve=document.getElementById('vendorEmail'); if(ve) ve.value=''; }catch(_e){}
+        rowsEl.innerHTML = `<tr><td colspan="6"><div class="empty">Unable to load resident work orders. ${esc(err?.message || 'Please verify the resident_work_orders table exists and is readable.')} ${/row-level security|401|jwt|unauthorized/i.test(String(err?.message||'')) ? 'This page needs a fresh logged-in manager session. Try signing out and back in, or refresh the page.' : ''}</div></td></tr>`;
+        statusLine.textContent = 'Resident work orders could not be loaded.';
+      }
+    }
+
+    async function assignVendor(){
+      if(!selected){
+        setMsg('Open a work order first.', false);
+        return;
+      }
+      const vendorName = document.getElementById('vendorName').value.trim();
+      const vendorEmail = document.getElementById('vendorEmail').value.trim();
+      const statusVal = document.getElementById('assignStatus').value || document.getElementById('detailStatus')?.value || 'sent_to_vendor';
+      const notes = document.getElementById('assignNotes').value.trim();
+
+      if(!vendorName){
+        setMsg('Enter a vendor name first.', false);
+        return;
+      }
+
+      assignBtn.disabled = true;
+      try{
+        // Update resident work order with vendor fields if those columns exist
+        let updatePayload = {
+          status: statusVal,
+          assigned_vendor_name: vendorName,
+          assigned_vendor_email: vendorEmail || null,
+          manager_approved_at: new Date().toISOString(),
+          manager_approved_by: getCurrentUserId()
+        };
+        try{
+          const updated = await residentApi("resident_work_orders?id=eq." + encodeURIComponent(String(selected.id)) + "&select=*", {
+            method: 'PATCH',
+            headers: { 'Prefer': 'return=representation' },
+            body: JSON.stringify(updatePayload)
+          });
+          selected = Array.isArray(updated) ? (updated[0] || selected) : (updated || selected);
+        }catch(_e){
+          const fallback = await residentApi("resident_work_orders?id=eq." + encodeURIComponent(String(selected.id)) + "&select=*", {
+            method: 'PATCH',
+            headers: { 'Prefer': 'return=representation' },
+            body: JSON.stringify({ status: statusVal })
+          });
+          selected = Array.isArray(fallback) ? (fallback[0] || selected) : (fallback || selected);
+        }
+
+        // Best-effort create linked maintenance request if table exists
+        try{
+          const maintenancePayload = {
+            subject: selected.subject || 'Resident Work Order',
+            html: `<p><strong>Resident:</strong> ${esc(selected.resident_name || '')}</p><p><strong>Unit:</strong> ${esc(selected.unit_number || '')}</p><p>${esc(selected.description || '')}</p>` + (notes ? `<p><strong>Note to Vendor:</strong> ${esc(notes)}</p>` : ''),
+            status: 'sent',
+            community_id: selected.community_id || null,
+            vendor_email: vendorEmail || null,
+            resident_work_order_id: selected.id || null,
+            unit_number: selected.unit_number || null,
+            resident_name: selected.resident_name || null,
+            resident_email: selected.resident_email || null
+          };
+          let mr = null;
+          try{
+            const created = await residentApi("maintenance_requests?select=*", {
+              method: 'POST',
+              headers: { 'Prefer': 'return=representation' },
+              body: JSON.stringify(maintenancePayload)
+            });
+            mr = Array.isArray(created) ? created[0] : created;
+          }catch(_e){
+            const fallbackPayload = {
+              subject: maintenancePayload.subject,
+              html: maintenancePayload.html,
+              status: maintenancePayload.status,
+              community_id: maintenancePayload.community_id,
+              vendor_email: maintenancePayload.vendor_email
+            };
+            try{
+              const created2 = await residentApi("maintenance_requests?select=*", {
+                method: 'POST',
+                headers: { 'Prefer': 'return=representation' },
+                body: JSON.stringify(fallbackPayload)
+              });
+              mr = Array.isArray(created2) ? created2[0] : created2;
+            }catch(_e2){}
+          }
+          if(mr && mr.id){
+            try{
+              await residentApi("resident_work_orders?id=eq." + encodeURIComponent(String(selected.id)) + "&select=*", {
+                method: 'PATCH',
+                headers: { 'Prefer': 'return=representation' },
+                body: JSON.stringify({
+                  status: statusVal,
+                  linked_maintenance_request_id: mr.id
+                })
+              });
+            }catch(_e){}
+            selected.linked_maintenance_request_id = mr.id;
+          }
+        }catch(_e){}
+
+        let emailNotice = 'Approved and routed to vendor.';
+        try{
+          const communityName = String(localStorage.getItem('activeCommunityName') || localStorage.getItem('zummeeActiveCommunityName') || '');
+          const emailResult = await invokeEdgeFunction('assign-vendor-email', {
+            work_order_id: selected.id || null,
+            vendor_email: vendorEmail || null,
+            vendor_name: vendorName || '',
+            manager_name: getCurrentManagerName(),
+            manager_phone: getCurrentManagerPhone(),
+            company_name: getCurrentCompanyName(),
+            vendor_note: notes || '',
+            community_name: communityName || '',
+            community_id: selected.community_id || null,
+            resident_name: selected.resident_name || '',
+            resident_email: selected.resident_email || '',
+            resident_phone: selected.resident_phone || '',
+            unit_number: selected.unit_number || '',
+            subject: selected.subject || 'Resident Work Order',
+            description: selected.description || '',
+            priority: selected.priority || '',
+            status: statusVal || 'assigned'
+          });
+          if(emailResult && emailResult.ok){
+            emailNotice = emailResult && emailResult.resident_email_sent ? 'Approved and routed. Vendor and resident notified by email.' : 'Approved and routed. Vendor notified by email with Accept Job button.';
+          } else if(emailResult && emailResult.warning){
+            emailNotice = 'Approved and routed. ' + String(emailResult.warning);
+          }
+        }catch(emailErr){
+          emailNotice = 'Approved and routed, but vendor email was not sent: ' + (emailErr?.message || 'Function error');
+        }
+
+        setMsg(emailNotice, true);
+        notifyHubResidentWorkOrdersChanged();
+        await loadWorkOrders();
+      }catch(err){
+        setMsg(err?.message || 'Unable to save vendor assignment.', false);
+      }finally{
+        assignBtn.disabled = false;
+      }
+    }
+
+    async function markComplete(){
+      if(!selected){
+        setMsg('Open a work order first.', false);
+        return;
+      }
+      completeBtn.disabled = true;
+      try{
+        const res = await residentApi("resident_work_orders?id=eq." + encodeURIComponent(String(selected.id)) + "&select=*", {
+          method: 'PATCH',
+          headers: { 'Prefer': 'return=representation' },
+          body: JSON.stringify({ status: 'completed' })
+        });
+        selected = Array.isArray(res) ? (res[0] || selected) : (res || selected);
+        setMsg('Work order marked complete.', true);
+        notifyHubResidentWorkOrdersChanged();
+        await loadWorkOrders();
+      }catch(err){
+        setMsg(err?.message || 'Unable to mark complete.', false);
+      }finally{
+        completeBtn.disabled = false;
+      }
+    }
+
+    const vendorNameSelect = document.getElementById('vendorName');
+    const detailStatus = document.getElementById('detailStatus');
+    if(detailStatus){
+      detailStatus.addEventListener('change', async function(){
+        if(!selected) return;
+        try{
+          const res = await residentApi("resident_work_orders?id=eq." + encodeURIComponent(String(selected.id)) + "&select=*", {
+            method: 'PATCH',
+            headers: { 'Prefer': 'return=representation' },
+            body: JSON.stringify({ status: detailStatus.value })
+          });
+          selected = Array.isArray(res) ? (res[0] || selected) : (res || selected);
+          notifyHubResidentWorkOrdersChanged();
+          await loadWorkOrders();
+          setMsg('Status updated.', true);
+        }catch(err){
+          setMsg(err?.message || 'Unable to update status.', false);
+        }
+      });
+    }
+    const detailPriority = document.getElementById('detailPriority');
+    if(detailPriority){
+      detailPriority.addEventListener('change', async function(){
+        if(!selected) return;
+        try{
+          const res = await residentApi("resident_work_orders?id=eq." + encodeURIComponent(String(selected.id)) + "&select=*", {
+            method: 'PATCH',
+            headers: { 'Prefer': 'return=representation' },
+            body: JSON.stringify({ priority: detailPriority.value })
+          });
+          selected = Array.isArray(res) ? (res[0] || selected) : (res || selected);
+          notifyHubResidentWorkOrdersChanged();
+          await loadWorkOrders();
+          setMsg('Priority updated.', true);
+        }catch(err){
+          setMsg(err?.message || 'Unable to update priority.', false);
+        }
+      });
+    }
+    document.getElementById('statCardNew')?.addEventListener('click', () => setQuickFilter('new'));
+    document.getElementById('statCardAssigned')?.addEventListener('click', () => setQuickFilter('assigned'));
+    document.getElementById('statCardActive')?.addEventListener('click', () => setQuickFilter('active'));
+    document.getElementById('statCardDone')?.addEventListener('click', () => setQuickFilter('done'));
+    if(vendorNameSelect){
+      vendorNameSelect.addEventListener('change', function(){
+        const chosen = vendorNameSelect.selectedOptions && vendorNameSelect.selectedOptions[0] ? vendorNameSelect.selectedOptions[0] : null;
+        const emailEl = document.getElementById('vendorEmail');
+        if(emailEl){
+          emailEl.value = (chosen && chosen.dataset && chosen.dataset.email) ? (chosen.dataset.email || '') : '';
+        }
+      });
+    }
+
+    searchBox.addEventListener('input', applyFilters);
+    statusFilter.addEventListener('change', applyFilters);
+    priorityFilter.addEventListener('change', applyFilters);
+    assignBtn.addEventListener('click', assignVendor);
+    completeBtn.addEventListener('click', markComplete);
+    if(saveManagerUpdateBtn) saveManagerUpdateBtn.addEventListener('click', saveManagerUpdateNote);
+
+    populateHeaderCommunities();
+    const headerSelectEl = headerCommunitySelect();
+    if(headerSelectEl){
+      headerSelectEl.addEventListener('change', function(){
+        try{
+          const name = headerSelectEl.selectedOptions && headerSelectEl.selectedOptions[0]
+            ? headerSelectEl.selectedOptions[0].textContent.trim()
+            : '';
+          setStoredActiveCommunity(headerSelectEl.value, name);
+        }catch(_e){}
+        applyFilters();
+      });
+    }
+
+    if(!window.__zummeeResidentHeaderCommunityBound){
+      window.__zummeeResidentHeaderCommunityBound = true;
+
+      document.addEventListener('change', function(ev){
+        const t = ev && ev.target;
+        if(!t || t.id !== 'zummeeCommunitySelect') return;
+        try{
+          const name = t.selectedOptions && t.selectedOptions[0]
+            ? String(t.selectedOptions[0].textContent || '').trim()
+            : '';
+          setStoredActiveCommunity(t.value, name);
+        }catch(_e){}
+        try{ applyFilters(); }catch(_e){}
+      }, true);
+
+      window.addEventListener('storage', function(ev){
+        try{
+          if(!ev) return;
+          if(ev.key !== 'activeCommunityId' && ev.key !== 'zummeeActiveCommunityId' && ev.key !== 'zummee_selected_community_id') return;
+          const sel = headerCommunitySelect();
+          const activeId = getStoredActiveCommunityId();
+          if(sel && activeId && sel.value !== activeId) sel.value = activeId;
+          applyFilters();
+        }catch(_e){}
+      });
+    }
+
+    loadWorkOrders();
+  </script>
+<script>
+(function(){
+  function tuneResidentWorkOrdersHeader(){
+    try{
+      var hub = document.getElementById('zummeeHdrHub');
+      if(hub){ hub.style.display = 'inline-flex'; hub.textContent = 'Hub'; }
+      var profile = document.getElementById('zummeeHdrProfile');
+      if(profile){ profile.style.display = 'none'; }
+      var signout = document.getElementById('zummeeSignOut');
+      if(signout){ signout.style.display = 'none'; }
+      var right = document.querySelector('header.zm-header .zm-header__right');
+      if(right){
+        right.style.display = 'flex';
+        right.style.flexDirection = 'column';
+        right.style.alignItems = 'flex-end';
+        right.style.justifyContent = 'flex-start';
+        right.style.gap = '12px';
+      }
+      var row = document.querySelector('header.zm-header .zm-communityRow');
+      if(row){
+        row.style.display = 'flex';
+        row.style.justifyContent = 'flex-end';
+        row.style.width = 'auto';
+      }
+      try{ if (typeof populateHeaderCommunities === 'function') populateHeaderCommunities(); }catch(_e){}
+      var actions = document.querySelector('header.zm-header .zm-actionsRow');
+      if(actions){
+        actions.style.display = 'flex';
+        actions.style.justifyContent = 'flex-end';
+        actions.style.width = 'auto';
+      }
+    }catch(e){}
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', tuneResidentWorkOrdersHeader, { once:true });
+  } else {
+    tuneResidentWorkOrdersHeader();
+  }
+  window.addEventListener('load', tuneResidentWorkOrdersHeader, { once:true });
+})();
+</script>
+
+
+
+
+
+
+
+
+
+<!-- RWO_DELETE_REMOVED -->
+
+<!-- RWO_ASSIGN_NOTE_FIX -->
+
+<!-- RWO_ASSIGN_NOTE_FIX_V2 -->
+
+<!-- VENDOR_GREETING_NAME_FIX -->
+
+<!-- VENDOR_GREETING_NAME_FIX_V2 -->
+
+<!-- ACTIVE_STATUS_GREEN_PULSE -->
+
+<!-- ACTIVE_STATUS_GREEN_PULSE_ACCEPT_ONLY -->
+
+<!-- STATUS_SPLIT_SENT_VS_ACTIVE -->
+
+<!-- SENT_TO_VENDOR_LABEL_FIX -->
+
+<!-- CENTER_PILL_REMOVE_UNDER_REVIEW -->
+
+<!-- STATUS_APPLY_FIX_DROP_ASSIGNED -->
+
+<!-- STATUS_APPLY_FIX_DROP_ASSIGNED_V2 -->
+
+<!-- REQUEST_DETAILS_PHOTO_PREVIEW -->
+
+<!-- REQUEST_DETAILS_PHOTO_PREVIEW_V2 -->
+
+<script id="residentFormContextLinkFix">
+(function(){
+  function getStoredActiveCommunityName(){
+    try{
+      return String(
+        localStorage.getItem('zummeeActiveCommunityName') ||
+        localStorage.getItem('activeCommunityName') ||
+        ''
+      ).trim();
+    }catch(_e){ return ''; }
+  }
+
+  function updateResidentFormHref(){
+    try{
+      var btn = document.getElementById('openResidentFormBtn');
+      if(!btn) return;
+
+      var select = document.getElementById('zummeeCommunitySelect');
+      var communityId = '';
+      var communityName = '';
+      if(select){
+        communityId = String(select.value || '').trim();
+        if(select.selectedOptions && select.selectedOptions[0]){
+          communityName = String(select.selectedOptions[0].textContent || '').trim();
+        }
+      }
+      if(!communityId){
+        try{
+          communityId = String(
+            localStorage.getItem('zummeeActiveCommunityId') ||
+            localStorage.getItem('activeCommunityId') ||
+            localStorage.getItem('zummee_selected_community_id') ||
+            ''
+          ).trim();
+        }catch(_e){}
+      }
+      if(!communityName){
+        communityName = getStoredActiveCommunityName();
+      }
+
+      var href = 'work_order_submit.html';
+      var params = [];
+      if(communityId) params.push('community_id=' + encodeURIComponent(communityId));
+      if(communityName) params.push('community_name=' + encodeURIComponent(communityName));
+      if(params.length){
+        href += '?' + params.join('&');
+      }
+      btn.setAttribute('href', href);
+    }catch(_e){}
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    updateResidentFormHref();
+    setTimeout(updateResidentFormHref, 0);
+    setTimeout(updateResidentFormHref, 300);
+
+    var select = document.getElementById('zummeeCommunitySelect');
+    if(select){
+      select.addEventListener('change', function(){
+        setTimeout(updateResidentFormHref, 0);
+        setTimeout(updateResidentFormHref, 100);
+      });
+    }
+
+    window.addEventListener('storage', function(){
+      setTimeout(updateResidentFormHref, 0);
+    });
+
+    document.addEventListener('zummee:community-changed', function(){
+      setTimeout(updateResidentFormHref, 0);
+    });
+  });
+})();
+</script>
+
+
+<style id="residentWorkOrdersHubButtonFix">
+  header.zm-header .rwo-back-hub-btn{
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    min-height:46px !important;
+    padding:10px 18px !important;
+    border-radius:999px !important;
+    background:#ffffff !important;
+    color:#17324c !important;
+    border:1px solid rgba(15,53,84,.12) !important;
+    text-decoration:none !important;
+    font-weight:700 !important;
+    line-height:1 !important;
+    box-shadow:0 2px 6px rgba(15,53,84,.08) !important;
+    -webkit-tap-highlight-color:transparent !important;
+    white-space:nowrap !important;
+  }
+  body[data-header-mode="hub"] header.zm-header .zm-actionsRow{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:flex-end !important;
+    gap:10px !important;
+    width:auto !important;
+  }
+  @media (max-width: 900px){
+    body[data-header-mode="hub"] header.zm-header .zm-actionsRow{
+      width:100% !important;
+      justify-content:center !important;
+    }
+    header.zm-header .rwo-back-hub-btn{
+      min-width:200px !important;
+    }
+  }
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+
+
+<script id="resident-work-orders-new-layout-js-v31">
+(function(){
+  function moveResidentControls(){var slot=document.getElementById('residentWorkOrdersInlineControls'); if(!slot) return false; var select=document.getElementById('zummeeCommunitySelect'); var communityRow=select&&select.closest?select.closest('.zm-communityRow'):null; if(communityRow){Array.prototype.slice.call(communityRow.children).forEach(function(child){if(child!==select) child.remove();}); if(communityRow.parentElement!==slot){slot.appendChild(communityRow);} communityRow.style.gap='0';} var hub=document.getElementById('zummeeHdrHub')||document.querySelector('.rwo-back-hub-btn'); if(hub){hub.textContent='Hub';hub.setAttribute('href','manager_hub.html');var actions=hub.closest&&hub.closest('.zm-actionsRow'); if(actions&&actions.parentElement!==slot){slot.appendChild(actions);} else if(!actions&&hub.parentElement!==slot){var wrap=document.createElement('div');wrap.className='zm-actionsRow';wrap.appendChild(hub);slot.appendChild(wrap);}} return !!slot.querySelector('#zummeeCommunitySelect');}
+  function getClient(){try{if(typeof ensureSupabase==='function') return Promise.resolve(ensureSupabase()).then(function(c){return c&&c.from?c:null;});}catch(e){} try{if(window.supabaseClient&&window.supabaseClient.from) return Promise.resolve(window.supabaseClient);}catch(e){} try{if(window.sb&&window.sb.from) return Promise.resolve(window.sb);}catch(e){} return Promise.resolve(null);}
+  function parseLogoRef(raw){raw=String(raw||'').trim(); if(!raw)return null; if(/^https?:\/\//i.test(raw))return{url:raw}; return{bucket:'company_logos',path:raw};}
+  function setLogo(url,alt){var logo=document.getElementById('residentWorkOrdersCompanyLogo'); if(!logo)return; url=String(url||'').trim(); logo.classList.remove('logo-ready'); logo.hidden=true; logo.removeAttribute('src'); if(!url)return; logo.onload=function(){logo.hidden=false;logo.classList.add('logo-ready');}; logo.onerror=function(){logo.hidden=true;logo.classList.remove('logo-ready');logo.removeAttribute('src');}; logo.alt=String(alt||'').trim()||'Management company logo'; logo.src=url;}
+  async function loadCompanyLogo(){try{var client=await getClient(); if(!client||!client.auth)return; var userRes=await client.auth.getUser(); var user=userRes&&userRes.data&&userRes.data.user; if(!user)return; var prof=await client.from('userdirectory').select('company_id').eq('auth_user_id',user.id).maybeSingle(); var companyId=String(prof&&prof.data&&prof.data.company_id||'').trim(); if(!companyId)return; var res=await client.from('companies').select('logo_path,name').eq('id',companyId).maybeSingle(); var row=res&&res.data||{}; var ref=parseLogoRef(row.logo_path); if(!ref)return; var url=String(ref.url||'').trim(); if(!url&&ref.bucket&&ref.path&&client.storage&&client.storage.from){var pub=client.storage.from(ref.bucket).getPublicUrl(ref.path); url=String(pub&&pub.data&&pub.data.publicUrl||'').trim();} setLogo(url,row.name||'Management company logo');}catch(e){console.warn('Resident Work Orders logo load skipped',e);}}
+  function boot(){moveResidentControls(); setTimeout(moveResidentControls,100); setTimeout(moveResidentControls,400); setTimeout(moveResidentControls,1000); loadCompanyLogo();}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true}); else boot(); window.addEventListener('load',boot,{once:true});
+})();
+</script>
+<script id="residentWorkOrdersSingleHubButtonFixV35">
+(function(){
+  function fixSingleHubButton(){
+    var slot = document.getElementById('residentWorkOrdersInlineControls');
+    if(!slot) return false;
+    var mainHub = document.getElementById('zummeeHdrHub');
+    var fallbackHub = document.querySelector('.rwo-back-hub-btn');
+    var hub = mainHub || fallbackHub;
+    if(mainHub){
+      document.querySelectorAll('.rwo-back-hub-btn').forEach(function(btn){
+        if(btn !== mainHub) btn.remove();
+      });
+    }
+    if(hub){
+      hub.textContent = 'Hub';
+      hub.setAttribute('href', 'manager_hub.html');
+      var actions = hub.closest && hub.closest('.zm-actionsRow');
+      if(!actions){
+        actions = document.createElement('div');
+        actions.className = 'zm-actionsRow';
+        actions.appendChild(hub);
+      }
+      if(actions.parentElement !== slot) slot.appendChild(actions);
+      Array.prototype.slice.call(slot.querySelectorAll('.zm-actionsRow')).forEach(function(row){
+        if(row !== actions) row.remove();
+      });
+      Array.prototype.slice.call(slot.querySelectorAll('a,button')).forEach(function(btn){
+        if(btn !== hub && (btn.textContent || '').trim().toLowerCase() === 'hub') btn.remove();
+      });
+    }
+    return true;
+  }
+  function run(){
+    fixSingleHubButton();
+    setTimeout(fixSingleHubButton, 80);
+    setTimeout(fixSingleHubButton, 300);
+    setTimeout(fixSingleHubButton, 900);
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run, {once:true});
+  else run();
+  window.addEventListener('load', run, {once:true});
+})();
+</script>
+<script src="company_logo_sync.js"></script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

@@ -1,0 +1,1451 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script>
+// v840: ensureSupabase Promise shim (clean)
+function ensureSupabaseSync(){
+  try{
+    if(window.sb) return window.sb;
+    if(window.supabaseClient) return window.supabaseClient;
+    if(window.supabase) return window.supabase;
+    if(typeof getSupabaseClientSafe === 'function') return getSupabaseClientSafe();
+  }catch(e){}
+  return null;
+}
+function ensureSupabase(){
+  return new Promise(function(resolve){
+    var c = ensureSupabaseSync();
+    if(c) return resolve(c);
+    var start = Date.now();
+    var t = setInterval(function(){
+      var cc = ensureSupabaseSync();
+      if(cc){
+        clearInterval(t);
+        resolve(cc);
+      } else if(Date.now() - start > 4000){
+        clearInterval(t);
+        resolve(null);
+      }
+    }, 50);
+  });
+}
+</script>
+
+
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Mileage Tracker</title>
+<style>
+  :root{--bg:#f6f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--shadow:0 10px 30px rgba(0,0,0,.08);--r:18px}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
+
+  /* Supervisor-style header */
+  .zummee-header{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:16px 22px;border-bottom:1.2px solid rgba(33,59,90,0.7);
+    background:#9fc9ec;box-shadow:0 1px 6px rgba(0,0,0,0.08);
+  }
+  .zummee-header__left{display:flex;align-items:center;gap:16px;min-width:0}
+  .zummee-header__right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+  .zummee-header__logo{display:inline-flex;align-items:center;text-decoration:none;flex:0 0 auto}
+  .zummee-header__logo img{height:96px;max-height:96px;width:auto;display:block}
+  .zummee-header__titles{display:flex;flex-direction:column;line-height:1.1}
+  .zummee-header__title{margin:0;font-size:1.6rem;font-weight:700;color:#0f2f4a}
+  .zummee-header__subtitle{margin-top:6px;font-size:1rem;font-weight:500;color:#0f2f4a;opacity:0.9}
+  .zummee-header__ctl-label{font-weight:700;color:#0f2f4a;opacity:0.95}
+  #zummeeCommunitySwatch{width:12px;height:12px;border-radius:999px;background:#0f2f4a22;border:1px solid rgba(15,47,74,0.35)}
+  .zummee-header__hubBtn{
+    display:inline-flex;align-items:center;gap:8px;
+    border:2px solid rgba(15,47,74,0.45);
+    background:rgba(255,255,255,0.78);
+    color:#0f2f4a;
+    padding:8px 12px;border-radius:14px;text-decoration:none;
+    font-weight:800;font-size:13px;
+  }
+  .zummee-header__hubBtn:hover{background:rgba(255,255,255,0.92)}
+
+  @media(max-width:640px){
+    .zummee-header{padding:12px 16px;gap:12px}
+    .zummee-header__logo img{height:72px;max-height:72px}
+  }
+
+  .wrap{max-width:1200px;margin:0 auto;padding:20px 14px 60px}
+  h1{margin:0 0 6px;font-size:34px;letter-spacing:-.02em;color:#0f2f4a}
+  .pageTitle{margin:0 0 6px;font-size:34px;letter-spacing:-.02em;color:#0f2f4a;font-weight:900}
+  .sub{color:var(--muted);font-size:14px;margin:6px 0 18px;line-height:1.4}
+
+  .pageBox{
+    border:2px solid rgba(15,47,74,0.35);
+    border-radius:22px;
+    padding:18px;
+    background:rgba(255,255,255,0.92);
+    box-shadow:0 10px 28px rgba(15,47,74,0.08);
+    margin-top:14px;
+  }
+  @media(max-width:640px){
+    .pageBox{padding:14px;border-radius:18px}
+  }
+
+  /* Section cards (match Daily Ops hover + outline) */
+  .card{
+    background:var(--card);
+    border:2px solid rgba(15,47,74,0.35);
+    border-radius:18px;
+    box-shadow:0 8px 22px rgba(15,47,74,0.08);
+    padding:16px;
+    margin-top:14px;
+    transition: transform 160ms ease, box-shadow 160ms ease;
+  }
+  .card:hover{
+    transform: translateY(-2px);
+    box-shadow:0 12px 28px rgba(15,47,74,0.14);
+  }
+  @media (prefers-reduced-motion: reduce){
+    .card{transition:none}
+    .card:hover{transform:none}
+  }
+
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  label{font-weight:800;font-size:12px;color:#374151}
+  input,select{border:1px solid rgba(15,47,74,0.25);border-radius:10px;padding:10px 12px;font-size:14px;background:#fff}
+  input[type="number"]{width:120px}
+  input[type="date"]{width:170px}
+  input[type="month"]{width:170px}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;font-size:13px;vertical-align:top}
+  th{color:#374151;font-weight:900;background:#f9fafb}
+  .muted{color:var(--muted)}
+  .right{text-align:right}
+  .pill{display:inline-block;padding:4px 10px;border-radius:999px;background:#eef2ff;color:#1e3a8a;font-weight:900;font-size:12px}
+  .total{display:flex;justify-content:space-between;align-items:center;font-weight:900;font-size:14px;margin-top:10px}
+  .smallbtn{border:1px solid rgba(15,47,74,0.25);background:rgba(255,255,255,0.9);border-radius:10px;padding:8px 10px;font-weight:900;font-size:12px;cursor:pointer}
+  .smallbtn:hover{border-color:rgba(15,47,74,0.45)}
+  .danger{color:#b91c1c}
+  /* Zummee confirm/alert modal (match Supervisor white/blue modals) */
+  .zummee-modal__backdrop{position:fixed;inset:0;background:rgba(15,47,74,0.35);display:none;align-items:center;justify-content:center;z-index:9999;padding:18px}
+  .zummee-modal__backdrop[aria-hidden="false"]{display:flex}
+  .zummee-modal__card{width:min(720px,100%);background:#ffffff;border:1px solid rgba(15,47,74,0.18);border-radius:22px;box-shadow:0 28px 70px rgba(15,47,74,0.22);overflow:hidden}
+  .zummee-modal__header{display:flex;gap:12px;align-items:flex-start;padding:22px 22px 10px}
+  .zummee-modal__icon{width:34px;height:34px;border-radius:12px;background:rgba(15,47,74,0.08);display:flex;align-items:center;justify-content:center;color:#0f2f4a;font-weight:900}
+  .zummee-modal__title{font-size:22px;font-weight:900;color:#0f2f4a;margin:0}
+  .zummee-modal__subtitle{margin-top:8px;color:#546577;font-size:16px;line-height:1.35}
+  .zummee-modal__body{padding:0 22px 16px}
+  .zummee-modal__footer{display:flex;gap:12px;justify-content:flex-end;padding:14px 22px 22px}
+  .zummee-modal__btn{border:2px solid rgba(15,47,74,0.22);background:rgba(255,255,255,0.95);color:#0f2f4a;border-radius:18px;padding:12px 18px;font-weight:900;cursor:pointer}
+  .zummee-modal__btn:hover{border-color:rgba(15,47,74,0.42);background:rgba(255,255,255,1)}
+  .zummee-modal__btn--primary{background:#0f2f4a;color:#ffffff;border-color:#0f2f4a}
+  .zummee-modal__btn--primary:hover{background:#0d2940;border-color:#0d2940}
+  .zummee-modal__btn--danger{background:#b91c1c;color:#ffffff;border-color:#b91c1c}
+  .zummee-modal__btn--danger:hover{background:#a31818;border-color:#a31818}
+
+</style>
+
+<!-- Supabase JS (browser client) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+(() => {
+  const SESSION_KEY = "zummee_session_v1";
+
+  function getSupabaseSession(){
+    function extract(o){
+      try{
+        if(!o) return null;
+        if(o.user && o.user.id) return { id:o.user.id, email:(o.user.email||"") };
+        if(o.currentSession && o.currentSession.user && o.currentSession.user.id) return { id:o.currentSession.user.id, email:(o.currentSession.user.email||"") };
+        if(o.session && o.session.user && o.session.user.id) return { id:o.session.user.id, email:(o.session.user.email||"") };
+      }catch(_e){}
+      return null;
+    }
+    function scan(store){
+      try{
+        for(var i=0;i<store.length;i++){
+          var key = store.key(i);
+          if(!key) continue;
+          if(!(key === 'sb-zummee-auth' || /^sb-.*-auth-token$/.test(key))) continue;
+          var raw = null;
+          try{ raw = store.getItem(key); }catch(_e){}
+          if(!raw) continue;
+          var obj = null;
+          try{ obj = JSON.parse(raw); }catch(_e2){}
+          var ex = extract(obj);
+          if(ex && ex.id) return ex;
+        }
+      }catch(_e3){}
+      return null;
+    }
+    try{
+      var a = scan(localStorage) || scan(sessionStorage);
+      if(a && a.id){
+        return { provider:"supabase", userId:a.id, email:(a.email||""), supabase:true };
+      }
+    }catch(_e4){}
+    return null;
+  }
+
+  let SELECTED_COMMUNITY_KEY = (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.SELECTED_COMMUNITY_KEY) || "zummee_selected_community_v1";
+
+  function safeParse(raw){ try { return JSON.parse(raw); } catch(e){ return null; } }
+  function getSession(){
+    var ses = safeParse((sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY) || ""));
+    if(ses && ses.userId){
+      try{ if(window.ZUMMEE_applyUserScope){ window.ZUMMEE_applyUserScope(ses.userId); } }catch(_e){}
+      try{ SELECTED_COMMUNITY_KEY = (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.SELECTED_COMMUNITY_KEY) || SELECTED_COMMUNITY_KEY; }catch(_e){}
+      try{ COMMUNITIES_KEY = (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.COMMUNITIES_KEY) || COMMUNITIES_KEY; }catch(_e){}
+      return ses;
+    }
+    var sbSes = getSupabaseSession();
+    if(sbSes){
+      try{ if(window.ZUMMEE_applyUserScope){ window.ZUMMEE_applyUserScope(sbSes.userId); } }catch(_e){}
+      try{ SELECTED_COMMUNITY_KEY = (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.SELECTED_COMMUNITY_KEY) || SELECTED_COMMUNITY_KEY; }catch(_e){}
+      try{ COMMUNITIES_KEY = (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.COMMUNITIES_KEY) || COMMUNITIES_KEY; }catch(_e){}
+      return sbSes;
+    }
+    return null;
+  }
+
+  function requireAuth(){
+    const ses = getSession();
+    if(!ses || !ses.userId){
+      window.location.href = "login.html";
+      return null;
+    }
+    return ses;
+  }
+
+  window.ZummeeAuth = {
+    requireAuth,
+    getSession,
+    getUserId: () => (getSession() && getSession().userId) || "",
+    getSelectedCommunityId: () => {
+      try { return localStorage.getItem(SELECTED_COMMUNITY_KEY) || ""; } catch(e){ return ""; }
+    },
+    scopedKey: (baseKey) => {
+      const ses = getSession();
+      const u = (ses && ses.userId) ? ses.userId : "";
+      const c = (() => { try { return localStorage.getItem(SELECTED_COMMUNITY_KEY) || ""; } catch(e){ return ""; } })();
+      if(u && c) return `${baseKey}::${u}::${c}`;
+      if(u) return `${baseKey}::${u}`;
+      return baseKey;
+    },
+	    signOut: () => { try{sessionStorage.removeItem(SESSION_KEY);}catch(e){}
+	      try{localStorage.removeItem(SESSION_KEY);}catch(e2){}
+	      // Supabase auth cleanup (support default sb-*-auth-token and custom sb-zummee-auth)
+	      try{
+	        [localStorage, sessionStorage].forEach(function(store){
+	          try{
+	            for(var i=store.length-1;i>=0;i--){
+	              var k = store.key(i);
+	              if(!k) continue;
+	              if(k === 'sb-zummee-auth' || /^sb-.*-auth-token$/.test(k) || /^sb-zummee-auth/.test(k)){
+	                try{ store.removeItem(k); }catch(_e){}
+	              }
+	            }
+	          }catch(_e2){}
+	        });
+	      }catch(_e3){}
+	      try{ if(window.sb && window.sb.auth && window.sb.auth.signOut){ window.sb.auth.signOut(); } }catch(e5){}
+	      window.location.replace("login.html"); }
+  };
+})();
+</script>
+
+<style>
+/* Mileage nav hub-only override (v310) */
+.top{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  align-items:center;
+  padding:10px 12px;
+  max-width:980px;
+  margin:0 auto 14px auto;
+}
+</style>
+
+
+<style>
+/* Hide mileage body header (v310) */
+.wrap > h1{ display:none !important; }
+.wrap > h1 + .sub{ display:none !important; }
+</style>
+
+
+<style>
+/* Reduce header-to-content gap (v311) */
+.wrap{
+  padding-top:6px !important;
+}
+@media (max-width: 520px){
+  .wrap{
+    padding-top:4px !important;
+  }
+}
+</style>
+
+</head>
+<body>
+<script>
+  // --- Cloud Communities (company-wide) ---
+  (function(){
+    const SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsY3d1dXd5cmdubWxteHBjYWltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMjI5MTAsImV4cCI6MjA4NDU5ODkxMH0.3pZZLufFv5SUHREjgPys-q8SnYVMzHona-yeXMVHuOg";
+
+    async function ensureSupabase() {
+      if(window.sb) return window.sb;
+      if(!window.supabase) throw new Error("Supabase library not loaded");
+      window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        auth: { storageKey:'sb-zummee-auth', storage: window.localStorage, persistSession:true, autoRefreshToken:true, detectSessionInUrl:true  }
+      });
+      return window.sb;
+    }
+
+    async function getSessionSafe(sb, ms){
+      ms = ms || 5000;
+      return await Promise.race([
+        sb.auth.getSession(),
+        new Promise((resolve) => {
+          let done = false;
+          const sub = sb.auth.onAuthStateChange((event, session) => {
+            if(done) return;
+            if(event === 'INITIAL_SESSION' || session){
+              done = true;
+              try{ sub.data.subscription.unsubscribe(); }catch(_e){}
+              resolve({ data: { session } });
+            }
+          });
+          setTimeout(() => {
+            if(done) return;
+            done = true;
+            try{ sub.data.subscription.unsubscribe(); }catch(_e){}
+            resolve({ data: { session: null }, error: new Error('session timeout') });
+          }, ms);
+        })
+      ]);
+    }
+
+    function safeLocalSet(k,v){ try{ localStorage.setItem(k,v); }catch(_e){} }
+    function safeLocalGet(k){ try{ return localStorage.getItem(k)||""; }catch(_e){ return ""; } }
+
+    async function requireUid() {
+      const sb = await ensureSupabase();
+      const s = await getSessionSafe(sb, 5000);
+      const uid = s.data?.session?.user?.id;
+      if(!uid) throw new Error("Not signed in");
+      return uid;
+    }
+
+    async function getProfile() {
+      const sb = await ensureSupabase();
+      const uid = await requireUid();
+      const q = await sb.from("profiles").select("*").eq("id", uid).maybeSingle();
+      if(q.error) throw q.error;
+      return { uid, company:(q.data?.company||"").trim(), selected:(q.data?.selected_community_id||"") };
+    }
+
+    function els() {
+      return {
+        select: document.getElementById("zummeeCommunitySelect"),
+        swatch: document.getElementById("zummeeCommunitySwatch"),
+        btnAdd: document.getElementById("zummeeCommunityAdd"),
+        btnRename: document.getElementById("zummeeCommunityRename"),
+        btnRemove: document.getElementById("zummeeCommunityRemove"),
+      };
+    }
+
+    function setSwatch(company){
+      const e = els().swatch;
+      if(!e) return;
+      let h=0; for(let i=0;i<company.length;i++) h=(h*31 + company.charCodeAt(i))>>>0;
+      const hue = h % 360;
+      e.style.background = `hsl(${hue} 70% 45%)`;
+      e.title = company || "No company";
+    }
+
+
+    function rebindButton(btn, handler){
+      if(!btn || !btn.parentNode) return btn;
+      const clone = btn.cloneNode(true);
+      btn.parentNode.replaceChild(clone, btn);
+      clone.onclick = handler;
+      return clone;
+    }
+
+
+    function hardBind(btn, handler){
+      if(!btn) return btn;
+      // remove inline onclick if any
+      try{ btn.onclick = null; btn.removeAttribute("onclick"); }catch(_e){}
+      // Remove any previously attached listeners by replacing node (inline attrs will be re-applied below if present in HTML, so also remove onclick)
+      const clone = btn.cloneNode(true);
+      try{ clone.onclick = null; clone.removeAttribute("onclick"); }catch(_e){}
+      btn.parentNode && btn.parentNode.replaceChild(clone, btn);
+      // Capture-phase handler to prevent any other handlers from firing (old + new)
+      clone.addEventListener("click", function(ev){
+        try{ ev.preventDefault(); }catch(_e){}
+        try{ ev.stopImmediatePropagation(); }catch(_e){}
+        return handler();
+      }, true);
+      return clone;
+    }
+
+    function bindSelect(select) {
+      if(!select) return;
+      select.onchange = async ()=>{
+        const val = String(select.value||"").trim();
+        safeLocalSet("zummee_selected_community_id", val);
+        try{
+          const sb = await ensureSupabase();
+          const uid = await requireUid();
+          await sb.from("profiles").update({ selected_community_id: val || null }).eq("id", uid);
+        }catch(_e){}
+        document.dispatchEvent(new CustomEvent("community:changed", { detail: { community_id: val } }));
+      };
+    }
+
+    function getLocalCommunitiesKey(profile){
+      try{
+        return (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.COMMUNITIES_KEY) || (window.COMMUNITIES_KEY) || ("zummee_communities_v1__user__" + profile.uid);
+      }catch(_e){
+        return "zummee_communities_v1__user__" + profile.uid;
+      }
+    }
+
+    function readLocalCommunities(profile){
+      try{
+        const raw = localStorage.getItem(getLocalCommunitiesKey(profile)) || "[]";
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr : [];
+      }catch(_e){
+        return [];
+      }
+    }
+
+    function writeLocalCommunities(profile, list){
+      try{ localStorage.setItem(getLocalCommunitiesKey(profile), JSON.stringify(list||[])); }catch(_e){}
+    }
+
+    async function listCommunities(profile) {
+      // User-only communities.
+      const list = readLocalCommunities(profile);
+      return list
+        .filter(c=>c && c.id && c.name)
+        .map(c=>({ id:String(c.id), name:String(c.name) }))
+        .sort((a,b)=>a.name.localeCompare(b.name));
+    }
+
+    function renderSelect(select, list, selectedId) {
+      if(!select) return;
+      const desired = String(selectedId||"").trim() || safeLocalGet("zummee_selected_community_id");
+      select.innerHTML = "";
+      const o0 = document.createElement("option");
+      o0.value = "";
+      o0.textContent = list.length ? "Select a community" : "No communities yet";
+      select.appendChild(o0);
+
+      list.forEach(c=>{
+        const o=document.createElement("option");
+        o.value = String(c.id);
+        o.textContent = c.name;
+        select.appendChild(o);
+      });
+
+      if(desired && list.some(c=>String(c.id)===String(desired))) {
+        select.value = String(desired);
+      } else {
+        select.value = "";
+        safeLocalSet("zummee_selected_community_id","");
+      }
+      select.disabled = false;
+      bindSelect(select);
+    }
+
+    async function refreshUI() {
+      const {select} = els();
+      if(!select) return;
+      try{
+        const profile = await getProfile();
+        setSwatch(profile.company);
+        if(!profile.company){
+          renderSelect(select, [], "");
+          return;
+        }
+        const list = await listCommunities(profile);
+        renderSelect(select, list, profile.selected);
+      }catch(e){
+        console.error(e);
+        renderSelect(select, [], "");
+      }
+    }
+
+    async function addCommunity(){
+      const profile = await getProfile();
+      if(!profile.company) window.zummeeAlert("Notice", "Set your Management Company in Profile first."); return; const name = prompt("Community name:");
+      if(!name) return;
+      const clean = name.trim();
+      if(!clean) return;
+
+      const list = readLocalCommunities(profile);
+      const exists = list.some(c=>String(c.name||"").trim().toLowerCase() === clean.toLowerCase());
+      if(exists) window.zummeeAlert("Notice", "That community already exists in your list."); return; const id = String(Date.now()) + "_" + Math.random().toString(16).slice(2);
+      list.push({ id, name: clean });
+      writeLocalCommunities(profile, list);
+
+      document.dispatchEvent(new CustomEvent("communities:changed"));
+      await refreshUI();
+      const {select} = els();
+      if(select){ select.value = String(id); select.dispatchEvent(new Event("change")); }
+    }
+
+    async function renameCommunity(){
+      const e = els();
+      const profile = await getProfile();
+      const id = String(e.select?.value||"").trim();
+      if(!id) window.zummeeAlert("Notice", "Select a community first."); return; const cur = e.select.options[e.select.selectedIndex]?.textContent || "";
+      const name = prompt("New community name:", cur);
+      if(!name) return;
+      const clean = name.trim();
+      if(!clean) return;
+
+      const list = readLocalCommunities(profile);
+      const idx = list.findIndex(c=>String(c.id)===String(id));
+      if(idx === -1) return;
+      list[idx].name = clean;
+      writeLocalCommunities(profile, list);
+
+      document.dispatchEvent(new CustomEvent("communities:changed"));
+      await refreshUI();
+      if(e.select) e.select.value = id;
+    }
+
+    async function removeCommunity(){
+      const e = els();
+      const profile = await getProfile();
+      const id = String(e.select?.value||"").trim();
+      if(!id) window.zummeeAlert("Notice", "Select a community first."); return; try{
+        const ok = await window.zummeeConfirm("Remove community", "Remove this community from your list?", "Remove", "Cancel", true);
+        if(!ok) return;
+      }catch(_e){
+        if(!confirm("Remove this community from your list?")) return;
+      }
+
+      const list = readLocalCommunities(profile).filter(c=>String(c.id)!==String(id));
+      writeLocalCommunities(profile, list);
+
+      // Clear selected if it was removed
+      try{
+        const sb = await ensureSupabase();
+        await sb.from("profiles").update({ selected_community_id: null }).eq("id", profile.uid);
+      }catch(_e){}
+      safeLocalSet("zummee_selected_community_id","");
+
+      document.dispatchEvent(new CustomEvent("communities:changed"));
+      await refreshUI();
+      document.dispatchEvent(new CustomEvent("community:changed", { detail: { community_id: "" } }));
+    }
+
+    document.addEventListener("DOMContentLoaded", ()=>{
+      const e = els();
+      bindSelect(e.select);
+      if(e.btnAdd) e.btnAdd = rebindButton(e.btnAdd, addCommunity);
+      if(e.btnRename) e.btnRename = rebindButton(e.btnRename, renameCommunity);
+      if(e.btnRemove) e.btnRemove = rebindButton(e.btnRemove, removeCommunity);
+      refreshUI();
+      try{ window.__zummeeCommunityMgmtV2Bound = true; }catch(_e){}
+    });
+
+    document.addEventListener("communities:changed", ()=>refreshUI());
+  })();
+</script>
+
+<script>(()=>{ if(window.ZummeeAuth) window.ZummeeAuth.requireAuth(); })();</script>
+
+<style>
+  .zummee-header {
+    position: sticky;
+    top: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 18px 28px;
+    border-bottom: 1px solid #6faedc;
+    background: #9fc9ec;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  }
+  .zummee-header__logo {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+  }
+  .zummee-header__logo img {
+    height: 96px;
+    width: auto;
+    display: block;
+  }
+  .zummee-header__titles {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+  }
+  .zummee-header__title {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #0f2f4a;
+  }
+  .zummee-header__subtitle {
+    margin-top: 6px;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #0f2f4a;
+    opacity: 0.9;
+  }
+  @media (max-width: 640px) {
+    .zummee-header {
+      padding: 12px 16px;
+      gap: 12px;
+    }
+    .zummee-header__logo img {
+      height: 96px;
+    }
+    .zummee-header__title {
+      font-size: 1.1rem;
+    }
+    .zummee-header__subtitle {
+      font-size: 0.9rem;
+    }
+  }
+</style>
+
+<header class="zummee-header">
+  <div class="zummee-header__left">
+    <a class="zummee-header__logo" href="index.html" aria-label="Go to Hub">
+      <img src="Zummee.png" alt="Zummee Logo">
+    </a>
+    <div class="zummee-header__titles">
+      <h1 class="zummee-header__title">Zummee Property Manager</h1>
+      <div class="zummee-header__subtitle">Your Property Management Personal Assistant</div>
+    </div>
+  </div>
+  <div class="zummee-header__right" aria-label="Mileage header controls">
+    <span class="zummee-header__ctl-label">Community</span>
+    <span id="zummeeCommunitySwatch" aria-hidden="true"></span>
+    <select id="zummeeCommunitySelect" style="padding:8px 10px;border:1px solid rgba(15,47,74,0.25);border-radius:10px;background:rgba(255,255,255,0.9);min-width:220px;"></select>
+    <a href="index.html" class="zummee-header__hubBtn">← Hub</a>
+  </div>
+</header>
+
+<div class="wrap">
+<div class="pageTitle">Mileage Tracker</div>
+  <div class="sub">Enter mileage by community. Totals are calculated for the selected month.</div>
+
+  <div class="pageBox">
+
+
+  <div class="card">
+    <div class="row">
+      <div>
+        <label for="monthPick">Month</label><br/>
+        <input id="monthPick" type="month"/>
+      </div>
+      <div class="muted" style="flex:1">Tip: Pick a month, then enter a date + mileage on the community row.</div>
+    </div>
+    <div class="row" style="margin-top:12px;gap:8px">
+      <button id="btnMonthlyReport" class="smallbtn" type="button">Create Monthly Report (PDF/Print)</button>
+      <button id="btnExportCSV" class="smallbtn" type="button">Export CSV</button>
+      <button id="btnEmailSummary" class="smallbtn" type="button">Email Summary</button>
+      <span class="muted" style="font-size:12px">Tip: Use “Create Monthly Report” then Print → Save as PDF, and attach it to the email draft.</span>
+    </div>
+
+    <div class="row" style="margin-top:12px;gap:10px;align-items:flex-end;flex-wrap:wrap">
+      <div style="min-width:280px;flex:1">
+        <label for="defaultReportEmail">Default email for monthly reports</label><br/>
+        <input id="defaultReportEmail" type="email" placeholder="name@example.com" style="width:100%"/>
+      </div>
+      <div class="muted" style="font-size:12px;min-width:260px">Used when you click “Email Summary”.</div>
+    </div>
+    <div class="total">
+      <div>Monthly Total (all communities)</div>
+      <div class="pill" id="monthlyTotal">0 mi</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:900;margin-bottom:10px">Communities</div>
+    <div id="emptyMsg" class="muted" style="display:none">No communities yet. Add communities on the Manager Hub first.</div>
+    <div style="overflow:auto">
+      <table id="commTable">
+        <thead>
+          <tr>
+            <th style="min-width:180px">Community</th>
+            <th style="min-width:170px">Date</th>
+            <th style="min-width:120px">Mileage</th>
+            <th class="right" style="min-width:140px">This Month</th>
+            <th style="min-width:120px"></th>
+          </tr>
+        </thead>
+        <tbody id="commBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:900;margin-bottom:10px">Entries (selected month)</div>
+    <div id="entriesList" class="muted">No entries yet.</div>
+  </div>
+  </div>
+</div>
+
+<!-- Zummee Confirm Modal -->
+<div id="zummeeConfirmModal" class="zummee-modal__backdrop" aria-hidden="true">
+  <div class="zummee-modal__card" role="dialog" aria-modal="true" aria-labelledby="zummeeConfirmTitle">
+    <div class="zummee-modal__header">
+      <div class="zummee-modal__icon" aria-hidden="true">!</div>
+      <div style="min-width:0">
+        <div id="zummeeConfirmTitle" class="zummee-modal__title">Confirm</div>
+        <div id="zummeeConfirmMsg" class="zummee-modal__subtitle">Are you sure?</div>
+      </div>
+    </div>
+    <div class="zummee-modal__footer">
+      <button id="zummeeConfirmCancel" class="zummee-modal__btn" type="button">Cancel</button>
+      <button id="zummeeConfirmOk" class="zummee-modal__btn zummee-modal__btn--primary" type="button">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Global helper: Supervisor-style confirm + alert (white modal, blue primary)
+  (function(){
+    function qs(id){ return document.getElementById(id); }
+
+    function openModal(){
+      var back = qs('zummeeConfirmModal');
+      if(!back) return null;
+      back.classList.add('is-open');
+      back.setAttribute('aria-hidden','false');
+      try{ document.body.style.overflow = 'hidden'; }catch(_e){}
+      return back;
+    }
+    function closeModal(){
+      var back = qs('zummeeConfirmModal');
+      if(!back) return;
+      back.classList.remove('is-open');
+      back.setAttribute('aria-hidden','true');
+      try{ document.body.style.overflow = ''; }catch(_e){}
+    }
+
+    window.zummeeConfirm = function(title, msg, okText, cancelText /* danger ignored for design consistency */){
+      return new Promise(function(resolve){
+        var back = qs('zummeeConfirmModal');
+        var t = qs('zummeeConfirmTitle');
+        var m = qs('zummeeConfirmMsg');
+        var ok = qs('zummeeConfirmOk');
+        var cancel = qs('zummeeConfirmCancel');
+
+        if(!back || !t || !m || !ok || !cancel){
+          resolve(window.confirm((msg||title||'Are you sure?')));
+          return;
+        }
+
+        t.textContent = title || 'Confirm';
+        m.textContent = msg || 'Are you sure?';
+        ok.textContent = okText || 'OK';
+        cancel.textContent = cancelText || 'Cancel';
+
+        // Always blue primary to match Supervisor
+        ok.classList.remove('zummee-modal__btn--danger');
+        ok.classList.add('zummee-modal__btn--primary');
+        cancel.style.display = '';
+
+        var done = false;
+        function finish(val){
+          if(done) return;
+          done = true;
+          cleanup();
+          closeModal();
+          resolve(!!val);
+        }
+        function onKey(e){ if(e.key === 'Escape') finish(false); }
+        function onBack(e){ if(e && e.target === back) finish(false); }
+
+        function cleanup(){
+          try{ ok.onclick = null; }catch(_e){}
+          try{ cancel.onclick = null; }catch(_e){}
+          try{ back.onclick = null; }catch(_e){}
+          try{ document.removeEventListener('keydown', onKey); }catch(_e){}
+        }
+
+        ok.onclick = function(){ finish(true); };
+        cancel.onclick = function(){ finish(false); };
+        back.onclick = onBack;
+        document.addEventListener('keydown', onKey);
+
+        openModal();
+        try{ ok.focus(); }catch(_e){}
+      });
+    };
+
+    window.zummeeAlert = function(title, msg, okText){
+      okText = okText || 'OK';
+      return new Promise(function(resolve){
+        var back = qs('zummeeConfirmModal');
+        var t = qs('zummeeConfirmTitle');
+        var m = qs('zummeeConfirmMsg');
+        var ok = qs('zummeeConfirmOk');
+        var cancel = qs('zummeeConfirmCancel');
+
+        if(!back || !t || !m || !ok){
+          try{ window.alert(msg || title || ''); }catch(_e){}
+          resolve(true);
+          return;
+        }
+
+        t.textContent = title || 'Notice';
+        m.textContent = msg || '';
+        ok.textContent = okText;
+
+        ok.classList.remove('zummee-modal__btn--danger');
+        ok.classList.add('zummee-modal__btn--primary');
+
+        if(cancel) cancel.style.display = 'none';
+
+        var done = false;
+        function finish(){
+          if(done) return;
+          done = true;
+          cleanup();
+          closeModal();
+          if(cancel) cancel.style.display = '';
+          resolve(true);
+        }
+        function onKey(e){ if(e.key === 'Escape') finish(); }
+        function onBack(e){ if(e && e.target === back) finish(); }
+
+        function cleanup(){
+          try{ ok.onclick = null; }catch(_e){}
+          try{ if(cancel) cancel.onclick = null; }catch(_e){}
+          try{ back.onclick = null; }catch(_e){}
+          try{ document.removeEventListener('keydown', onKey); }catch(_e){}
+        }
+
+        ok.onclick = finish;
+        if(cancel) cancel.onclick = finish;
+        back.onclick = onBack;
+        document.addEventListener('keydown', onKey);
+
+        openModal();
+        try{ ok.focus(); }catch(_e){}
+      });
+    };
+  })();
+</script>
+
+<script>
+(function(){
+  // Supabase-only mileage storage (no local mileage storage)
+  // Communities list remains managed on the Hub (local storage) for now.
+
+  // --- Supabase client (same project as login) ---
+  var SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
+  var SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsY3d1dXd5cmdubWxteHBjYWltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMjI5MTAsImV4cCI6MjA4NDU5ODkxMH0.3pZZLufFv5SUHREjgPys-q8SnYVMzHona-yeXMVHuOg";
+  if(!window.sb && window.supabase && window.supabase.createClient){
+    try{
+      window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        auth: { storageKey:'sb-zummee-auth', storage: window.localStorage, persistSession:true, autoRefreshToken:true, detectSessionInUrl:true  }
+      });
+    }catch(e0){}
+  }
+
+  var COMMUNITIES_KEY_BASE = (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.COMMUNITIES_KEY) || "zummee_communities_v1";
+
+  function safeParse(raw){ try{ return JSON.parse(raw); }catch(e){ return null; } }
+  function pad2(n){ return (n<10 ? ("0"+n) : (""+n)); }
+  function nowMonthKey(){ var d=new Date(); return d.getFullYear()+"-"+pad2(d.getMonth()+1); }
+  function setMonthInputDefault(){ var el=document.getElementById("monthPick"); if(el) el.value = nowMonthKey(); }
+
+  function mkLabel(mk){
+    // mk = YYYY-MM
+    var y = Number(String(mk).slice(0,4));
+    var m = Number(String(mk).slice(5,7));
+    if(!isFinite(y) || !isFinite(m)) return String(mk||"");
+    var names = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    var name = names[Math.max(0, Math.min(11, m-1))];
+    return name + " " + y;
+  }
+
+  function escapeHtml(s){
+    s = String(s==null?"":s);
+    return s
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/\"/g,"&quot;")
+      .replace(/'/g,"&#39;");
+  }
+
+  function fmtMiles(n){ n = Number(n||0); if(!isFinite(n)) n=0; return n.toFixed(1).replace(/\.0$/,""); }
+  function monthStartEnd(mk){
+    // mk = YYYY-MM
+    var y = Number(String(mk).slice(0,4));
+    var m = Number(String(mk).slice(5,7));
+    if(!isFinite(y) || !isFinite(m)){
+      var d=new Date(); y=d.getFullYear(); m=d.getMonth()+1;
+    }
+    var start = y+"-"+pad2(m)+"-01";
+    // next month start
+    var ny=y, nm=m+1; if(nm===13){ nm=1; ny=y+1; }
+    var end = ny+"-"+pad2(nm)+"-01";
+    return { start:start, end:end };
+  }
+
+  function loadCommunities(){
+    var raw=null; try{ var k = (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.COMMUNITIES_KEY) || COMMUNITIES_KEY_BASE; raw = localStorage.getItem(k); }catch(e){ raw=null; }
+    var arr = safeParse(raw||"");
+    if(!arr || !arr.length) return [];
+    var out=[];
+    for(var i=0;i<arr.length;i++){
+      var c=arr[i];
+      if(!c) continue;
+      var name = String(c.name||c.id||"Community");
+      var id = String(c.id||c.name||("c"+i));
+
+      // Hide placeholder/default community entries (users often keep one around for testing)
+      // so the mileage page starts with only real communities.
+      var n = name.trim().toLowerCase();
+      var did = id.trim().toLowerCase();
+      if(n === "default" || n === "default community" || did === "default") continue;
+
+      out.push({ id: id, name: name });
+    }
+    return out;
+  }
+
+  function ensureSignedIn(cb){
+    if(!window.sb || !window.sb.auth){ cb(new Error("Supabase not initialized"), null); return; }
+    window.sb.auth.getSession().then(function(r){
+      var ses = r && r.data ? r.data.session : null;
+      if(ses && ses.user && ses.user.id){ cb(null, ses); return; }
+      // try refresh once
+      window.sb.auth.refreshSession().then(function(){
+        window.sb.auth.getSession().then(function(r2){
+          var ses2 = r2 && r2.data ? r2.data.session : null;
+          if(ses2 && ses2.user && ses2.user.id){ cb(null, ses2); return; }
+          cb(new Error("Not signed in"), null);
+        });
+      }).catch(function(){ cb(new Error("Not signed in"), null); });
+    }).catch(function(){ cb(new Error("Not signed in"), null); });
+  }
+
+  function getProfileCompany(userId, cb){
+    if(!window.sb || !window.sb.from){ cb(null, ""); return; }
+
+    function tryTable(tname){
+      window.sb.from(tname).select("company").eq("id", userId).maybeSingle().then(function(res){
+        if(res && res.error){
+          // if table doesn't exist, try the other
+          cb(res.error, "");
+          return;
+        }
+        var company = (res && res.data && res.data.company) ? String(res.data.company) : "";
+        cb(null, company);
+      }).catch(function(err){ cb(err, ""); });
+    }
+
+    // Try "Profiles" first (your project commonly uses capitalized tables)
+    tryTable("Profiles");
+  }
+
+  function getProfileCompanyRobust(userId, cb){
+    getProfileCompany(userId, function(err, company){
+      if(!err) { cb(null, company); return; }
+      // try lowercase fallback
+      window.sb.from("profiles").select("company").eq("id", userId).maybeSingle().then(function(res2){
+        if(res2 && res2.error){ cb(res2.error, ""); return; }
+        var company2 = (res2 && res2.data && res2.data.company) ? String(res2.data.company) : "";
+        cb(null, company2);
+      }).catch(function(err2){ cb(err2, ""); });
+    });
+  }
+
+  function loadMileageForMonth(userId, mk, cb){
+    var range = monthStartEnd(mk);
+    window.sb
+      .from("mileage_entries")
+      .select("id,community,drive_date,miles,created_at")
+      .eq("user_id", userId)
+      .gte("drive_date", range.start)
+      .lt("drive_date", range.end)
+      .order("drive_date", { ascending:false })
+      .then(function(res){
+        if(res && res.error){ cb(res.error, []); return; }
+        cb(null, (res && res.data) ? res.data : []);
+      })
+      .catch(function(err){ cb(err, []); });
+  }
+
+  function insertMileageRow(userId, companyName, communityName, driveDate, miles, cb){
+    // Attempt with company_name; if column doesn't exist, retry without.
+    var base = { user_id:userId, community:communityName, drive_date:driveDate, miles:Number(miles) };
+    var withCompany = { user_id:userId, community:communityName, drive_date:driveDate, miles:Number(miles), company_name: companyName };
+
+    function doInsert(payload, retryOnMissingColumn){
+      window.sb.from("mileage_entries").insert([payload]).then(function(res){
+        if(res && res.error){
+          var msg = String(res.error.message||"");
+          if(retryOnMissingColumn && msg.indexOf('column "company_name"') !== -1 && msg.indexOf("does not exist") !== -1){
+            doInsert(base, false);
+            return;
+          }
+          cb(res.error);
+          return;
+        }
+        cb(null);
+      }).catch(function(err){ cb(err); });
+    }
+
+    // If company_name is required and empty, the insert will fail; we handle that earlier.
+    doInsert(withCompany, true);
+  }
+
+  function deleteMileageRow(rowId, cb){
+    window.sb.from("mileage_entries").delete().eq("id", rowId).then(function(res){
+      if(res && res.error){ cb(res.error); return; }
+      cb(null);
+    }).catch(function(err){ cb(err); });
+  }
+
+  // --- UI Rendering ---
+  var STATE = { userId:"", email:"", company:"", mk: nowMonthKey(), rows: [] };
+
+  // Default email address for monthly mileage reports (per-user)
+  function getDefaultReportEmail(){
+    var uid = String(STATE.userId||"").trim();
+    var v = "";
+    if(uid){ v = safeLocalGet("mileage_default_report_email::" + uid) || ""; }
+    if(!v) v = safeLocalGet("mileage_default_report_email") || "";
+    return String(v||"").trim();
+  }
+
+  function setDefaultReportEmail(val){
+    var uid = String(STATE.userId||"").trim();
+    var v = String(val||"").trim();
+    if(uid){
+      safeLocalSet("mileage_default_report_email::" + uid, v);
+    } else {
+      safeLocalSet("mileage_default_report_email", v);
+    }
+  }
+
+  function wireDefaultReportEmailInput(){
+    var el = document.getElementById("defaultReportEmail");
+    if(!el) return;
+    if(el.dataset && el.dataset.wired === "1"){ 
+      // Still refresh value when user scope changes
+      el.value = getDefaultReportEmail();
+      return;
+    }
+    if(el.dataset) el.dataset.wired = "1";
+    // Load saved value
+    el.value = getDefaultReportEmail();
+    var save = function(){
+      var v = String(el.value||"").trim();
+      if(v && el.checkValidity && !el.checkValidity()){
+        window.zummeeAlert("Notice", "Please enter a valid email address."); return;
+      }
+      setDefaultReportEmail(v);
+    };
+    el.addEventListener("change", save);
+    el.addEventListener("blur", save);
+  }
+
+  function setMonthlyTotal(){
+    var grand = 0;
+    for(var i=0;i<STATE.rows.length;i++){
+      var m = Number(STATE.rows[i].miles||0);
+      if(!isFinite(m)) m=0;
+      grand += m;
+    }
+    var el = document.getElementById("monthlyTotal");
+    if(el) el.textContent = fmtMiles(grand) + " mi";
+  }
+
+  function totalsByCommunity(){
+    var totals = {};
+    for(var i=0;i<STATE.rows.length;i++){
+      var r = STATE.rows[i];
+      var key = String(r.community||"");
+      if(!key) continue;
+      var m = Number(r.miles||0);
+      if(!isFinite(m)) m=0;
+      totals[key] = (totals[key]||0) + m;
+    }
+    return totals;
+  }
+
+  function computeGrandTotal(){
+    var g=0;
+    for(var i=0;i<STATE.rows.length;i++){
+      var m = Number(STATE.rows[i].miles||0);
+      if(!isFinite(m)) m=0;
+      g += m;
+    }
+    return g;
+  }
+
+  function rowsAsc(){
+    var a = (STATE.rows||[]).slice();
+    a.sort(function(x,y){
+      var dx = String(x.drive_date||"");
+      var dy = String(y.drive_date||"");
+      if(dx<dy) return -1;
+      if(dx>dy) return 1;
+      return 0;
+    });
+    return a;
+  }
+
+  function makeCSV(){
+    var rows = rowsAsc();
+    var lines = ["Date,Community,Miles"]; 
+    for(var i=0;i<rows.length;i++){
+      var r = rows[i];
+      var d = String(r.drive_date||"");
+      var c = String(r.community||"").replace(/"/g,'""');
+      var m = fmtMiles(r.miles||0);
+      lines.push(d + ',"' + c + '",' + m);
+    }
+    return lines.join("\n");
+  }
+
+  function downloadTextFile(filename, text, mime){
+    try{
+      var blob = new Blob([text], { type: mime || "text/plain" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function(){
+        try{ document.body.removeChild(a); }catch(_e){}
+        try{ URL.revokeObjectURL(url); }catch(_e2){}
+      }, 0);
+    }catch(e){
+      window.zummeeAlert("Notice", "Could not export file: " + (e.message||e)); }
+  }
+
+  function openMonthlyReport(){
+    var title = "Mileage Report – " + mkLabel(STATE.mk);
+    var totals = totalsByCommunity();
+    var grand = computeGrandTotal();
+    var rows = rowsAsc();
+
+    var summaryRows = "";
+    var keys = Object.keys(totals).sort();
+    for(var i=0;i<keys.length;i++){
+      var k = keys[i];
+      summaryRows += '<tr><td>'+escapeHtml(k)+'</td><td style="text-align:right">'+escapeHtml(fmtMiles(totals[k]))+'</td></tr>';
+    }
+    if(!summaryRows) summaryRows = '<tr><td class="muted" colspan="2">No entries for this month.</td></tr>';
+
+    var entryRows = "";
+    for(var j=0;j<rows.length;j++){
+      var r = rows[j];
+      entryRows += '<tr><td>'+escapeHtml(String(r.drive_date||""))+'</td><td>'+escapeHtml(String(r.community||""))+'</td><td style="text-align:right">'+escapeHtml(fmtMiles(r.miles||0))+'</td></tr>';
+    }
+    if(!entryRows) entryRows = '<tr><td class="muted" colspan="3">No entries for this month.</td></tr>';
+
+    var companyLine = STATE.company ? ('<div style="margin-top:6px" class="muted"><b>Management Company:</b> '+escapeHtml(STATE.company)+'</div>') : '';
+    var emailLine = STATE.email ? ('<div class="muted"><b>User:</b> '+escapeHtml(STATE.email)+'</div>') : '';
+
+    var html = ''+
+    '<!doctype html><html><head><meta charset="utf-8"/>'+
+    '<meta name="viewport" content="width=device-width,initial-scale=1"/>'+
+    '<title>'+escapeHtml(title)+'</title>'+
+    '<style>'+
+      'body{font-family:Arial,system-ui,-apple-system,Segoe UI,Roboto;margin:24px;color:#111827}'+
+      'h1{margin:0 0 6px;font-size:22px}'+
+      '.muted{color:#6b7280;font-size:12px}'+
+      '.card{border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-top:14px}'+
+      'table{width:100%;border-collapse:collapse}'+
+      'th,td{padding:8px 6px;border-bottom:1px solid #e5e7eb;font-size:12px;vertical-align:top}'+
+      'th{background:#f9fafb;text-align:left}'+
+      '.right{text-align:right}'+
+      '@media print{.noprint{display:none}}'+
+    '</style></head><body>'+
+    '<div class="noprint" style="display:flex;gap:10px;justify-content:flex-end">'+
+      '<button onclick="window.print()" style="padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;font-weight:700;cursor:pointer">Print / Save PDF</button>'+
+      '<button onclick="window.close()" style="padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;font-weight:700;cursor:pointer">Close</button>'+
+    '</div>'+
+    '<h1>'+escapeHtml(title)+'</h1>'+
+    emailLine +
+    companyLine +
+    '<div class="muted" style="margin-top:6px"><b>Month:</b> '+escapeHtml(STATE.mk)+'</div>'+
+    '<div class="card">'+
+      '<div style="font-weight:800;margin-bottom:8px">Summary (Totals by Community)</div>'+
+      '<table><thead><tr><th>Community</th><th style="text-align:right">Miles</th></tr></thead><tbody>'+
+        summaryRows +
+        '<tr><td style="font-weight:800">Grand Total</td><td style="text-align:right;font-weight:800">'+escapeHtml(fmtMiles(grand))+'</td></tr>'+
+      '</tbody></table>'+
+    '</div>'+
+    '<div class="card">'+
+      '<div style="font-weight:800;margin-bottom:8px">Entries</div>'+
+      '<table><thead><tr><th>Date</th><th>Community</th><th style="text-align:right">Miles</th></tr></thead><tbody>'+
+        entryRows +
+      '</tbody></table>'+
+    '</div>'+
+    '</body></html>';
+
+    var w = window.open("", "_blank");
+    if(!w){
+      window.zummeeAlert("Notice", "Pop-up blocked. Please allow pop-ups for this site to generate the report."); return;
+    }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  }
+
+  function openEmailSummary(){
+    var totals = totalsByCommunity();
+    var keys = Object.keys(totals).sort();
+    var lines = [];
+    lines.push("Mileage summary for " + mkLabel(STATE.mk) + " (" + STATE.mk + ")");
+    if(STATE.company) lines.push("Management Company: " + STATE.company);
+    lines.push("");
+    if(!keys.length){
+      lines.push("No mileage entries for this month.");
+    } else {
+      lines.push("Totals by community:");
+      for(var i=0;i<keys.length;i++){
+        var k = keys[i];
+        lines.push("- " + k + ": " + fmtMiles(totals[k]) + " mi");
+      }
+      lines.push("");
+      lines.push("Grand Total: " + fmtMiles(computeGrandTotal()) + " mi");
+    }
+    lines.push("");
+    lines.push("Attached: Mileage Report (PDF) and/or CSV export.");
+
+    var subject = "Mileage Report – " + mkLabel(STATE.mk);
+    var body = lines.join("\n");
+
+    var to = getDefaultReportEmail();
+    // Basic sanitize for safety (single recipient)
+    if(to) to = to.replace(/[^a-zA-Z0-9@._+\-]/g, "");
+    var mailto = "mailto:" + (to ? to : "") + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+    window.location.href = mailto;
+  }
+
+  function renderEntriesList(){
+    var el = document.getElementById("entriesList");
+    if(!el) return;
+    if(!STATE.rows || !STATE.rows.length){
+      el.textContent = "No entries yet.";
+      el.className = "muted";
+      return;
+    }
+    var mk = STATE.mk;
+    var html = '<div class="muted" style="margin-bottom:8px">Month: '+mk+'</div>';
+    html += '<div style="overflow:auto"><table><thead><tr><th>Date</th><th>Community</th><th class="right">Miles</th><th class="right">Delete</th></tr></thead><tbody>';
+    for(var i=0;i<STATE.rows.length;i++){
+      var r = STATE.rows[i];
+      var d = String(r.drive_date||"");
+      var c = String(r.community||"");
+      html += '<tr>';
+      html += '<td>'+d+'</td>';
+      html += '<td>'+c+'</td>';
+      html += '<td class="right">'+fmtMiles(r.miles||0)+'</td>';
+      html += '<td class="right"><button class="smallbtn danger" data-id="'+String(r.id||"")+'">Delete</button></td>';
+      html += '</tr>';
+    }
+    html += '</tbody></table></div>';
+    el.className = "";
+    el.innerHTML = html;
+
+    var btns = el.querySelectorAll("button[data-id]");
+    for(var j=0;j<btns.length;j++){
+      btns[j].onclick = async function(){
+        var id = this.getAttribute("data-id");
+        if(!id) return;
+        try{
+          const ok = await window.zummeeConfirm("Delete mileage entry", "Delete this mileage entry?", "Delete", "Cancel", true);
+          if(!ok) return;
+        }catch(_e){
+          if(!confirm("Delete this mileage entry?")) return;
+        }
+        deleteMileageRow(id, function(err){
+          if(err){ window.zummeeAlert("Notice", "Could not delete: " + (err.message||err)); return; }
+          reloadMonth();
+        });
+      };
+    }
+  }
+
+  function renderCommunitiesTable(){
+    var tbody = document.getElementById("commBody");
+    var empty = document.getElementById("emptyMsg");
+    if(!tbody) return;
+    tbody.innerHTML = "";
+
+    // Build communities from the header dropdown (source of truth on this page)
+    var sel = document.getElementById("zummeeCommunitySelect");
+    var comms = [];
+    try{
+      if(sel && sel.options && sel.options.length){
+        for(var oi=0; oi<sel.options.length; oi++){
+          var opt = sel.options[oi];
+          if(!opt) continue;
+          var id = String(opt.value||"").trim();
+          var name = String(opt.textContent||opt.innerText||"").trim();
+          if(!id) continue; // skip "Select a community"
+          if(!name) name = id;
+          comms.push({ id:id, name:name });
+        }
+      }
+    }catch(_eSel){}
+
+    if(!comms.length){ if(empty) empty.style.display = "block"; return; }
+    if(empty) empty.style.display = "none";
+
+    var totals = totalsByCommunity();
+
+    for(var j=0;j<comms.length;j++){
+      var c = comms[j];
+      var tr = document.createElement("tr");
+
+      var tdName = document.createElement("td");
+      tdName.textContent = c.name;
+      tr.appendChild(tdName);
+
+      var tdDate = document.createElement("td");
+      var dspan = document.createElement("span");
+      dspan.className = "muted";
+      dspan.textContent = "Auto";
+      dspan.title = "Date is captured automatically when you click Add.";
+      tdDate.appendChild(dspan);
+      tr.appendChild(tdDate);
+
+      var tdMiles = document.createElement("td");
+      var milesIn = document.createElement("input");
+      milesIn.type = "number";
+      milesIn.step = "0.1";
+      milesIn.min = "0";
+      milesIn.placeholder = "0";
+      milesIn.id = "mi_"+c.id;
+      tdMiles.appendChild(milesIn);
+      tr.appendChild(tdMiles);
+
+      var tdTotal = document.createElement("td");
+      tdTotal.className = "right";
+      tdTotal.textContent = fmtMiles(totals[c.name]||0) + " mi";
+      tr.appendChild(tdTotal);
+
+      var tdBtn = document.createElement("td");
+      tdBtn.className = "right";
+      var btn = document.createElement("button");
+      btn.className = "smallbtn";
+      btn.textContent = "Add";
+      btn.setAttribute("data-cid", c.id);
+      btn.setAttribute("data-cname", c.name);
+      btn.onclick = function(){
+        var cid = this.getAttribute("data-cid");
+        var cname = this.getAttribute("data-cname");
+        var mEl = document.getElementById("mi_"+cid);
+        var mVal = mEl ? String(mEl.value||"").trim() : "";
+        var miles = Number(mVal);
+
+        // Capture today's date automatically
+        var today = new Date();
+        var driveDate = today.getFullYear()+"-"+pad2(today.getMonth()+1)+"-"+pad2(today.getDate());
+        // Ensure we're viewing the month we just recorded
+        var todayMk = today.getFullYear()+"-"+pad2(today.getMonth()+1);
+        var mpEl = document.getElementById("monthPick");
+        if(mpEl && mpEl.value !== todayMk){
+          mpEl.value = todayMk;
+          STATE.mk = todayMk;
+        }
+        if(!isFinite(miles) || miles <= 0){ window.zummeeAlert("Notice", "Please enter mileage greater than 0 for " + cname + "."); return; }
+
+        if(!STATE.company){
+          window.zummeeAlert("Notice", "Please set your Management Company in Profile before saving mileage."); window.location.href = "profile.html";
+          return;
+        }
+
+        insertMileageRow(STATE.userId, STATE.company, cname, driveDate, miles, function(err){
+          if(err){ window.zummeeAlert("Notice", "Could not save mileage: " + (err.message||err)); return; }
+          if(mEl) mEl.value = "";
+          reloadMonth();
+        });
+      };
+      tdBtn.appendChild(btn);
+      tr.appendChild(tdBtn);
+
+      tbody.appendChild(tr);
+    }
+  }
+
+  function reloadMonth(){
+    ensureSignedIn(function(err, ses){
+      if(err || !ses){ window.location.href = "login.html"; return; }
+      STATE.userId = ses.user.id;
+      STATE.email = (ses && ses.user && ses.user.email) ? String(ses.user.email) : "";
+      // Wire + load per-user default recipient email
+      try{ wireDefaultReportEmailInput(); }catch(_e){}
+      try{ if(window.ZUMMEE_applyUserScope) window.ZUMMEE_applyUserScope(STATE.userId); }catch(_e){}
+      var mp = document.getElementById("monthPick");
+      STATE.mk = (mp && mp.value) ? mp.value : nowMonthKey();
+
+      // load profile company then mileage rows
+      getProfileCompanyRobust(STATE.userId, function(err2, company){
+        // If company table fails, still allow mileage insert without company_name (if schema allows)
+        STATE.company = company || "";
+
+        loadMileageForMonth(STATE.userId, STATE.mk, function(err3, rows){
+          if(err3){
+            window.zummeeAlert("Notice", "Could not load mileage: " + (err3.message||err3)); STATE.rows = [];
+          } else {
+            STATE.rows = rows || [];
+          }
+          setMonthlyTotal();
+          renderCommunitiesTable();
+          renderEntriesList();
+        });
+      });
+    });
+  }
+
+  function init(){
+    setMonthInputDefault();
+    try{ setTimeout(setMonthInputDefault, 150); }catch(_e){}
+    var mp = document.getElementById("monthPick");
+    if(mp){ mp.addEventListener("change", function(){ reloadMonth(); }); }
+    // When community changes in header, just re-render the community rows (no reload needed)
+    var cs = document.getElementById("zummeeCommunitySelect");
+    if(cs){ cs.addEventListener("change", function(){ try{ renderCommunitiesTable(); }catch(_e){} }); }
+
+    var b1 = document.getElementById("btnMonthlyReport");
+    if(b1){ b1.addEventListener("click", function(){ openMonthlyReport(); }); }
+    var b2 = document.getElementById("btnExportCSV");
+    if(b2){ b2.addEventListener("click", function(){
+      var csv = makeCSV();
+      var fn = "Mileage_" + String(STATE.mk||"") + ".csv";
+      downloadTextFile(fn, csv, "text/csv;charset=utf-8");
+    }); }
+    var b3 = document.getElementById("btnEmailSummary");
+    if(b3){ b3.addEventListener("click", function(){ openEmailSummary(); }); }
+    reloadMonth();
+  }
+
+  if(document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+</body>
+</html>

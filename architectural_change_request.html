@@ -1,0 +1,399 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Architectural Change Request</title><script>window.ZUMMEE_ACC_BUILD="v235-acc-submit-client-fix";console.log("ACC build",window.ZUMMEE_ACC_BUILD);</script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script id="accInlineSupabaseClientV230">
+window.SUPABASE_URL = window.SUPABASE_URL || 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
+async function ensureSupabase(){
+  if(window.supabaseClient && window.supabaseClient.from) return window.supabaseClient;
+  if(window.sb && window.sb.from) return window.sb;
+  if(!window.supabase || !window.supabase.createClient) throw new Error('Supabase library not loaded');
+  const c = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, { auth:{ storageKey:'sb-zummee-auth', storage: window.localStorage, persistSession:true, autoRefreshToken:true, detectSessionInUrl:true } });
+  window.supabaseClient = c;
+  window.sb = c;
+  return c;
+}
+</script><script src="company_logo_sync.js"></script>
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>:root{--blue:#12324d;--line:#9bc9ff;--muted:#5f7288}*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:var(--blue);background:linear-gradient(180deg,#f1f7ff,#f8fbff)}.shell{max-width:1060px;margin:auto;padding:24px 22px 54px}.hero,.card{background:rgba(255,255,255,.96);border:2px solid var(--line);border-radius:34px;box-shadow:0 18px 46px rgba(18,50,77,.10)}.hero{padding:24px 28px;display:grid;grid-template-columns:1fr auto;gap:18px}.kicker{font-size:13px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;color:#6c7f94}.hero h1{margin:4px 0 0;font-size:34px;letter-spacing:-.04em}.heroRight{display:flex;flex-direction:column;align-items:flex-end;gap:10px}.heroLogo{height:58px;max-width:210px;object-fit:contain}.btn{border:2px solid var(--line);background:#fff;color:var(--blue);border-radius:18px;padding:13px 17px;font-weight:950;font-size:15px;text-decoration:none;display:inline-flex;justify-content:center;cursor:pointer}.btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}.card{padding:22px;margin-top:20px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.field{display:flex;flex-direction:column;gap:7px}.field label{font-weight:950;color:#354f69}.field input,.field select,.field textarea{border:1px solid rgba(18,50,77,.14);border-radius:16px;padding:13px 14px;font:inherit;color:var(--blue);background:#fff}.field textarea{min-height:110px;resize:vertical}.wide{grid-column:1/-1}.muted{color:var(--muted)}.status{margin-top:10px;font-weight:850}.ok{color:#166534}.bad{color:#991b1b}.request{border:1px solid rgba(18,50,77,.12);border-radius:22px;background:#fff;padding:16px;margin-top:12px}.pill{display:inline-flex;border:1px solid #b7d8ff;background:#eef6ff;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:950;text-transform:uppercase;color:#1d4ed8}.accTracker{margin:14px 0 12px;padding:14px;border-radius:20px;background:linear-gradient(180deg,#f7fbff,#fff);border:1px solid rgba(18,50,77,.12)}.trackerSteps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.trackerStep{border:1px solid rgba(18,50,77,.12);border-radius:16px;background:#fff;padding:10px;text-align:center;font-size:12px;font-weight:950;color:#6b7d8f}.trackerStep.active{color:var(--blue);border-color:var(--line);box-shadow:0 8px 18px rgba(18,50,77,.08)}.trackerStep.done{background:#eef6ff;color:#1d4ed8;border-color:#b7d8ff}.trackerCounts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.trackerCounts span{border:1px solid rgba(18,50,77,.10);background:#fff;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:900}.trackerMessage{margin-top:10px;color:var(--muted);font-weight:750;line-height:1.35}@media(max-width:760px){.trackerSteps{grid-template-columns:1fr 1fr}}@media(max-width:760px){.grid{grid-template-columns:1fr}.hero{grid-template-columns:1fr}.heroRight{align-items:flex-start}.hero h1{font-size:30px}}</style></head><body><main class="shell"><section class="hero"><div><div class="kicker">Resident Home</div><h1>Architectural Change Request (ACC)</h1></div><div class="heroRight"><img id="pageCompanyLogo" class="heroLogo" alt="Company logo"><button class="btn" onclick="location.href='community_experience.html'">Back</button></div></section><section class="card"><h2>Submit ACC Request</h2><p class="muted">Submit exterior changes, improvements, or architectural requests for review.</p><div class="grid"><div class="field"><label>Resident Name</label><input id="residentName"></div><div class="field"><label>Address / Unit</label><input id="residentAddress"></div><div class="field wide"><label>Request Title</label><input id="requestTitle" placeholder="Example: Replace front door, install fence, repaint exterior"></div><div class="field"><label>Request Type</label><select id="requestType"><option>Exterior Change</option><option>Fence</option><option>Paint</option><option>Landscape</option><option>Door / Window</option><option>Roof</option><option>Other</option></select></div><div class="field"><label>Upload PDF / Image</label><input id="requestFile" type="file" accept="application/pdf,image/*"></div><div class="field wide"><label>Description</label><textarea id="requestDescription" placeholder="Describe the proposed change, materials, colors, location, and timeline."></textarea></div></div><button class="btn primary" onclick="submitACCRequest()">Submit Request</button><div id="status" class="status"></div></section><section class="card"><h2>My ACC Requests</h2><div id="requestList"></div></section></main><script>const $=id=>document.getElementById(id);const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));let ctx={};async function getACCClient(){if(window.ensureSupabase)return await window.ensureSupabase();return window.supabaseClient||window.sb}function setLogo(url){const img=$('pageCompanyLogo');if(url)img.src=url}
+function statusText(status){
+  const s=String(status||'pending_board_review').toLowerCase();
+  if(s==='approved')return 'Approved';
+  if(s==='rejected')return 'Rejected';
+  if(s==='additional_questions')return 'Additional Questions Requested';
+  if(s==='pending_board_review')return 'Pending Board Review';
+  if(s==='submitted')return 'Pending Board Review';
+  return s.replace(/_/g,' ');
+}
+function accTrackerHtml(x){
+  const st=String(x.status||'pending_board_review').toLowerCase();
+  const approved=Number(x.__voteCounts?.approve||0);
+  const rejected=Number(x.__voteCounts?.reject||0);
+  const questions=Number(x.__voteCounts?.question||0);
+  const needed=Number(x.majority_required||x.__majorityRequired||0);
+  const steps=[{key:'submitted',label:'Submitted'},{key:'pending_board_review',label:'Board Review'},{key:'additional_questions',label:'Questions'},{key:'approved',label:'Decision'}];
+  const stepState=(key)=>{if(key==='submitted')return 'done';if(st==='approved')return key==='approved'?'done':'done';if(st==='rejected')return key==='approved'?'active':'done';if(st==='additional_questions')return key==='additional_questions'?'active':(key==='approved'?'':'done');if(st==='pending_board_review'||st==='submitted')return key==='pending_board_review'?'active':(key==='submitted'?'done':'');return '';};
+  let message='Your request is waiting for board review.';
+  if(st==='approved') message='Approved. You may proceed according to the community approval notice.';
+  else if(st==='rejected') message='Not approved. Please review the board note or contact management.';
+  else if(st==='additional_questions') message='The board has requested additional information before making a decision.';
+  else if(approved||rejected||questions) message='Board members are reviewing this request. The status will update automatically once a majority decision is reached.';
+  const needText=needed?`<span>Majority needed: ${needed}</span>`:'';
+  return `<div class="accTracker"><strong>Status Tracker</strong><div class="trackerSteps">${steps.map(s=>`<div class="trackerStep ${stepState(s.key)}">${esc(s.label)}</div>`).join('')}</div><div class="trackerCounts"><span>Approvals: ${approved}</span><span>Rejections: ${rejected}</span><span>Questions: ${questions}</span>${needText}</div><div class="trackerMessage">${esc(message)}</div></div>`;
+}
+function renderResidentAccRequest(x){
+  const st=String(x.status||'pending_board_review').toLowerCase();
+  const note=x.board_question||x.reviewer_notes||'';
+  const file=x.file_path?`<div style="margin-top:10px"><a class="btn" href="#" onclick="openAccFile('${esc(x.file_path)}');return false;">View Attachment</a></div>`:'';
+  return `<div class="request ${esc(st)}"><span class="pill">${esc(statusText(st))}</span><h3>${esc(x.request_title||'ACC Request')}</h3><div class="muted">${esc(x.request_type||'')} • ${new Date(x.created_at||Date.now()).toLocaleDateString()}</div>${accTrackerHtml(x)}<p>${esc(x.description||'')}</p>${note?`<div class="muted"><b>Board note:</b> ${esc(note)}</div>`:''}${file}</div>`;
+}
+async function attachAccVoteCounts(c, rows){
+  if(!rows || !rows.length) return rows;
+  try{const ids=rows.map(r=>r.id).filter(Boolean);const vr=await c.from('architectural_change_request_votes').select('request_id,vote').in('request_id',ids);if(vr.error) return rows;const map={};(vr.data||[]).forEach(v=>{if(!map[v.request_id]) map[v.request_id]={approve:0,reject:0,question:0};if(map[v.request_id][v.vote]!==undefined) map[v.request_id][v.vote]++;});rows.forEach(r=>{r.__voteCounts=map[r.id]||{approve:0,reject:0,question:0};});}catch(e){}
+  return rows;
+}
+
+async function openAccFile(path){
+  try{const c=await getACCClient();const u=c.storage.from('acc-request-files').getPublicUrl(path).data.publicUrl;if(u)window.open(u,'_blank');}catch(e){}
+}
+function firstValue(){
+  for(let i=0;i<arguments.length;i++){
+    const v=arguments[i];
+    if(v!==undefined && v!==null && String(v).trim()!=='') return String(v).trim();
+  }
+  return '';
+}
+
+function buildResidentAddressDisplay(street, unit){
+  const clean=v=>String(v===undefined||v===null?'':v).trim();
+  const a=clean(street);
+  const u=clean(unit);
+  if(a && u && !a.toLowerCase().includes(('unit '+u).toLowerCase()) && a.toLowerCase()!==u.toLowerCase()) return `${a} • Unit ${u}`;
+  return a || (u ? `Unit ${u}` : '');
+}
+function ls(){
+  for(let i=0;i<arguments.length;i++){
+    try{ const v=localStorage.getItem(arguments[i]); if(v!==undefined && v!==null && String(v).trim()!=='') return String(v).trim(); }catch(e){}
+    try{ const v=sessionStorage.getItem(arguments[i]); if(v!==undefined && v!==null && String(v).trim()!=='') return String(v).trim(); }catch(e){}
+  }
+  return '';
+}
+async function hydrateResidentFromDatabase(c){
+  try{
+    const email=ctx.email || ls('resident_email','email','zummee_resident_email');
+    const residentId=ctx.resident_id || ls('resident_id','zummee_resident_id');
+    let q=null;
+    if(residentId){ q=c.from('resident_directory').select('*').eq('id',residentId).maybeSingle(); }
+    else if(email){
+      try { q=c.from('resident_directory').select('*').eq('email',email).maybeSingle(); }
+      catch(_e) { q=null; }
+    }
+    if(!q) return {};
+    const r=await q;
+    return (!r.error && r.data) ? r.data : {};
+  }catch(e){ return {}; }
+}
+async function init(){
+  try{
+    if(window.ZummeeResidentAuth){
+      let r=await window.ZummeeResidentAuth.requireResident({redirect:false});
+      ctx=(r&&r.ctx)||{};
+      ctx.resident=ctx.resident||{};
+    }
+  }catch(e){}
+  const res=ctx.resident||{};
+  ctx.community_id=firstValue(res.community_id,res.communityId,ls('currentCommunityId','activeCommunityId','zummee_selected_community_id'));
+  ctx.company_id=firstValue(res.company_id,res.companyId,ls('company_id','zummee_company_id','activeCompanyId'));
+  ctx.resident_id=firstValue(res.id,res.resident_id,ls('resident_id','zummee_resident_id'));
+  ctx.email=firstValue(res.email,res.resident_email,ls('resident_email','zummee_resident_email','email'));
+  try{
+    const c=await getACCClient();
+    const dbResident=await hydrateResidentFromDatabase(c);
+    const fullName=firstValue(res.resident_name,res.name,res.full_name,dbResident.resident_name,dbResident.name,dbResident.full_name,ls('resident_name','zummee_resident_name','residentFullName'));
+    const street=firstValue(res.street_address,res.address,dbResident.street_address,dbResident.address,dbResident.mailing_address,ls('resident_address','street_address','zummee_resident_address'));
+    const unit=firstValue(res.unit_number,res.unit,res.unitNumber,dbResident.unit_number,dbResident.unit,dbResident.unitNumber,ls('resident_unit_number','resident_unit','unit_number','residentUnit','zummee_resident_unit'));
+    const address=buildResidentAddressDisplay(street,unit);
+    if($('residentName')) $('residentName').value=fullName;
+    if($('residentAddress')) { $('residentAddress').value=address; $('residentAddress').dataset.zummeeAddressLocked=address; }
+    if(fullName) localStorage.setItem('resident_name',fullName);
+    if(address) localStorage.setItem('resident_unit',address);
+    if(unit) localStorage.setItem('resident_unit_number',unit);
+  }catch(e){
+    if($('residentName')) $('residentName').value=firstValue(res.resident_name,res.name,res.full_name,ls('resident_name','zummee_resident_name','residentFullName'));
+    const fallbackStreet=firstValue(res.street_address,res.address,ls('resident_address','street_address','zummee_resident_address'));
+    const fallbackUnit=firstValue(res.unit_number,res.unit,res.unitNumber,ls('resident_unit_number','resident_unit','unit_number','residentUnit','zummee_resident_unit'));
+    if($('residentAddress')) { const fallbackAddress=buildResidentAddressDisplay(fallbackStreet,fallbackUnit); $('residentAddress').value=fallbackAddress; $('residentAddress').dataset.zummeeAddressLocked=fallbackAddress; }
+  }
+  try{
+    const c=await getACCClient();
+    if(ctx.company_id){
+      let r=await c.from('companies').select('logo_path').eq('id',ctx.company_id).maybeSingle();
+      if(r.data&&r.data.logo_path)setLogo(/^https?:/.test(r.data.logo_path)?r.data.logo_path:c.storage.from('company_logos').getPublicUrl(r.data.logo_path).data.publicUrl);
+    }
+  }catch(e){}
+  loadRequests();
+}
+async function uploadFile(file){
+  if(!file)return null;
+  const c=await getACCClient();
+  const ext=(file.name.split('.').pop()||'dat').replace(/[^a-z0-9]/gi,'');
+  const path=`${ctx.community_id||'community'}/${Date.now()}-${Math.random().toString(16).slice(2)}.${ext}`;
+  let r=await c.storage.from('acc-request-files').upload(path,file,{contentType:file.type||'application/octet-stream'});
+  if(r.error)throw r.error;
+  return path;
+}
+async function submitACCRequest(){
+  const c=await getACCClient();
+  const file=$('requestFile').files&&$('requestFile').files[0];
+  try{
+    $('status').className='status';
+    $('status').textContent='Submitting request…';
+    const file_path=await uploadFile(file);
+    const row={company_id:ctx.company_id||null,community_id:ctx.community_id,resident_id:ctx.resident_id||null,resident_email:ctx.email||null,resident_name:$('residentName').value.trim(),address:$('residentAddress').value.trim(),request_title:$('requestTitle').value.trim(),request_type:$('requestType').value,description:$('requestDescription').value.trim(),file_path,status:'pending_board_review'};
+    let r=await c.from('architectural_change_requests').insert(row).select('*').single();
+    if(r.error)throw r.error;
+    try{
+      await c.from('notification_events').insert({
+        company_id: ctx.company_id || null,
+        community_id: ctx.community_id || null,
+        event_type: 'acc_request',
+        priority: 'attention',
+        title: 'New ACC request submitted',
+        message: 'New ACC request submitted: ' + (r.data.resident_name || 'Resident') + ' — ' + (r.data.request_title || 'Architectural Change Request'),
+        link_url: 'architectural_change_request.html?open_acc_request_id=' + encodeURIComponent(String(r.data.id)),
+        source_table: 'architectural_change_requests',
+        source_id: r.data.id,
+        metadata: { acc_request_id: r.data.id, request_id: r.data.id }
+      });
+    }catch(_eventErr){ console.warn('ACC live activity event skipped', _eventErr); }
+    try{await fetch('/.netlify/functions/send-acc-request-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({request:r.data})});}catch(_notifyErr){console.warn('ACC notification skipped',_notifyErr)}
+    $('status').className='status ok';
+    $('status').textContent='ACC request submitted for board review.';
+    $('requestTitle').value='';
+    $('requestDescription').value='';
+    $('requestFile').value='';
+    loadRequests();
+  }catch(e){
+    console.error(e);
+    $('status').className='status bad';
+    $('status').textContent='Could not submit ACC request. Run the setup SQL/storage bucket first.';
+  }
+}
+async function loadRequests(){
+  const host=$('requestList');
+  try{
+    const c=await getACCClient();
+    let q=c.from('architectural_change_requests').select('*').eq('community_id',ctx.community_id).order('created_at',{ascending:false});
+    if(ctx.resident_id)q=q.eq('resident_id',ctx.resident_id);
+    else if(ctx.email)q=q.eq('resident_email',ctx.email);
+    let r=await q;
+    if(r.error)throw r.error;
+    let rows=r.data||[];
+    rows=await attachAccVoteCounts(c,rows);
+    host.innerHTML=rows.length?rows.map(renderResidentAccRequest).join(''):'<p class="muted">No ACC requests submitted yet.</p>';
+  }catch(e){
+    host.innerHTML='<p class="muted">ACC requests will appear after setup is complete.</p>';
+  }
+}
+init();</script>
+
+<script id="accResidentAutofillLockV229">
+(function(){
+  function el(id){ return document.getElementById(id); }
+  function clean(v){ return String(v == null ? '' : v).trim(); }
+  function first(){
+    for(var i=0;i<arguments.length;i++){
+      var v = clean(arguments[i]);
+      if(v) return v;
+    }
+    return '';
+  }
+
+  function buildAddressDisplay(street, unit){
+    var a = clean(street);
+    var u = clean(unit);
+    if(a && u && a.toLowerCase().indexOf(('unit ' + u).toLowerCase()) === -1 && a.toLowerCase() !== u.toLowerCase()) return a + ' • Unit ' + u;
+    return a || (u ? 'Unit ' + u : '');
+  }
+  function readStore(key){
+    try{ var v = localStorage.getItem(key); if(clean(v)) return clean(v); }catch(e){}
+    try{ var v2 = sessionStorage.getItem(key); if(clean(v2)) return clean(v2); }catch(e){}
+    return '';
+  }
+  function setResidentFields(name, address, email, phone, unit){
+    var nameEl = el('residentName');
+    var addressEl = el('residentAddress');
+    var finalAddress = clean(address);
+    if(clean(unit) && finalAddress && finalAddress.toLowerCase().indexOf(('unit ' + clean(unit)).toLowerCase()) === -1){
+      finalAddress = buildAddressDisplay(finalAddress, unit);
+    }
+    if(nameEl && clean(name)){
+      nameEl.value = clean(name);
+      nameEl.readOnly = true;
+      nameEl.setAttribute('aria-readonly','true');
+      nameEl.style.background = '#f3f7fb';
+      nameEl.style.fontWeight = '800';
+    }
+    if(addressEl && clean(finalAddress)){
+      addressEl.value = clean(finalAddress);
+      addressEl.dataset.zummeeAddressLocked = clean(finalAddress);
+      addressEl.readOnly = true;
+      addressEl.setAttribute('aria-readonly','true');
+      addressEl.style.background = '#f3f7fb';
+      addressEl.style.fontWeight = '800';
+    }
+    try{
+      if(clean(name)) localStorage.setItem('resident_name', clean(name));
+      if(clean(finalAddress)) localStorage.setItem('resident_unit', clean(finalAddress));
+      if(clean(unit)) localStorage.setItem('resident_unit_number', clean(unit));
+      if(clean(email)) localStorage.setItem('resident_email', clean(email));
+      if(clean(phone)) localStorage.setItem('resident_phone', clean(phone));
+    }catch(e){}
+  }
+  async function getClient(){
+    try{ if(typeof ensureSupabase === 'function') return await ensureSupabase(); }catch(e){}
+    try{ if(window.supabaseClient && window.supabaseClient.from) return window.supabaseClient; }catch(e){}
+    try{ if(window.sb && window.sb.from) return window.sb; }catch(e){}
+    try{ if(typeof sb === 'function') return await getACCClient(); }catch(e){}
+    return null;
+  }
+  async function loadResidentFromDirectory(c, user, email, residentId, communityId){
+    var selectCols = '*';
+    try{
+      if(user && user.id){
+        var byAuth = await c.from('resident_directory').select(selectCols).eq('auth_user_id', user.id).maybeSingle();
+        if(!byAuth.error && byAuth.data) return byAuth.data;
+      }
+    }catch(e){}
+    try{
+      if(residentId){
+        var byId = await c.from('resident_directory').select(selectCols).eq('id', residentId).maybeSingle();
+        if(!byId.error && byId.data) return byId.data;
+      }
+    }catch(e){}
+    try{
+      if(email){
+        var q = c.from('resident_directory').select(selectCols).eq('email', email).limit(1);
+        if(communityId) q = q.eq('community_id', communityId);
+        var byEmail = await q.maybeSingle();
+        if(!byEmail.error && byEmail.data) return byEmail.data;
+      }
+    }catch(e){}
+    return null;
+  }
+  async function autofill(){
+    var authResident = null;
+    var authUser = null;
+    try{
+      if(window.ZummeeResidentAuth && typeof window.ZummeeResidentAuth.getContext === 'function'){
+        var rc = await window.ZummeeResidentAuth.getContext();
+        authResident = rc && rc.resident ? rc.resident : null;
+        authUser = rc && rc.user ? rc.user : null;
+      }else if(window.ZummeeResidentAuth && typeof window.ZummeeResidentAuth.requireResident === 'function'){
+        var rr = await window.ZummeeResidentAuth.requireResident({redirect:false});
+        authResident = rr && rr.ctx && rr.ctx.resident ? rr.ctx.resident : null;
+        authUser = rr && rr.ctx && rr.ctx.user ? rr.ctx.user : null;
+      }
+    }catch(e){}
+
+    var c = await getClient();
+    if(c && !authUser && c.auth && typeof c.auth.getUser === 'function'){
+      try{ var gu = await c.auth.getUser(); authUser = gu && gu.data ? gu.data.user : null; }catch(e){}
+    }
+
+    var email = first(
+      authResident && (authResident.email || authResident.resident_email),
+      authUser && authUser.email,
+      readStore('resident_email'), readStore('zummee_resident_email'), readStore('email')
+    );
+    var residentId = first(
+      authResident && (authResident.id || authResident.resident_id),
+      readStore('resident_id'), readStore('zummee_resident_id')
+    );
+    var communityId = first(
+      authResident && (authResident.community_id || authResident.communityId),
+      readStore('currentCommunityId'), readStore('activeCommunityId'), readStore('zummee_selected_community_id'), readStore('zummeeActiveCommunityId')
+    );
+
+    var dbResident = null;
+    if(c) dbResident = await loadResidentFromDirectory(c, authUser, email, residentId, communityId);
+
+    var name = first(
+      authResident && (authResident.resident_name || authResident.name || authResident.full_name),
+      dbResident && (dbResident.resident_name || dbResident.name || dbResident.full_name),
+      readStore('resident_name'), readStore('zummee_resident_name'), readStore('residentFullName')
+    );
+    var street = first(
+      authResident && (authResident.street_address || authResident.address),
+      dbResident && (dbResident.street_address || dbResident.address || dbResident.mailing_address),
+      readStore('resident_address'), readStore('street_address'), readStore('zummee_resident_address')
+    );
+    var unit = first(
+      authResident && (authResident.unit_number || authResident.unit || authResident.unitNumber),
+      dbResident && (dbResident.unit_number || dbResident.unit || dbResident.unitNumber),
+      readStore('resident_unit_number'), readStore('unit_number'), readStore('residentUnit'), readStore('zummee_resident_unit')
+    );
+    var address = buildAddressDisplay(street, unit);
+    var phone = first(
+      authResident && (authResident.phone || authResident.resident_phone),
+      dbResident && (dbResident.phone || dbResident.resident_phone),
+      readStore('resident_phone'), readStore('zummee_resident_phone')
+    );
+
+    setResidentFields(name, address, email, phone, unit);
+
+    try{
+      if(typeof ctx !== 'undefined'){
+        ctx.resident_id = first(ctx.resident_id, residentId, dbResident && dbResident.id);
+        ctx.email = first(ctx.email, email, dbResident && (dbResident.email || dbResident.resident_email));
+        ctx.community_id = first(ctx.community_id, communityId, dbResident && dbResident.community_id);
+        ctx.company_id = first(ctx.company_id, authResident && authResident.company_id, dbResident && dbResident.company_id, readStore('company_id'), readStore('zummee_company_id'));
+      }
+    }catch(e){}
+  }
+  function boot(){
+    autofill();
+    setTimeout(autofill, 250);
+    setTimeout(autofill, 900);
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
+  else boot();
+  window.addEventListener('load', boot, {once:true});
+})();
+</script>
+
+<script id="accAddressUnitOverwriteGuardV233">
+(function(){
+  function clean(v){return String(v==null?'':v).trim();}
+  function get(id){return document.getElementById(id);}
+  function store(k){try{return clean(localStorage.getItem(k)) || clean(sessionStorage.getItem(k));}catch(e){return '';}}
+  function desired(){
+    var el=get('residentAddress');
+    var locked=el && clean(el.dataset.zummeeAddressLocked);
+    var unit=store('resident_unit_number') || store('unit_number') || store('residentUnit') || store('zummee_resident_unit');
+    var cur=el?clean(el.value):'';
+    var base=locked || store('resident_address') || cur;
+    if(base && unit && base.toLowerCase().indexOf(('unit '+unit).toLowerCase())===-1 && base.toLowerCase()!==unit.toLowerCase()) return base + ' • Unit ' + unit;
+    return base || (unit ? 'Unit ' + unit : '');
+  }
+  function apply(){
+    var el=get('residentAddress');
+    if(!el) return;
+    var d=desired();
+    if(d && clean(el.value)!==d){ el.value=d; }
+    if(d){ el.dataset.zummeeAddressLocked=d; try{localStorage.setItem('resident_unit',d);}catch(e){} }
+    el.readOnly=true;
+  }
+  [0,200,700,1300,2200].forEach(function(t){setTimeout(apply,t);});
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',apply,{once:true}); else apply();
+  window.addEventListener('load',apply,{once:true});
+})();
+</script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body></html>

@@ -1,0 +1,1897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>window.ZUMMEE_BUILD="2026-03-27-1";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Online Voting</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="shared/supabase-client.js?v=2026-04-08-2"></script>
+  <script src="shared/header.js?v=2026-04-08-2"></script>
+  <link rel="stylesheet" href="shared/header.css?v=2026-03-27-1">
+  <link rel="stylesheet" href="shared/zummee-design-system.css?v=2026-03-27-1">
+  <script id="zummeeStaffGuard">
+  (async () => {
+    if (window.__zummeeStaffGuardRan) return;
+    window.__zummeeStaffGuardRan = true;
+
+    async function getClient(){
+      try{ if(typeof ensureSupabase === 'function'){ const c = await ensureSupabase(); if(c && c.auth && typeof c.auth.getSession === 'function') return c; } }catch(_e){}
+      try{ if(window.supabaseClient && window.supabaseClient.auth && typeof window.supabaseClient.auth.getSession === 'function') return window.supabaseClient; }catch(_e){}
+      try{ if(window.sb && window.sb.auth && typeof window.sb.auth.getSession === 'function') return window.sb; }catch(_e){}
+      return null;
+    }
+
+    const go = (target) => {
+      try{ window.location.replace(target); }catch(_e){ window.location.href = target; }
+    };
+
+    const sb = await getClient();
+    if(!sb){ go('login.html'); return; }
+
+    const sessionRes = await sb.auth.getSession();
+    const user = sessionRes && sessionRes.data && sessionRes.data.session ? sessionRes.data.session.user : null;
+    if(!user){ go('login.html'); return; }
+
+    const ud = await sb
+      .from('userdirectory')
+      .select('role')
+      .eq('auth_user_id', user.id)
+      .single();
+
+    const role = String((ud && ud.data && ud.data.role) || '').trim();
+    if(role === 'Resident'){ go('resident_portal.html'); return; }
+
+    document.documentElement.setAttribute('data-staff-role', role || '');
+  })();
+  </script>
+  
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+    :root{
+      --brand:#17324d;
+      --brand-2:#234f80;
+      --muted:#4f6782;
+      --line:rgba(23,50,77,.14);
+      --soft:rgba(255,255,255,.22);
+      --soft-2:rgba(255,255,255,.34);
+      --danger:#b63832;
+      --success:#0f7a47;
+      --warning:#986d07;
+      --page-max:1180px;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family:Arial,Helvetica,sans-serif;
+      color:var(--brand);
+    }
+    body.zummee-shell-theme{ min-height:100vh; }
+    #zummeeHeaderMount{ display:block; }
+    .wrap{ max-width:var(--page-max); margin:24px auto 42px; padding:0 16px; }
+    .pageIntro{ display:flex; align-items:flex-end; justify-content:flex-start; gap:18px; flex-wrap:wrap; margin:0 0 18px; }
+    .pageIntro h1{ margin:0; font-size:clamp(32px,5vw,44px); line-height:1.03; letter-spacing:-.03em; font-weight:900; color:var(--brand); }
+    .pageIntro p{ margin:8px 0 0; font-size:14px; color:var(--muted); max-width:700px; }
+    .pageActions{ display:flex; gap:10px; flex-wrap:wrap; }
+    .stack{ display:grid; gap:18px; }
+    .grid-4{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
+    .mainGrid{ display:grid; grid-template-columns:minmax(0,1.45fr) minmax(320px,.9fr); gap:18px; align-items:start; }
+    .leftCol,.rightCol{ display:grid; gap:18px; }
+
+    .zummee-section-card{ position:relative; overflow:hidden; }
+    .voting-hero-card{background:linear-gradient(135deg,#f7d774 0%,#e0b84c 100%);border:1px solid rgba(255,255,255,.28);box-shadow:0 10px 22px rgba(140,101,10,.18);} 
+    .voting-hero-card::before{
+      content:"";
+      position:absolute; top:0; right:0; width:108px; height:108px;
+      background:rgba(255,255,255,.20); clip-path:polygon(100% 0,0 0,100% 100%);
+      opacity:.95; pointer-events:none;
+    }
+    .voting-hero-card .summaryLabel{ color:#6a5314; }
+    .voting-hero-card .summaryNote,.voting-hero-card .sectionCopy{ color:#5e4b18; }
+    .voting-hero-card .statusPill{ background:rgba(255,255,255,.52); color:#6a5314; border:1px solid rgba(255,255,255,.42); }
+    .liveResultsCard .statusText,.liveResultsCard .muted,.liveResultsCard .sectionCopy,.liveResultsCard .sidebarRow strong,.liveResultsCard .sidebarRow span{ color:#5e4b18; }
+    .liveResultsCard .btn.secondary{ background:rgba(255,255,255,.72); color:#6a5314; border-color:rgba(255,255,255,.42); }
+    .liveResultsCard .sectionTitle{ color:var(--brand); }
+    .zummee-section-card--blue::before{
+      content:"";
+      position:absolute; inset:0;
+      background:linear-gradient(120deg, rgba(255,255,255,.18) 0%, rgba(255,255,255,.08) 32%, rgba(255,255,255,.22) 50%, rgba(255,255,255,.08) 68%, rgba(255,255,255,.16) 100%);
+      opacity:.85;
+      pointer-events:none;
+    }
+    .zIn{ position:relative; z-index:1; }
+    .zummee-glass-panel{ padding:16px; }
+    .summaryValue{ font-size:34px; font-weight:900; line-height:1; margin:0 0 8px; }
+    .summaryLabel{ font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:#45607d; font-weight:900; }
+    .summaryNote{ margin:0; font-size:13px; color:#4e6782; line-height:1.45; }
+    .sectionHead{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:16px; }
+    .sectionTitle{ margin:0; font-size:30px; line-height:1.04; font-weight:900; letter-spacing:-.03em; color:var(--brand); }
+    .sectionCopy{ margin:6px 0 0; font-size:14px; color:var(--muted); line-height:1.5; max-width:760px; }
+    .btnRow{ display:flex; gap:10px; flex-wrap:wrap; }
+    .btn{
+      appearance:none; border:0; cursor:pointer; text-decoration:none;
+      min-height:46px; padding:12px 18px; border-radius:999px;
+      font:800 15px/1 Arial,Helvetica,sans-serif;
+      transition:transform .18s ease, box-shadow .18s ease, opacity .18s ease;
+    }
+    .btn:hover{ transform:translateY(-1px); }
+    .btn.primary{ background:var(--brand-2); color:#fff; box-shadow:0 12px 24px rgba(23,50,77,.18); }
+    .btn.secondary{ background:rgba(255,255,255,.84); color:var(--brand); border:1px solid rgba(23,50,77,.12); }
+    .btn.ghost{ background:rgba(255,255,255,.28); color:var(--brand); border:1px solid rgba(255,255,255,.34); }
+    .btn.danger{ background:#fff; color:var(--danger); border:1px solid rgba(182,56,50,.18); }
+    .miniBtn{ min-height:36px; padding:9px 14px; font-size:13px; }
+    .fieldGrid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+    .fieldGrid.three{ grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .fieldWide{ grid-column:1 / -1; }
+    .field{ min-width:0; }
+    .field label{ display:block; margin:0 0 7px; font-size:12px; text-transform:uppercase; letter-spacing:.08em; font-weight:900; color:#48627d; }
+    .field input,.field select,.field textarea{
+      width:100%; min-width:0; box-sizing:border-box; border:1px solid rgba(255,255,255,.40); background:rgba(255,255,255,.78);
+      color:var(--brand); border-radius:16px; padding:13px 14px; font:700 15px/1.35 Arial,Helvetica,sans-serif;
+      outline:none; box-shadow:inset 0 1px 0 rgba(255,255,255,.38);
+    }
+    .field input[type="datetime-local"]{ padding-inline:12px; font-size:14px; }
+    .field textarea{ min-height:108px; resize:vertical; }
+    .field input:focus,.field select:focus,.field textarea:focus{ box-shadow:0 0 0 4px rgba(35,79,128,.10); border-color:rgba(35,79,128,.26); }
+    .toggleRow{ display:flex; align-items:center; justify-content:space-between; gap:14px; padding:15px 16px; border-radius:18px; background:rgba(255,255,255,.28); border:1px solid rgba(255,255,255,.34); margin-bottom:14px; }
+    .toggleText strong{ display:block; font-size:16px; color:var(--brand); }
+    .toggleText span{ display:block; margin-top:4px; color:var(--muted); font-size:13px; }
+    .toggle{
+      position:relative; width:62px; height:36px; border-radius:999px;
+      background:rgba(23,50,77,.18); border:1px solid rgba(255,255,255,.34); flex:0 0 auto;
+    }
+    .toggle input{ position:absolute; inset:0; opacity:0; cursor:pointer; }
+    .toggle span{ position:absolute; inset:0; border-radius:999px; }
+    .toggle span::after{
+      content:""; position:absolute; top:4px; left:4px; width:26px; height:26px; border-radius:50%;
+      background:#fff; box-shadow:0 4px 12px rgba(0,0,0,.14); transition:transform .18s ease;
+    }
+    .toggle input:checked + span{ background:rgba(35,79,128,.84); }
+    .toggle input:checked + span::after{ transform:translateX(26px); }
+    .statusPill,.smallPill{
+      display:inline-flex; align-items:center; justify-content:center; border-radius:999px; white-space:nowrap;
+      padding:7px 12px; font-size:12px; font-weight:900; letter-spacing:.04em; text-transform:uppercase;
+    }
+    .statusPill{ background:rgba(255,255,255,.30); border:1px solid rgba(255,255,255,.35); color:var(--brand); }
+    .smallPill{ background:rgba(255,255,255,.70); color:var(--brand); }
+    .smallPill.pending{ color:var(--warning); }
+    .smallPill.approved{ color:var(--success); }
+    .smallPill.removed{ color:var(--danger); }
+    .statusBar{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:0 0 12px; }
+    .statusText{ font-size:13px; color:#45607d; font-weight:800; }
+    .helper{ font-size:13px; color:var(--muted); line-height:1.5; }
+    .list{ display:grid; gap:12px; }
+    .listItem{
+      display:grid; grid-template-columns:minmax(0,1fr) auto; gap:14px; align-items:center;
+      padding:15px 16px; border-radius:18px; background:rgba(255,255,255,.28); border:1px solid rgba(255,255,255,.34);
+    }
+    .listTitle{ margin:0 0 5px; font-size:16px; font-weight:900; color:var(--brand); }
+    .listMeta{ margin:0; font-size:13px; color:var(--muted); line-height:1.45; }
+    .listActions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+    .emptyState{ padding:22px; border-radius:18px; background:rgba(255,255,255,.22); border:1px solid rgba(255,255,255,.30); color:#4a6480; }
+    .emptyState strong{ color:var(--brand); display:block; margin-bottom:6px; }
+    .sidebarStat{ display:grid; gap:12px; }
+    .sidebarRow{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border-radius:16px; background:rgba(255,255,255,.28); border:1px solid rgba(255,255,255,.34); }
+    .muted{ color:var(--muted); }
+    .tiny{ font-size:12px; }
+    .toastWrap{ position:fixed; right:16px; bottom:16px; z-index:200; display:grid; gap:10px; }
+    .toast{
+      min-width:280px; max-width:360px; padding:14px 16px; border-radius:18px;
+      background:#fff; color:var(--brand); box-shadow:0 14px 34px rgba(18,50,80,.18);
+      border:1px solid rgba(23,50,77,.10); font-weight:800;
+    }
+    .toast.error{ color:var(--danger); }
+    .toast small{ display:block; margin-top:6px; color:var(--muted); font-weight:700; line-height:1.4; }
+    .hidden{ display:none !important; }
+
+    .pickerFieldBox{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;min-height:52px;padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.82);box-shadow:inset 0 0 0 1px rgba(29,99,216,.08);text-align:center}
+    .pickerValue{flex:1 1 220px;font-weight:800;color:#17324d;text-align:center}
+    .pickerValue.isEmpty{color:#5d7894;font-weight:700}
+    .pickerActions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+    .pickerModal{position:fixed;inset:0;background:rgba(10,24,46,.48);display:none;align-items:center;justify-content:center;padding:18px;z-index:5000;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+    .pickerModal.open{display:flex}
+    .pickerCard{width:min(760px,100%);max-height:min(82vh,900px);overflow:hidden;border-radius:26px;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(244,249,255,.97));box-shadow:0 24px 60px rgba(18,54,109,.2);border:1px solid rgba(23,88,170,.14)}
+    .pickerHead{padding:18px 20px 14px;border-bottom:1px solid rgba(29,99,216,.08);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    .pickerTitle{margin:0;font-size:26px;font-weight:900;letter-spacing:-.03em;color:#17324d}
+    .pickerSub{margin:6px 0 0;font-size:14px;color:#5d7894;font-weight:700}
+    .pickerBody{padding:16px 20px 20px;display:grid;gap:14px}
+    .pickerSearch{width:100%;min-height:46px;border-radius:16px;border:1px solid rgba(29,99,216,.14);padding:0 14px;font:inherit;font-weight:700;background:#fff;color:#17324d}
+    .pickerList{display:grid;gap:10px;max-height:52vh;overflow:auto;padding-right:4px}
+    .pickerItem{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.86);box-shadow:inset 0 0 0 1px rgba(29,99,216,.08);cursor:pointer}
+    .pickerItem:hover{transform:translateY(-1px)}
+    .pickerItemName{margin:0;font-size:16px;font-weight:900;color:#17324d}
+    .pickerItemMeta{margin:6px 0 0;font-size:13px;color:#5d7894;font-weight:700}
+    .pickerFoot{display:flex;justify-content:flex-end;gap:10px;padding:0 20px 20px}
+
+
+    @media (max-width: 1024px){
+      .electionSetupCard{ padding:18px 18px !important; }
+      .electionSetupCard .sectionHead{ margin-bottom:12px; }
+      .electionSetupCard .sectionTitle{ font-size:24px; }
+      .electionSetupCard .sectionCopy{ font-size:13px; line-height:1.4; max-width:none; }
+      .electionSetupCard .statusPill{ padding:6px 11px; font-size:11px; }
+      .electionSetupCard .fieldGrid{ gap:12px; }
+      .electionSetupCard .field label{ margin-bottom:6px; font-size:11px; }
+      .electionSetupCard .field input,
+      .electionSetupCard .field select,
+      .electionSetupCard .field textarea{ padding:10px 12px; border-radius:14px; font-size:14px; }
+      .electionSetupCard .field input[type="datetime-local"]{ padding-inline:10px; font-size:13px; }
+      .electionSetupCard .field textarea{ min-height:88px; }
+      .electionSetupCard .btnRow{ margin-top:12px !important; gap:10px; }
+      .electionSetupCard .btn{ min-height:42px; padding:10px 16px; font-size:14px; flex:0 1 220px; }
+    }
+    @media (max-width: 720px){
+      .electionSetupCard{ padding:16px 14px !important; }
+      .electionSetupCard .sectionTitle{ font-size:22px; }
+      .electionSetupCard .btn{ flex:1 1 100%; }
+    }
+    @media (max-width: 1024px){
+      .grid-4{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .mainGrid{ grid-template-columns:1fr; }
+      .zIn > .fieldGrid{ gap:16px; }
+      .btnRow{ gap:12px; }
+    }
+
+    @media (min-width: 721px) and (max-width: 900px){
+      .electionSetupCard{ padding:16px 16px !important; }
+      .electionSetupCard .sectionHead{ margin-bottom:10px; gap:10px; align-items:flex-start; }
+      .electionSetupCard .sectionTitle{ font-size:22px; }
+      .electionSetupCard .sectionCopy{ font-size:12px; line-height:1.35; max-width:none; }
+      .electionSetupCard .statusPill{ padding:5px 10px; font-size:11px; }
+      .electionSetupCard .fieldGrid{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 12px; }
+      .electionSetupCard .fieldWide{ grid-column:1 / -1; }
+      .electionSetupCard .field label{ margin:0 0 5px; font-size:11px; }
+      .electionSetupCard .field input,
+      .electionSetupCard .field select,
+      .electionSetupCard .field textarea{ padding:9px 12px; border-radius:14px; font-size:13px; }
+      .electionSetupCard .field input[type="datetime-local"]{ padding-inline:8px; font-size:12px; }
+      .electionSetupCard .field textarea{ min-height:74px; }
+      .electionSetupCard .btnRow{ margin-top:10px !important; gap:8px; flex-wrap:nowrap; }
+      .electionSetupCard .btn{ min-height:38px; padding:9px 14px; font-size:13px; flex:1 1 0; }
+    }
+
+    @media (max-width: 900px){
+      .zIn > .fieldGrid{ grid-template-columns:1fr; }
+      .btnRow .btn{ flex:1 1 100%; }
+    }
+    @media (max-width: 720px){
+      .wrap{ padding:0 12px; }
+      .grid-4,.fieldGrid,.fieldGrid.three{ grid-template-columns:1fr; }
+      .listItem{ grid-template-columns:1fr; }
+      .listActions{ justify-content:flex-start; }
+      .pageActions{ width:100%; }
+      .pageActions .btn{ flex:1 1 auto; }
+      .zummee-section-card{ padding:18px 16px !important; }
+      .sectionTitle{ font-size:26px; }
+    }
+  .statusPill--loading{background:rgba(255,255,255,0.14); color:rgba(255,255,255,0.88);} .is-loading-controls{opacity:.72; pointer-events:none;}
+    @media (min-width: 721px) and (max-width: 900px){
+      .electionSetupCard{ padding:12px 12px !important; }
+      .electionSetupCard .sectionHead{ margin-bottom:6px; gap:6px; align-items:center; }
+      .electionSetupCard .sectionHead > div:first-child{ flex:1 1 auto; min-width:0; }
+      .electionSetupCard .sectionTitle{ font-size:17px; line-height:1; }
+      .electionSetupCard .sectionCopy{ margin-top:4px; font-size:10px; line-height:1.22; max-width:none; }
+      .electionSetupCard .statusPill{ padding:4px 9px; font-size:10px; align-self:flex-start; margin-top:2px; }
+      .electionSetupCard .zIn > .fieldGrid{ grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:7px 8px !important; }
+      .electionSetupCard .fieldWide{ grid-column:1 / -1; }
+      .electionSetupCard .field label{ margin:0 0 3px; font-size:10px; }
+      .electionSetupCard .field input,
+      .electionSetupCard .field select,
+      .electionSetupCard .field textarea{ padding:7px 10px; min-height:40px; border-radius:11px; font-size:11px; }
+      .electionSetupCard .field input[type="datetime-local"]{ min-height:38px; padding-inline:8px; font-size:10px; }
+      .electionSetupCard .field textarea{ min-height:58px; resize:none; }
+      .electionSetupCard .btnRow{ margin-top:7px !important; gap:8px; flex-wrap:nowrap; }
+      .electionSetupCard .btnRow .btn{ min-height:34px; padding:7px 10px; font-size:11px; flex:1 1 0 !important; }
+    }
+ 
+
+    /* iPad election setup equal field widths */
+    @media (min-width: 721px) and (max-width: 1024px){
+      .electionSetupCard .fieldGrid{
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+        column-gap: 12px !important;
+        row-gap: 12px !important;
+      }
+      .electionSetupCard .fieldGrid > .field{
+        min-width: 0 !important;
+        width: auto !important;
+      }
+      .electionSetupCard .fieldGrid > .field:nth-child(1),
+      .electionSetupCard .fieldGrid > .field:nth-child(2),
+      .electionSetupCard .fieldGrid > .field:nth-child(4),
+      .electionSetupCard .fieldGrid > .field:nth-child(5){
+        grid-column: auto !important;
+      }
+      .electionSetupCard #eventTitle,
+      .electionSetupCard #eventType,
+      .electionSetupCard #votingStartAt,
+      .electionSetupCard #votingEndAt{
+        display: block !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+      }
+      .electionSetupCard #eventType{
+        -webkit-appearance: none;
+        appearance: none;
+        background-image: linear-gradient(45deg, transparent 50%, #17324d 50%), linear-gradient(135deg, #17324d 50%, transparent 50%);
+        background-position: calc(100% - 18px) calc(50% - 3px), calc(100% - 12px) calc(50% - 3px);
+        background-size: 6px 6px, 6px 6px;
+        background-repeat: no-repeat;
+        padding-right: 34px !important;
+      }
+    }
+
+
+
+    /* iPad election setup date fields spacing fix */
+    @media (min-width: 721px) and (max-width: 1024px){
+      .electionSetupCard .fieldGrid{
+        column-gap: 16px !important;
+        row-gap: 12px !important;
+      }
+      .electionSetupCard .field:nth-child(4),
+      .electionSetupCard .field:nth-child(5){
+        min-width: 0 !important;
+      }
+      .electionSetupCard #votingStartAt,
+      .electionSetupCard #votingEndAt{
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        min-height: 34px !important;
+        height: 34px !important;
+        padding: 6px 10px !important;
+        font-size: 11px !important;
+        box-sizing: border-box !important;
+      }
+      .electionSetupCard .btnRow{
+        gap: 12px !important;
+      }
+      .electionSetupCard .btnRow .btn{
+        min-width: 0 !important;
+      }
+    }
+
+
+    /* iPad election setup date row true spacing + sizing */
+    @media (min-width: 721px) and (max-width: 1024px){
+      .electionSetupCard .fieldGrid{
+        column-gap:18px !important;
+      }
+      .electionSetupCard .fieldGrid > .field:nth-child(4),
+      .electionSetupCard .fieldGrid > .field:nth-child(5){
+        width:100% !important;
+        min-width:0 !important;
+        overflow:visible !important;
+        padding-inline:2px !important;
+        box-sizing:border-box !important;
+      }
+      .electionSetupCard .fieldGrid > .field:nth-child(4) input,
+      .electionSetupCard .fieldGrid > .field:nth-child(5) input{
+        display:block !important;
+        width:100% !important;
+        max-width:100% !important;
+        margin:0 !important;
+        box-sizing:border-box !important;
+        -webkit-appearance:none !important;
+        appearance:none !important;
+        min-height:32px !important;
+        height:32px !important;
+        padding:4px 12px !important;
+        font-size:10px !important;
+        line-height:1.1 !important;
+        border-radius:18px !important;
+        background-clip:padding-box !important;
+      }
+    }
+
+ 
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+
+.mh2-actions .mh2-btn--ghost{display:none !important;}
+</style>
+  <script src="community_state_stable.js"></script>
+<style>
+/* FORCE white text in Status & Details section */
+#boardSubmittedItemsSection,
+#boardSubmittedItemsSection *:not(button),
+#boardMemberHubStatus,
+#boardMemberHubStatus *:not(button),
+#annualMeetingApprovals,
+#annualMeetingApprovals *:not(button) {
+  color: #ffffff !important;
+}
+
+/* Secondary text (slightly dimmed white) */
+#boardSubmittedItemsSection .muted,
+#boardMemberHubStatus .muted,
+#annualMeetingApprovals .muted {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style>
+/* HARD OVERRIDE — force white text in dark section */
+.hub-zone:last-of-type,
+.hub-zone:last-of-type *:not(button):not(.badge):not(.pill) {
+  color: #ffffff !important;
+}
+
+/* Slightly softer for secondary text */
+.hub-zone:last-of-type .muted,
+.hub-zone:last-of-type p,
+.hub-zone:last-of-type span {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+</head>
+<body data-header-mode="subpage" class="zummee-shell-theme zummee-unified-layout">
+  <div id="zummeeHeaderMount"></div>
+
+  <div class="wrap stack">
+    <!-- top action buttons removed -->
+
+    <section class="zummee-section-card voting-hero-card">
+      <div class="zIn">
+        <div class="sectionHead">
+          <div>
+            <h2 class="sectionTitle">Online Voting System</h2>
+            <p class="sectionCopy">Use the community selector in the Zummee header. Save one voting event for the selected community, then open nominations and manage the nominee queue below.</p>
+          </div>
+          <span class="statusPill" id="communityBadge">No community selected</span>
+        </div>
+        <div class="grid-4">
+          <div class="zummee-glass-panel">
+            <div class="summaryLabel">Current Event</div>
+            <div class="summaryValue" id="summaryEvent">—</div>
+            <p class="summaryNote">Draft until saved for this community.</p>
+          </div>
+          <div class="zummee-glass-panel">
+            <div class="summaryLabel">Nominations</div>
+            <div class="summaryValue" id="summaryNominationStatus">Closed</div>
+            <p class="summaryNote">Toggle after the event shell is saved.</p>
+          </div>
+          <div class="zummee-glass-panel">
+            <div class="summaryLabel">Nominees</div>
+            <div class="summaryValue" id="summaryNomineeCount">0</div>
+            <p class="summaryNote">Pending and approved nominees for the current event.</p>
+          </div>
+          <div class="zummee-glass-panel">
+            <div class="summaryLabel">Approved</div>
+            <div class="summaryValue" id="summaryApprovedCount">0</div>
+            <p class="summaryNote">These will feed the ballot builder later.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="mainGrid">
+      <div class="leftCol">
+        <section class="zummee-section-card zummee-section-card--blue electionSetupCard">
+          <div class="zIn">
+            <div class="sectionHead">
+              <div>
+                <h2 class="sectionTitle">Election Setup</h2>
+                <p class="sectionCopy">Create or update the voting event shell for the selected community. Nomination controls save into this event.</p>
+              </div>
+              <span class="statusPill" id="eventStatusPill">Unsaved</span>
+            </div>
+            <div class="fieldGrid">
+              <div class="field">
+                <label for="eventTitle">Election Title</label>
+                <input id="eventTitle" type="text" placeholder="2026 Board Election">
+              </div>
+              <div class="field">
+                <label for="eventType">Election Type</label>
+                <select id="eventType">
+                  <option value="Board Election">Board Election</option>
+                  <option value="Annual Meeting Vote">Annual Meeting Vote</option>
+                  <option value="Community Poll">Community Poll</option>
+                </select>
+              </div>
+              <div class="field fieldWide">
+                <label for="eventDescription">Description</label>
+                <textarea id="eventDescription" placeholder="Add a short election summary for staff and future resident-facing use."></textarea>
+              </div>
+              <div class="field">
+                <label for="votingStartAt">Voting Start</label>
+                <input id="votingStartAt" type="datetime-local">
+              </div>
+              <div class="field">
+                <label for="votingEndAt">Voting End</label>
+                <input id="votingEndAt" type="datetime-local">
+              </div>
+            </div>
+            <div class="btnRow" style="margin-top:16px;">
+              <button class="btn primary" id="saveEventBtn" type="button">Save Voting Event</button>
+              <button class="btn secondary" id="createDraftBtn" type="button">Create Draft Event</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="zummee-section-card zummee-section-card--blue">
+          <div class="zIn">
+            <div class="sectionHead">
+              <div>
+                <h2 class="sectionTitle">Nomination Controls</h2>
+                <p class="sectionCopy">Wire the nomination flow first. Open or close nominations, save the date window, add nominees manually, and approve or remove nominees.</p>
+              </div>
+              <span class="statusPill statusPill--loading" id="nominationWindowPill">Loading…</span>
+            </div>
+
+            <div class="toggleRow" id="nominationToggleRow">
+              <div class="toggleText">
+                <strong>Nominations Open</strong>
+                <span>When turned on, the current voting event is ready to accept nominees.</span>
+              </div>
+              <label class="toggle" aria-label="Toggle nominations open">
+                <input id="nominationOpen" type="checkbox">
+                <span></span>
+              </label>
+            </div>
+
+            <div class="fieldGrid">
+              <div class="field">
+                <label for="nominationStartAt">Nomination Start</label>
+                <input id="nominationStartAt" type="datetime-local">
+              </div>
+              <div class="field">
+                <label for="nominationEndAt">Nomination End</label>
+                <input id="nominationEndAt" type="datetime-local">
+              </div>
+            </div>
+            <div class="btnRow" style="margin-top:16px;">
+              <button class="btn primary" id="saveNominationWindowBtn" type="button">Save Nomination Window</button>
+              <button class="btn secondary" id="toggleNominationBtn" type="button">Open Nominations</button>
+            </div>
+
+            <div class="sectionHead" style="margin-top:24px; margin-bottom:12px;">
+              <div>
+                <h3 class="sectionTitle" style="font-size:24px;">Add Nominee</h3>
+                <p class="sectionCopy">Start with manual entries first. Resident-submitted nominations can plug into the same queue later.</p>
+              </div>
+            </div>
+            <div class="fieldGrid three">
+              <div class="field">
+                <label for="nomineeName">Nominee Name</label>
+                <input id="nomineeName" type="text" placeholder="Jane Smith">
+              </div>
+              <div class="field">
+                <label for="nomineeEmail">Email</label>
+                <input id="nomineeEmail" type="email" placeholder="jane@example.com">
+              </div>
+              <div class="field">
+                <label for="nomineeUnit">Unit / Address</label>
+                <input id="nomineeUnit" type="text" placeholder="Unit 204">
+              </div>
+              <div class="field fieldWide">
+                <label for="nomineeNotes">Notes</label>
+                <textarea id="nomineeNotes" placeholder="Optional notes for management review."></textarea>
+              </div>
+            </div>
+            <div class="btnRow" style="margin-top:16px;">
+              <button class="btn primary" id="addNomineeBtn" type="button">Add Nominee</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="zummee-section-card zummee-section-card--blue">
+          <div class="zIn">
+            <div class="sectionHead">
+              <div>
+                <h2 class="sectionTitle">Nominee Queue</h2>
+                <p class="sectionCopy">Approve nominees to prepare them for ballot wiring. Remove nominees if they withdraw or were added in error.</p>
+              </div>
+              <span class="statusPill" id="queuePill">0 Nominees</span>
+            </div>
+            <div class="statusBar">
+              <div class="statusText" id="queueStatusText">Load a community and save a voting event to begin.</div>
+              <div class="btnRow">
+                <button class="btn ghost miniBtn" id="reloadNomineesBtn" type="button">Reload Queue</button>
+              </div>
+            </div>
+            <div id="nomineeList" class="list"></div>
+          </div>
+        </section>
+      </div>
+
+      <aside class="rightCol">
+        <section class="zummee-section-card zummee-section-card--blue">
+          <div class="zIn">
+            <div class="sectionHead">
+              <div>
+                <h2 class="sectionTitle" style="font-size:26px;">Current Event Snapshot</h2>
+                <p class="sectionCopy">A quick view of what is currently saved for the selected community.</p>
+              </div>
+            </div>
+            <div class="sidebarStat">
+              <div class="sidebarRow"><strong>Event Title</strong><span class="muted tiny" id="sideEventTitle">—</span></div>
+              <div class="sidebarRow"><strong>Election Type</strong><span class="muted tiny" id="sideEventType">—</span></div>
+              <div class="sidebarRow"><strong>Voting Window</strong><span class="muted tiny" id="sideVotingWindow">Not set</span></div>
+              <div class="sidebarRow"><strong>Nomination Window</strong><span class="muted tiny" id="sideNominationWindow">Not set</span></div>
+              <div class="sidebarRow"><strong>Nominations</strong><span class="muted tiny" id="sideNominationStatus">Closed</span></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="zummee-section-card zummee-section-card--blue">
+          <div class="zIn">
+            <div class="sectionHead">
+              <div>
+                <h2 class="sectionTitle" style="font-size:26px;">Ballot Builder</h2>
+                <p class="sectionCopy">Create one ballot item for this election using the approved nominee queue.</p>
+              </div>
+              <span class="statusPill" id="ballotBuilderPill">No ballot yet</span>
+            </div>
+            <div class="fieldGrid">
+              <div class="field">
+                <label for="ballotTitle">Ballot Title</label>
+                <input id="ballotTitle" type="text" placeholder="Board Member Election">
+              </div>
+              <div class="field">
+                <label for="ballotType">Selection Type</label>
+                <select id="ballotType">
+                  <option value="single">Single Select</option>
+                  <option value="multi">Multi Select</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="ballotMaxSelections">Max Selections / Seats</label>
+                <input id="ballotMaxSelections" type="number" min="1" step="1" value="1">
+              </div>
+            </div>
+            <div class="btnRow" style="margin-top:16px;">
+              <button class="btn primary" id="createBallotBtn" type="button">Create Ballot From Approved Nominees</button>
+              <button class="btn secondary" id="reloadBallotBtn" type="button">Refresh Ballot</button>
+            </div>
+            <div class="statusBar">
+              <div class="statusText" id="ballotStatusText">Approve nominees first, then build the ballot.</div>
+            </div>
+            <div id="approvedNomineePreview" class="list"></div>
+            <div class="sectionHead" style="margin-top:18px; margin-bottom:12px;">
+              <div>
+                <h3 class="sectionTitle" style="font-size:22px;">Saved Ballot Preview</h3>
+                <p class="sectionCopy">One ballot item per election in this first release.</p>
+              </div>
+            </div>
+            <div id="savedBallotList" class="list"></div>
+          </div>
+        </section>
+
+        <section class="zummee-section-card voting-hero-card liveResultsCard">
+          <div class="zIn">
+            <div class="sectionHead">
+              <div>
+                <h2 class="sectionTitle" style="font-size:26px;">Live Results</h2>
+                <p class="sectionCopy">Residents cannot see this panel while voting is open. Refresh anytime or let it auto-refresh.</p>
+              </div>
+              <span class="statusPill" id="resultsPill">0 Votes</span>
+            </div>
+            <div class="statusBar">
+              <div class="statusText" id="resultsStatusText">Refresh results after residents vote.</div>
+              <div class="btnRow">
+                <button class="btn secondary miniBtn" id="refreshResultsBtn" type="button">Refresh Results</button>
+              </div>
+            </div>
+            <div class="sidebarStat" style="margin-bottom:14px;">
+              <div class="sidebarRow"><strong>Total Submissions</strong><span class="muted tiny" id="resultsSubmissionCount">0</span></div>
+              <div class="sidebarRow"><strong>Last Updated</strong><span class="muted tiny" id="resultsUpdatedAt">—</span></div>
+              <div class="sidebarRow"><strong>Weighted Votes</strong><span class="muted tiny" id="resultsWeightedCount">0</span></div>
+            </div>
+            <div id="resultsList" class="list"></div>
+          </div>
+        </section>
+
+
+        <section class="zummee-section-card zummee-section-card--blue">
+          <div class="zIn">
+            <div class="sectionHead">
+              <div>
+                <h2 class="sectionTitle" style="font-size:26px;">Proxy Management</h2>
+                <p class="sectionCopy">Assign valid proxies to a holder resident for this election. Grantors are locked from voting and holders receive increased vote weight.</p>
+              </div>
+              <span class="statusPill" id="proxyPill">0 Active</span>
+            </div>
+            <div class="fieldGrid">
+              <div class="field">
+                <label>Grantor Resident</label>
+                <input id="proxyGrantorResidentId" type="hidden">
+                <div class="pickerFieldBox">
+                  <div id="proxyGrantorResidentDisplay" class="pickerValue isEmpty">Choose resident giving proxy</div>
+                  <div class="pickerActions">
+                    <button class="btn secondary miniBtn" id="chooseProxyGrantorBtn" type="button">Choose</button>
+                    <button class="btn ghost miniBtn" id="clearProxyGrantorBtn" type="button">Clear</button>
+                  </div>
+                </div>
+              </div>
+              <div class="field">
+                <label>Holder Resident</label>
+                <input id="proxyHolderResidentId" type="hidden">
+                <div class="pickerFieldBox">
+                  <div id="proxyHolderResidentDisplay" class="pickerValue isEmpty">Choose resident receiving proxy</div>
+                  <div class="pickerActions">
+                    <button class="btn secondary miniBtn" id="chooseProxyHolderBtn" type="button">Choose</button>
+                    <button class="btn ghost miniBtn" id="clearProxyHolderBtn" type="button">Clear</button>
+                  </div>
+                </div>
+                <div class="muted tiny" id="proxyHolderWeightText" style="margin-top:8px;">Current holder voting power: 1</div>
+              </div>
+              <div class="field fieldWide">
+                <label for="proxyNotes">Notes</label>
+                <textarea id="proxyNotes" placeholder="Optional validation notes for this proxy."></textarea>
+              </div>
+            </div>
+            <div class="btnRow" style="margin-top:16px;">
+              <button class="btn primary" id="assignProxyBtn" type="button">Assign Proxy</button>
+              <button class="btn secondary" id="refreshProxyBtn" type="button">Refresh Proxies</button>
+            </div>
+            <div class="statusBar">
+              <div class="statusText" id="proxyStatusText">Assign proxies after the voting event is saved.</div>
+            </div>
+            <div id="proxyList" class="list"></div>
+          </div>
+        </section>
+        <section class="zummee-section-card zummee-section-card--blue">
+          <div class="zIn">
+            <div class="sectionHead">
+              <div>
+                <h2 class="sectionTitle" style="font-size:26px;">Setup Note</h2>
+                <p class="sectionCopy">This page expects the online voting tables below.</p>
+              </div>
+            </div>
+            <div class="emptyState">
+              <strong>Run the SQL setup first</strong>
+              Use <code>full voting SQL setup</code> from this build before testing saves. If the tables are missing, this page will show a friendly setup warning instead of silently failing.
+            </div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <div class="toastWrap" id="toastWrap"></div>
+
+  <script>
+    (function(){
+      var state = {
+        eventId: '',
+        nominees: [],
+        currentEvent: null,
+        user: null,
+        schemaReady: true,
+        resultsByOptionId: {},
+        submissionCount: 0,
+        weightedSubmissionCount: 0,
+        proxyAssignments: [],
+        resultsUpdatedAt: '',
+        resultsSignature: ''
+      };
+
+      var residentPicker = {
+        mode: 'grantor',
+        residents: []
+      };
+
+      function $(id){ return document.getElementById(id); }
+      function esc(v){ return String(v == null ? '' : v).replace(/[&<>"']/g, function(ch){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch]; }); }
+      function showToast(msg, detail, isError){
+        var wrap = $('toastWrap');
+        if(!wrap) return;
+        var el = document.createElement('div');
+        el.className = 'toast' + (isError ? ' error' : '');
+        el.innerHTML = esc(msg) + (detail ? '<small>' + esc(detail) + '</small>' : '');
+        wrap.appendChild(el);
+        setTimeout(function(){ el.style.opacity = '0'; el.style.transform = 'translateY(8px)'; }, 2600);
+        setTimeout(function(){ try{ el.remove(); }catch(_e){} }, 3200);
+      }
+      function activeCommunityId(){
+        try{ return String(localStorage.getItem('zummeeActiveCommunityId') || localStorage.getItem('activeCommunityId') || '').trim(); }catch(_e){ return ''; }
+      }
+      function activeCommunityName(){
+        try{ return String(localStorage.getItem('zummeeActiveCommunityName') || localStorage.getItem('activeCommunityName') || '').trim(); }catch(_e){ return ''; }
+      }
+      function setBusy(btn, busy, text){
+        if(!btn) return;
+        if(busy){ if(!btn.dataset.baseText) btn.dataset.baseText = btn.textContent; btn.disabled = true; btn.textContent = text || 'Saving…'; }
+        else { btn.disabled = false; btn.textContent = btn.dataset.baseText || btn.textContent; }
+      }
+      function toInputDateTime(v){
+        if(!v) return '';
+        try{
+          var d = new Date(v);
+          if(isNaN(d.getTime())) return '';
+          var off = d.getTimezoneOffset();
+          var local = new Date(d.getTime() - off * 60000);
+          return local.toISOString().slice(0,16);
+        }catch(_e){ return ''; }
+      }
+      function fromInputDateTime(v){
+        return String(v || '').trim() ? new Date(v).toISOString() : null;
+      }
+      function niceDateRange(a,b){
+        var aa = String(a || '').trim(), bb = String(b || '').trim();
+        if(!aa && !bb) return 'Not set';
+        function fmt(x){ try{ return new Date(x).toLocaleString([], { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' }); }catch(_e){ return x; } }
+        if(aa && bb) return fmt(aa) + ' → ' + fmt(bb);
+        return fmt(aa || bb);
+      }
+      function getEventPayload(){
+        return {
+          title: $('eventTitle').value.trim(),
+          election_type: $('eventType').value,
+          description: $('eventDescription').value.trim(),
+          voting_start_at: fromInputDateTime($('votingStartAt').value),
+          voting_end_at: fromInputDateTime($('votingEndAt').value),
+          nomination_open: !!$('nominationOpen').checked,
+          nomination_start_at: fromInputDateTime($('nominationStartAt').value),
+          nomination_end_at: fromInputDateTime($('nominationEndAt').value)
+        };
+      }
+      function syncNominationUi(){
+        var isOpen = !!($('nominationOpen') && $('nominationOpen').checked);
+        $('summaryNominationStatus').textContent = isOpen ? 'Open' : 'Closed';
+        $('nominationWindowPill').textContent = state.eventId ? (isOpen ? 'Open' : 'Closed') : 'No event yet';
+        $('sideNominationStatus').textContent = isOpen ? 'Open' : 'Closed';
+        $('toggleNominationBtn').textContent = isOpen ? 'Close Nominations' : 'Open Nominations';
+      }
+      function setNominationLoading(isLoading){
+        var row = $('nominationToggleRow');
+        var pill = $('nominationWindowPill');
+        if(row) row.classList[isLoading ? 'add' : 'remove']('is-loading-controls');
+        ['nominationOpen','nominationStartAt','nominationEndAt','saveNominationWindowBtn','toggleNominationBtn'].forEach(function(id){
+          var el = $(id);
+          if(el) el.disabled = !!isLoading;
+        });
+        if(pill){
+          pill.classList[isLoading ? 'add' : 'remove']('statusPill--loading');
+          if(isLoading) pill.textContent = 'Loading…';
+        }
+      }
+      function updateSummary(){
+        var ev = state.currentEvent || null;
+        var nominees = Array.isArray(state.nominees) ? state.nominees : [];
+        var approved = nominees.filter(function(x){ return String((x && x.status) || '').toLowerCase() === 'approved'; }).length;
+        $('summaryEvent').textContent = ev && ev.title ? ev.title : '—';
+        $('summaryNomineeCount').textContent = String(nominees.length || 0);
+        $('summaryApprovedCount').textContent = String(approved);
+        $('communityBadge').textContent = activeCommunityName() || 'No community selected';
+        $('eventStatusPill').textContent = state.eventId ? 'Saved' : 'Unsaved';
+        $('queuePill').textContent = String(nominees.length || 0) + ' Nominee' + ((nominees.length || 0) === 1 ? '' : 's');
+        $('queueStatusText').textContent = state.eventId ? 'Manage pending and approved nominees for this event.' : 'Save a voting event first, then nominees can be added here.';
+        $('sideEventTitle').textContent = ev && ev.title ? ev.title : '—';
+        $('sideEventType').textContent = ev && ev.election_type ? ev.election_type : '—';
+        $('sideVotingWindow').textContent = ev ? niceDateRange(ev.voting_start_at, ev.voting_end_at) : 'Not set';
+        $('sideNominationWindow').textContent = ev ? niceDateRange(ev.nomination_start_at, ev.nomination_end_at) : 'Not set';
+        syncNominationUi();
+        var approvedRows = nominees.filter(function(x){ return String((x && x.status) || '').toLowerCase() === 'approved'; });
+        $('ballotBuilderPill').textContent = state.ballotItems && state.ballotItems.length ? 'Ballot Ready' : 'No ballot yet';
+        $('ballotStatusText').textContent = !state.eventId ? 'Save the voting event first.' : (!approvedRows.length ? 'Approve nominees first, then build the ballot.' : (state.ballotItems && state.ballotItems.length ? 'Saved ballot is shown below.' : 'Approved nominees are ready for ballot creation.'));
+        if(!activeCommunityId()) $('communityBadge').textContent = 'Select a community in the header';
+      }
+      function renderEvent(ev){
+        state.currentEvent = ev || null;
+        state.eventId = ev && ev.id ? String(ev.id) : '';
+        $('eventTitle').value = ev && ev.title ? ev.title : '';
+        $('eventType').value = ev && ev.election_type ? ev.election_type : 'Board Election';
+        $('eventDescription').value = ev && ev.description ? ev.description : '';
+        $('votingStartAt').value = toInputDateTime(ev && ev.voting_start_at);
+        $('votingEndAt').value = toInputDateTime(ev && ev.voting_end_at);
+        var nominationsAreOpen = !!(ev && (ev.nomination_open === true || String(ev.status || '').toLowerCase() === 'nominations'));
+        $('nominationOpen').checked = nominationsAreOpen;
+        $('nominationStartAt').value = toInputDateTime(ev && ev.nomination_start_at);
+        $('nominationEndAt').value = toInputDateTime(ev && ev.nomination_end_at);
+        updateSummary();
+      }
+
+      function safeLocalGet(key){
+        try{ return String(localStorage.getItem(key) || '').trim(); }catch(_e){ return ''; }
+      }
+      function safeLocalSet(key, val){
+        try{ localStorage.setItem(key, String(val == null ? '' : val)); }catch(_e){}
+      }
+      async function requireUid(){
+        var sb = await getClient();
+        var ses = await sb.auth.getSession();
+        var uid = ses && ses.data && ses.data.session && ses.data.session.user ? String(ses.data.session.user.id || '').trim() : '';
+        if(!uid) throw new Error('No active session');
+        return uid;
+      }
+      async function getHeaderProfile(){
+        var sb = await getClient();
+        var uid = await requireUid();
+        var profRow = null;
+        var selected = '';
+        try{
+          var qp = await sb.from('profiles').select('selected_community_id,company,company_id,role').eq('id', uid).maybeSingle();
+          if(!qp.error && qp.data){
+            profRow = qp.data;
+            selected = String(qp.data.selected_community_id || '').trim();
+          }
+        }catch(_e){}
+        var ud = null;
+        try{
+          var qu = await sb.from('userdirectory').select('company_id,role,approved,profile_name,profile_email').eq('auth_user_id', uid).maybeSingle();
+          if(!qu.error) ud = qu.data;
+        }catch(_e){}
+        var company_id = String((ud && ud.company_id) || (profRow && profRow.company_id) || localStorage.getItem('zummee_active_company_id') || '').trim();
+        var company = String((profRow && profRow.company) || localStorage.getItem('zummee_active_company_name') || '').trim();
+        var role = String((ud && ud.role) || (profRow && profRow.role) || '').trim();
+        if(!company && company_id){
+          try{
+            var qc = await sb.from('Companies').select('name,code').eq('id', company_id).maybeSingle();
+            if(!qc.error && qc.data){ company = String(qc.data.name || qc.data.code || '').trim(); }
+          }catch(_e){}
+        }
+        return { uid: uid, company: company, company_id: company_id, role: role, selected: selected };
+      }
+      async function getCompanyRow(companyNameOrId){
+        try{
+          var sb = await getClient();
+          var v = String(companyNameOrId || '').trim();
+          if(!v) return null;
+          var isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
+          if(isUuid){
+            var q0 = await sb.from('Companies').select('id,name,code,active').eq('id', v).maybeSingle();
+            return q0 && !q0.error ? (q0.data || null) : null;
+          }
+          var q = await sb.from('Companies').select('id,name,code,active').ilike('name', v).limit(1);
+          if(q && !q.error && Array.isArray(q.data) && q.data.length) return q.data[0];
+          q = await sb.from('Companies').select('id,name,code,active').ilike('code', v).limit(1);
+          if(q && !q.error && Array.isArray(q.data) && q.data.length) return q.data[0];
+        }catch(_e){}
+        return null;
+      }
+      async function listHeaderCommunities(profile){
+        profile = profile || {};
+        var company = String(profile.company || '').trim();
+        var companyId = String(profile.company_id || '').trim();
+        var role = String(profile.role || '').trim().toLowerCase();
+        var isPriv = role.indexOf('admin') !== -1 || role.indexOf('supervisor') !== -1 || role.indexOf('companyadmin') !== -1;
+        var uid = String(profile.uid || '').trim();
+        var sb = await getClient();
+        if(!companyId && company){
+          var crow = await getCompanyRow(company);
+          companyId = crow && crow.id ? String(crow.id).trim() : '';
+        }
+        try{
+          if(companyId){
+            if(isPriv){
+              var qAll = await sb.from('PropertyCommunities').select('id,name').eq('company_id', companyId).order('name', { ascending:true });
+              if(!qAll.error && Array.isArray(qAll.data)) return qAll.data.map(function(c){ return { id:String(c.id), name:String(c.name) }; });
+            } else if(uid){
+              var qc = await sb.from('CommunityAssignments').select('community_id').eq('user_id', uid);
+              if(!qc.error){
+                var ids = (qc.data || []).map(function(r){ return String(r.community_id || '').trim(); }).filter(Boolean);
+                if(!ids.length) return [];
+                var qAssigned = await sb.from('PropertyCommunities').select('id,name').eq('company_id', companyId).in('id', ids).order('name', { ascending:true });
+                if(!qAssigned.error && Array.isArray(qAssigned.data)) return qAssigned.data.map(function(c){ return { id:String(c.id), name:String(c.name) }; });
+              }
+            }
+          }
+        }catch(_e){}
+        var fallbackKeys = [];
+        try{
+          if(window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.COMMUNITIES_KEY) fallbackKeys.push(window.ZUMMEE_KEYS.COMMUNITIES_KEY);
+          if(window.COMMUNITIES_KEY) fallbackKeys.push(window.COMMUNITIES_KEY);
+        }catch(_e){}
+        if(uid) fallbackKeys.push('zummee_communities_v1__user_' + uid);
+        fallbackKeys.push('zummee_communities_v1');
+        if(company) {
+          fallbackKeys.push('zummee_company_communities_v1__' + company);
+          fallbackKeys.push('zummee_company_communities_v1__' + company.toLowerCase());
+        }
+        var seen = {};
+        for(var i=0;i<fallbackKeys.length;i++){
+          var key = String(fallbackKeys[i] || '').trim();
+          if(!key || seen[key]) continue;
+          seen[key] = true;
+          try{
+            var raw = localStorage.getItem(key) || '[]';
+            var arr = JSON.parse(raw);
+            if(Array.isArray(arr) && arr.length){
+              return arr.filter(function(c){ return c && c.id && c.name; }).map(function(c){ return { id:String(c.id), name:String(c.name) }; }).sort(function(a,b){ return a.name.localeCompare(b.name); });
+            }
+          }catch(_e){}
+        }
+        return [];
+      }
+      function bindHeaderCommunitySelect(select){
+        if(!select || select.dataset.boundCommunityChange === '1') return;
+        select.dataset.boundCommunityChange = '1';
+        select.addEventListener('change', async function(){
+          var val = String(select.value || '').trim();
+          var txt = select.selectedOptions && select.selectedOptions[0] ? String(select.selectedOptions[0].textContent || '').trim() : '';
+          safeLocalSet('zummee_selected_community_id', val);
+          safeLocalSet('zummee_selected_community_v1', val);
+          safeLocalSet('zummeeActiveCommunityId', val);
+          safeLocalSet('activeCommunityId', val);
+          safeLocalSet('zummeeActiveCommunityName', txt);
+          safeLocalSet('activeCommunityName', txt);
+          try{
+            var sb = await getClient();
+            var uid = await requireUid();
+            await sb.from('profiles').update({ selected_community_id: val || null }).eq('id', uid);
+          }catch(_e){}
+          try{ document.dispatchEvent(new CustomEvent('community:changed', { detail:{ community_id: val } })); }catch(_e){}
+        });
+      }
+      function renderHeaderCommunitySelect(select, list, selectedId){
+        if(!select) return;
+        var desired = String(selectedId || safeLocalGet('zummeeActiveCommunityId') || safeLocalGet('activeCommunityId') || safeLocalGet('zummee_selected_community_id') || '').trim();
+        select.innerHTML = '';
+        var o0 = document.createElement('option');
+        o0.value = '';
+        o0.textContent = list.length ? 'Select a community' : 'No communities yet';
+        select.appendChild(o0);
+        list.forEach(function(c){
+          var o = document.createElement('option');
+          o.value = String(c.id);
+          o.textContent = c.name;
+          select.appendChild(o);
+        });
+        var resolved = '';
+        if(desired && list.some(function(c){ return String(c.id) === desired; })) resolved = desired;
+        else if(desired){
+          var byName = list.find(function(c){ return String(c.name || '').trim().toLowerCase() === desired.toLowerCase(); });
+          if(byName) resolved = String(byName.id);
+        }
+        if(resolved){
+          select.value = resolved;
+          var opt = select.selectedOptions && select.selectedOptions[0] ? select.selectedOptions[0] : null;
+          var txt = opt ? String(opt.textContent || '').trim() : '';
+          safeLocalSet('zummee_selected_community_id', resolved);
+          safeLocalSet('zummee_selected_community_v1', resolved);
+          safeLocalSet('zummeeActiveCommunityId', resolved);
+          safeLocalSet('activeCommunityId', resolved);
+          safeLocalSet('zummeeActiveCommunityName', txt);
+          safeLocalSet('activeCommunityName', txt);
+        } else {
+          select.value = '';
+        }
+        select.disabled = false;
+        bindHeaderCommunitySelect(select);
+      }
+      async function initHeaderCommunityPicker(){
+        var select = document.getElementById('zummeeCommunitySelect');
+        if(!select) return;
+        select.disabled = true;
+        select.innerHTML = '<option value="">Loading communities…</option>';
+        try{
+          var profile = await getHeaderProfile();
+          var list = await listHeaderCommunities(profile);
+          renderHeaderCommunitySelect(select, list, profile.selected);
+        }catch(err){
+          select.disabled = false;
+          select.innerHTML = '<option value="">No communities yet</option>';
+          console.warn('Online Voting header community load failed:', err);
+        }
+      }
+
+      function renderNominees(){
+        var root = $('nomineeList');
+        var rows = Array.isArray(state.nominees) ? state.nominees : [];
+        if(!state.eventId){
+          root.innerHTML = '<div class="emptyState"><strong>No voting event saved yet</strong>Save the Election Setup section first. Then this nominee queue will load and manual nominees can be added.</div>';
+          updateSummary();
+          return;
+        }
+        if(!rows.length){
+          root.innerHTML = '<div class="emptyState"><strong>No nominees yet</strong>Use the Add Nominee form above to create the first nominee for this event.</div>';
+          updateSummary();
+          return;
+        }
+        root.innerHTML = rows.map(function(row){
+          var status = String((row && row.status) || 'pending').toLowerCase();
+          var sub = [];
+          if(row.nominee_email) sub.push(row.nominee_email);
+          if(row.unit_label) sub.push(row.unit_label);
+          if(row.notes) sub.push(row.notes);
+          var meta = sub.length ? sub.join(' • ') : 'No extra nominee notes yet.';
+          var approveBtn = status === 'approved' ? '' : '<button class="btn secondary miniBtn" data-action="approve" data-id="' + esc(row.id) + '">Approve</button>';
+          return '' +
+            '<div class="listItem">' +
+              '<div>' +
+                '<p class="listTitle">' + esc(row.nominee_name || 'Unnamed nominee') + '</p>' +
+                '<p class="listMeta">' + esc(meta) + '</p>' +
+              '</div>' +
+              '<div class="listActions">' +
+                '<span class="smallPill ' + esc(status) + '">' + esc(status) + '</span>' +
+                approveBtn +
+                '<button class="btn danger miniBtn" data-action="remove" data-id="' + esc(row.id) + '">Remove</button>' +
+              '</div>' +
+            '</div>';
+        }).join('');
+        updateSummary();
+      }
+
+      function renderApprovedNomineePreview(){
+        var root = $('approvedNomineePreview');
+        var rows = (state.nominees || []).filter(function(x){ return String((x && x.status) || '').toLowerCase() === 'approved'; });
+        if(!state.eventId){
+          root.innerHTML = '<div class="emptyState"><strong>No event yet</strong>Save the voting event first.</div>';
+          return;
+        }
+        if(!rows.length){
+          root.innerHTML = '<div class="emptyState"><strong>No approved nominees yet</strong>Approve nominees in the queue to feed the ballot builder.</div>';
+          return;
+        }
+        root.innerHTML = rows.map(function(row){
+          return '<div class="listItem"><div><p class="listTitle">' + esc(row.nominee_name || 'Unnamed nominee') + '</p><p class="listMeta">' + esc(row.nominee_email || 'No email on file') + '</p></div><div class="listActions"><span class="smallPill approved">approved</span></div></div>';
+        }).join('');
+      }
+
+      function renderSavedBallots(){
+        var root = $('savedBallotList');
+        var rows = Array.isArray(state.ballotItems) ? state.ballotItems : [];
+        if(!state.eventId){
+          root.innerHTML = '<div class="emptyState"><strong>No event yet</strong>Save the voting event before building the ballot.</div>';
+          return;
+        }
+        var approvedNomineeCount = Number(state.approvedNomineeCount || 0);
+        var hasNoApprovedNominees = approvedNomineeCount === 0;
+        var hasNoBallotOptions = !rows.length || rows.every(function(row){
+          return !(Array.isArray(row.voting_ballot_options) && row.voting_ballot_options.length);
+        });
+        if(hasNoApprovedNominees || hasNoBallotOptions){
+          root.innerHTML = '<div class="emptyState"><strong>No saved ballot</strong>Approve nominees to build a new ballot.</div>';
+          return;
+        }
+        root.innerHTML = rows.map(function(row){
+          var opts = Array.isArray(row.voting_ballot_options) ? row.voting_ballot_options : [];
+          var meta = (String(row.item_type || 'single').toUpperCase()) + ' • Max ' + String(row.max_selections || 1);
+          var names = opts.map(function(o){ return esc(o.custom_option_text || 'Option'); }).join(' • ');
+          return '<div class="listItem"><div><p class="listTitle">' + esc(row.title || 'Untitled ballot') + '</p><p class="listMeta">' + esc(meta) + '</p><p class="listMeta" style="margin-top:6px;">' + (names || 'No options yet') + '</p></div><div class="listActions"><span class="smallPill approved">saved</span></div></div>';
+        }).join('');
+      }
+
+      function getResultsSignature(){
+        var rows = Array.isArray(state.ballotItems) ? state.ballotItems : [];
+        if(!state.eventId) return 'no-event';
+        if(!rows.length) return 'no-ballot';
+        return rows.map(function(row){
+          var opts = Array.isArray(row.voting_ballot_options) ? row.voting_ballot_options : [];
+          return String(row.id || '') + '|' + String(row.title || '') + '|' + String(row.item_type || '') + '|' + String(row.max_selections || '') + '|' + opts.map(function(o){ return String(o.id || '') + ':' + String(o.custom_option_text || ''); }).join(',');
+        }).join('||');
+      }
+
+      function patchResultsValues(){
+        var rows = Array.isArray(state.ballotItems) ? state.ballotItems : [];
+        rows.forEach(function(row){
+          var opts = Array.isArray(row.voting_ballot_options) ? row.voting_ballot_options : [];
+          opts.forEach(function(o){
+            var votes = state.resultsByOptionId[o.id] || 0;
+            var pct = state.weightedSubmissionCount ? Math.round((votes / state.weightedSubmissionCount) * 100) : 0;
+            var item = document.querySelector('[data-result-option-id="' + String(o.id) + '"]');
+            if(!item) return;
+            var countEl = item.querySelector('[data-role="voteCount"]');
+            var metaEl = item.querySelector('[data-role="voteMeta"]');
+            if(countEl) countEl.textContent = String(votes);
+            if(metaEl) metaEl.textContent = String(votes) + ' weighted vote' + (votes === 1 ? '' : 's') + ' • ' + String(pct) + '% of weighted ballots';
+          });
+        });
+      }
+
+      function renderResults(forceFull){
+        var root = $('resultsList');
+        var pill = $('resultsPill');
+        var status = $('resultsStatusText');
+        var count = $('resultsSubmissionCount');
+        var updated = $('resultsUpdatedAt');
+        var weighted = $('resultsWeightedCount');
+        if(!root) return;
+        count.textContent = String(state.submissionCount || 0);
+        updated.textContent = state.resultsUpdatedAt || '—';
+        if(weighted) weighted.textContent = String(state.weightedSubmissionCount || 0);
+        pill.textContent = String(state.weightedSubmissionCount || 0) + ' Weighted Vote' + ((state.weightedSubmissionCount || 0) === 1 ? '' : 's');
+        var rows = Array.isArray(state.ballotItems) ? state.ballotItems : [];
+        var approvedNomineeCount = Number(state.approvedNomineeCount || 0);
+        var hasNoApprovedNominees = approvedNomineeCount === 0;
+        var hasNoOptions = !rows.length || rows.every(function(row){
+          return !(Array.isArray(row.voting_ballot_options) && row.voting_ballot_options.length);
+        });
+        if(hasNoApprovedNominees || hasNoOptions){
+          state.resultsSignature = 'no-ballot';
+          state.submissionCount = 0;
+          state.weightedSubmissionCount = 0;
+          count.textContent = '0';
+          if(weighted) weighted.textContent = '0';
+          pill.textContent = '0 Weighted Votes';
+          root.innerHTML = '<div class="emptyState"><strong>No active ballot</strong>Add nominees to begin collecting votes.</div>';
+          status.textContent = 'No active ballot options are available right now.';
+          return;
+        }
+        var signature = getResultsSignature();
+        if(!forceFull && state.resultsSignature === signature && state.eventId && rows.length){
+          status.textContent = (state.submissionCount || 0) ? 'Live weighted vote totals are shown below.' : 'No resident votes recorded yet.';
+          patchResultsValues();
+          return;
+        }
+        state.resultsSignature = signature;
+        if(!state.eventId){
+          root.innerHTML = '<div class="emptyState"><strong>No event yet</strong>Save a voting event before reviewing results.</div>';
+          status.textContent = 'Create and save an event first.';
+          return;
+        }
+        status.textContent = (state.submissionCount || 0) ? 'Live weighted vote totals are shown below.' : 'No resident votes recorded yet.';
+        root.innerHTML = rows.map(function(row){
+          var opts = Array.isArray(row.voting_ballot_options) ? row.voting_ballot_options.slice() : [];
+          opts.sort(function(a,b){
+            var av = state.resultsByOptionId[a.id] || 0;
+            var bv = state.resultsByOptionId[b.id] || 0;
+            if(bv !== av) return bv - av;
+            return String(a.custom_option_text || '').localeCompare(String(b.custom_option_text || ''));
+          });
+          var top = '<div class="listItem"><div><p class="listTitle">' + esc(row.title || 'Untitled ballot') + '</p><p class="listMeta">' + esc(String(row.item_type || 'single').toUpperCase()) + ' • Max ' + esc(String(row.max_selections || 1)) + '</p></div><div class="listActions"><span class="statusPill">' + esc(String(opts.length)) + ' Options</span></div></div>';
+          var body = opts.map(function(o){
+            var votes = state.resultsByOptionId[o.id] || 0;
+            var pct = state.weightedSubmissionCount ? Math.round((votes / state.weightedSubmissionCount) * 100) : 0;
+            return '<div class="listItem" data-result-option-id="' + esc(String(o.id || '')) + '"><div><p class="listTitle">' + esc(o.custom_option_text || 'Option') + '</p><p class="listMeta" data-role="voteMeta">' + esc(String(votes)) + ' weighted vote' + (votes === 1 ? '' : 's') + ' • ' + esc(String(pct)) + '% of weighted ballots</p></div><div class="listActions"><span class="smallPill approved" data-role="voteCount">' + esc(String(votes)) + '</span></div></div>';
+          }).join('');
+          return top + body;
+        }).join('');
+      }
+
+      function renderProxyAssignments(){
+        var root = $('proxyList');
+        var pill = $('proxyPill');
+        var status = $('proxyStatusText');
+        if(!root) return;
+        var rows = Array.isArray(state.proxyAssignments) ? state.proxyAssignments : [];
+        var activeCount = rows.filter(function(r){ return String((r && r.status) || '').toLowerCase() === 'active'; }).length;
+        if(pill) pill.textContent = String(activeCount) + ' Active';
+        if(!state.eventId){
+          root.innerHTML = '<div class="emptyState"><strong>No event yet</strong>Save a voting event before assigning proxies.</div>';
+          if(status) status.textContent = 'Save the voting event first.';
+          return;
+        }
+        if(!rows.length){
+          root.innerHTML = `<div class="emptyState"><strong>No proxy assignments yet</strong>Assign a valid proxy to increase a holder resident's voting weight.</div>`;
+          if(status) status.textContent = 'No proxy assignments for this event yet.';
+          return;
+        }
+        var holderCounts = rows.filter(function(r){ return String((r && r.status) || '').toLowerCase() !== 'revoked'; }).reduce(function(acc,row){
+          var holder = String((row && row.holder_resident_id) || '');
+          if(holder) acc[holder] = (acc[holder] || 0) + 1;
+          return acc;
+        }, {});
+        root.innerHTML = rows.map(function(row){
+          var st = String((row && row.status) || 'active').toLowerCase();
+          var weight = 1 + (holderCounts[String(row.holder_resident_id || '')] || 0);
+          var notes = row.notes ? esc(row.notes) : 'No notes';
+          var revoke = st === 'active' ? '<button class="btn danger miniBtn" data-action="revokeProxy" data-id="' + esc(row.id) + '">Revoke</button>' : '';
+          return '<div class="listItem"><div><p class="listMeta">' + esc(st) + ' • Holder weight ' + esc(String(weight)) + '</p><p class="listMeta" style="margin-top:6px;">' + notes + '</p></div><div class="listActions"><span class="smallPill ' + esc(st) + '">' + esc(st) + '</span>' + revoke + '</div></div>';
+        }).join('');
+        if(status) status.textContent = activeCount ? 'Active proxy assignments are shown below.' : 'No active proxy assignments right now.';
+        updateProxyHolderWeightText();
+      }
+
+      async function loadProxyAssignments(){
+        state.proxyAssignments = [];
+        renderProxyAssignments();
+        if(!state.eventId) return;
+        try{
+          var sb = await getClient();
+          var q = await sb.from('voting_proxy_assignments').select('*').eq('voting_event_id', state.eventId).order('created_at', { ascending:false });
+          if(q.error) throw q.error;
+          state.proxyAssignments = q.data || [];
+          renderProxyAssignments();
+        }catch(err){
+          $('proxyStatusText').textContent = 'Could not load proxy assignments right now.';
+          showToast('Could not load proxies', String((err && err.message) || err || 'Unknown error'), true);
+        }
+      }
+
+
+      async function loadResults(){
+        state.resultsByOptionId = {};
+        state.submissionCount = 0;
+        state.weightedSubmissionCount = 0;
+        state.approvedNomineeCount = 0;
+        state.resultsUpdatedAt = new Date().toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
+        renderResults(true);
+        if(!state.eventId) return;
+        try{
+          var sb = await getClient();
+          var approved = await sb.from('voting_nominees').select('id', { count:'exact' }).eq('voting_event_id', state.eventId).eq('status', 'approved');
+          if(approved.error) throw approved.error;
+          state.approvedNomineeCount = Number(approved.count || ((approved.data || []).length) || 0);
+          var submissions = await sb.from('voting_vote_submissions').select('id,vote_weight', { count:'exact' }).eq('voting_event_id', state.eventId);
+          if(submissions.error) throw submissions.error;
+          state.submissionCount = Number(submissions.count || 0);
+          var weightsBySubmissionId = (submissions.data || []).reduce(function(acc,row){ if(row && row.id) acc[row.id] = Number(row.vote_weight || 1); return acc; }, {});
+          state.weightedSubmissionCount = (submissions.data || []).reduce(function(sum,row){ return sum + Number((row && row.vote_weight) || 1); }, 0);
+          var sels = await sb.from('voting_vote_selections').select('selected_option_id,submission_id').eq('voting_event_id', state.eventId);
+          if(sels.error) throw sels.error;
+          state.resultsByOptionId = (sels.data || []).reduce(function(acc,row){
+            if(row && row.selected_option_id){ var w = weightsBySubmissionId[row.submission_id] || 1; acc[row.selected_option_id] = (acc[row.selected_option_id] || 0) + w; }
+            return acc;
+          }, {});
+          state.resultsUpdatedAt = new Date().toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
+          renderResults();
+        }catch(err){
+          $('resultsStatusText').textContent = 'Could not load live results right now.';
+          showToast('Could not load results', String((err && err.message) || err || 'Unknown error'), true);
+        }
+      }
+
+      async function createBallot(){
+        if(!state.eventId){ showToast('Save the voting event first', 'Ballots must belong to a saved voting event.', true); return; }
+        var approvedRows = (state.nominees || []).filter(function(x){ return String((x && x.status) || '').toLowerCase() === 'approved'; });
+        if(!approvedRows.length){ showToast('No approved nominees yet', 'Approve nominees in the queue before building the ballot.', true); return; }
+        var title = $('ballotTitle').value.trim() || 'Board Member Election';
+        var itemType = $('ballotType').value || 'single';
+        var maxSelections = parseInt($('ballotMaxSelections').value || '1', 10);
+        if(!isFinite(maxSelections) || maxSelections < 1) maxSelections = 1;
+        if(itemType === 'single') maxSelections = 1;
+        if(itemType === 'multi' && maxSelections > approvedRows.length){
+          showToast('Too many selections', 'Max selections cannot exceed approved nominees.', true);
+          return;
+        }
+        var btn = $('createBallotBtn');
+        setBusy(btn, true, 'Creating Ballot…');
+        try{
+          var sb = await getClient();
+          var existing = state.ballotItems && state.ballotItems[0] ? state.ballotItems[0] : null;
+          var ballotItemId = '';
+          if(existing && existing.id){
+            var upd = await sb.from('voting_ballot_items').update({ title:title, item_type:itemType, max_selections:maxSelections, sort_order:1 }).eq('id', existing.id).select().single();
+            if(upd.error) throw upd.error;
+            ballotItemId = String(upd.data.id);
+            var del = await sb.from('voting_ballot_options').delete().eq('ballot_item_id', ballotItemId);
+            if(del.error) throw del.error;
+          } else {
+            var ins = await sb.from('voting_ballot_items').insert({ voting_event_id: state.eventId, title:title, item_type:itemType, max_selections:maxSelections, sort_order:1 }).select().single();
+            if(ins.error) throw ins.error;
+            ballotItemId = String(ins.data.id);
+          }
+          var payload = approvedRows.map(function(row, idx){
+            return { ballot_item_id: ballotItemId, nominee_id: row.id, custom_option_text: row.nominee_name || 'Nominee', sort_order: idx + 1 };
+          });
+          var opt = await sb.from('voting_ballot_options').insert(payload);
+          if(opt.error) throw opt.error;
+          showToast('Ballot created', itemType === 'multi' ? ('Residents may choose up to ' + maxSelections + '.') : 'Residents may choose one nominee.');
+          await loadVotingData();
+        }catch(err){
+          showToast('Could not create ballot', String((err && err.message) || err || 'Unknown error'), true);
+        }finally{
+          setBusy(btn, false);
+        }
+      }
+      async function getClient(){
+        if(typeof ensureSupabase === 'function') return await ensureSupabase();
+        if(window.supabaseClient && typeof window.supabaseClient.from === 'function') return window.supabaseClient;
+        if(window.sb && typeof window.sb.from === 'function') return window.sb;
+        throw new Error('Supabase client not ready');
+      }
+      async function getUser(){
+        if(state.user) return state.user;
+        var sb = await getClient();
+        var ses = await sb.auth.getSession();
+        state.user = ses && ses.data && ses.data.session ? ses.data.session.user : null;
+        return state.user;
+      }
+      async function loadVotingData(){
+        setNominationLoading(true);
+        var communityId = activeCommunityId();
+        var communityName = activeCommunityName();
+        if(!communityId){
+          renderEvent(null);
+          state.nominees = [];
+          state.ballotItems = [];
+          renderNominees();
+          renderApprovedNomineePreview();
+          renderSavedBallots();
+          renderResults();
+          setNominationLoading(false);
+          showToast('Select a community first', 'Use the community picker in the Zummee header before working on Online Voting.', true);
+          return;
+        }
+        try{
+          var sb = await getClient();
+          var q = await sb
+            .from('voting_events')
+            .select('*')
+            .eq('community_id', communityId)
+            .order('created_at', { ascending:false })
+            .limit(1);
+          if(q.error) throw q.error;
+          var ev = q.data && q.data[0] ? q.data[0] : null;
+          renderEvent(ev);
+          if(ev && ev.id){
+            var n = await sb
+              .from('voting_nominees')
+              .select('*')
+              .eq('voting_event_id', ev.id)
+              .order('submitted_at', { ascending:false });
+            if(n.error) throw n.error;
+            state.nominees = n.data || [];
+            var b = await sb
+              .from('voting_ballot_items')
+              .select('id,title,item_type,max_selections,sort_order,voting_ballot_options(id,custom_option_text,sort_order)')
+              .eq('voting_event_id', ev.id)
+              .order('sort_order', { ascending:true });
+            if(b.error) throw b.error;
+            state.ballotItems = (b.data || []).map(function(item){
+              item.voting_ballot_options = Array.isArray(item.voting_ballot_options) ? item.voting_ballot_options.sort(function(a,b){ return (a.sort_order||0) - (b.sort_order||0); }) : [];
+              return item;
+            });
+          } else {
+            state.nominees = [];
+            state.ballotItems = [];
+          }
+          renderNominees();
+          renderApprovedNomineePreview();
+          renderSavedBallots();
+          await loadResults();
+          await loadProxyAssignments();
+          setNominationLoading(false);
+        }catch(err){
+          var msg = String((err && err.message) || err || 'Could not load online voting data.');
+          state.schemaReady = false;
+          renderEvent(null);
+          state.nominees = [];
+          state.ballotItems = [];
+          renderNominees();
+          renderApprovedNomineePreview();
+          renderSavedBallots();
+          await loadResults();
+          await loadProxyAssignments();
+          setNominationLoading(false);
+          showToast('Online Voting setup is not ready yet', msg, true);
+        }
+      }
+      async function saveEvent(forceDraft){
+        var communityId = activeCommunityId();
+        var communityName = activeCommunityName();
+        if(!communityId){ showToast('Select a community first', 'Use the header community picker before saving a voting event.', true); return; }
+        var payload = getEventPayload();
+        if(!payload.title){
+          if(forceDraft){
+            payload.title = (communityName || 'Community') + ' Voting Event';
+            $('eventTitle').value = payload.title;
+          } else {
+            showToast('Election title required', 'Add an election title before saving the voting event.', true);
+            return;
+          }
+        }
+        var btn = $('saveEventBtn');
+        setBusy(btn, true, 'Saving Event…');
+        try{
+          var sb = await getClient();
+          var user = await getUser();
+          var row = {
+            community_id: communityId,
+                        title: payload.title,
+            election_type: payload.election_type,
+            description: payload.description || null,
+            voting_start_at: payload.voting_start_at,
+            voting_end_at: payload.voting_end_at,
+            nomination_open: !!payload.nomination_open,
+            nomination_start_at: payload.nomination_start_at,
+            nomination_end_at: payload.nomination_end_at,
+            status: payload.nomination_open ? 'nominations' : 'draft',
+            created_by: user && user.id ? user.id : null,
+          };
+          var res;
+          if(state.eventId){
+            res = await sb.from('voting_events').update(row).eq('id', state.eventId).select().single();
+          } else {
+            res = await sb.from('voting_events').insert(row).select().single();
+          }
+          if(res.error) throw res.error;
+          renderEvent(res.data || null);
+          showToast('Voting event saved', 'The event shell is ready for nomination controls.');
+          await loadVotingData();
+        }catch(err){
+          showToast('Could not save voting event', String((err && err.message) || err || 'Unknown error'), true);
+        }finally{
+          setBusy(btn, false);
+        }
+      }
+      async function saveNominationWindow(toggleOnly){
+        if(!state.eventId){
+          showToast('Save the voting event first', 'Nomination controls need a saved voting event record.', true);
+          return;
+        }
+        var btn = $('saveNominationWindowBtn');
+        setBusy(btn, true, toggleOnly ? 'Updating…' : 'Saving Window…');
+        try{
+          var sb = await getClient();
+          var patch = {
+            nomination_open: !!$('nominationOpen').checked,
+            nomination_start_at: fromInputDateTime($('nominationStartAt').value),
+            nomination_end_at: fromInputDateTime($('nominationEndAt').value),
+            status: $('nominationOpen').checked ? 'nominations' : 'draft'
+          };
+          var res = await sb.from('voting_events').update(patch).eq('id', state.eventId).select().single();
+          if(res.error) throw res.error;
+          renderEvent(res.data || null);
+          showToast(toggleOnly ? 'Nomination status updated' : 'Nomination window saved', toggleOnly ? 'The open/closed state has been updated for this event.' : 'Start and end dates were saved.');
+          await loadVotingData();
+        }catch(err){
+          showToast('Could not save nomination controls', String((err && err.message) || err || 'Unknown error'), true);
+        }finally{
+          setBusy(btn, false);
+        }
+      }
+      async function addNominee(){
+        if(!state.eventId){ showToast('Save the voting event first', 'Nominees must belong to a saved voting event.', true); return; }
+        var name = $('nomineeName').value.trim();
+        var email = $('nomineeEmail').value.trim();
+        var unit = $('nomineeUnit').value.trim();
+        var notes = $('nomineeNotes').value.trim();
+        if(!name){ showToast('Nominee name required', 'Add the nominee name before saving.', true); return; }
+        var btn = $('addNomineeBtn');
+        setBusy(btn, true, 'Adding Nominee…');
+        try{
+          var sb = await getClient();
+          var user = await getUser();
+          var res = await sb.from('voting_nominees').insert({
+            voting_event_id: state.eventId,
+            community_id: activeCommunityId(),
+            nominee_name: name,
+            nominee_email: email || null,
+            status: 'pending',
+            submitted_by: user && user.id ? user.id : null,
+            submitted_at: new Date().toISOString()
+          }).select().single();
+          if(res.error) throw res.error;
+          $('nomineeName').value = '';
+          $('nomineeEmail').value = '';
+          $('nomineeUnit').value = '';
+          $('nomineeNotes').value = '';
+          showToast('Nominee added', 'The nominee was added to the queue as pending.');
+          await loadVotingData();
+        }catch(err){
+          showToast('Could not add nominee', String((err && err.message) || err || 'Unknown error'), true);
+        }finally{
+          setBusy(btn, false);
+        }
+      }
+      async function approveNominee(id){
+        try{
+          var sb = await getClient();
+          var res = await sb.from('voting_nominees').update({ status:'approved', approved_at:new Date().toISOString() }).eq('id', id).select().single();
+          if(res.error) throw res.error;
+          showToast('Nominee approved', 'This nominee is now ready for future ballot wiring.');
+          await loadVotingData();
+        }catch(err){
+          showToast('Could not approve nominee', String((err && err.message) || err || 'Unknown error'), true);
+        }
+      }
+      async function removeNominee(id){
+        try{
+          var sb = await getClient();
+          var res = await sb.from('voting_nominees').delete().eq('id', id);
+          if(res.error) throw res.error;
+          showToast('Nominee removed', 'The nominee was removed from this voting event.');
+          await loadVotingData();
+        }catch(err){
+          showToast('Could not remove nominee', String((err && err.message) || err || 'Unknown error'), true);
+        }
+      }
+
+      async function assignProxy(){
+        if(!state.eventId){ showToast('Save the voting event first', 'Proxy assignments must belong to a saved voting event.', true); return; }
+        var grantor = $('proxyGrantorResidentId').value.trim();
+        var holder = $('proxyHolderResidentId').value.trim();
+        var notes = $('proxyNotes').value.trim();
+        if(!grantor || !holder){ showToast('Both resident IDs are required', 'Enter both the grantor and holder resident IDs.', true); return; }
+        if(grantor === holder){ showToast('Proxy holder cannot match grantor', 'Choose a different resident to receive the proxy.', true); return; }
+        var btn = $('assignProxyBtn');
+        setBusy(btn, true, 'Assigning Proxy…');
+        try{
+          var sb = await getClient();
+          var user = await getUser();
+          var res = await sb.from('voting_proxy_assignments').insert({
+            voting_event_id: state.eventId,
+            community_id: activeCommunityId(),
+            grantor_resident_id: grantor,
+            holder_resident_id: holder,
+            status: 'active',
+            notes: notes || null,
+            validated_by: user && user.id ? user.id : null,
+            validated_at: new Date().toISOString()
+          }).select().single();
+          if(res.error) throw res.error;
+          setResidentSelection('grantor', null);
+          $('proxyNotes').value = '';
+          showToast('Proxy assigned', 'The holder resident now carries additional voting weight for this event. The holder stays selected so you can add another grantor quickly.');
+          await loadProxyAssignments();
+        }catch(err){
+          showToast('Could not assign proxy', String((err && err.message) || err || 'Unknown error'), true);
+        }finally{ setBusy(btn, false); }
+      }
+
+      async function revokeProxy(id){
+        try{
+          var sb = await getClient();
+          var res = await sb.from('voting_proxy_assignments').update({ status:'revoked' }).eq('id', id).select().single();
+          if(res.error) throw res.error;
+          showToast('Proxy revoked', 'The proxy assignment was revoked for this event.');
+          await loadProxyAssignments();
+        }catch(err){
+          showToast('Could not revoke proxy', String((err && err.message) || err || 'Unknown error'), true);
+        }
+      }
+
+
+      async function loadResidentPickerResidents(){
+        var communityId = activeCommunityId();
+        if(!communityId){ residentPicker.residents = []; renderResidentPickerList([]); return; }
+        try{
+          var sb = await getClient();
+          var res = await sb.from('resident_directory')
+            .select('id,resident_name,email,unit_number,street_address')
+            .eq('community_id', communityId)
+            .order('resident_name', { ascending:true });
+          if(res.error) throw res.error;
+          residentPicker.residents = Array.isArray(res.data) ? res.data : [];
+          filterResidentPicker();
+        }catch(err){
+          residentPicker.residents = [];
+          renderResidentPickerList([]);
+          showToast('Could not load residents', String((err && err.message) || err || 'Unknown error'), true);
+        }
+      }
+      function residentLabel(resident){
+        if(!resident) return '';
+        var name = String(resident.resident_name || '').trim() || 'Unnamed Resident';
+        var unit = String(resident.unit_number || '').trim();
+        var addr = String(resident.street_address || '').trim();
+        var email = String(resident.email || '').trim();
+        var bits = [];
+      }
+      function formatResidentMeta(resident){
+        var bits = [];
+        var unit = String((resident && resident.unit_number) || '').trim();
+        var addr = String((resident && resident.street_address) || '').trim();
+        var email = String((resident && resident.email) || '').trim();
+        if(unit) bits.push(unit);
+        if(addr) bits.push(addr);
+        if(email) bits.push(email);
+        return bits.join(' • ');
+      }
+      function renderResidentPickerList(rows){
+        var wrap = $('residentPickerList');
+        if(!wrap) return;
+        rows = Array.isArray(rows) ? rows : [];
+        if(!rows.length){
+          wrap.innerHTML = '<div class="emptyState"><strong>No residents found</strong>Try a different search or make sure the selected community has residents loaded.</div>';
+          return;
+        }
+        wrap.innerHTML = rows.map(function(r){
+          var title = esc(String(r.resident_name || '').trim() || 'Unnamed Resident');
+          var meta = esc(formatResidentMeta(r) || 'No details');
+          return '<button class="pickerItem" type="button" data-resident-id="' + esc(String(r.id || '')) + '"><strong>' + title + '</strong><span>' + meta + '</span></button>';
+        }).join('');
+      }
+      function filterResidentPicker(){
+        var q = String(($('residentPickerSearch') && $('residentPickerSearch').value) || '').trim().toLowerCase();
+        var rows = Array.isArray(residentPicker.residents) ? residentPicker.residents.slice() : [];
+        if(q){
+          rows = rows.filter(function(r){
+            return [r && r.resident_name, r && r.email, r && r.unit_number, r && r.street_address].some(function(v){ return String(v || '').toLowerCase().indexOf(q) !== -1; });
+          });
+        }
+        renderResidentPickerList(rows);
+      }
+      function setResidentSelection(mode, resident){
+        var isGrantor = String(mode || '') === 'grantor';
+        var hidden = $(isGrantor ? 'proxyGrantorResidentId' : 'proxyHolderResidentId');
+        var display = $(isGrantor ? 'proxyGrantorResidentDisplay' : 'proxyHolderResidentDisplay');
+        if(!hidden || !display) return;
+        if(!resident){
+          hidden.value = '';
+          display.textContent = isGrantor ? 'Choose resident giving proxy' : 'Choose resident receiving proxy';
+          display.classList.add('isEmpty');
+        } else {
+          hidden.value = String(resident.id || '').trim();
+          var meta = formatResidentMeta(resident);
+          display.innerHTML = '<strong>' + esc(String(resident.resident_name || '').trim() || 'Unnamed Resident') + '</strong>' + (meta ? '<span class="muted tiny" style="display:block; margin-top:6px;">' + esc(meta) + '</span>' : '');
+          display.classList.remove('isEmpty');
+        }
+        updateProxyHolderWeightPreview();
+      }
+      function updateProxyHolderWeightPreview(){
+        var holderId = String(($('proxyHolderResidentId') && $('proxyHolderResidentId').value) || '').trim();
+        var rows = Array.isArray(state.proxyAssignments) ? state.proxyAssignments : [];
+        var count = holderId ? rows.filter(function(r){ return String((r && r.holder_resident_id) || '').trim() === holderId && String((r && r.status) || '').toLowerCase() !== 'revoked'; }).length : 0;
+        var el = $('proxyHolderWeightText');
+        if(el) el.textContent = 'Current holder voting power: ' + String(1 + count);
+      }
+      async function openResidentPicker(mode){
+        residentPicker.mode = String(mode || 'grantor');
+        if($('residentPickerTitle')) $('residentPickerTitle').textContent = residentPicker.mode === 'holder' ? 'Choose Holder Resident' : 'Choose Grantor Resident';
+        if($('residentPickerSub')) $('residentPickerSub').textContent = residentPicker.mode === 'holder' ? 'Select the resident receiving proxy voting power.' : 'Select the resident giving proxy voting power.';
+        if($('residentPickerSearch')) $('residentPickerSearch').value = '';
+        if($('residentPickerModal')) {
+          $('residentPickerModal').classList.add('open');
+          $('residentPickerModal').setAttribute('aria-hidden','false');
+        }
+        await loadResidentPickerResidents();
+        setTimeout(function(){ if($('residentPickerSearch')) $('residentPickerSearch').focus(); }, 20);
+      }
+      var closeResidentPicker = function(){
+        var modal = $('residentPickerModal');
+        if(modal) {
+          modal.classList.remove('open');
+          modal.setAttribute('aria-hidden','true');
+        }
+      };
+      function bindEvents(){
+        const refreshPageBtn = $('refreshPageBtn');
+        if (refreshPageBtn) refreshPageBtn.addEventListener('click', loadVotingData);
+        $('saveEventBtn').addEventListener('click', function(){ saveEvent(false); });
+        $('createDraftBtn').addEventListener('click', function(){ saveEvent(true); });
+        $('saveNominationWindowBtn').addEventListener('click', function(){ saveNominationWindow(false); });
+        $('nominationOpen').addEventListener('change', function(){
+          syncNominationUi();
+          if(state.eventId) saveNominationWindow(true);
+        });
+        $('toggleNominationBtn').addEventListener('click', function(){
+          $('nominationOpen').checked = !$('nominationOpen').checked;
+          $('nominationOpen').dispatchEvent(new Event('change'));
+        });
+        $('addNomineeBtn').addEventListener('click', addNominee);
+        $('reloadNomineesBtn').addEventListener('click', loadVotingData);
+        $('createBallotBtn').addEventListener('click', createBallot);
+        $('reloadBallotBtn').addEventListener('click', loadVotingData);
+        if($('refreshResultsBtn')) $('refreshResultsBtn').addEventListener('click', loadResults);
+        if($('assignProxyBtn')) $('assignProxyBtn').addEventListener('click', assignProxy);
+        if($('refreshProxyBtn')) $('refreshProxyBtn').addEventListener('click', loadProxyAssignments);
+        if($('chooseProxyGrantorBtn')) $('chooseProxyGrantorBtn').addEventListener('click', function(){ void openResidentPicker('grantor'); });
+        if($('chooseProxyHolderBtn')) $('chooseProxyHolderBtn').addEventListener('click', function(){ void openResidentPicker('holder'); });
+        if($('clearProxyGrantorBtn')) $('clearProxyGrantorBtn').addEventListener('click', function(){ setResidentSelection('grantor', null); });
+        if($('clearProxyHolderBtn')) $('clearProxyHolderBtn').addEventListener('click', function(){ setResidentSelection('holder', null); });
+        if($('closeResidentPickerBtn')) $('closeResidentPickerBtn').addEventListener('click', function(){ closeResidentPicker(); });
+        if($('cancelResidentPickerBtn')) $('cancelResidentPickerBtn').addEventListener('click', function(){ closeResidentPicker(); });
+        if($('residentPickerSearch')) $('residentPickerSearch').addEventListener('input', filterResidentPicker);
+        if($('residentPickerList')) $('residentPickerList').addEventListener('click', function(e){
+          var btn = e.target && e.target.closest ? e.target.closest('[data-resident-id]') : null;
+          if(!btn) return;
+          var id = String(btn.getAttribute('data-resident-id') || '').trim();
+          var resident = (residentPicker.residents || []).find(function(r){ return String(r.id || '') === id; });
+          if(!resident) return;
+          setResidentSelection(residentPicker.mode || 'grantor', resident);
+          closeResidentPicker();
+        });
+        if($('residentPickerModal')) $('residentPickerModal').addEventListener('click', function(e){ if(e.target === $('residentPickerModal')) closeResidentPicker(); });
+        $('ballotType').addEventListener('change', function(){
+          if($('ballotType').value === 'single'){ $('ballotMaxSelections').value = '1'; $('ballotMaxSelections').setAttribute('readonly','readonly'); }
+          else { $('ballotMaxSelections').removeAttribute('readonly'); if(!$('ballotMaxSelections').value || $('ballotMaxSelections').value === '1') $('ballotMaxSelections').value = '2'; }
+        });
+        $('nomineeList').addEventListener('click', function(e){
+          var btn = e.target && e.target.closest ? e.target.closest('[data-action]') : null;
+          if(!btn) return;
+          var id = String(btn.getAttribute('data-id') || '').trim();
+          var action = String(btn.getAttribute('data-action') || '').trim();
+          if(!id || !action) return;
+          if(action === 'approve') approveNominee(id);
+          if(action === 'remove') removeNominee(id);
+          if(action === 'revokeProxy') revokeProxy(id);
+        });
+        document.addEventListener('change', function(e){
+          if(e && e.target && (e.target.id === 'zummeeCommunitySelect' || e.target.id === 'communitySelect')){
+            setTimeout(loadVotingData, 180);
+          }
+        });
+      }
+      document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && $('residentPickerModal') && $('residentPickerModal').classList.contains('open')) closeResidentPicker(); });
+      document.addEventListener('DOMContentLoaded', function(){
+        bindEvents();
+        if($('ballotType').value === 'single'){ $('ballotMaxSelections').value = '1'; $('ballotMaxSelections').setAttribute('readonly','readonly'); }
+        initHeaderCommunityPicker().finally(function(){ loadVotingData(); });
+        setInterval(function(){
+          if(document.hidden) return;
+          if(!state.eventId) return;
+          loadResults();
+        }, 10000);
+      });
+    })();
+  </script>
+
+  <div class="pickerModal" id="residentPickerModal" aria-hidden="true">
+    <div class="pickerCard">
+      <div class="pickerHead">
+        <div>
+          <p class="eyebrow" style="margin:0 0 6px;">Zummee Resident Picker</p>
+          <h3 class="pickerTitle" id="residentPickerTitle">Choose Resident</h3>
+          <p class="pickerSub" id="residentPickerSub">Select a resident from the active community.</p>
+        </div>
+        <button class="btn secondary miniBtn" id="closeResidentPickerBtn" type="button">Close</button>
+      </div>
+      <div class="pickerBody">
+        <input id="residentPickerSearch" class="pickerSearch" type="text" placeholder="Search by resident name, email, address, or unit">
+        <div id="residentPickerList" class="pickerList"></div>
+      </div>
+      <div class="pickerFoot">
+        <button class="btn ghost" id="cancelResidentPickerBtn" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+<script src="company_logo_sync.js"></script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

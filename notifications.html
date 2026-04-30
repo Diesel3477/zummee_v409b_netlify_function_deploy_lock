@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>window.ZUMMEE_BUILD="2026-04-13-notifications-step1";</script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notifications</title>
+  <link rel="stylesheet" href="shared/header.css?v=2026-03-27-1">
+  <script src="shared/header.js?v=2026-04-08-2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="shared/supabase-client.js?v=2026-04-08-2"></script>
+  
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+    :root{
+      --brand:#0f3554;
+      --text:#17324c;
+      --muted:#5d6b7a;
+      --line:rgba(15,53,84,.12);
+      --panel:#ffffff;
+      --soft:#f4f8fc;
+      --shadow:0 18px 42px rgba(15,53,84,.08);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:linear-gradient(180deg,#eef5fb 0%,#f7f9fc 100%);
+      color:var(--text);
+      font-family:Arial,Helvetica,sans-serif;
+    }
+    #zummeeHeaderMount{
+      position:sticky;
+      top:0;
+      z-index:20;
+      box-shadow:0 6px 18px rgba(15,53,84,.08);
+    }
+    .wrap{
+      max-width:1120px;
+      margin:24px auto 42px auto;
+      padding:0 16px 42px;
+    }
+    .hero,
+    .panel{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:28px;
+      box-shadow:var(--shadow);
+    }
+    .hero{
+      padding:22px 22px 18px;
+      margin-bottom:18px;
+    }
+    .heroTop{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      flex-wrap:wrap;
+    }
+    h1{
+      margin:0;
+      font-size:clamp(30px,5vw,42px);
+      line-height:1.04;
+      color:var(--brand);
+    }
+    .sub{
+      margin-top:8px;
+      color:var(--muted);
+      font-size:15px;
+    }
+    .heroStats{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .statPill{
+      min-height:44px;
+      padding:0 16px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:999px;
+      background:#f7fbff;
+      border:1px solid rgba(15,53,84,.09);
+      color:var(--brand);
+      font-weight:900;
+      font-size:14px;
+      box-shadow:0 8px 18px rgba(15,53,84,.06);
+    }
+    .panel{
+      padding:18px;
+    }
+    .toolbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom:14px;
+    }
+    .filters{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .filterBtn,
+    .actionBtn{
+      appearance:none;
+      border:1px solid rgba(15,53,84,.12);
+      background:rgba(255,255,255,.92);
+      color:var(--brand);
+      min-height:42px;
+      padding:0 14px;
+      border-radius:999px;
+      font-weight:800;
+      cursor:pointer;
+      box-shadow:0 8px 18px rgba(15,53,84,.06);
+    }
+    .filterBtn.is-active{
+      background:linear-gradient(180deg,#2d67af,#214f88);
+      color:#fff;
+      border-color:transparent;
+      box-shadow:0 12px 24px rgba(33,79,136,.24);
+    }
+    .list{
+      display:grid;
+      gap:12px;
+    }
+    .noticeEmpty{
+      padding:24px 18px;
+      text-align:center;
+      color:var(--muted);
+      font-weight:700;
+      border-radius:22px;
+      background:#f8fbff;
+      border:1px solid rgba(15,53,84,.08);
+    }
+    .noticeItem{
+      display:block;
+      text-decoration:none;
+      color:inherit;
+      padding:16px 16px 14px 18px;
+      border-radius:22px;
+      background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,251,255,.96));
+      border:1px solid rgba(15,53,84,.08);
+      box-shadow:0 12px 26px rgba(15,53,84,.06);
+      position:relative;
+      overflow:hidden;
+    }
+    .noticeItem::before{
+      content:"";
+      position:absolute;
+      left:0;
+      top:12px;
+      bottom:12px;
+      width:6px;
+      border-radius:999px;
+      background:rgba(37,99,235,.20);
+    }
+    .noticeItem.is-unread{
+      border-color:rgba(37,99,235,.16);
+      box-shadow:0 14px 28px rgba(37,99,235,.08);
+    }
+    .noticeItem.is-unread::before{
+      background:#2563eb;
+      box-shadow:0 0 0 6px rgba(37,99,235,.10);
+    }
+    .noticeItem.priority-high::before{ background:#d97706; box-shadow:0 0 0 6px rgba(217,119,6,.10); }
+    .noticeItem.priority-urgent::before{ background:#dc2626; box-shadow:0 0 0 6px rgba(220,38,38,.10); }
+    .noticeItem.priority-info::before{ background:#64748b; box-shadow:0 0 0 6px rgba(100,116,139,.10); }
+
+    .noticeTop{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:14px;
+      padding-left:6px;
+    }
+    .noticeTitle{
+      font-size:18px;
+      font-weight:900;
+      color:var(--brand);
+      line-height:1.15;
+    }
+    .noticeWhen{
+      flex:0 0 auto;
+      color:#6a7d91;
+      font-size:12px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+      white-space:nowrap;
+      padding-top:2px;
+    }
+    .noticeMessage{
+      margin-top:8px;
+      padding-left:6px;
+      color:#35516b;
+      font-size:14px;
+      line-height:1.45;
+      font-weight:700;
+    }
+    .noticeMeta{
+      margin-top:10px;
+      padding-left:6px;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .metaPill{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:28px;
+      padding:0 10px;
+      border-radius:999px;
+      background:#f5f9fe;
+      border:1px solid rgba(15,53,84,.08);
+      color:var(--brand);
+      font-size:11px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+    }
+    .metaUnread{
+      background:rgba(37,99,235,.10);
+      color:#1d4ed8;
+      border-color:rgba(37,99,235,.12);
+    }
+    .metaRead{
+      background:rgba(100,116,139,.10);
+      color:#475569;
+      border-color:rgba(100,116,139,.12);
+    }
+    .loadingShell{
+      display:grid;
+      gap:12px;
+    }
+    .loadingRow{
+      min-height:92px;
+      border-radius:22px;
+      background:linear-gradient(90deg, rgba(255,255,255,.92), rgba(246,250,255,.98), rgba(255,255,255,.92));
+      border:1px solid rgba(15,53,84,.08);
+      position:relative;
+      overflow:hidden;
+    }
+    .loadingRow::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.58) 45%, rgba(255,255,255,0) 100%);
+      transform:translateX(-100%);
+      animation: loadingSweep 1.15s ease-in-out infinite;
+    }
+    @keyframes loadingSweep{ to{ transform:translateX(100%); } }
+
+    @media (max-width: 768px){
+      .wrap{ margin:18px auto 30px auto; padding:0 12px 30px; }
+      .hero, .panel{ border-radius:24px; }
+      .noticeTop{ flex-direction:column; gap:6px; }
+      .noticeWhen{ white-space:normal; }
+      .toolbar{ align-items:stretch; }
+    }
+  
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+
+.mh2-actions .mh2-btn--ghost{display:none !important;}
+</style>
+  <script src="community_state_stable.js"></script>
+<style>
+/* FORCE white text in Status & Details section */
+#boardSubmittedItemsSection,
+#boardSubmittedItemsSection *:not(button),
+#boardMemberHubStatus,
+#boardMemberHubStatus *:not(button),
+#annualMeetingApprovals,
+#annualMeetingApprovals *:not(button) {
+  color: #ffffff !important;
+}
+
+/* Secondary text (slightly dimmed white) */
+#boardSubmittedItemsSection .muted,
+#boardMemberHubStatus .muted,
+#annualMeetingApprovals .muted {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style>
+/* HARD OVERRIDE — force white text in dark section */
+.hub-zone:last-of-type,
+.hub-zone:last-of-type *:not(button):not(.badge):not(.pill) {
+  color: #ffffff !important;
+}
+
+/* Slightly softer for secondary text */
+.hub-zone:last-of-type .muted,
+.hub-zone:last-of-type p,
+.hub-zone:last-of-type span {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+</head>
+<body data-header-mode="simple" data-page-title="Notifications">
+  <div id="zummeeHeaderMount"></div>
+
+  <main class="wrap">
+    <section class="hero">
+      <div class="heroTop">
+        <div>
+          <h1>Notifications</h1>
+          <div class="sub">Review work orders, board activity, vendor updates, and meeting alerts in one place.</div>
+        </div>
+        <div class="heroStats">
+          <div class="statPill" id="statAll">0 Total</div>
+          <div class="statPill" id="statUnread">0 Unread</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="toolbar">
+        <div class="filters" id="filterBar">
+          <button class="filterBtn is-active" type="button" data-filter="all">All</button>
+          <button class="filterBtn" type="button" data-filter="unread">Unread</button>
+          <button class="filterBtn" type="button" data-filter="work_orders">Work Orders</button>
+          <button class="filterBtn" type="button" data-filter="board">Board</button>
+          <button class="filterBtn" type="button" data-filter="meetings">Meetings</button>
+          <button class="filterBtn" type="button" data-filter="vendors">Vendors</button>
+        </div>
+        <div>
+          <button class="actionBtn" type="button" id="markAllReadBtn">Mark All Read</button>
+        </div>
+      </div>
+
+      <div id="notificationsList" class="list">
+        <div class="loadingShell">
+          <div class="loadingRow"></div>
+          <div class="loadingRow"></div>
+          <div class="loadingRow"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    function $(id){ return document.getElementById(id); }
+
+    function getSB(){
+      try{
+        if(window.sb && typeof window.sb.from === 'function') return window.sb;
+        if(window.supabaseClient && typeof window.supabaseClient.from === 'function') return window.supabaseClient;
+        if(window.supabase && typeof window.supabase.from === 'function') return window.supabase;
+      }catch(_e){}
+      return null;
+    }
+
+    async function ensureClient(){
+      try{
+        if(typeof ensureSupabase === 'function'){
+          const sb = await ensureSupabase();
+          if(sb && typeof sb.from === 'function') return sb;
+        }
+      }catch(_e){}
+      return getSB();
+    }
+
+    async function getCurrentUserId(sb){
+      try{
+        if(sb && sb.auth && typeof sb.auth.getUser === 'function'){
+          const res = await sb.auth.getUser();
+          return String(res && res.data && res.data.user && res.data.user.id || '').trim();
+        }
+      }catch(_e){}
+      return '';
+    }
+
+    function getActiveCommunityId(){
+      const keys = ['zummeeActiveCommunityId','activeCommunityId','zummee_selected_community_id','zummee_selected_community_v1'];
+      for(const key of keys){
+        try{
+          const v = String(localStorage.getItem(key) || '').trim();
+          if(v) return v;
+        }catch(_e){}
+      }
+      return '';
+    }
+
+    function escapeHtml(v){
+      return String(v == null ? '' : v)
+        .replaceAll('&','&amp;')
+        .replaceAll('<','&lt;')
+        .replaceAll('>','&gt;')
+        .replaceAll('"','&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function formatWhen(v){
+      try{
+        const d = new Date(v);
+        if(isNaN(d.getTime())) return '';
+        return d.toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+      }catch(_e){ return ''; }
+    }
+
+    function groupForType(type){
+      const t = String(type || '').toLowerCase();
+      if(['new_work_order','work_order_sent_to_vendor','vendor_accepted_job','vendor_scheduled_job','vendor_in_progress','vendor_completed_job'].includes(t)) return 'work_orders';
+      if(['board_item_submitted'].includes(t)) return 'board';
+      if(['minutes_sent_for_approval','minutes_approved','agenda_sent'].includes(t)) return 'meetings';
+      if(['vendor_accepted_job','vendor_scheduled_job','vendor_in_progress','vendor_completed_job'].includes(t)) return 'vendors';
+      return 'all';
+    }
+
+    let __notifications = [];
+    let __readSet = new Set();
+    let __activeFilter = 'all';
+    let __userId = '';
+
+    function applyFilter(rows){
+      if(__activeFilter === 'all') return rows;
+      if(__activeFilter === 'unread'){
+        return rows.filter(r => !__readSet.has(String(r.id)));
+      }
+      return rows.filter(r => groupForType(r.event_type) === __activeFilter);
+    }
+
+    function updateStats(rows){
+      const unread = rows.reduce((n, r) => n + (__readSet.has(String(r.id)) ? 0 : 1), 0);
+      $('statAll').textContent = rows.length + ' Total';
+      $('statUnread').textContent = unread + ' Unread';
+    }
+
+    function renderNotifications(){
+      const list = $('notificationsList');
+      if(!list) return;
+      const rows = applyFilter(__notifications);
+      updateStats(__notifications);
+
+      if(!rows.length){
+        list.innerHTML = '<div class="noticeEmpty">No notifications in this view.</div>';
+        return;
+      }
+
+      list.innerHTML = rows.map(row => {
+        const unread = !__readSet.has(String(row.id));
+        const href = String(row.link_url || '#');
+        const priority = String(row.priority || 'normal').toLowerCase();
+        const when = formatWhen(row.created_at);
+        const group = groupForType(row.event_type);
+        return (
+          '<a class="noticeItem ' + (unread ? 'is-unread ' : '') + 'priority-' + escapeHtml(priority) + '" href="' + escapeHtml(href) + '" data-id="' + escapeHtml(String(row.id)) + '">' +
+            '<div class="noticeTop">' +
+              '<div class="noticeTitle">' + escapeHtml(row.title || 'Notification') + '</div>' +
+              '<div class="noticeWhen">' + escapeHtml(when) + '</div>' +
+            '</div>' +
+            '<div class="noticeMessage">' + escapeHtml(row.message || '') + '</div>' +
+            '<div class="noticeMeta">' +
+              '<span class="metaPill ' + (unread ? 'metaUnread' : 'metaRead') + '">' + (unread ? 'Unread' : 'Read') + '</span>' +
+              '<span class="metaPill">' + escapeHtml(group.replaceAll('_',' ')) + '</span>' +
+              '<span class="metaPill">' + escapeHtml(priority || 'normal') + '</span>' +
+            '</div>' +
+          '</a>'
+        );
+      }).join('');
+
+      Array.prototype.forEach.call(list.querySelectorAll('.noticeItem[data-id]'), function(link){
+        if(link.dataset.boundClick === '1') return;
+        link.dataset.boundClick = '1';
+        link.addEventListener('click', async function(){
+          const id = String(link.getAttribute('data-id') || '').trim();
+          if(!id || !__userId) return;
+          try{
+            const sb = await ensureClient();
+            if(!sb) return;
+            await sb.from('notification_reads').upsert({ notification_id:id, user_id:__userId });
+          }catch(_e){}
+        });
+      });
+    }
+
+    async function loadNotifications(){
+      const sb = await ensureClient();
+      const list = $('notificationsList');
+      if(!sb){
+        list.innerHTML = '<div class="noticeEmpty">Notifications are unavailable right now.</div>';
+        return;
+      }
+
+      __userId = await getCurrentUserId(sb);
+      const communityId = getActiveCommunityId();
+
+      try{
+        let q = sb
+          .from('notification_events')
+          .select('id, created_at, event_type, priority, title, message, link_url, community_id')
+          .order('created_at', { ascending:false })
+          .limit(100);
+
+        if(communityId) q = q.eq('community_id', communityId);
+
+        const res = await q;
+        if(res && res.error) throw res.error;
+        __notifications = Array.isArray(res && res.data) ? res.data : [];
+
+        __readSet = new Set();
+        if(__userId && __notifications.length){
+          const ids = __notifications.map(r => r.id).filter(Boolean);
+          const rr = await sb.from('notification_reads').select('notification_id').eq('user_id', __userId).in('notification_id', ids);
+          if(!(rr && rr.error) && Array.isArray(rr.data)){
+            rr.data.forEach(r => {
+              if(r && r.notification_id) __readSet.add(String(r.notification_id));
+            });
+          }
+        }
+
+        renderNotifications();
+      }catch(err){
+        list.innerHTML = '<div class="noticeEmpty">Unable to load notifications right now.</div>';
+      }
+    }
+
+    async function markAllRead(){
+      const sb = await ensureClient();
+      if(!sb || !__userId || !__notifications.length) return;
+      try{
+        const unreadIds = __notifications
+          .filter(r => !__readSet.has(String(r.id)))
+          .map(r => String(r.id));
+
+        await Promise.all(unreadIds.map(id =>
+          sb.from('notification_reads').upsert({ notification_id:id, user_id:__userId })
+        ));
+        unreadIds.forEach(id => __readSet.add(String(id)));
+        renderNotifications();
+      }catch(_e){}
+    }
+
+    function bindUI(){
+      const filterBar = $('filterBar');
+      if(filterBar){
+        Array.prototype.forEach.call(filterBar.querySelectorAll('[data-filter]'), function(btn){
+          btn.addEventListener('click', function(){
+            __activeFilter = String(btn.getAttribute('data-filter') || 'all');
+            Array.prototype.forEach.call(filterBar.querySelectorAll('[data-filter]'), function(other){
+              other.classList.toggle('is-active', other === btn);
+            });
+            renderNotifications();
+          });
+        });
+      }
+      const markAllReadBtn = $('markAllReadBtn');
+      if(markAllReadBtn){
+        markAllReadBtn.addEventListener('click', markAllRead);
+      }
+
+      document.addEventListener('community:changed', function(){ setTimeout(loadNotifications, 200); });
+      window.addEventListener('focus', function(){ setTimeout(loadNotifications, 120); });
+    }
+
+    bindUI();
+    loadNotifications();
+  </script>
+<script src="company_logo_sync.js"></script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

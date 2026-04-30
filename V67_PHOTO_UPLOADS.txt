@@ -1,0 +1,21 @@
+v67 resident + vendor photo uploads
+
+What changed:
+- added new Edge Function: upload-work-order-photo
+- added SQL setup file: work_order_photos_setup.sql
+- resident work order form now supports optional photo uploads
+- vendor completion page now supports optional completion photo uploads
+
+How it works:
+- files upload to Supabase Storage bucket: work-order-photos
+- metadata is saved to public.work_order_photos
+
+Deploy:
+1. Upload this build
+2. Run work_order_photos_setup.sql in Supabase SQL editor
+3. Deploy:
+   cd ~/Downloads/zummee_maintenance_workflow_v67_photo_uploads
+   supabase functions deploy upload-work-order-photo --project-ref slcwuuwyrgnmlmxpcaim --no-verify-jwt
+
+Optional:
+   supabase secrets set WORK_ORDER_PHOTO_BUCKET=work-order-photos

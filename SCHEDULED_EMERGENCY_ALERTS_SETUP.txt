@@ -1,0 +1,65 @@
+Run this SQL in Supabase SQL Editor:
+
+create extension if not exists pgcrypto;
+create extension if not exists pg_cron;
+
+create table if not exists public."EmergencyScheduledAlerts" (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid null,
+  community_id uuid not null,
+  community_name text null,
+  template_id uuid null,
+  template_title text null,
+  message_body text not null default '',
+  resident_count integer not null default 0,
+  board_count integer not null default 0,
+  recipient_count integer not null default 0,
+  scheduled_for timestamptz not null,
+  status text not null default 'scheduled',
+  created_by uuid null,
+  created_by_name text null,
+  provider_message text null,
+  created_at timestamptz not null default now(),
+  sent_at timestamptz null,
+  constraint emergency_scheduled_alerts_status_chk check (status in ('scheduled','sent','cancelled','failed','partial_success','twilio_not_configured'))
+);
+
+create index if not exists emergency_scheduled_alerts_company_idx on public."EmergencyScheduledAlerts" (company_id);
+create index if not exists emergency_scheduled_alerts_community_idx on public."EmergencyScheduledAlerts" (community_id);
+create index if not exists emergency_scheduled_alerts_status_time_idx on public."EmergencyScheduledAlerts" (status, scheduled_for);
+
+alter table public."EmergencyScheduledAlerts" enable row level security;
+
+drop policy if exists "emergency_scheduled_alerts_select_authenticated" on public."EmergencyScheduledAlerts";
+create policy "emergency_scheduled_alerts_select_authenticated"
+on public."EmergencyScheduledAlerts"
+for select to authenticated
+using (true);
+
+drop policy if exists "emergency_scheduled_alerts_insert_authenticated" on public."EmergencyScheduledAlerts";
+create policy "emergency_scheduled_alerts_insert_authenticated"
+on public."EmergencyScheduledAlerts"
+for insert to authenticated
+with check (true);
+
+drop policy if exists "emergency_scheduled_alerts_update_authenticated" on public."EmergencyScheduledAlerts";
+create policy "emergency_scheduled_alerts_update_authenticated"
+on public."EmergencyScheduledAlerts"
+for update to authenticated
+using (true)
+with check (true);
+
+select cron.schedule(
+  'process-scheduled-emergency-alerts-every-5-min',
+  '*/5 * * * *',
+  $$select net.http_post(
+    url:='https://slcwuuwyrgnmlmxpcaim.supabase.co/functions/v1/process-scheduled-emergency-alerts',
+    headers:=jsonb_build_object('Content-Type','application/json','apikey', current_setting('app.settings.service_role_key', true)),
+    body:='{}'::jsonb
+  );$$
+)
+where not exists (
+  select 1 from cron.job where jobname = 'process-scheduled-emergency-alerts-every-5-min'
+);
+
+If your project does not support net.http_post from SQL, you can skip the cron block and trigger the processor manually or use Supabase scheduled functions.

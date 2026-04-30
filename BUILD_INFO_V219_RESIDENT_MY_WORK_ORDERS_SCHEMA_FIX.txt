@@ -1,0 +1,11 @@
+V219 Resident My Work Orders Schema Fix
+
+Fixes resident work order history for the production resident_work_orders schema.
+The pasted production row uses resident_email, unit_number, and submitted_at, but not resident_id/created_at.
+
+Changes:
+- Resident My Work Orders query no longer depends on resident_id.
+- Query orders by submitted_at instead of created_at.
+- Query selects production-safe columns.
+- Fallback query also avoids created_at/resident_id.
+- Client-side filters rows by resident_email or unit_number as a safety guard.

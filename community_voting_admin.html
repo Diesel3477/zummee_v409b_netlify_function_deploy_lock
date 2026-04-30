@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Voting Results Controls</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="shared/supabase-client.js?v=2026-04-26-210"></script>
+<script src="company_logo_sync.js?v=2026-04-26-210"></script>
+
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+:root{--blue:#12324d;--line:#9bc9ff;--muted:#5f7288;--bg:#eef5fb;--green:#166534;--gold:#8a5b00;--red:#991b1b}*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:var(--blue);background:linear-gradient(180deg,#f1f7ff 0%,#edf5fd 55%,#f8fbff 100%)}.shell{max-width:1180px;margin:0 auto;padding:24px 22px 54px}.hero,.section{background:#fff;border:2px solid var(--line);border-radius:34px;box-shadow:0 18px 46px rgba(18,50,77,.08)}.hero{padding:24px 28px;display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center}.kicker{font-size:13px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;color:#6c7f94}.hero h1{margin:4px 0 0;font-size:34px;line-height:1.02;letter-spacing:-.04em}.heroRight{display:flex;flex-direction:column;align-items:flex-end;gap:12px}.logo{height:58px;max-width:210px;object-fit:contain;display:none}.logo.is-visible{display:block}.btn{border:2px solid var(--line);background:#fff;color:var(--blue);border-radius:18px;padding:12px 16px;font-weight:950;font-size:14px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}.btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}.btn.gold{background:#fff8df;border-color:#f1d27a;color:#7c5300}.section{margin-top:22px;padding:24px}.section h2{margin:0;font-size:26px;letter-spacing:-.04em}.sub{margin:7px 0 0;color:var(--muted);font-size:15px;line-height:1.35}.toolbar{display:grid;grid-template-columns:1fr 1fr auto;gap:14px;margin-top:18px}.field{display:flex;flex-direction:column;gap:7px}.field label{font-size:12px;font-weight:950;text-transform:uppercase;letter-spacing:.08em;color:#60758c}.field select,.field input{height:48px;border:2px solid #cfe3ff;border-radius:16px;padding:0 13px;font-size:15px;color:var(--blue);background:#fff}.election{margin-top:18px;border:1px solid rgba(18,50,77,.12);border-radius:24px;background:#fbfdff;padding:18px}.electionTop{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.electionTitle{font-size:21px;font-weight:950;letter-spacing:-.03em}.electionDesc{margin-top:5px;color:var(--muted);line-height:1.35}.pill{border-radius:999px;padding:7px 11px;background:#eef6ff;border:1px solid rgba(59,130,246,.18);font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.08em;color:#1d4ed8;white-space:nowrap}.pill.open{background:#eaf8ef;color:#166534}.pill.closed{background:#f3f4f6;color:#4b5563}.controlGrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}.results{margin-top:16px;border:1px solid rgba(18,50,77,.10);border-radius:20px;background:#fff;padding:14px}.resultRow{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid rgba(18,50,77,.08)}.resultRow:first-of-type{border-top:0}.resultName{font-weight:950}.resultVotes{font-weight:950}.winnerBadge{display:inline-flex;margin-left:8px;border-radius:999px;background:#fff7df;color:#8a5b00;border:1px solid rgba(138,91,0,.22);padding:3px 7px;font-size:10px;font-weight:950;letter-spacing:.08em;text-transform:uppercase}.resultMeta{font-size:12px;color:var(--muted);margin-top:4px}.resultBar{grid-column:1/-1;height:9px;border-radius:999px;background:#eaf3ff;overflow:hidden}.resultBarFill{height:100%;border-radius:999px;background:#2d78d4}.msg{margin-top:14px;font-weight:850;color:var(--muted)}.msg.ok{color:var(--green)}.msg.bad{color:var(--red)}@media(max-width:800px){.toolbar,.controlGrid{grid-template-columns:1fr}.hero{grid-template-columns:1fr auto;padding:22px}.hero h1{font-size:30px}.logo{height:46px;max-width:170px}.shell{padding:18px 14px 42px}.section{padding:20px;border-radius:26px}}
+</style>
+<style id="zummee-global-hero-header-refactor">
+/* v224: safe header refactor - stack contextual actions under the wired logo */
+.heroRight{display:flex !important;flex-direction:column !important;align-items:flex-end !important;justify-content:flex-start !important;gap:10px !important;}
+.heroRight img,.heroRight .logo,.heroRight .heroLogo{margin:0 !important;}
+.heroRight .btn,.heroRight button,.heroRight a{align-self:flex-end !important;}
+@media(max-width:800px){.heroRight{width:100% !important;align-items:flex-end !important;}}
+</style>
+</head>
+<body>
+<main class="shell">
+  <section class="hero">
+    <div><div class="kicker">Board / Supervisor Tools</div><h1>Voting Results Controls</h1></div>
+    <div class="heroRight"><img id="pageCompanyLogo" class="logo" alt="Company logo"><a class="btn" href="manager_hub.html">Hub</a></div>
+  </section>
+
+  <section class="section">
+    <h2>Release and Display Settings</h2>
+    <p class="sub">Choose whether residents see full vote totals, winners only, or nothing until the board releases results. Supervisors can always audit full totals below.</p>
+    <div class="toolbar">
+      <div class="field"><label>Community</label><select id="communitySelect"></select></div>
+      <div class="field"><label>Election</label><select id="electionSelect"></select></div>
+      <button class="btn primary" onclick="loadSelectedElection()">Load</button>
+    </div>
+    <div id="adminMsg" class="msg"></div>
+  </section>
+
+  <section class="section" id="detailsSection" style="display:none">
+    <h2 id="electionTitle">Election</h2>
+    <p class="sub" id="electionSub"></p>
+    <div class="controlGrid">
+      <div class="field"><label>Resident Results Display</label><select id="resultsVisibility"><option value="hidden">Hidden until released</option><option value="winners_only">Winners only</option><option value="totals">Full vote totals</option></select></div>
+      <div class="field"><label>Release Status</label><select id="resultsReleased"><option value="false">Not released</option><option value="true">Released to residents</option></select></div>
+    </div>
+    <div class="actions">
+      <button class="btn primary" onclick="saveResultsSettings()">Save Results Settings</button>
+      <button class="btn gold" onclick="releaseResults()">Release Results</button>
+      <button class="btn" onclick="emailResultsToResidents()">Email Results to Residents</button>
+    </div>
+    <div class="results"><div style="font-weight:950;margin-bottom:10px">Supervisor Internal Audit View</div><div id="auditResults" class="msg">Load an election to view totals.</div></div>
+  </section>
+</main>
+<script>
+const $=id=>document.getElementById(id);const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+async function getClient(){if(window.ensureSupabase)return await window.ensureSupabase();return window.supabaseClient||window.sb||null}
+let ctx={companyId:localStorage.getItem('zummee_company_id')||localStorage.getItem('company_id')||'',communityId:localStorage.getItem('zummee_selected_community_id')||localStorage.getItem('currentCommunityId')||'',communityName:localStorage.getItem('currentCommunityName')||localStorage.getItem('zummeeCurrentCommunityName')||''};let currentElection=null;
+function msg(m,t=''){const el=$('adminMsg');el.textContent=m||'';el.className='msg '+t}
+async function loadLogo(){try{const sb=await getClient();if(sb&&ctx.companyId){const r=await sb.from('companies').select('logo_path').eq('id',ctx.companyId).maybeSingle();const img=$('pageCompanyLogo');if(r.data&&r.data.logo_path&&img){const path=r.data.logo_path;img.src=/^https?:\/\//i.test(path)?path:sb.storage.from('company_logos').getPublicUrl(path).data.publicUrl;img.classList.add('is-visible')}}}catch(e){}}
+async function loadCommunities(){const sb=await getClient();const sel=$('communitySelect');sel.innerHTML='';try{let q=sb.from('PropertyCommunities').select('id,name,community_name,company_id').order('name',{ascending:true});if(ctx.companyId)q=q.eq('company_id',ctx.companyId);const r=await q;if(r.error)throw r.error;const rows=r.data||[];sel.innerHTML=rows.map(c=>`<option value="${esc(c.id)}">${esc(c.name||c.community_name||'Community')}</option>`).join('');if(ctx.communityId)sel.value=ctx.communityId;if(!rows.length){sel.innerHTML='<option value="">No communities found</option>'}}catch(e){sel.innerHTML=ctx.communityId?`<option value="${esc(ctx.communityId)}">${esc(ctx.communityName||'Current Community')}</option>`:'<option value="">Current Community</option>'}await loadElectionsForCommunity();}
+async function loadElectionsForCommunity(){const sb=await getClient();const sel=$('electionSelect');const communityId=$('communitySelect').value||ctx.communityId;sel.innerHTML='<option>Loading…</option>';try{let q=sb.from('community_voting_elections').select('*').order('created_at',{ascending:false});if(communityId)q=q.eq('community_id',communityId);const r=await q;if(r.error)throw r.error;const rows=r.data||[];sel.innerHTML=rows.length?rows.map(e=>`<option value="${esc(e.id)}">${esc(e.title)} • ${esc(e.status||'draft')}</option>`).join(''):'<option value="">No elections found</option>';if(rows.length)loadSelectedElection();}catch(e){console.error(e);sel.innerHTML='<option value="">Could not load elections</option>';}}
+$('communitySelect').addEventListener('change',loadElectionsForCommunity);
+async function loadSelectedElection(){const sb=await getClient();const id=$('electionSelect').value;if(!id){msg('No election selected.','bad');return}msg('');try{const r=await sb.from('community_voting_elections').select('*, community_voting_candidates(*)').eq('id',id).single();if(r.error)throw r.error;currentElection=r.data;$('detailsSection').style.display='block';$('electionTitle').textContent=currentElection.title||'Election';$('electionSub').textContent=`Status: ${currentElection.status||'draft'} • Max winners/selections: ${currentElection.max_votes||1}`;$('resultsVisibility').value=currentElection.results_visibility||((currentElection.results_visible||currentElection.status==='results')?'totals':'hidden');$('resultsReleased').value=String(!!(currentElection.results_released||currentElection.results_visible||currentElection.status==='results'));renderAudit();}catch(e){console.error(e);msg('Could not load election. Run the V210 results control SQL if needed.','bad')}}
+async function getElectionResults(){const sb=await getClient();const votes=await sb.from('community_voting_votes').select('candidate_id,resident_id').eq('election_id',currentElection.id);if(votes.error)throw votes.error;const counts={};const voters=new Set();(votes.data||[]).forEach(v=>{counts[v.candidate_id]=(counts[v.candidate_id]||0)+1;if(v.resident_id)voters.add(v.resident_id)});const rows=(currentElection.community_voting_candidates||[]).map(c=>({candidate_id:c.id,candidate_name:c.candidate_name,total_votes:counts[c.id]||0})).sort((a,b)=>(b.total_votes-a.total_votes)||String(a.candidate_name).localeCompare(String(b.candidate_name)));rows._totalVoters=voters.size;return rows;}
+async function renderAudit(){const host=$('auditResults');host.textContent='Loading totals…';try{const rows=await getElectionResults();const max=Math.max(0,...rows.map(r=>r.total_votes||0));const total=rows.reduce((s,r)=>s+(r.total_votes||0),0);host.className='';host.innerHTML=rows.length?`<div class="msg">${rows._totalVoters||0} resident${(rows._totalVoters||0)===1?'':'s'} participated • ${total} vote selection${total===1?'':'s'} recorded</div>`+rows.map(r=>{const pct=total?Math.round(((r.total_votes||0)/total)*100):0;return `<div class="resultRow"><div><span class="resultName">${esc(r.candidate_name)}</span>${r.total_votes===max&&max>0?'<span class="winnerBadge">Top</span>':''}<div class="resultMeta">${pct}% of vote selections</div></div><div class="resultVotes">${r.total_votes} vote${r.total_votes===1?'':'s'}</div><div class="resultBar"><div class="resultBarFill" style="width:${pct}%"></div></div></div>`}).join(''):'<div class="msg">No candidates found.</div>'}catch(e){host.className='msg bad';host.textContent='Could not load audit totals.'}}
+async function saveResultsSettings(){const sb=await getClient();if(!currentElection)return;try{const released=$('resultsReleased').value==='true';const payload={results_visibility:$('resultsVisibility').value,results_released:released,results_visible:released,results_released_at:released?(currentElection.results_released_at||new Date().toISOString()):null,updated_at:new Date().toISOString()};const r=await sb.from('community_voting_elections').update(payload).eq('id',currentElection.id);if(r.error)throw r.error;msg('Results settings saved.','ok');await loadSelectedElection();}catch(e){console.error(e);msg('Could not save settings. Run V210 SQL first.','bad')}}
+async function releaseResults(){$('resultsReleased').value='true';if($('resultsVisibility').value==='hidden')$('resultsVisibility').value='winners_only';await saveResultsSettings();}
+async function emailResultsToResidents(){if(!currentElection)return;try{const rows=await getElectionResults();const mode=$('resultsVisibility').value;let body='';if(mode==='winners_only'){const winners=rows.slice(0,Math.max(1,currentElection.max_votes||1));body=`${currentElection.title} results are available. Winners: ${winners.map(w=>w.candidate_name).join(', ')}.`}else if(mode==='totals'){body=`${currentElection.title} results:\n\n`+rows.map(r=>`${r.candidate_name}: ${r.total_votes} vote${r.total_votes===1?'':'s'}`).join('\n')}else{body=`${currentElection.title} results are not yet released.`}const sb=await getClient();await sb.from('community_voting_result_emails').insert({election_id:currentElection.id,community_id:currentElection.community_id,results_visibility:mode,email_subject:`${currentElection.title} Results`,email_body:body,sent_by:localStorage.getItem('zummee_user_id_v1')||null,sent_by_name:localStorage.getItem('zummee_user_name')||localStorage.getItem('zummeeEmployeeName')||'Board/Supervisor'}).then(()=>{});msg('Results email was prepared/logged for the email sender queue.','ok')}catch(e){console.error(e);msg('Could not prepare results email. Run V210 SQL first.','bad')}}
+loadLogo();loadCommunities();
+</script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+Vendor completion portal upgrade
+
+This build adds:
+1. A vendor completion link in the vendor email
+2. A public vendor completion page: vendor_complete.html
+3. A new Edge Function: complete-vendor-job
+
+What happens now:
+- Manager assigns vendor
+- Vendor email contains a "Mark Job Complete" button
+- Vendor opens vendor_complete.html with signed query parameters
+- Vendor marks the work complete
+- Resident work order status updates to completed
+- Best-effort resident completion email is sent
+
+Required deployment steps:
+1. Upload this build
+2. Deploy both functions:
+   supabase functions deploy assign-vendor-email --no-verify-jwt
+   supabase functions deploy complete-vendor-job --no-verify-jwt
+3. Set this secret once:
+   supabase secrets set VENDOR_PORTAL_SECRET=choose_a_long_random_secret
+4. Optional if your public page URL differs:
+   supabase secrets set VENDOR_PORTAL_BASE_URL=https://zummee.net/vendor_complete.html

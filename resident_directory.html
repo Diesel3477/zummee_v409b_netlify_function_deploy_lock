@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>window.ZUMMEE_BUILD="2026-03-27-1";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resident Directory</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="shared/supabase-client.js?v=2026-04-08-2"></script>
+  <script src="shared/resident-auth.js?v=2026-03-27-1"></script>
+  <script src="shared/header.js?v=2026-04-08-2"></script>
+  <link rel="stylesheet" href="shared/header.css?v=2026-03-27-1">
+  
+  <script id="zummeeStaffGuard">
+  (async () => {
+    if (window.__zummeeStaffGuardRan) return;
+    window.__zummeeStaffGuardRan = true;
+
+    async function getClient(){
+      try{ if(typeof ensureSupabase === 'function'){ const c = await ensureSupabase(); if(c && c.auth && typeof c.auth.getSession === 'function') return c; } }catch(_e){}
+      try{ if(window.supabaseClient && window.supabaseClient.auth && typeof window.supabaseClient.auth.getSession === 'function') return window.supabaseClient; }catch(_e){}
+      try{ if(window.sb && window.sb.auth && typeof window.sb.auth.getSession === 'function') return window.sb; }catch(_e){}
+      return null;
+    }
+
+    const go = (target) => {
+      try{ window.location.replace(target); }catch(_e){ window.location.href = target; }
+    };
+
+    const sb = await getClient();
+    if(!sb){ go('login.html'); return; }
+
+    const sessionRes = await sb.auth.getSession();
+    const user = sessionRes && sessionRes.data && sessionRes.data.session ? sessionRes.data.session.user : null;
+    if(!user){ go('login.html'); return; }
+
+    const ud = await sb
+      .from('userdirectory')
+      .select('role')
+      .eq('auth_user_id', user.id)
+      .single();
+
+    const role = String((ud && ud.data && ud.data.role) || '').trim();
+    if(role === 'Resident'){ go('resident_portal.html'); return; }
+
+    document.documentElement.setAttribute('data-staff-role', role || '');
+  })();
+  </script>
+<script>
+    window.SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+    window.SUPABASE_ANON_KEY = 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
+    window.ZummeeResidentAuth && window.ZummeeResidentAuth.blockResidentsFromManagerPage && window.ZummeeResidentAuth.blockResidentsFromManagerPage();
+  </script>
+  
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+    :root{--brand:#0f3554;--bg:#f4f6fa;--card:#fff;--muted:#5d6b7a;--border:#d9e1ea;--ok:#d9f2e3;--danger:#fee2e2}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:#17324c}
+    #zummeeHeaderMount{display:block}
+    main{max-width:1280px;margin:26px auto;padding:0 16px 46px}
+    .card{background:#fff;border:1px solid rgba(15,53,84,.12);border-radius:28px;padding:22px;box-shadow:0 18px 42px rgba(15,53,84,.08)}
+    .topRow{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap}
+    h1{margin:0;font-size:clamp(30px,5vw,42px);line-height:1.04;color:var(--brand)}
+    .sub{color:var(--muted);font-size:14px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:11px 18px;border-radius:999px;border:2px solid var(--brand);background:#fff;color:var(--brand);text-decoration:none;font-size:15px;font-weight:800;cursor:pointer}
+    .btn.primary{background:var(--brand);color:#fff}
+    .btnRow{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+    .grid{display:grid;grid-template-columns:40% 60%;gap:22px;margin-top:18px}
+    .field label{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;font-weight:800}
+    .field input,.field select,.field textarea{width:100%;border:1.5px solid var(--border);border-radius:16px;padding:12px 14px;font-size:16px;background:#fff;color:#17324c}
+    .field textarea{min-height:180px;resize:vertical}
+    .helper{color:var(--muted);font-size:14px}
+    .message{margin-top:14px;font-weight:700}
+    .message.ok{color:#11653a}
+    .message.err{color:#8c1d18}
+    .tableWrap{overflow:auto;border:1px solid rgba(15,53,84,.12);border-radius:18px;background:#fff;margin-top:14px}
+    table{width:100%;border-collapse:collapse;min-width:820px}
+    th,td{padding:12px 14px;border-bottom:1px solid rgba(15,53,84,.08);text-align:left;vertical-align:top}
+    th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+    .pill{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:900;background:#f3f6fa;color:#476079}
+    .empty{padding:16px;border:1px dashed rgba(15,53,84,.18);border-radius:18px;color:var(--muted);background:#fbfdff}
+    .previewWrap{margin-top:16px}
+    @media (max-width:980px){ .grid{grid-template-columns:1fr} }
+
+    .btn.small{min-height:36px;padding:8px 14px;font-size:14px;border-width:2px}
+    .btn.danger{background:#fff;color:#8c1d18;border-color:#d8a4a0}
+    .btn.danger:hover{background:#fff5f5}
+    .zummee-modal__backdrop{position:fixed;inset:0;background:rgba(12,31,49,.38);display:none;align-items:center;justify-content:center;padding:20px;z-index:9999}
+    .zummee-modal__backdrop.is-open{display:flex}
+    .zummee-modal__card{width:min(520px,100%);background:linear-gradient(180deg,#f8fbff 0%,#eef5ff 100%);border:1px solid rgba(15,53,84,.16);border-radius:28px;box-shadow:0 28px 70px rgba(15,53,84,.22);padding:24px 24px 20px}
+    .zummee-modal__eyebrow{font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#6d7f94;margin-bottom:8px}
+    .zummee-modal__title{font-size:30px;line-height:1.05;font-weight:900;color:#17324c;margin:0 0 12px}
+    .zummee-modal__subtitle{font-size:16px;line-height:1.45;color:#496075;margin:0 0 18px}
+    .zummee-modal__actions{display:flex;justify-content:flex-end;gap:12px;flex-wrap:wrap}
+    .zummee-modal__btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:12px 20px;border-radius:999px;border:2px solid var(--brand);background:#fff;color:var(--brand);font-size:15px;font-weight:900;cursor:pointer}
+    .zummee-modal__btn--primary{background:var(--brand);color:#fff}
+
+  
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+
+.mh2-actions .mh2-btn--ghost{display:none !important;}
+</style>
+  <script src="community_state_stable.js"></script>
+<style>
+/* FORCE white text in Status & Details section */
+#boardSubmittedItemsSection,
+#boardSubmittedItemsSection *:not(button),
+#boardMemberHubStatus,
+#boardMemberHubStatus *:not(button),
+#annualMeetingApprovals,
+#annualMeetingApprovals *:not(button) {
+  color: #ffffff !important;
+}
+
+/* Secondary text (slightly dimmed white) */
+#boardSubmittedItemsSection .muted,
+#boardMemberHubStatus .muted,
+#annualMeetingApprovals .muted {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style>
+/* HARD OVERRIDE — force white text in dark section */
+.hub-zone:last-of-type,
+.hub-zone:last-of-type *:not(button):not(.badge):not(.pill) {
+  color: #ffffff !important;
+}
+
+/* Slightly softer for secondary text */
+.hub-zone:last-of-type .muted,
+.hub-zone:last-of-type p,
+.hub-zone:last-of-type span {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+</head>
+<body>
+  <div id="zummeeHeaderMount"></div>
+  <main>
+    <section class="card">
+      <div class="topRow">
+        <div>
+          <h1>Resident Directory</h1>
+          <div class="sub">Import residents by community, store their records, and send resident sign-up invites.</div>
+        </div>
+        <div class="btnRow">
+          <a class="btn" href="manager_hub.html">Back to Manager Hub</a>
+          <a class="btn" href="resident_work_orders.html">Open Resident Work Orders</a>
+        </div>
+      </div>
+      <div id="pageMsg" class="message"></div>
+    </section>
+
+    <section class="grid">
+      <section class="card">
+        <h2 style="margin:0 0 8px;color:var(--brand)">Resident Import & Manual Entry</h2>
+        <div class="helper">Import residents by CSV or quickly add new residents manually.</div>
+
+        <hr style="margin:18px 0;border:none;border-top:1px solid #e3e8ef">
+
+        <h3 style="margin:0 0 8px;color:var(--brand)">CSV Import</h3>
+
+        <div class="field" style="margin-top:10px">
+          <label for="communitySelect">Community</label>
+          <select id="communitySelect"></select>
+        </div>
+
+        <div class="field" style="margin-top:10px">
+          <label for="communityId">Community ID</label>
+          <input id="communityId" type="text" placeholder="Community UUID auto-fills from dropdown" />
+        </div>
+
+        <div class="field" style="margin-top:12px">
+          <label for="csvFile">Upload CSV File</label>
+          <input id="csvFile" type="file" accept=".csv,text/csv" />
+        </div>
+
+        <div class="field" style="margin-top:12px">
+          <label for="csvInput">CSV Text</label>
+          <textarea id="csvInput" placeholder="resident_name,unit_number,street_address,city,state,zip_code,email,phone"></textarea>
+        </div>
+
+        <div class="field" style="margin-top:12px">
+          <label><input id="replaceExisting" type="checkbox" /> Replace existing residents</label>
+        </div>
+
+        <div class="btnRow">
+          <button id="previewBtn" class="btn">Preview Import</button>
+          <button id="importBtn" class="btn primary">Import Residents</button>
+        </div>
+
+        <div class="previewWrap">
+          <h4 style="margin:16px 0 6px;color:var(--brand)">Preview</h4>
+          <div id="previewBox" class="empty">No CSV preview yet.</div>
+        </div>
+
+        <hr style="margin:22px 0;border:none;border-top:1px solid #e3e8ef">
+
+        <h3 style="margin:0 0 8px;color:var(--brand)">Add Resident Manually</h3>
+
+        <div class="field">
+          <label for="manualResidentName">Resident Name</label>
+          <input id="manualResidentName" type="text" placeholder="John Smith" />
+        </div>
+
+        <div class="field">
+          <label for="manualUnitNumber">Unit Number</label>
+          <input id="manualUnitNumber" type="text" placeholder="101" />
+        </div>
+
+        <div class="field">
+          <label for="manualEmail">Email</label>
+          <input id="manualEmail" type="email" placeholder="john@email.com" />
+        </div>
+
+        <div class="field">
+          <label for="manualPhone">Phone</label>
+          <input id="manualPhone" type="text" placeholder="4045551111" />
+        </div>
+
+        <details style="margin-top:12px">
+          <summary style="cursor:pointer;font-weight:700;color:#17324c">Show More Fields</summary>
+          <div class="field" style="margin-top:12px">
+            <label for="manualStreetAddress">Street Address</label>
+            <input id="manualStreetAddress" type="text" placeholder="123 Main St" />
+          </div>
+
+          <div class="field">
+            <label for="manualCity">City</label>
+            <input id="manualCity" type="text" placeholder="Atlanta" />
+          </div>
+
+          <div class="field">
+            <label for="manualState">State</label>
+            <input id="manualState" type="text" placeholder="GA" />
+          </div>
+
+          <div class="field">
+            <label for="manualZipCode">ZIP Code</label>
+            <input id="manualZipCode" type="text" placeholder="30303" />
+          </div>
+        </details>
+
+        <div class="btnRow">
+          <button id="addResidentBtn" class="btn primary">Add Resident</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 style="margin:0 0 8px;color:var(--brand)">Resident Invites</h2>
+        <div class="helper">Select imported residents with email addresses and send secure sign-up invites. Residents can set their password from the email link and later access only their own info.</div>
+
+        <div class="btnRow">
+          <button id="refreshResidentsBtn" class="btn">Refresh Residents</button>
+          <button id="inviteSelectedBtn" class="btn primary">Send Invites to Selected</button>
+        </div>
+
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th></th>
+                <th>Resident</th>
+                <th>Unit</th>
+                <th>Email</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="residentRows">
+              <tr><td colspan="6" class="empty">Load a community to view residents.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+  <script>
+    window.SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+    window.SUPABASE_ANON_KEY = 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
+
+    let residentRows = [];
+    let parsedPreview = [];
+    let communityRows = [];
+
+    async function ensureSupabase(){
+      if(window.sb && typeof window.sb.from === 'function') return window.sb;
+      if(!(window.supabase && typeof window.supabase.createClient === 'function')){
+        throw new Error('Supabase client not available on this page.');
+      }
+      window.sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, {
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+      });
+      return window.sb;
+    }
+
+    function getStoredCompanyId(){
+      return String(
+        window.activeCompanyId
+        || localStorage.getItem('activeCompanyId')
+        || localStorage.getItem('zummee_active_company_id')
+        || localStorage.getItem('zummee_company_id')
+        || ''
+      ).trim();
+    }
+
+    function getStoredCompanyName(){
+      return String(
+        window.activeCompanyName
+        || localStorage.getItem('activeCompanyName')
+        || localStorage.getItem('zummee_active_company_name')
+        || localStorage.getItem('companyName')
+        || ''
+      ).trim();
+    }
+
+    function getStoredCommunityId(){
+      return String(
+        localStorage.getItem('activeCommunityId')
+        || localStorage.getItem('zummee_community_id')
+        || localStorage.getItem('zummee_selected_community_id')
+        || ''
+      ).trim();
+    }
+
+    async function getProfileContext(){
+      const sb = await ensureSupabase();
+      const authRes = await sb.auth.getUser();
+      const uid = authRes?.data?.user?.id || '';
+      let profile = null;
+      if(uid){
+        const q = await sb.from('profiles').select('company,company_id,selected_community_id,role').eq('id', uid).maybeSingle();
+        if(!q.error && q.data) profile = q.data;
+      }
+      return {
+        uid,
+        company: String(profile?.company || '').trim() || getStoredCompanyName(),
+        company_id: String(profile?.company_id || '').trim() || getStoredCompanyId(),
+        selected_community_id: String(profile?.selected_community_id || '').trim() || getStoredCommunityId(),
+        role: String(profile?.role || localStorage.getItem('role') || '').trim()
+      };
+    }
+
+    async function loadCommunities(){
+      const sb = await ensureSupabase();
+      const ctx = await getProfileContext();
+      let rows = [];
+      const selectedCommunityId = String(ctx.selected_community_id || getStoredCommunityId() || '').trim();
+
+      if(ctx.company_id){
+        let q = await sb.from('PropertyCommunities').select('id,name,company_id,company').eq('company_id', ctx.company_id).order('name', { ascending:true });
+        if(!q.error && Array.isArray(q.data) && q.data.length){
+          rows = q.data;
+        }
+      }
+
+      if(!rows.length && ctx.company){
+        let q = await sb.from('PropertyCommunities').select('id,name,company_id,company').eq('company', ctx.company).order('name', { ascending:true });
+        if(!q.error && Array.isArray(q.data) && q.data.length){
+          rows = q.data;
+        }
+      }
+
+      if(!rows.length && ctx.company){
+        let q = await sb.from('Communities').select('id,name,company').eq('company', ctx.company).order('name', { ascending:true });
+        if(!q.error && Array.isArray(q.data) && q.data.length){
+          rows = q.data;
+        }
+      }
+
+      if(!rows.length && selectedCommunityId){
+        let q = await sb.from('PropertyCommunities').select('id,name,company_id,company').eq('id', selectedCommunityId).maybeSingle();
+        if(!q.error && q.data){
+          rows = [q.data];
+        }
+      }
+
+      if(!rows.length && selectedCommunityId){
+        let q = await sb.from('Communities').select('id,name,company').eq('id', selectedCommunityId).maybeSingle();
+        if(!q.error && q.data){
+          rows = [q.data];
+        }
+      }
+
+      communityRows = Array.isArray(rows) ? rows : [];
+      const select = document.getElementById('communitySelect');
+      const input = document.getElementById('communityId');
+      if(!select || !input) return communityRows;
+
+      if(!communityRows.length){
+        select.innerHTML = '<option value="">No communities found</option>';
+        select.disabled = true;
+        if(!input.value) input.value = ctx.selected_community_id || '';
+        return communityRows;
+      }
+
+      select.disabled = false;
+      select.innerHTML = communityRows.map(r => `<option value="${String(r.id || '')}">${String(r.name || 'Unnamed Community')}</option>`).join('');
+      const desired = String(input.value || ctx.selected_community_id || getStoredCommunityId() || communityRows[0].id || '').trim();
+      const found = communityRows.find(r => String(r.id) === desired);
+      const finalId = String((found || communityRows[0] || {}).id || '').trim();
+      select.value = finalId;
+      input.value = finalId;
+      try{ localStorage.setItem('activeCommunityId', finalId); }catch(_e){}
+      try{ localStorage.setItem('zummee_selected_community_id', finalId); }catch(_e){}
+      return communityRows;
+    }
+
+    function setMsg(text, ok){
+      const el = document.getElementById('pageMsg');
+      el.textContent = text || '';
+      el.className = 'message ' + (ok ? 'ok' : 'err');
+    }
+
+    function parseCsv(text){
+      const lines = String(text || '').trim().split(/\r?\n/).filter(Boolean);
+      if(!lines.length) return [];
+      const headers = lines[0].split(',').map(h => h.trim());
+      return lines.slice(1).map(line => {
+        const cols = line.split(',').map(v => v.trim());
+        const row = {};
+        headers.forEach((h, i) => row[h] = cols[i] || '');
+        return row;
+      });
+    }
+
+    function renderPreview(rows){
+      const box = document.getElementById('previewBox');
+      if(!rows.length){
+        box.className = 'empty';
+        box.textContent = 'No CSV preview yet.';
+        return;
+      }
+      box.className = '';
+      const first = rows.slice(0,5);
+      box.innerHTML = `<div class="tableWrap"><table><thead><tr>${Object.keys(first[0]).map(k => `<th>${k}</th>`).join('')}</tr></thead><tbody>${first.map(r => `<tr>${Object.keys(first[0]).map(k => `<td>${r[k] || ''}</td>`).join('')}</tr>`).join('')}</tbody></table></div><div class="helper" style="margin-top:8px">${rows.length} row(s) ready to import.</div>`;
+    }
+
+    async function fileToText(file){
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(new Error('Unable to read CSV file.'));
+        reader.readAsText(file);
+      });
+    }
+
+
+    let confirmResolve = null;
+
+    function closeZummeeConfirm(result){
+      const back = document.getElementById('zummeeConfirmModal');
+      if(back) back.classList.remove('is-open');
+      document.body.style.overflow = '';
+      if(confirmResolve){
+        const fn = confirmResolve;
+        confirmResolve = null;
+        fn(!!result);
+      }
+    }
+
+    function zummeeConfirmResidentDelete(message){
+      return new Promise(resolve => {
+        confirmResolve = resolve;
+        const back = document.getElementById('zummeeConfirmModal');
+        const msg = document.getElementById('zummeeConfirmMsg');
+        const ok = document.getElementById('zummeeConfirmOk');
+        const cancel = document.getElementById('zummeeConfirmCancel');
+        if(msg) msg.textContent = message || 'Delete this resident record? This cannot be undone.';
+        if(back) back.classList.add('is-open');
+        document.body.style.overflow = 'hidden';
+        setTimeout(() => { try{ ok && ok.focus(); }catch(_e){} }, 20);
+      });
+    }
+
+    async function loadResidents(){
+      const communityId = String(document.getElementById('communityId').value || '').trim();
+      const tbody = document.getElementById('residentRows');
+      if(!communityId){
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">Enter a community ID first.</td></tr>';
+        return;
+      }
+      try{
+        const res = await fetch(window.SUPABASE_URL + '/rest/v1/resident_directory?community_id=eq.' + encodeURIComponent(communityId) + '&select=*&order=resident_name.asc', {
+          headers: {
+            'apikey': window.SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + window.SUPABASE_ANON_KEY,
+            'Accept': 'application/json'
+          }
+        });
+        const raw = await res.text();
+        let data = null;
+        try{ data = raw ? JSON.parse(raw) : null; }catch(_e){ data = raw; }
+        if(!res.ok) throw new Error((data && (data.message || data.error)) || 'Unable to load residents.');
+        residentRows = Array.isArray(data) ? data : [];
+        if(!residentRows.length){
+          tbody.innerHTML = '<tr><td colspan="6" class="empty">No residents found for this community yet.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = residentRows.map(r => {
+          const isManual = (String(r.entry_source || r.source || '').toLowerCase() === 'manual')
+            || /manual_entry/i.test(String(r.notes || ''))
+            || (!r.auth_user_id && !r.invited_at);
+          const actionHtml = isManual
+            ? `<button type="button" class="btn small danger residentDeleteBtn" data-resident-id="${r.id}">Delete</button>`
+            : '<span class="helper">—</span>';
+          return `
+          <tr data-resident-id="${r.id}">
+            <td><input type="checkbox" class="residentInviteCheck" value="${r.id}" ${r.email ? '' : 'disabled'}></td>
+            <td>${r.resident_name || ''}</td>
+            <td>${r.unit_number || ''}</td>
+            <td>${r.email || '<span class="helper">No email</span>'}</td>
+            <td>${r.auth_user_id ? '<span class="pill">Linked</span>' : (r.invited_at ? '<span class="pill">Invited</span>' : '<span class="pill">Not Invited</span>')}</td>
+            <td>${actionHtml}</td>
+          </tr>
+        `;}).join('');
+        Array.from(tbody.querySelectorAll('.residentDeleteBtn')).forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const residentId = String(btn.getAttribute('data-resident-id') || '').trim();
+            if(!residentId) return;
+            const ok = await zummeeConfirmResidentDelete('Delete this resident record? This cannot be undone.');
+            if(!ok) return;
+            await deleteResident(residentId);
+          });
+        });
+      }catch(err){
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">Unable to load residents.</td></tr>';
+        setMsg(err && err.message ? err.message : 'Unable to load residents.', false);
+      }
+    }
+
+    async function previewCsv(){
+      let text = String(document.getElementById('csvInput').value || '');
+      const file = document.getElementById('csvFile').files?.[0];
+      if(file && !text.trim()){
+        text = await fileToText(file);
+        document.getElementById('csvInput').value = text;
+      }
+      parsedPreview = parseCsv(text);
+      renderPreview(parsedPreview);
+    }
+
+    async function importResidents(){
+      const communityId = String(document.getElementById('communityId').value || '').trim();
+      if(!communityId){
+        setMsg('Community ID is required.', false);
+        return;
+      }
+      if(!parsedPreview.length){
+        await previewCsv();
+      }
+      if(!parsedPreview.length){
+        setMsg('No resident rows to import.', false);
+        return;
+      }
+      try{
+        const res = await fetch(window.SUPABASE_URL + '/functions/v1/import-resident-directory', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': window.SUPABASE_ANON_KEY
+          },
+          body: JSON.stringify({
+            community_id: communityId,
+            rows: parsedPreview,
+            replace_existing: !!document.getElementById('replaceExisting').checked
+          })
+        });
+        const raw = await res.text();
+        let data = null;
+        try{ data = raw ? JSON.parse(raw) : null; }catch(_e){ data = raw; }
+        if(!res.ok) throw new Error((data && (data.error || data.message)) || 'Import failed.');
+        setMsg(`Imported ${data.imported_count || 0} resident(s).`, true);
+        await loadResidents();
+      }catch(err){
+        setMsg(err && err.message ? err.message : 'Import failed.', false);
+      }
+    }
+
+    
+        
+        async function addResidentManually(){
+          const communityId = String(document.getElementById('communityId')?.value || '').trim();
+          const residentName = String(document.getElementById('manualResidentName')?.value || '').trim();
+
+          if(!communityId){
+            setMsg('Community ID required.', false);
+            return;
+          }
+          if(!residentName){
+            setMsg('Resident name required.', false);
+            return;
+          }
+
+          const payload = [{
+            resident_name: residentName,
+            unit_number: String(document.getElementById('manualUnitNumber')?.value || '').trim(),
+            street_address: String(document.getElementById('manualStreetAddress')?.value || '').trim(),
+            city: String(document.getElementById('manualCity')?.value || '').trim(),
+            state: String(document.getElementById('manualState')?.value || '').trim(),
+            zip_code: String(document.getElementById('manualZipCode')?.value || '').trim(),
+            email: String(document.getElementById('manualEmail')?.value || '').trim(),
+            phone: String(document.getElementById('manualPhone')?.value || '').trim(),
+            notes: 'MANUAL_ENTRY'
+          }];
+
+          try{
+            const res = await fetch(window.SUPABASE_URL + '/functions/v1/import-resident-directory', {
+              method:'POST',
+              headers:{
+                'Content-Type':'application/json',
+                'apikey':window.SUPABASE_ANON_KEY
+              },
+              body:JSON.stringify({
+                community_id: communityId,
+                rows: payload,
+                replace_existing: false
+              })
+            });
+
+            const raw = await res.text();
+            let data = null;
+            try{ data = raw ? JSON.parse(raw) : null; }catch(_e){ data = raw; }
+            if(!res.ok) throw new Error((data && (data.error || data.message)) || 'Add resident failed.');
+
+            setMsg('Resident added.', true);
+            document.getElementById('communityId').value = communityId;
+            ['manualResidentName','manualUnitNumber','manualStreetAddress','manualCity','manualState','manualZipCode','manualEmail','manualPhone'].forEach(id => {
+              const el = document.getElementById(id);
+              if(el) el.value = '';
+            });
+            await loadResidents();
+          }catch(err){
+            setMsg(err && err.message ? err.message : 'Add resident failed.', false);
+          }
+        }
+
+
+        async function deleteResident(residentId){
+      if(!residentId){
+        setMsg('Resident id missing.', false);
+        return;
+      }
+      try{
+        const res = await fetch(window.SUPABASE_URL + '/rest/v1/resident_directory?id=eq.' + encodeURIComponent(residentId), {
+          method: 'DELETE',
+          headers: {
+            'apikey': window.SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + window.SUPABASE_ANON_KEY,
+            'Accept': 'application/json',
+            'Prefer': 'return=minimal'
+          }
+        });
+        const raw = await res.text();
+        let data = null;
+        try{ data = raw ? JSON.parse(raw) : null; }catch(_e){ data = raw; }
+        if(!res.ok) throw new Error((data && (data.message || data.error)) || 'Delete failed.');
+        setMsg('Resident deleted.', true);
+        await loadResidents();
+      }catch(err){
+        setMsg(err && err.message ? err.message : 'Delete failed.', false);
+      }
+    }
+
+        async function sendInvites(){
+      const selected = Array.from(document.querySelectorAll('.residentInviteCheck:checked'))
+        .map(el => String(el.value || el.dataset?.residentId || el.closest('tr')?.dataset?.residentId || '').trim())
+        .filter(Boolean);
+      if(!selected.length){
+        setMsg('Select at least one resident with an email address.', false);
+        return;
+      }
+      try{
+        const res = await fetch(window.SUPABASE_URL + '/functions/v1/send-resident-invites', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': window.SUPABASE_ANON_KEY
+          },
+          body: JSON.stringify({ resident_ids: selected })
+        });
+        const raw = await res.text();
+        let data = null;
+        try{ data = raw ? JSON.parse(raw) : null; }catch(_e){ data = raw; }
+        if(!res.ok) throw new Error((data && (data.error || data.message)) || 'Invite send failed.');
+        const invitedCount = Number(data?.invited_count || 0);
+        const linkedCount = Number(data?.linked_count || 0);
+        const failedCount = Number(data?.failed_count || 0);
+        const results = Array.isArray(data?.results) ? data.results : [];
+        const detailBits = results
+          .filter(r => r && r.reason)
+          .slice(0, 3)
+          .map(r => `${r.email || r.id || 'Resident'}: ${r.reason}`);
+        let msg = `Invited ${invitedCount} resident(s)`;
+        if(linkedCount) msg += `, linked ${linkedCount} existing account(s)`;
+        if(failedCount) msg += `, ${failedCount} failed`;
+        msg += '.';
+        if(detailBits.length) msg += ' ' + detailBits.join(' | ');
+        setMsg(msg, invitedCount > 0 || linkedCount > 0);
+        await loadResidents();
+      }catch(err){
+        setMsg(err && err.message ? err.message : 'Invite send failed.', false);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      try{
+        if(typeof mountZummeeHeader === 'function'){
+          mountZummeeHeader({ title: 'Resident Directory', subtitle: 'Import residents and send invites' });
+        }
+      }catch(_e){}
+
+      document.getElementById('previewBtn').addEventListener('click', previewCsv);
+      document.getElementById('addResidentBtn').addEventListener('click', addResidentManually);
+      document.getElementById('importBtn').addEventListener('click', importResidents);
+      document.getElementById('refreshResidentsBtn').addEventListener('click', loadResidents);
+      document.getElementById('inviteSelectedBtn').addEventListener('click', sendInvites);
+      document.getElementById('communitySelect').addEventListener('change', async (e) => {
+        const val = String(e.target?.value || '').trim();
+        document.getElementById('communityId').value = val;
+        try{ localStorage.setItem('activeCommunityId', val); }catch(_e){}
+        try{ localStorage.setItem('zummee_selected_community_id', val); }catch(_e){}
+        await loadResidents();
+      });
+      document.getElementById('communityId').addEventListener('change', async (e) => {
+        const val = String(e.target?.value || '').trim();
+        const match = communityRows.find(r => String(r.id) === val);
+        if(match){
+          document.getElementById('communitySelect').value = val;
+        }
+        try{ localStorage.setItem('activeCommunityId', val); }catch(_e){}
+        try{ localStorage.setItem('zummee_selected_community_id', val); }catch(_e){}
+        await loadResidents();
+      });
+      document.getElementById('csvFile').addEventListener('change', async () => {
+        const file = document.getElementById('csvFile').files?.[0];
+        if(file){
+          const text = await fileToText(file);
+          document.getElementById('csvInput').value = text;
+          parsedPreview = parseCsv(text);
+          renderPreview(parsedPreview);
+        }
+      });
+
+      await loadCommunities();
+      if(document.getElementById('communityId').value){
+        await loadResidents();
+      }
+    });
+  </script>
+
+  <div id="zummeeConfirmModal" class="zummee-modal__backdrop" aria-hidden="true">
+    <div class="zummee-modal__card" role="dialog" aria-modal="true" aria-labelledby="zummeeConfirmTitle">
+      <div class="zummee-modal__eyebrow">Please Confirm</div>
+      <div id="zummeeConfirmTitle" class="zummee-modal__title">Delete Resident</div>
+      <div id="zummeeConfirmMsg" class="zummee-modal__subtitle">Delete this resident record? This cannot be undone.</div>
+      <div class="zummee-modal__actions">
+        <button id="zummeeConfirmCancel" class="zummee-modal__btn" type="button">Cancel</button>
+        <button id="zummeeConfirmOk" class="zummee-modal__btn zummee-modal__btn--primary" type="button">Delete</button>
+      </div>
+    </div>
+  </div>
+
+<script src="company_logo_sync.js"></script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

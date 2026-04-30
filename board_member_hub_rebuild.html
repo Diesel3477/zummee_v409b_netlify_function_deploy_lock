@@ -1,0 +1,2566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<script>
+(function(){
+  try{
+    var p = new URLSearchParams(window.location.search || '');
+    var id = p.get('community_id') || p.get('cid') || localStorage.getItem('zummeeActiveCommunityId') || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('currentCommunityId') || '';
+    var qs = id ? ('?community_id=' + encodeURIComponent(id)) : (window.location.search || '');
+    var target = '/board_member_hub_v2.html' + qs;
+    if (!location.pathname.endsWith('/board_member_hub_v2.html')) location.replace(target);
+  } catch(e) { location.replace('/board_member_hub_v2.html'); }
+})();
+</script>
+
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Board Member Hub</title>
+
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+  :root{
+    --bg-top:#f7fbff;
+    --bg-bottom:#edf3f8;
+    --text:#17324d;
+    --muted:#5e7389;
+    --border:rgba(23,50,77,.10);
+    --border-strong:rgba(112,163,255,.52);
+    --shadow:0 18px 40px rgba(18,42,67,.10);
+    --soft-shadow:0 10px 24px rgba(18,42,67,.06);
+    --brand:#1d3b63;
+    --accent:#d4a93d;
+    --danger:#b42318;
+    --blue-top:rgba(255,255,255,.96);
+    --blue-bottom:rgba(244,249,254,.94);
+    --gold-top:rgba(255,248,227,.98);
+    --gold-bottom:rgba(246,232,170,.94);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,Arial,sans-serif;background:linear-gradient(180deg,var(--bg-top) 0%, var(--bg-bottom) 100%);color:var(--text)}
+  .page{max-width:1320px;margin:0 auto;padding:18px 18px 40px;border-radius:30px;position:relative;background:linear-gradient(180deg,rgba(255,255,255,.42),rgba(244,249,254,.34));border:1px solid rgba(37,99,235,.42);box-shadow:0 10px 24px rgba(18,42,67,.06),0 0 0 1px rgba(96,165,250,.22),0 8px 22px rgba(59,130,246,.12)}
+  .page::before{content:"";position:absolute;inset:0;border-radius:30px;pointer-events:none;box-shadow:inset 0 0 0 1px rgba(147,197,253,.35);}
+  .hero{background:linear-gradient(180deg,var(--blue-top),var(--blue-bottom));border:1px solid rgba(37,99,235,.42);box-shadow:0 10px 24px rgba(18,42,67,.06),0 0 0 1px rgba(96,165,250,.22),0 8px 22px rgba(59,130,246,.12);border-radius:30px;padding:22px 22px 18px;margin-bottom:18px;position:relative;overflow:hidden}
+  .hero::after,.card::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;box-shadow:inset 0 0 0 1px rgba(147,197,253,.35);}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+  .title{font-size:34px;font-weight:900;letter-spacing:-.02em;margin:0 0 6px;color:var(--brand)}
+  .subtitle{margin:0;color:var(--muted);font-size:14px}
+  .topbar-main{display:flex;align-items:flex-start;gap:16px;flex:1 1 auto;min-width:0}
+  .hero-brand-slot{display:flex;align-items:flex-start;justify-content:flex-end;flex:0 0 auto;margin-left:auto}
+  .hero-brand-logo{width:auto;height:56px;max-width:none;display:block;opacity:0;transform:translateY(4px);transition:opacity .2s ease, transform .2s ease}
+  .hero-brand-logo.is-visible{opacity:1;transform:translateY(0)}
+  .hero-brand-logo.is-company{filter:none}
+  .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-start;width:100%}
+  select, input[type="text"], input[type="date"], textarea{border:1px solid rgba(23,50,77,.12);border-radius:18px;padding:12px 14px;font-size:14px;color:var(--text);background:rgba(255,255,255,.92);width:100%;box-shadow:inset 0 1px 0 rgba(255,255,255,.78)}
+  textarea{min-height:104px;resize:vertical}
+  .community-select{min-width:240px;background:#fff}
+  .btn{appearance:none;border:none;border-radius:16px;padding:11px 16px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:var(--soft-shadow);text-decoration:none !important;display:inline-flex;align-items:center;justify-content:center}
+  .btn-primary{background:#1e3b67;color:#fff}
+  .btn-secondary{background:#fff;border:1px solid rgba(23,50,77,.12);color:var(--text)}
+  .stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;background:#fff;border:1px solid rgba(23,50,77,.10);font-size:13px;font-weight:700;color:var(--text);box-shadow:var(--soft-shadow)}
+  .pill.accent{background:linear-gradient(180deg,var(--gold-top),var(--gold-bottom));border-color:rgba(212,169,61,.30)}
+  .workspace{display:grid;grid-template-columns:1.05fr 1.05fr;gap:18px}
+  .card{background:linear-gradient(180deg,var(--blue-top),var(--blue-bottom));border:1px solid rgba(37,99,235,.42);border-radius:30px;box-shadow:0 10px 24px rgba(18,42,67,.06),0 0 0 1px rgba(96,165,250,.22),0 8px 22px rgba(59,130,246,.12);padding:22px;position:relative;overflow:hidden}
+  .card.span2{grid-column:span 2}
+  .submitted-priority{grid-column:span 2;background:linear-gradient(180deg,var(--blue-top),var(--blue-bottom));border:1px solid rgba(37,99,235,.42);box-shadow:0 10px 24px rgba(18,42,67,.06),0 0 0 1px rgba(96,165,250,.22),0 8px 22px rgba(59,130,246,.12)}
+  .submitted-priority .section-title{font-size:22px}
+  .submitted-priority .section-sub{font-size:14px;color:var(--muted)}
+  .submitted-priority .items{max-height:440px}
+  .submitted-count{background:#fff;border-color:rgba(23,50,77,.10);font-weight:800}
+  .calendar-card{grid-column:span 2}
+  .calendar-card .items{max-height:none;overflow:visible}
+  .calendar-card .calendarWrap{display:flex;flex-direction:column;gap:12px}
+  .calendar-card .calendarEvent{background:rgba(255,255,255,.94);border:1px solid rgba(210,223,243,.96);border-radius:16px;padding:12px 14px;display:flex;justify-content:space-between;gap:12px;align-items:center;box-shadow:0 1px 0 rgba(255,255,255,.92), inset 0 0 0 1px rgba(255,255,255,.70)}
+  .calendar-card .calendarLabel{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .calendar-card .calendarValue{font-size:16px;font-weight:800;color:var(--text);margin-top:4px}
+  .calendar-card .calendarMeta{font-size:12px;color:var(--muted);margin-top:4px}
+  .calendar-card .calendarPill{white-space:nowrap;background:#fff7df;border:1px solid rgba(212,169,61,.35);border-radius:999px;padding:8px 12px;font-size:12px;font-weight:800;color:#6c5314}
+  .section-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .section-title{font-size:19px;font-weight:900;margin:0;color:var(--brand)}
+
+  .maintenance-card .section-head{margin-bottom:0}
+  .maintenance-card:not(.is-collapsed) .section-head{margin-bottom:14px}
+  .section-collapse-btn{appearance:none;border:1px solid rgba(23,50,77,.12);background:#fff;color:var(--brand);border-radius:999px;padding:9px 13px;font-size:13px;font-weight:900;cursor:pointer;box-shadow:var(--soft-shadow);display:inline-flex;align-items:center;gap:6px}
+  .section-collapse-btn:hover{transform:translateY(-1px)}
+  .maintenance-card.is-collapsed #maintenanceItemsHost{display:none}
+  .maintenance-card.is-collapsed #maintenanceArchiveWrap{display:none!important}
+  .minutes-card .section-head{margin-bottom:0}
+  .minutes-card:not(.is-collapsed) .section-head{margin-bottom:14px}
+  .minutes-card.is-collapsed #minuteApprovalHost{display:none}
+  .minutes-card.is-collapsed #minutesArchiveWrap{display:none!important}
+  /* Live Maintenance Updates pill-only status — v13 */
+  #maintenanceItemsHost .bmStatusRow, #maintenanceArchiveHost .bmStatusRow{display:flex!important;justify-content:flex-end!important;align-items:center!important;gap:8px!important;margin-top:8px!important;width:100%!important}
+  #maintenanceItemsHost .bmUpdateText, #maintenanceArchiveHost .bmUpdateText{display:none!important}
+  #maintenanceItemsHost .bmStatusPill, #maintenanceArchiveHost .bmStatusPill{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:auto!important;min-width:0!important;padding:8px 13px!important;border-radius:999px!important;font-size:13px!important;font-weight:900!important;line-height:1!important;letter-spacing:.01em!important;text-transform:none!important;white-space:nowrap!important;border:1px solid rgba(23,50,77,.10)!important;box-shadow:0 4px 12px rgba(18,42,67,.06)!important}
+  #maintenanceItemsHost .bmStatusPill.submitted, #maintenanceArchiveHost .bmStatusPill.submitted{background:#fff7d6!important;color:#7a5600!important;border-color:rgba(212,169,61,.34)!important}
+  #maintenanceItemsHost .bmStatusPill.sent_to_vendor, #maintenanceArchiveHost .bmStatusPill.sent_to_vendor{background:#eaf2ff!important;color:#1d4ed8!important;border-color:rgba(37,99,235,.18)!important}
+  #maintenanceItemsHost .bmStatusPill.active, #maintenanceArchiveHost .bmStatusPill.active{background:#dcfce7!important;color:#166534!important;border-color:rgba(22,163,74,.20)!important;box-shadow:0 4px 12px rgba(22,163,74,.10)!important;animation:none!important}
+  #maintenanceItemsHost .bmStatusPill.completed, #maintenanceArchiveHost .bmStatusPill.completed{background:#dcfce7!important;color:#166534!important;border-color:rgba(22,163,74,.20)!important}
+
+  /* Live Maintenance Updates archive by month — v14 */
+  .maintenance-archive-wrap,.minutes-archive-wrap{margin-top:14px;display:flex;flex-direction:column;gap:10px}
+  .maintenance-archive-toggle,.minutes-archive-toggle{appearance:none;width:100%;border:1px solid rgba(210,223,243,.96);background:rgba(255,255,255,.92);color:var(--brand);border-radius:18px;padding:14px 16px;font-size:16px;font-weight:900;cursor:pointer;box-shadow:0 1px 0 rgba(255,255,255,.92), inset 0 0 0 1px rgba(255,255,255,.72);display:flex;align-items:center;justify-content:space-between;text-align:left}
+  .maintenance-archive-toggle::after,.minutes-archive-toggle::after{content:'›';font-size:22px;line-height:1;transition:transform .18s ease}
+  .maintenance-archive-toggle[aria-expanded="true"]::after,.minutes-archive-toggle[aria-expanded="true"]::after{transform:rotate(90deg)}
+  .maintenance-archive-host,.minutes-archive-host{display:none;flex-direction:column;gap:10px}
+  .maintenance-archive-host.is-open,.minutes-archive-host.is-open{display:flex}
+  .maintenance-month,.minutes-month{border:1px solid rgba(210,223,243,.96);background:rgba(255,255,255,.72);border-radius:18px;overflow:hidden;box-shadow:0 1px 0 rgba(255,255,255,.92), inset 0 0 0 1px rgba(255,255,255,.55)}
+  .maintenance-month-toggle,.minutes-month-toggle{appearance:none;width:100%;border:0;background:rgba(255,255,255,.82);color:var(--brand);padding:13px 16px;font-size:15px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:space-between;text-align:left}
+  .maintenance-month-toggle::after,.minutes-month-toggle::after{content:'›';font-size:20px;transition:transform .18s ease}
+  .maintenance-month-toggle[aria-expanded="true"]::after,.minutes-month-toggle[aria-expanded="true"]::after{transform:rotate(90deg)}
+  .maintenance-month-items,.minutes-month-items{display:none;flex-direction:column;gap:10px;padding:0 12px 12px}
+  .maintenance-month-items.is-open,.minutes-month-items.is-open{display:flex}
+  .maintenance-archive-host .bmMaintItem,.maintenance-archive-host .item,.maintenance-archive-host .itemRow,.minutes-archive-host .itemRow,.minutes-archive-host .item{box-shadow:none}
+
+  .section-sub{font-size:13px;color:var(--muted)}
+  .legacy-link{display:inline-flex;align-items:center;padding:10px 14px;border-radius:999px;background:#fff;border:1px solid rgba(23,50,77,.12);box-shadow:var(--soft-shadow);font-weight:800;color:var(--brand);text-decoration:none}
+  .items{display:flex;flex-direction:column;gap:12px;max-height:520px;overflow:auto;padding-right:4px}
+  .item, .itemRow, .bmMaintItem{background:rgba(255,255,255,.94);border:1px solid rgba(210,223,243,.96);border-radius:18px;padding:14px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start;box-shadow:0 1px 0 rgba(255,255,255,.92), inset 0 0 0 1px rgba(255,255,255,.72)}
+  .itemTitle{font-size:15px;font-weight:800;color:var(--text)}
+  .itemMain{flex:1 1 auto;min-width:0}
+  .muted{color:var(--muted)}
+  .tiny{font-size:12px}
+  .itemActions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  .itemActions .btn, .itemActions .pill{padding:8px 11px;border-radius:10px;font-size:13px;font-weight:700;border:1px solid rgba(24,49,83,.14);background:#fff;color:var(--text);text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+  #submittedItemsHost .itemActions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px!important;justify-content:stretch!important;align-items:stretch!important;width:100%;max-width:280px}
+  #submittedItemsHost .itemActions .btn, #submittedItemsHost .itemActions .pill{width:100%!important;min-width:0!important;height:38px!important;padding:0 12px!important;border-radius:10px!important;font-size:14px!important;display:flex!important;align-items:center!important;justify-content:center!important;white-space:nowrap!important;margin:0!important}
+  #submittedItemsHost .itemActions .danger, #submittedItemsHost .itemActions .delete-btn{background:#fff1f0!important;color:var(--danger)!important;border-color:rgba(180,35,24,.18)!important}
+  .itemActions .btnPrimary, .itemActions .btn-primary{background:var(--brand)!important;color:#fff!important;border-color:transparent}
+  .itemActions .danger, .danger{background:#fff1f0!important;color:var(--danger)!important;border-color:rgba(180,35,24,.18)!important}
+  .new-item-grid{display:grid;grid-template-columns:1fr 180px;gap:12px}
+  .new-item-grid .full{grid-column:1 / -1}
+  .action-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+  .board-empty{padding:18px;border-radius:16px;background:#fff;border:1px dashed rgba(24,49,83,.16);color:var(--muted);text-align:center}
+  .legacy-link{font-size:13px;color:var(--brand);font-weight:700;text-decoration:none}
+  .minutesPreview{margin-top:8px;padding:10px;border-radius:12px;background:#fff;border:1px solid rgba(210,223,243,.96);box-shadow:inset 0 0 0 1px rgba(255,255,255,.76);font-size:13px;line-height:1.45;max-height:180px;overflow:auto}
+  #bridgeFrame{position:absolute;left:-99999px;top:0;width:1280px;height:2000px;border:0;opacity:0;pointer-events:none}
+  
+  .calendar-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .calendar-btn{appearance:none;border:none;border-radius:12px;padding:10px 14px;font-size:14px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff}
+  .calendar-modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.42);display:none;align-items:center;justify-content:center;padding:20px;z-index:9999}
+  .calendar-modal{width:min(560px,100%);background:#fff;border-radius:22px;border:1px solid var(--border);box-shadow:0 24px 60px rgba(15,23,42,.24);padding:18px}
+  .calendar-modal h3{margin:0 0 6px;font-size:22px;font-weight:800;color:var(--text)}
+  .calendar-modal p{margin:0 0 14px;color:var(--muted);font-size:14px}
+  .calendar-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .calendar-form-grid .full{grid-column:1 / -1}
+  .calendar-modal textarea{min-height:96px}
+  .calendar-modal-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px}
+
+  .item-modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.42);display:none;align-items:center;justify-content:center;padding:20px;z-index:9999}
+  .item-modal{width:min(720px,100%);background:#fff;border-radius:22px;border:1px solid var(--border);box-shadow:0 24px 60px rgba(15,23,42,.24);padding:18px}
+  .item-modal h3{margin:0 0 4px;font-size:22px;font-weight:800;color:var(--text)}
+  .item-modal p{margin:0;color:var(--muted);font-size:14px}
+  .item-modal-grid{display:grid;grid-template-columns:1.4fr .9fr;gap:12px;margin-top:14px}
+  .item-modal-card{background:#f8fafc;border:1px solid var(--border);border-radius:16px;padding:14px}
+  .item-modal-label{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#64748b;margin-bottom:6px}
+  .item-modal-value{font-size:16px;font-weight:700;color:var(--text);line-height:1.4;white-space:pre-wrap;word-break:break-word}
+  .item-modal-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px}
+  @media(max-width:760px){.item-modal-grid{grid-template-columns:1fr}}
+  .calendar-status{font-size:13px;color:var(--muted);min-height:18px;margin-top:8px}
+
+  @media (max-width: 900px){
+    .topbar{align-items:flex-start}
+    .topbar-main{width:100%;justify-content:space-between;align-items:flex-start}
+    .hero-brand-slot{margin-left:0}
+    .workspace{grid-template-columns:1fr}
+    .card.span2{grid-column:auto}
+    .new-item-grid{grid-template-columns:1fr}
+    .community-select{min-width:200px;width:100%}
+    .calendar-form-grid{grid-template-columns:1fr}
+  }
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+
+.mh2-actions .mh2-btn--ghost{display:none !important;}
+
+/* Work order confirmation modal */
+.wo-confirm-overlay{
+  position:fixed !important;
+  inset:0 !important;
+  z-index:999998 !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  padding:24px !important;
+  background:rgba(16,35,75,.38) !important;
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+}
+.wo-confirm-card{
+  width:min(440px,calc(100vw - 48px)) !important;
+  background:#fff !important;
+  border:2px solid #9fc0ff !important;
+  border-radius:28px !important;
+  box-shadow:0 24px 70px rgba(18,50,111,.24) !important;
+  padding:24px !important;
+  color:#17304f !important;
+  font-family:inherit !important;
+}
+.wo-confirm-card h3{margin:0 0 8px !important;font-size:22px !important;line-height:1.18 !important;color:#12326f !important;}
+.wo-confirm-card p{margin:0 !important;font-size:15px !important;line-height:1.45 !important;color:#516277 !important;}
+.wo-confirm-actions{display:flex !important;gap:12px !important;justify-content:flex-end !important;margin-top:22px !important;}
+.wo-confirm-actions button{border:0 !important;border-radius:999px !important;padding:11px 18px !important;font-weight:800 !important;cursor:pointer !important;}
+.wo-confirm-cancel{background:#eef4ff !important;color:#12326f !important;}
+.wo-confirm-create{background:#12326f !important;color:#fff !important;}
+
+/* ===== CALENDAR MODAL DATE FIELD FIX ===== */
+.calendar-modal,
+.calendar-modal * {
+  box-sizing: border-box !important;
+}
+.calendar-form-grid {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  gap: 12px !important;
+  overflow: hidden !important;
+}
+.calendar-form-grid > div {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+}
+#calendarEventDate,
+#calendarEventTime,
+#calendarEventTitle,
+#calendarEventLocation,
+#calendarEventNotes {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  display: block !important;
+}
+#calendarEventDate {
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 0 14px !important;
+  border-radius: 18px !important;
+  border: 1px solid rgba(23,50,77,.12) !important;
+  background: #fff !important;
+  font-size: 14px !important;
+  color: var(--text) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.78) !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+@media (max-width: 900px) {
+  .calendar-form-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ===== CALENDAR MODAL KEYBOARD SAFE SCROLL FIX ===== */
+.calendar-modal-backdrop{
+  align-items:flex-start !important;
+  justify-content:center !important;
+  overflow-y:auto !important;
+  -webkit-overflow-scrolling:touch !important;
+  padding:22px 18px calc(22px + env(safe-area-inset-bottom, 0px)) !important;
+}
+.calendar-modal{
+  position:relative !important;
+  margin:0 auto !important;
+  width:min(560px, calc(100vw - 36px)) !important;
+  max-width:calc(100vw - 36px) !important;
+  max-height:calc(var(--board-vvh, 100vh) - 44px) !important;
+  overflow-y:auto !important;
+  overscroll-behavior:contain !important;
+  -webkit-overflow-scrolling:touch !important;
+  padding:18px 18px 24px !important;
+}
+.calendar-modal input,
+.calendar-modal textarea,
+.calendar-modal select{
+  scroll-margin-top:90px !important;
+  scroll-margin-bottom:180px !important;
+}
+.calendar-modal-actions{
+  position:sticky !important;
+  bottom:0 !important;
+  background:linear-gradient(180deg, rgba(255,255,255,0), #fff 28%, #fff 100%) !important;
+  padding-top:18px !important;
+  padding-bottom:2px !important;
+}
+@media (max-width: 900px){
+  .calendar-modal-backdrop{padding:16px 14px calc(16px + env(safe-area-inset-bottom, 0px)) !important;}
+  .calendar-modal{
+    width:min(560px, calc(100vw - 28px)) !important;
+    max-width:calc(100vw - 28px) !important;
+    max-height:calc(var(--board-vvh, 100vh) - 32px) !important;
+  }
+}
+
+/* ===== BOARD HUB VISUAL CALENDAR GRID ===== */
+.calendar-card .items{max-height:none !important;overflow:visible !important;}
+.bm-calendar-board{margin-top:14px;}
+.bm-calendar-topline{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:12px;}
+.bm-calendar-month{font-weight:900;color:var(--text);font-size:20px;letter-spacing:-.01em;}
+.bm-calendar-hint{font-size:13px;color:var(--muted);margin-top:3px;}
+.bm-calendar-count{font-size:13px;font-weight:800;color:#991b1b;background:#fff1f2;border:1px solid #fecdd3;border-radius:999px;padding:8px 12px;white-space:nowrap;}
+.bm-calendar-dow,.bm-calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;}
+.bm-calendar-dow{margin-bottom:8px;color:var(--muted);font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;text-align:center;}
+.bm-calendar-day{min-height:52px;border-radius:16px;border:1px solid rgba(210,223,243,.95);background:rgba(255,255,255,.94);display:flex;align-items:flex-start;justify-content:space-between;padding:9px 10px;position:relative;box-shadow:inset 0 1px 0 rgba(255,255,255,.8);}
+.bm-calendar-day.muted-day{opacity:.36;}
+.bm-calendar-day.today{border-color:#9fc0ff;box-shadow:0 0 0 2px rgba(159,192,255,.22), inset 0 1px 0 rgba(255,255,255,.8);}
+.bm-calendar-day.scheduled{background:linear-gradient(180deg,#fff5f5 0%,#fee2e2 100%);border-color:#ef4444;box-shadow:0 0 0 2px rgba(239,68,68,.16), inset 0 1px 0 rgba(255,255,255,.82);}
+.bm-calendar-num{font-weight:900;color:var(--text);font-size:14px;line-height:1;}
+.bm-calendar-day.scheduled .bm-calendar-num{color:#991b1b;}
+.bm-calendar-dot{width:9px;height:9px;border-radius:999px;background:#dc2626;box-shadow:0 0 0 4px rgba(220,38,38,.16);margin-top:1px;}
+.bm-calendar-list{display:grid;gap:8px;margin-top:14px;}
+.bm-calendar-list-item{display:flex;gap:10px;align-items:center;border:1px solid rgba(210,223,243,.95);border-radius:14px;background:#fff;padding:10px 12px;color:var(--text);font-weight:800;}
+.bm-calendar-list-date{color:#991b1b;background:#fff1f2;border:1px solid #fecdd3;border-radius:999px;padding:5px 9px;font-size:12px;white-space:nowrap;}
+.bm-calendar-none{color:var(--muted);font-size:14px;padding:8px 0;}
+@media(max-width:720px){.bm-calendar-dow,.bm-calendar-grid{gap:5px}.bm-calendar-day{min-height:44px;border-radius:12px;padding:7px}.bm-calendar-month{font-size:18px}.bm-calendar-topline{align-items:flex-start;flex-direction:column}.bm-calendar-count{align-self:flex-start}}
+
+
+
+/* v260 Board Hub header control alignment — match Manager Hub */
+.hero .topbar{
+  display:flex !important;
+  flex-direction:column !important;
+  gap:14px !important;
+}
+.hero .topbar-main{
+  width:100% !important;
+  display:flex !important;
+  align-items:flex-start !important;
+  justify-content:space-between !important;
+  gap:18px !important;
+}
+.hero .hero-brand-slot{
+  margin-left:auto !important;
+  align-items:flex-start !important;
+  justify-content:flex-end !important;
+}
+.hero .controls{
+  width:100% !important;
+  display:flex !important;
+  flex-direction:row !important;
+  flex-wrap:nowrap !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  gap:14px !important;
+  margin-top:0 !important;
+}
+.hero .controls .community-select,
+.hero .controls select#communitySelect{
+  flex:1 1 auto !important;
+  width:auto !important;
+  min-width:0 !important;
+  max-width:none !important;
+  margin:0 !important;
+}
+.hero .controls .btn,
+.hero .controls .btn-primary{
+  flex:0 0 auto !important;
+  white-space:nowrap !important;
+  margin-left:auto !important;
+  min-height:48px !important;
+  padding:12px 22px !important;
+  border-radius:24px !important;
+}
+@media(max-width:640px){
+  .hero .controls{flex-wrap:wrap !important;}
+  .hero .controls .community-select,
+  .hero .controls select#communitySelect{flex-basis:100% !important;}
+  .hero .controls .btn{margin-left:0 !important;}
+}
+
+/* v296: Board hub inline gallery approvals preview */
+#galleryApprovalHost .gallery-approval-row{display:grid;grid-template-columns:86px 1fr auto;gap:14px;align-items:center;padding:12px;border:1px solid rgba(147,197,253,.85);border-radius:18px;background:linear-gradient(180deg,#fff,#f8fbff);box-shadow:0 10px 24px rgba(31,77,140,.06);}
+#galleryApprovalHost .gallery-approval-row + .gallery-approval-row{margin-top:10px}
+#galleryApprovalHost .gallery-approval-thumb{width:86px;height:66px;border-radius:14px;object-fit:cover;background:#eef6ff;border:1px solid rgba(147,197,253,.7)}
+#galleryApprovalHost .gallery-approval-title{font-weight:950;color:var(--brand);font-size:16px;line-height:1.15}
+#galleryApprovalHost .gallery-approval-meta{margin-top:4px;color:#64748b;font-weight:800;font-size:13px}
+#galleryApprovalHost .gallery-approval-caption{margin-top:6px;color:#17324d;font-weight:700;font-size:14px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#galleryApprovalHost .gallery-approval-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+#galleryApprovalHost .gallery-mini-btn{border-radius:999px;border:1px solid #b9d7ff;background:#fff;color:#12326f;padding:9px 13px;font-weight:950;text-decoration:none;white-space:nowrap}
+#galleryApprovalHost .gallery-mini-btn.primary{background:#123a5a;color:#fff;border-color:#123a5a}
+#galleryApprovalHost .gallery-mini-btn.danger{background:#fff1f2;color:#b91c1c;border-color:#fecdd3}
+#galleryApprovalHost .gallery-mini-status{margin-top:10px;color:#64748b;font-weight:800}
+@media(max-width:760px){#galleryApprovalHost .gallery-approval-row{grid-template-columns:76px 1fr}#galleryApprovalHost .gallery-approval-actions{grid-column:1/-1;justify-content:stretch}#galleryApprovalHost .gallery-mini-btn{flex:1;text-align:center}}
+
+</style>
+<style>/* removed conflicting board hub overrides */</style>
+<style>/* removed conflicting board hub overrides */</style>
+
+<style>
+/* Board Member Hub shell sync override */
+.page,.hero,.card{backdrop-filter:none;-webkit-backdrop-filter:none;}
+.card > .section-head{margin-bottom:14px;}
+</style>
+
+<style>
+/* cleanup pass: remove conflicting legacy overrides and keep submitted card on manager-hub light system */
+.submitted-priority, .submitted-priority *:not(button):not(.pill):not(.badge){ color: inherit !important; }
+.submitted-priority .section-title, .submitted-priority .itemTitle, .submitted-priority strong{ color: var(--brand) !important; }
+.submitted-priority .section-sub, .submitted-priority .muted, .submitted-priority .tiny, .submitted-priority .itemMeta, .submitted-priority .itemSubtitle{ color: var(--muted) !important; }
+.submitted-priority .item, .submitted-priority .itemRow{ background: rgba(255,255,255,.96); }
+</style>
+
+<style>
+/* final manager hub outline sync */
+.page, .hero, .card, .submitted-priority{
+  border:1px solid rgba(37,99,235,.42) !important;
+  box-shadow:0 10px 24px rgba(18,42,67,.06), 0 0 0 1px rgba(96,165,250,.22), 0 8px 22px rgba(59,130,246,.12) !important;
+}
+.page::before, .hero::after, .card::after{
+  box-shadow:inset 0 0 0 1px rgba(147,197,253,.35) !important;
+}
+</style>
+
+<style>
+/* submitted item record pop polish */
+#submittedItemsHost .item,
+#submittedItemsHost .itemRow{
+  background: linear-gradient(180deg, rgba(244,252,247,.98), rgba(236,248,240,.98)) !important;
+  border: 1px solid rgba(108,180,126,.34) !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,.92), inset 0 0 0 1px rgba(255,255,255,.76), 0 8px 18px rgba(70,140,90,.08) !important;
+}
+#submittedItemsHost .itemTitle{
+  color: #1b4d2f !important;
+}
+#submittedItemsHost .muted,
+#submittedItemsHost .tiny{
+  color: #567260 !important;
+}
+</style>
+
+
+<style id="calendar-edit-delete-v6-css">
+  .bm-calendar-list-item{align-items:flex-start !important; justify-content:flex-start !important;}
+  .bm-calendar-list-main{display:block; flex:1; min-width:0;}
+  .bm-calendar-record-actions{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
+  .bm-calendar-record-actions .btn{padding:8px 12px; border-radius:12px; font-size:13px;}
+  .bm-calendar-record-actions .calendar-delete-btn{border-color:#fecaca !important; color:#991b1b !important; background:#fff1f2 !important;}
+  .bm-calendar-reminder-badge{display:inline-flex; margin-top:8px; padding:6px 9px; border-radius:999px; background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; font-size:12px; font-weight:900;}
+  .bm-calendar-past-title{font-weight:900;color:#17324d;margin-top:18px;margin-bottom:8px;}
+  .bm-calendar-past-archive{margin-top:18px;border:1px solid rgba(210,223,243,.95);border-radius:18px;background:rgba(255,255,255,.72);overflow:hidden;}
+  .bm-calendar-past-toggle,.bm-calendar-month-toggle{width:100%;appearance:none;border:none;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;cursor:pointer;font-weight:900;color:#17324d;text-align:left;}
+  .bm-calendar-past-toggle{font-size:15px;}
+  .bm-calendar-month-toggle{font-size:14px;border-top:1px solid rgba(210,223,243,.72);}
+  .bm-calendar-past-toggle .chev,.bm-calendar-month-toggle .chev{font-size:14px;color:var(--muted);transition:transform .16s ease;}
+  .bm-calendar-past-archive.open .bm-calendar-past-toggle .chev,.bm-calendar-past-month.open .bm-calendar-month-toggle .chev{transform:rotate(90deg);}
+  .bm-calendar-past-body,.bm-calendar-month-body{display:none;padding:0 12px 12px;}
+  .bm-calendar-past-archive.open .bm-calendar-past-body,.bm-calendar-past-month.open .bm-calendar-month-body{display:block;}
+  .bm-calendar-past-month{border-top:1px solid rgba(210,223,243,.72);}
+  .bm-calendar-past-month:first-child{border-top:none;}
+  .bm-calendar-past-month .bm-calendar-list{margin-top:8px;}
+</style>
+<style id="calendar-date-click-polish">
+  .bm-calendar-day{appearance:none;-webkit-appearance:none;text-align:left;cursor:pointer;border:1px solid rgba(210,223,243,.95);transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease, background .15s ease;}
+  .bm-calendar-day:active{transform:scale(.985)}
+  .bm-calendar-day.selected{border-color:#2563eb !important;box-shadow:0 0 0 3px rgba(37,99,235,.16), inset 0 0 0 1px rgba(37,99,235,.28) !important;background:rgba(239,246,255,.95) !important;}
+  .bm-calendar-selection-title{font-weight:900;color:#17324d;margin-top:16px;margin-bottom:8px;}
+  .bm-calendar-list-meta{font-size:13px;color:#5e7389;margin-top:4px;font-weight:600;}
+</style>
+
+
+<style id="board-calendar-upcoming-gold-final-fix">
+/* Final visible Board Member Hub calendar: gold Upcoming/New Events block */
+#calendarHost .bm-calendar-upcoming-gold{
+  margin-top:16px !important;
+  padding:14px !important;
+  border-radius:20px !important;
+  border:1px solid rgba(212,169,61,.58) !important;
+  background:linear-gradient(135deg,rgba(255,231,150,.92) 0%,rgba(255,247,215,.88) 48%,rgba(255,255,255,.78) 100%) !important;
+  box-shadow:0 14px 34px rgba(212,169,61,.24), inset 0 1px 0 rgba(255,255,255,.82) !important;
+}
+#calendarHost .bm-calendar-upcoming-gold .bm-calendar-selection-title{
+  margin-top:0 !important;
+  margin-bottom:10px !important;
+  color:#6f4f00 !important;
+  font-size:17px !important;
+  letter-spacing:-.01em !important;
+}
+#calendarHost .bm-calendar-upcoming-gold .bm-calendar-list{
+  margin-top:0 !important;
+}
+#calendarHost .bm-calendar-upcoming-gold .bm-calendar-list-item{
+  background:rgba(255,255,255,.90) !important;
+  border-color:rgba(212,169,61,.36) !important;
+}
+
+
+/* === Board Member Hub Mini Command Center Restore v263 - polished attention queue === */
+.board-command-center{display:grid;grid-template-columns:1.05fr .95fr;gap:16px;margin:18px 0 20px;}
+.board-command-center .command-card{background:rgba(255,255,255,.90);border:2px solid rgba(148,181,235,.72);border-radius:24px;padding:18px;box-shadow:0 16px 36px rgba(35,77,125,.09), inset 0 1px 0 rgba(255,255,255,.9);}
+.board-command-center .command-card.primary{background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(249,252,255,.92));}
+.command-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px;}
+.command-title{font-size:22px;font-weight:950;color:#17324d;letter-spacing:-.02em;}
+.command-sub{font-size:14px;color:#64748b;font-weight:700;margin-top:2px;}
+.command-count-pill{display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;padding:0 11px;border-radius:999px;background:#fff7d6;border:1px solid rgba(212,169,61,.42);color:#17324d;font-weight:950;font-size:15px;box-shadow:0 8px 18px rgba(212,169,61,.12);}
+.command-attention-list{display:grid;gap:10px;margin-top:12px;}
+.command-attention-item{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:14px 16px;border-radius:18px;background:rgba(248,251,255,.92);border:1px solid rgba(184,207,242,.92);box-shadow:0 7px 16px rgba(31,68,110,.045);cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;transition:transform .16s ease, background .16s ease, border-color .16s ease, box-shadow .16s ease;}
+.command-attention-item:hover{background:#ffffff;border-color:rgba(147,183,242,.95);box-shadow:0 10px 22px rgba(31,68,110,.075);}
+.command-attention-item:active{transform:scale(.985);background:rgba(239,246,255,.98);}
+.command-attention-icon{width:34px;height:34px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:#fff7d6;border:1px solid rgba(212,169,61,.42);color:#17324d;font-weight:950;font-size:15px;flex:0 0 auto;}
+.command-attention-text{min-width:0;}
+.command-attention-item strong{display:block;color:#17324d;font-size:15px;line-height:1.18;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.command-attention-item span{display:block;color:#64748b;font-size:13px;font-weight:750;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.command-attention-chevron{color:#64748b;font-size:28px;font-weight:900;line-height:1;opacity:.55;padding-left:6px;}
+.command-attention-action{display:none!important;}
+.command-empty{padding:13px;border-radius:16px;background:rgba(241,245,249,.78);color:#64748b;font-weight:800;}
+.command-quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
+.command-quick-grid button{appearance:none;border:2px solid rgba(148,181,235,.72);background:#fff;color:#17324d;border-radius:16px;padding:13px 12px;font-weight:950;cursor:pointer;box-shadow:0 8px 18px rgba(31,68,110,.06);}
+.command-quick-grid button:active{transform:scale(.985);}
+.command-today{display:grid;gap:9px;margin-top:14px;}
+.command-today-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:16px;background:#fff;border:1px solid rgba(210,223,243,.88);font-weight:900;color:#17324d;}
+.command-today-row span:last-child{color:#64748b;}
+@media(max-width:860px){.board-command-center{grid-template-columns:1fr;}.command-attention-item{grid-template-columns:auto 1fr auto;gap:10px;padding:13px 14px;}.command-attention-item strong{font-size:15px;}.command-attention-icon{width:32px;height:32px;border-radius:10px;}.command-attention-chevron{font-size:24px;}}
+
+</style>
+
+<style id="force-replace-upcoming-system-v275">
+/* v275 force replacement: remove old gold upcoming system and render premium event cards */
+#calendarHost .bm-calendar-upcoming-gold{display:none!important;}
+#calendarHost .bm-calendar-upcoming-panel{
+  margin-top:18px!important;
+  padding:18px!important;
+  border-radius:24px!important;
+  border:2px solid rgba(148,181,235,.72)!important;
+  background:linear-gradient(180deg,rgba(255,255,255,.97),rgba(248,251,255,.94))!important;
+  box-shadow:0 16px 36px rgba(35,77,125,.08), inset 0 1px 0 rgba(255,255,255,.92)!important;
+}
+#calendarHost .bm-calendar-upcoming-panel .bm-calendar-selection-title{
+  margin:0 0 12px!important;
+  color:#17324d!important;
+  font-size:22px!important;
+  font-weight:950!important;
+  letter-spacing:-.02em!important;
+}
+#calendarHost .bm-calendar-upcoming-panel .bm-calendar-list{margin-top:0!important;display:grid!important;gap:12px!important;}
+#calendarHost .bm-event-card,
+#calendarHost .bm-calendar-upcoming-panel .bm-calendar-list-item{
+  display:grid!important;
+  grid-template-columns:68px minmax(0,1fr) auto!important;
+  align-items:center!important;
+  gap:16px!important;
+  padding:16px!important;
+  border-radius:22px!important;
+  border:1.5px solid rgba(151,190,255,.74)!important;
+  background:linear-gradient(180deg,rgba(255,255,255,.99),rgba(249,252,255,.96))!important;
+  box-shadow:0 10px 24px rgba(18,50,77,.06), inset 0 1px 0 rgba(255,255,255,.9)!important;
+  color:#17324d!important;
+  font-weight:800!important;
+}
+#calendarHost .bm-event-date{
+  width:62px!important;height:62px!important;border-radius:18px!important;
+  display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;
+  background:#eef6ff!important;border:1px solid rgba(151,190,255,.86)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.85)!important;
+}
+#calendarHost .bm-event-day{font-size:22px!important;line-height:1!important;font-weight:950!important;color:#17324d!important;}
+#calendarHost .bm-event-month{font-size:11px!important;line-height:1!important;margin-top:5px!important;font-weight:950!important;letter-spacing:.12em!important;color:#5e7389!important;}
+#calendarHost .bm-event-title{display:block!important;font-size:20px!important;line-height:1.15!important;font-weight:950!important;color:#17324d!important;}
+#calendarHost .bm-event-meta{font-size:14px!important;color:#5e7389!important;margin-top:5px!important;font-weight:800!important;}
+#calendarHost .bm-event-tags{display:flex!important;gap:8px!important;flex-wrap:wrap!important;margin-top:10px!important;}
+#calendarHost .bm-event-tag{display:inline-flex!important;align-items:center!important;border-radius:999px!important;padding:6px 10px!important;font-size:12px!important;font-weight:950!important;line-height:1!important;}
+#calendarHost .bm-event-tag.alert{background:#fff7ed!important;border:1px solid #fed7aa!important;color:#9a3412!important;}
+#calendarHost .bm-event-tag.due{background:#fff1f2!important;border:1px solid #fecdd3!important;color:#991b1b!important;}
+#calendarHost .bm-event-actions{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:8px!important;flex-wrap:nowrap!important;}
+#calendarHost .bm-event-edit,#calendarHost .bm-event-delete{
+  appearance:none!important;border-radius:999px!important;padding:10px 14px!important;min-width:78px!important;font-weight:950!important;line-height:1!important;cursor:pointer!important;
+}
+#calendarHost .bm-event-edit{background:#eef6ff!important;border:1px solid rgba(151,190,255,.9)!important;color:#1d4ed8!important;}
+#calendarHost .bm-event-delete{background:#fff1f2!important;border:1px solid rgba(220,38,38,.28)!important;color:#991b1b!important;}
+html.dark-mode #calendarHost .bm-calendar-upcoming-panel{background:rgba(9,23,42,.78)!important;border-color:rgba(119,160,220,.34)!important;box-shadow:0 16px 42px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.05)!important;}
+html.dark-mode #calendarHost .bm-calendar-upcoming-panel .bm-calendar-selection-title,html.dark-mode #calendarHost .bm-event-title,html.dark-mode #calendarHost .bm-event-day{color:#f8fbff!important;}
+html.dark-mode #calendarHost .bm-event-card{background:linear-gradient(180deg,rgba(16,33,58,.98),rgba(12,28,50,.94))!important;border-color:rgba(119,160,220,.32)!important;box-shadow:0 12px 26px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.05)!important;color:#f8fbff!important;}
+html.dark-mode #calendarHost .bm-event-date{background:rgba(15,35,64,.92)!important;border-color:rgba(119,160,220,.36)!important;}
+html.dark-mode #calendarHost .bm-event-month,html.dark-mode #calendarHost .bm-event-meta{color:#b9c8dc!important;}
+@media(max-width:760px){#calendarHost .bm-event-card{grid-template-columns:58px minmax(0,1fr)!important;align-items:start!important;}#calendarHost .bm-event-date{width:54px!important;height:54px!important;border-radius:16px!important;}#calendarHost .bm-event-actions{grid-column:2!important;justify-content:flex-start!important;margin-top:2px!important;}.bm-event-title{font-size:18px!important;}}
+</style>
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="shared/supabase-client.js?v=2026-04-29-v327"></script>
+<script src="zummee_clean_bootstrap.js?v=clean-2026-04-28"></script>
+</head>
+<body>
+<iframe id="bridgeFrame" src="board_member_hub.html?engine=1" title="Board Member Hub Engine"></iframe>
+<div class="page">
+  <section class="hero">
+    <div class="topbar">
+      <div class="topbar-main">
+        <div>
+          <h1 class="title">Board Member Hub</h1>
+        </div>
+        <div class="hero-brand-slot">
+          <img id="heroBrandLogo" class="hero-brand-logo" alt="Company logo" />
+        </div>
+      </div>
+      <div class="controls">
+        <select id="communitySelect" class="community-select"></select>
+        <a class="btn btn-primary" href="manager_hub.html" onclick="try{var h=localStorage.getItem('manager_hub_path')||'manager_hub.html'; this.href=h;}catch(e){}">Back to Hub</a>
+      </div>
+    </div>
+    <div class="stats">
+      <span class="pill accent" id="submittedCountPill">Submitted: …</span>
+      <span class="pill" id="maintenanceCountPill">Maintenance: 0</span>
+      <span class="pill" id="agendaCountPill">Agenda: 0</span>
+      <span class="pill" id="minutesCountPill">Minutes: 0</span>
+    </div>
+  </section>
+
+  <section class="board-command-center" id="boardCommandCenter">
+    <div class="command-card primary">
+      <div class="command-title-row"><div><div class="command-title">Needs Your Attention</div><div class="command-sub">Board items, approvals, and updates that need action.</div></div><span class="command-count-pill" id="boardAttentionCount">0</span></div>
+      <div class="command-attention-list" id="boardNeedsAttention"><div class="command-empty">Loading board priorities…</div></div>
+    </div>
+    <div class="command-card">
+      <div class="command-title">Quick Actions</div><div class="command-sub">Jump directly to the most common board tasks.</div>
+      <div class="command-quick-grid"><button type="button" data-scroll-target="newItemTitle">+ New Item</button><button type="button" data-scroll-target="calendarHost">+ Event</button><button type="button" data-scroll-target="submittedItemsHost">Review Items</button><button type="button" data-scroll-target="galleryApprovalCard">Gallery</button></div>
+      <div class="command-title" style="margin-top:18px;font-size:18px;">Today Snapshot</div>
+      <div class="command-today" id="boardTodaySnapshot"><div class="command-today-row"><span>Submitted Items</span><span id="todaySubmittedMini">…</span></div><div class="command-today-row"><span>Maintenance Updates</span><span id="todayMaintenanceMini">0</span></div><div class="command-today-row"><span>Agenda Topics</span><span id="todayAgendaMini">0</span></div></div>
+    </div>
+  </section>
+
+
+  <section class="workspace">
+    <div class="card new-item-gold-card">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">New Item</h2>
+          
+        </div>
+      </div>
+      <div class="new-item-grid">
+        <div>
+          <label class="tiny muted" for="newItemTitle">Title</label>
+          <input id="newItemTitle" type="text" placeholder="e.g., Replace lobby lighting" />
+        </div>
+        <div>
+          <label class="tiny muted" for="newItemDue">Due date</label>
+          <input id="newItemDue" type="date" />
+        </div>
+        <div class="full">
+          <label class="tiny muted" for="newItemDetails">Details</label>
+          <textarea id="newItemDetails" placeholder="Add any notes or context…"></textarea>
+        </div>
+        <div class="full">
+          <label class="tiny muted" for="newItemPhoto">Photo (optional)</label>
+          <input id="newItemPhoto" type="file" accept="image/*" />
+        </div>
+        <div class="full new-item-agenda-option">
+          <label class="agenda-checkbox-row" for="newItemAgendaFlag">
+            <input id="newItemAgendaFlag" type="checkbox" />
+            <span>Add to this month’s agenda</span>
+          </label>
+        </div>
+      </div>
+      <div class="action-row">
+        <button id="submitNewItemBtn" class="btn btn-primary" type="button">Submit Action Item</button>
+        <button id="clearNewItemBtn" class="btn btn-secondary" type="button">Clear</button>
+      </div>
+      <div class="tiny muted" id="newItemStatus" style="margin-top:10px"></div>
+    </div>
+
+
+    <div class="card submitted-priority span2">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Submitted Items</h2>
+          <div class="section-sub">Existing board action items for the selected community.</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <span class="pill submitted-count" id="submittedItemsPriorityPill">… Submitted</span>
+          <a class="legacy-link" href="board_member_hub.html?view=submitted">Open full list</a>
+        </div>
+      </div>
+      <div class="items" id="submittedItemsHost"></div>
+    </div>
+
+
+    <div class="card span2" id="galleryApprovalCard">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Community Gallery Approvals</h2>
+          <div class="section-sub">Review resident photos before they publish to the Community Experience gallery.</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <span class="pill" id="galleryApprovalPill">Review</span>
+          <a class="legacy-link" href="board_gallery_approvals.html">Open approvals</a>
+        </div>
+      </div>
+      <div class="items" id="galleryApprovalHost"><div class="board-empty">Loading resident photo submissions…</div></div>
+      <div class="gallery-mini-status" id="galleryApprovalStatus"></div>
+    </div>
+
+
+
+    <div class="card span2" id="communityEventsApprovalCard">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Community Events</h2>
+          <div class="section-sub">Create event posts, upload flyers, and approve events before residents see them.</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <span class="pill" id="communityEventsPill">Board Approval</span>
+          <a class="legacy-link" href="board_community_events.html">Open events</a>
+        </div>
+      </div>
+      <div class="items"><div class="board-empty">Event posts remain pending until a board majority approves them.</div></div>
+    </div>
+
+    <div class="card calendar-card span2">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Calendar</h2>
+          <div class="section-sub">Important annual meeting and board-related dates for this community.</div>
+        </div>
+        <div class="calendar-actions">
+          <span class="pill accent" id="calendarCountPill">Dates: 0</span>
+          <button id="addCalendarEventBtn" class="calendar-btn" type="button">Add Calendar Item</button>
+        </div>
+      </div>
+      <div class="items" id="calendarHost"></div>
+    </div>
+
+    <div class="card span2 maintenance-card is-collapsed" id="liveMaintenanceSection">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Live Maintenance Updates</h2>
+        </div>
+        <button class="section-collapse-btn" id="maintenanceToggleBtn" type="button" aria-expanded="false" aria-controls="maintenanceItemsHost">Show updates ▾</button>
+      </div>
+      <div class="items" id="maintenanceItemsHost"></div>
+      <div class="maintenance-archive-wrap" id="maintenanceArchiveWrap" style="display:none">
+        <button class="maintenance-archive-toggle" id="maintenanceArchiveToggle" type="button" aria-expanded="false" aria-controls="maintenanceArchiveHost">Archived Updates</button>
+        <div class="maintenance-archive-host" id="maintenanceArchiveHost"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Meeting Agenda Items</h2>
+          <div class="section-sub">Topics that will feed into the meeting agenda.</div>
+        </div>
+      </div>
+      <div class="items" id="agendaItemsHost"></div>
+    </div>
+
+    <div class="card minutes-card is-collapsed" id="minutesApprovalSection">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Minutes Awaiting Approval</h2>
+        </div>
+        <button class="section-collapse-btn" id="minutesToggleBtn" type="button" aria-expanded="false" aria-controls="minuteApprovalHost">Show minutes ▾</button>
+      </div>
+      <div class="items" id="minuteApprovalHost"></div>
+      <div class="minutes-archive-wrap" id="minutesArchiveWrap" style="display:none">
+        <button class="minutes-archive-toggle" id="minutesArchiveToggle" type="button" aria-expanded="false" aria-controls="minutesArchiveHost">Archived Minutes</button>
+        <div class="minutes-archive-host" id="minutesArchiveHost"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+
+<div class="item-modal-backdrop" id="itemModalBackdrop" aria-hidden="true">
+  <div class="item-modal" role="dialog" aria-modal="true" aria-labelledby="itemModalTitle">
+    <h3 id="itemModalTitle">Board Item</h3>
+    <p id="itemModalSub">Review the submitted item details.</p>
+    <div class="item-modal-grid">
+      <div class="item-modal-card">
+        <div class="item-modal-label">Details</div>
+        <div class="item-modal-value" id="itemModalDetails">—</div>
+      </div>
+      <div class="item-modal-card">
+        <div class="item-modal-label">Submitted By</div>
+        <div class="item-modal-value" id="itemModalCreatedBy">—</div>
+        <div class="item-modal-label" style="margin-top:12px">Due Date</div>
+        <div class="item-modal-value" id="itemModalDue">—</div>
+        <div class="item-modal-label" style="margin-top:12px">Created</div>
+        <div class="item-modal-value" id="itemModalCreatedAt">—</div>
+      </div>
+    </div>
+    <div class="item-modal-actions">
+      <button id="itemModalCloseBtn" class="btn btn-primary" type="button">Close</button>
+    </div>
+  </div>
+</div>
+<div class="calendar-modal-backdrop" id="calendarModalBackdrop" aria-hidden="true">
+  <div class="calendar-modal" role="dialog" aria-modal="true" aria-labelledby="calendarModalTitle">
+    <h3 id="calendarModalTitle">Add Calendar Item</h3>
+    <p>Add an important board or annual-meeting date for this community.</p>
+    <div class="calendar-form-grid">
+      <div class="full">
+        <label class="tiny muted" for="calendarEventTitle">Title</label>
+        <input id="calendarEventTitle" type="text" placeholder="e.g., Board meeting" />
+      </div>
+      <div>
+        <label class="tiny muted" for="calendarEventDate">Date</label>
+        <input id="calendarEventDate" type="date" />
+      </div>
+      <div>
+        <label class="tiny muted" for="calendarEventTime">Time (optional)</label>
+        <input id="calendarEventTime" type="time" />
+      </div>
+      <div>
+        <label class="tiny muted" for="calendarEventLocation">Location (optional)</label>
+        <input id="calendarEventLocation" type="text" placeholder="Clubhouse or virtual" />
+      </div>
+      <div class="full">
+        <label class="tiny muted" for="calendarEventNotes">Notes (optional)</label>
+        <textarea id="calendarEventNotes" placeholder="Add any context board members should know."></textarea>
+      </div>
+    </div>
+    <div id="calendarEventStatus" class="calendar-status"></div>
+    <div class="calendar-modal-actions">
+      <button id="calendarModalCancelBtn" class="btn btn-secondary" type="button">Cancel</button>
+      <button id="calendarModalSaveBtn" class="btn btn-primary" type="button">Save Calendar Item</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const frame = document.getElementById('bridgeFrame');
+  const communitySelect = document.getElementById('communitySelect');
+  const deletedSubmittedItemIds = new Set();
+  const hosts = {
+    submitted: document.getElementById('submittedItemsHost'),
+    maintenance: document.getElementById('maintenanceItemsHost'),
+    agenda: document.getElementById('agendaItemsHost'),
+    minutes: document.getElementById('minuteApprovalHost'),
+    calendar: document.getElementById('calendarHost'),
+    gallery: document.getElementById('galleryApprovalHost')
+  };
+  const pills = {
+    submitted: document.getElementById('submittedCountPill'),
+    maintenance: document.getElementById('maintenanceCountPill'),
+    agenda: document.getElementById('agendaCountPill'),
+    minutes: document.getElementById('minutesCountPill'),
+    calendar: document.getElementById('calendarCountPill')
+  };
+  // v375: keep display names separate from UUID community IDs.
+  // Older Board Hub/Manager Hub builds can leave <option value="Biltmore Parc">, which makes
+  // Supabase UUID filters fail (community_id=eq.Biltmore+Parc). All data queries must use this resolver.
+  function isUuid(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||'').trim()); }
+  function urlCommunityId(){ try{ const u=new URL(window.location.href); const v=u.searchParams.get('community_id')||u.searchParams.get('cid')||''; return isUuid(v)?String(v).trim():''; }catch(_e){ return ''; } }
+  function selectedCommunityName(){
+    try{
+      if(communitySelect && communitySelect.selectedOptions && communitySelect.selectedOptions[0]) return String(communitySelect.selectedOptions[0].textContent||'').trim();
+    }catch(_e){}
+    try{ return String(localStorage.getItem('currentCommunityName')||localStorage.getItem('activeCommunityName')||localStorage.getItem('zummeeCurrentCommunityName')||localStorage.getItem('zummee_community')||'').trim(); }catch(_e){ return ''; }
+  }
+  function getStoredCommunityUuid(){
+    const vals=[];
+    try{ vals.push(localStorage.getItem('zummee_selected_community_id'), localStorage.getItem('activeCommunityId'), localStorage.getItem('zummeeActiveCommunityId'), localStorage.getItem('currentCommunityId')); }catch(_e){}
+    try{ vals.push(window.currentCommunityId, window.activeCommunityId, window.zummeeSelectedCommunityId); }catch(_e){}
+    vals.unshift(urlCommunityId());
+    for(const v of vals){ if(isUuid(v)) return String(v).trim(); }
+    return '';
+  }
+  function selectedOptionCommunityUuid(){
+    try{
+      if(!communitySelect) return '';
+      if(isUuid(communitySelect.value)) return String(communitySelect.value).trim();
+      const opt = communitySelect.selectedOptions && communitySelect.selectedOptions[0];
+      if(opt){
+        const vals=[opt.value,opt.getAttribute('data-community-id'),opt.getAttribute('data-id'),opt.dataset && opt.dataset.communityId,opt.dataset && opt.dataset.id];
+        for(const v of vals){ if(isUuid(v)) return String(v).trim(); }
+      }
+    }catch(_e){}
+    return '';
+  }
+  function getResolvedCommunityId(){
+    const id = selectedOptionCommunityUuid() || getStoredCommunityUuid();
+    if(id){
+      try{
+        localStorage.setItem('zummee_selected_community_id', id);
+        localStorage.setItem('activeCommunityId', id);
+        localStorage.setItem('zummeeActiveCommunityId', id);
+        localStorage.setItem('currentCommunityId', id);
+        window.currentCommunityId=id; window.activeCommunityId=id; window.zummeeSelectedCommunityId=id;
+      }catch(_e){}
+    }
+    return id;
+  }
+  const statusEl = document.getElementById('newItemStatus');
+  // v20 performance: archive sections are indexed during initial load but their
+  // month bodies are rendered only when the user expands the archive. This keeps
+  // the page responsive while preserving the same data and controls.
+  const lazyArchives = {
+    maintenance: { groups: [], total: 0, rendered: false },
+    minutes: { groups: [], total: 0, rendered: false }
+  };
+  function resetLazyArchive(type){
+    if(!lazyArchives[type]) return;
+    lazyArchives[type].groups = [];
+    lazyArchives[type].total = 0;
+    lazyArchives[type].rendered = false;
+  }
+  function renderLazyArchive(type){
+    const data = lazyArchives[type];
+    if(!data || data.rendered) return;
+    const host = type === 'maintenance' ? document.getElementById('maintenanceArchiveHost') : document.getElementById('minutesArchiveHost');
+    if(!host) return;
+    host.innerHTML = '';
+    data.groups.forEach(function(group){
+      const month = document.createElement('div');
+      month.className = type === 'maintenance' ? 'maintenance-month' : 'minutes-month';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = type === 'maintenance' ? 'maintenance-month-toggle' : 'minutes-month-toggle';
+      btn.setAttribute('aria-expanded','false');
+      btn.textContent = group.label + ' (' + group.rows.length + ')';
+      const body = document.createElement('div');
+      body.className = type === 'maintenance' ? 'maintenance-month-items' : 'minutes-month-items';
+      group.rows.forEach(function(html){
+        const scratch = document.createElement('div');
+        scratch.innerHTML = html;
+        while(scratch.firstChild) body.appendChild(scratch.firstChild);
+      });
+      btn.addEventListener('click', function(){
+        const open = btn.getAttribute('aria-expanded') === 'true';
+        btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+        body.classList.toggle('is-open', !open);
+      });
+      month.appendChild(btn);
+      month.appendChild(body);
+      host.appendChild(month);
+    });
+    data.rendered = true;
+  }
+  const liveMaintenanceSection = document.getElementById('liveMaintenanceSection');
+  const maintenanceToggleBtn = document.getElementById('maintenanceToggleBtn');
+  function setMaintenanceCollapsed(collapsed){
+    if(!liveMaintenanceSection || !maintenanceToggleBtn) return;
+    liveMaintenanceSection.classList.toggle('is-collapsed', !!collapsed);
+    maintenanceToggleBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    maintenanceToggleBtn.textContent = collapsed ? 'Show updates ▾' : 'Hide updates ▴';
+  }
+  if(maintenanceToggleBtn){
+    maintenanceToggleBtn.addEventListener('click', function(){
+      setMaintenanceCollapsed(!liveMaintenanceSection.classList.contains('is-collapsed'));
+    });
+  }
+
+  const maintenanceArchiveToggle = document.getElementById('maintenanceArchiveToggle');
+  const maintenanceArchiveHost = document.getElementById('maintenanceArchiveHost');
+  if(maintenanceArchiveToggle && maintenanceArchiveHost){
+    maintenanceArchiveToggle.addEventListener('click', function(){
+      const open = maintenanceArchiveToggle.getAttribute('aria-expanded') === 'true';
+      if(open){
+        maintenanceArchiveToggle.setAttribute('aria-expanded','false');
+        maintenanceArchiveHost.classList.remove('is-open');
+      }else{
+        renderLazyArchive('maintenance');
+        maintenanceArchiveToggle.setAttribute('aria-expanded','true');
+        maintenanceArchiveHost.classList.add('is-open');
+      }
+    });
+  }
+
+  const minutesApprovalSection = document.getElementById('minutesApprovalSection');
+  const minutesToggleBtn = document.getElementById('minutesToggleBtn');
+  function setMinutesCollapsed(collapsed){
+    if(!minutesApprovalSection || !minutesToggleBtn) return;
+    minutesApprovalSection.classList.toggle('is-collapsed', !!collapsed);
+    minutesToggleBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    minutesToggleBtn.textContent = collapsed ? 'Show minutes ▾' : 'Hide minutes ▴';
+  }
+  if(minutesToggleBtn){
+    minutesToggleBtn.addEventListener('click', function(){
+      setMinutesCollapsed(!minutesApprovalSection.classList.contains('is-collapsed'));
+    });
+  }
+  const minutesArchiveToggle = document.getElementById('minutesArchiveToggle');
+  const minutesArchiveHost = document.getElementById('minutesArchiveHost');
+  if(minutesArchiveToggle && minutesArchiveHost){
+    minutesArchiveToggle.addEventListener('click', function(){
+      const open = minutesArchiveToggle.getAttribute('aria-expanded') === 'true';
+      if(open){
+        minutesArchiveToggle.setAttribute('aria-expanded','false');
+        minutesArchiveHost.classList.remove('is-open');
+      }else{
+        renderLazyArchive('minutes');
+        minutesArchiveToggle.setAttribute('aria-expanded','true');
+        minutesArchiveHost.classList.add('is-open');
+      }
+    });
+  }
+  const addCalendarEventBtn = document.getElementById('addCalendarEventBtn');
+  const calendarModalBackdrop = document.getElementById('calendarModalBackdrop');
+  const calendarModalSaveBtn = document.getElementById('calendarModalSaveBtn');
+  const calendarModalCancelBtn = document.getElementById('calendarModalCancelBtn');
+  const calendarEventStatus = document.getElementById('calendarEventStatus');
+  let calendarEditingId = null;
+  const itemModalBackdrop = document.getElementById('itemModalBackdrop');
+  const itemModalCloseBtn = document.getElementById('itemModalCloseBtn');
+  const heroBrandLogo = document.getElementById('heroBrandLogo');
+  function showBoardHubToast(message){
+    try{
+      const existing = document.getElementById('boardHubToast');
+      if(existing) existing.remove();
+      const toast = document.createElement('div');
+      toast.id = 'boardHubToast';
+      toast.setAttribute('role','status');
+      toast.textContent = message || 'Work order created.';
+      toast.style.position = 'fixed';
+      toast.style.top = '24px';
+      toast.style.left = '50%';
+      toast.style.transform = 'translateX(-50%)';
+      toast.style.zIndex = '999999';
+      toast.style.background = '#ffffff';
+      toast.style.color = '#12326f';
+      toast.style.border = '2px solid #9fc0ff';
+      toast.style.borderRadius = '18px';
+      toast.style.boxShadow = '0 14px 36px rgba(30, 60, 120, 0.18)';
+      toast.style.padding = '14px 22px';
+      toast.style.fontWeight = '800';
+      toast.style.letterSpacing = '.01em';
+      toast.style.fontFamily = 'inherit';
+      document.body.appendChild(toast);
+      window.setTimeout(function(){ try{ toast.remove(); }catch(e){} }, 2600);
+    }catch(e){ try{ alert(message || 'Work order created.'); }catch(_e){} }
+  }
+
+
+  function parseCompanyLogoRef(raw){
+    raw = String(raw || '').trim();
+    if(!raw) return null;
+    if(/^https?:\/\//i.test(raw)) return { url: raw };
+    return { bucket:'company_logos', path: raw };
+  }
+  function preloadImage(url){
+    return new Promise(function(resolve, reject){
+      const img = new Image();
+      img.decoding = 'async';
+      img.onload = function(){ resolve(url); };
+      img.onerror = function(err){ reject(err || new Error('Image preload failed')); };
+      img.src = url;
+    });
+  }
+  async function paintHeroBrandLogo(payload){
+    if(!heroBrandLogo) return;
+    let url = String(payload && payload.url || '').trim() || '';
+    let alt = String(payload && payload.alt || '').trim() || 'Zummee logo';
+    let isCompany = !!(payload && payload.isCompany);
+    try{ await preloadImage(url); }catch(_e){
+      url = '';
+      alt = 'Zummee logo';
+      isCompany = false;
+      try{ await preloadImage(url); }catch(_e2){}
+    }
+    heroBrandLogo.classList.remove('is-visible');
+    heroBrandLogo.src = url;
+    heroBrandLogo.alt = alt;
+    heroBrandLogo.classList.toggle('is-company', isCompany);
+    requestAnimationFrame(function(){ heroBrandLogo.classList.add('is-visible'); });
+  }
+  async function loadHeroBrandLogo(){
+    if(!heroBrandLogo) return;
+    try{
+      const win = bridgeWin();
+      if(!win || !win.sb || typeof win.sb.from !== 'function') throw new Error('Board hub engine not available');
+      const ctx = typeof win.getCurrentContext === 'function' ? (await win.getCurrentContext()) : null;
+      const companyId = String((ctx && (ctx.company_id || ctx.companyId)) || localStorage.getItem('activeCompanyId') || localStorage.getItem('zummee_company_id') || '').trim();
+      if(!companyId) throw new Error('No company id');
+      const res = await win.sb.from('companies').select('logo_path,name').eq('id', companyId).maybeSingle();
+      if(res.error) throw res.error;
+      const row = res.data || {};
+      const ref = parseCompanyLogoRef(row.logo_path);
+      if(!ref) throw new Error('No company logo');
+      let url = String(ref.url || '').trim();
+      if(!url && ref.bucket && ref.path && win.sb.storage && win.sb.storage.from){
+        const pub = win.sb.storage.from(ref.bucket).getPublicUrl(ref.path);
+        url = String(pub && pub.data && pub.data.publicUrl || '').trim();
+      }
+      if(!url) throw new Error('No logo URL');
+      await paintHeroBrandLogo({ url:url, alt:String(row.name || 'Company logo'), isCompany:true });
+    }catch(_e){
+      await paintHeroBrandLogo({ url:'', alt:'Company logo', isCompany:false });
+    }
+  }
+
+  function bridgeWin(){ return frame && frame.contentWindow; }
+  function bridgeDoc(){ try { return frame && frame.contentDocument; } catch(e){ return null; } }
+  function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+  function confirmCreateWorkOrder(){
+    return new Promise(function(resolve){
+      try{
+        const existing = document.getElementById('workOrderConfirmOverlay');
+        if(existing) existing.remove();
+        const overlay = document.createElement('div');
+        overlay.id = 'workOrderConfirmOverlay';
+        overlay.className = 'wo-confirm-overlay';
+        overlay.setAttribute('role','dialog');
+        overlay.setAttribute('aria-modal','true');
+        overlay.innerHTML = '<div class="wo-confirm-card"><h3>Create work order?</h3><p>This will create a maintenance work order from the submitted board item. Continue?</p><div class="wo-confirm-actions"><button type="button" class="wo-confirm-cancel" data-wo-confirm="cancel">Cancel</button><button type="button" class="wo-confirm-create" data-wo-confirm="create">Create Work Order</button></div></div>';
+        function close(result){ try{ overlay.remove(); }catch(_e){} resolve(!!result); }
+        overlay.addEventListener('click', function(ev){
+          const action = ev.target && ev.target.getAttribute && ev.target.getAttribute('data-wo-confirm');
+          if(action === 'create') close(true);
+          if(action === 'cancel') close(false);
+          if(ev.target === overlay) close(false);
+        });
+        function onKey(ev){ if(ev.key === 'Escape'){ document.removeEventListener('keydown', onKey); close(false); } }
+        document.addEventListener('keydown', onKey);
+        document.body.appendChild(overlay);
+        const createBtn = overlay.querySelector('[data-wo-confirm="create"]');
+        if(createBtn) createBtn.focus();
+      }catch(err){
+        console.error('Confirm modal failed:', err);
+        resolve(window.confirm('Create work order?'));
+      }
+    });
+  }
+
+  function setEmpty(el, text){ if(el) el.innerHTML = '<div class="board-empty">'+text+'</div>'; }
+  function countItems(host){ return host ? host.querySelectorAll('.item, .itemRow, .bmMaintItem').length : 0; }
+  function escapeHtml(value){
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+  try{ window.escapeHtml = escapeHtml; }catch(_e){}
+
+  function friendlyDate(value){
+    const raw = String(value || '').trim();
+    if(!raw) return '';
+    const d = new Date(raw + (raw.length <= 10 ? 'T12:00:00' : ''));
+    if(Number.isNaN(d.getTime())) return raw;
+    return d.toLocaleDateString([], { month:'short', day:'numeric', year:'numeric' });
+  }
+  function parseCalendarDate(raw){
+    raw = String(raw || '').trim();
+    if(!raw) return null;
+    let m = raw.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if(m) return new Date(Number(m[1]), Number(m[2])-1, Number(m[3]));
+    m = raw.match(/([A-Za-z]{3,9})\s+(\d{1,2}),\s*(\d{4})/);
+    if(m){
+      const d = new Date(m[1] + ' ' + m[2] + ', ' + m[3] + ' 12:00:00');
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+  }
+  function dateKey(d){
+    if(!d || Number.isNaN(d.getTime())) return '';
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function collectAnnualMeetingCalendarEvents(){
+    const doc = bridgeDoc();
+    const body = doc && doc.getElementById('bmAnnualMeetingsBody');
+    const events = [];
+    if(!body) return events;
+    const title = body.querySelector('.bmCriticalTitle');
+    const desc = body.querySelector('.bmCriticalDesc, .sub');
+    const meta = String((desc && desc.textContent) || (title && title.textContent) || '').trim();
+    body.querySelectorAll('.bmStat, .statCard').forEach(card=>{
+      const label = String((card.querySelector('.label')||{}).textContent || '').trim();
+      const value = String((card.querySelector('.value')||{}).textContent || '').trim();
+      const d = parseCalendarDate(value);
+      if(label && d) events.push({ title: label, date: d, meta: meta || value, source: 'annual' });
+    });
+    const rawText = String(body.textContent || '').trim();
+    rawText.replace(/([A-Za-z]{3,9}\s+\d{1,2},\s*\d{4}|\d{4}-\d{1,2}-\d{1,2})/g, function(match){
+      const d = parseCalendarDate(match);
+      if(d && !events.some(ev => dateKey(ev.date) === dateKey(d))){
+        events.push({ title: 'Annual meeting date', date: d, meta: match, source: 'annual' });
+      }
+      return match;
+    });
+    return events;
+  }
+  async function collectCommunityCalendarEvents(){
+    const win = bridgeWin();
+    if(!win || !win.sb || typeof win.sb.from !== 'function') return [];
+    const ctx = typeof win.getCtx === 'function' ? win.getCtx() : null;
+    const communityId = String((ctx && isUuid(ctx.communityId) ? ctx.communityId : '') || getResolvedCommunityId() || '').trim();
+    if(!communityId) return [];
+    const start = new Date(); start.setMonth(start.getMonth()-12, 1); start.setHours(0,0,0,0);
+    const end = new Date(); end.setMonth(end.getMonth()+4, 1); end.setHours(0,0,0,0);
+    try{
+      const res = await win.sb.from('CommunityCalendarEvents')
+        .select('id,title,starts_at,location,notes')
+        .eq('community_id', communityId)
+        .gte('starts_at', start.toISOString())
+        .lt('starts_at', end.toISOString())
+        .order('starts_at', { ascending: true })
+        .limit(80);
+      if(res && res.error) throw res.error;
+      return (res && res.data || []).map(row => ({
+        id: row.id,
+        raw: row,
+        title: String(row.title || 'Calendar item'),
+        date: new Date(row.starts_at),
+        location: row.location || '',
+        notes: row.notes || '',
+        meta: [row.location, row.notes].filter(Boolean).join(' • '),
+        source: 'community'
+      })).filter(ev => ev.date && !Number.isNaN(ev.date.getTime()));
+    }catch(err){
+      console.warn('Calendar event load skipped:', err);
+      return [];
+    }
+  }
+  function renderCalendarMonth(host, events){
+    window.__lastCalendarEvents = events || [];
+    const today = new Date(); today.setHours(0,0,0,0);
+    const upcoming = events.filter(ev => ev.date >= today).sort((a,b)=>a.date-b.date);
+    const focus = upcoming[0] ? upcoming[0].date : today;
+    const monthStart = new Date(focus.getFullYear(), focus.getMonth(), 1);
+    const firstOffset = monthStart.getDay();
+    const cells = [];
+    const byDay = new Map();
+    events.forEach(ev => {
+      const key = dateKey(ev.date);
+      if(!byDay.has(key)) byDay.set(key, []);
+      byDay.get(key).push(ev);
+    });
+    const startCell = new Date(monthStart);
+    startCell.setDate(monthStart.getDate() - firstOffset);
+    for(let i=0;i<42;i++){
+      const d = new Date(startCell); d.setDate(startCell.getDate()+i);
+      const key = dateKey(d);
+      const dayEvents = byDay.get(key) || [];
+      const muted = d.getMonth() !== focus.getMonth();
+      const isToday = dateKey(d) === dateKey(today);
+      const title = dayEvents.length ? dayEvents.map(ev => ev.title).join(' | ') : ('No scheduled events on ' + friendlyDate(key));
+      cells.push('<button type="button" class="bm-calendar-day ' + (muted?'muted-day ':'') + (isToday?'today ':'') + (dayEvents.length?'scheduled ':'') + '" data-date="' + escapeHtml(key) + '" aria-label="' + escapeHtml(title) + '" title="' + escapeHtml(title) + '">' +
+        '<span class="bm-calendar-num">' + d.getDate() + '</span>' +
+        (dayEvents.length ? '<span class="bm-calendar-dot"></span>' : '') +
+      '</button>');
+    }
+    const visibleEvents = upcoming.filter(ev => ev.date.getFullYear() === focus.getFullYear() && ev.date.getMonth() === focus.getMonth());
+    const pastEvents = events.filter(ev => ev.date < today).sort((a,b)=>b.date-a.date).slice(0,50);
+    function isReminderWindow(ev){
+      try{
+        const today2 = new Date(); today2.setHours(0,0,0,0);
+        const eventDay = new Date(ev.date); eventDay.setHours(0,0,0,0);
+        const diffDays = Math.ceil((eventDay - today2) / 86400000);
+        return diffDays >= 0 && diffDays <= 2;
+      }catch(_e){ return false; }
+    }
+    function timeLabel(ev){
+      try{
+        const d = ev && ev.date ? new Date(ev.date) : null;
+        if(!d || Number.isNaN(d.getTime())) return '';
+        return (d.getHours() || d.getMinutes()) ? d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : '';
+      }catch(_e){ return ''; }
+    }
+    function eventListHtml(list, emptyText){
+      return list.length ? list.map(ev => {
+        const eventKey = dateKey(ev.date);
+        const t = timeLabel(ev);
+        const meta = [t, ev.location, ev.notes].filter(Boolean).join(' • ');
+        const d = new Date(ev.date);
+        const day = String(d.getDate());
+        const month = d.toLocaleDateString([], { month:'short' }).toUpperCase();
+        const actions = ev.id ? ('<div class="bm-event-actions"><button class="bm-event-edit" type="button" data-cal-edit="' + escapeHtml(String(ev.id)) + '">Edit</button><button class="bm-event-delete" type="button" data-cal-delete="' + escapeHtml(String(ev.id)) + '">Delete</button></div>') : '';
+        const reminder = isReminderWindow(ev) ? '<div class="bm-event-tags"><span class="bm-event-tag alert">Reminder active</span><span class="bm-event-tag due">Due within 2 days</span></div>' : '';
+        return '<div class="bm-calendar-list-item bm-event-card" data-calendar-event-id="' + escapeHtml(String(ev.id || '')) + '">' +
+          '<div class="bm-event-date"><span class="bm-event-day">' + escapeHtml(day) + '</span><span class="bm-event-month">' + escapeHtml(month) + '</span></div>' +
+          '<div class="bm-calendar-list-main bm-event-main"><strong class="bm-event-title">' + escapeHtml(ev.title) + '</strong>' + (meta ? '<div class="bm-calendar-list-meta bm-event-meta">' + escapeHtml(meta) + '</div>' : '') + reminder + '</div>' + actions +
+        '</div>';
+      }).join('') : '<div class="bm-calendar-none">' + escapeHtml(emptyText) + '</div>';
+    }
+    function monthArchiveHtml(list){
+      if(!list.length){
+        return '<div class="bm-calendar-past-archive"><button type="button" class="bm-calendar-past-toggle" aria-expanded="false"><span>Past Events</span><span class="chev">›</span></button><div class="bm-calendar-past-body"><div class="bm-calendar-none">No past events yet.</div></div></div>';
+      }
+      const groups = new Map();
+      list.forEach(ev => {
+        const d = new Date(ev.date);
+        const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+        if(!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(ev);
+      });
+      const months = Array.from(groups.keys()).sort().reverse().map(key => {
+        const parts = key.split('-');
+        const labelDate = new Date(Number(parts[0]), Number(parts[1])-1, 1);
+        const label = labelDate.toLocaleDateString([], {month:'long', year:'numeric'});
+        const rows = groups.get(key).sort((a,b)=>b.date-a.date);
+        return '<div class="bm-calendar-past-month" data-past-month="' + escapeHtml(key) + '">' +
+          '<button type="button" class="bm-calendar-month-toggle" aria-expanded="false"><span>' + escapeHtml(label) + ' (' + rows.length + ')</span><span class="chev">›</span></button>' +
+          '<div class="bm-calendar-month-body"><div class="bm-calendar-list">' + eventListHtml(rows, 'No events in this month.') + '</div></div>' +
+        '</div>';
+      }).join('');
+      return '<div class="bm-calendar-past-archive" data-past-archive="calendar"><button type="button" class="bm-calendar-past-toggle" aria-expanded="false"><span>Past Events (' + list.length + ')</span><span class="chev">›</span></button><div class="bm-calendar-past-body">' + months + '</div></div>';
+    }
+
+    host.innerHTML = '<div class="bm-calendar-board">' +
+      '<div class="bm-calendar-topline"><div><div class="bm-calendar-month">' + focus.toLocaleDateString([], { month:'long', year:'numeric' }) + '</div><div class="bm-calendar-hint">Tap a date to view scheduled items.</div></div><div class="bm-calendar-count">' + events.length + ' scheduled</div></div>' +
+      '<div class="bm-calendar-dow"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>' +
+      '<div class="bm-calendar-grid">' + cells.join('') + '</div>' +
+      '<div class="bm-calendar-upcoming-panel">' +
+        '<div class="bm-calendar-selection-title">Upcoming this month</div>' +
+        '<div class="bm-calendar-list">' + eventListHtml(visibleEvents, 'No scheduled dates in this month.') + '</div>' +
+      '</div>' +
+      monthArchiveHtml(pastEvents) +
+    '</div>';
+
+    host.querySelectorAll('.bm-calendar-past-toggle').forEach(btn => {
+      btn.addEventListener('click', function(){
+        const wrap = this.closest('.bm-calendar-past-archive');
+        if(!wrap) return;
+        const open = wrap.classList.toggle('open');
+        this.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+    });
+    host.querySelectorAll('.bm-calendar-month-toggle').forEach(btn => {
+      btn.addEventListener('click', function(){
+        const wrap = this.closest('.bm-calendar-past-month');
+        if(!wrap) return;
+        const open = wrap.classList.toggle('open');
+        this.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+    });
+
+    const listHost = host.querySelector('.bm-calendar-list');
+    const selectionTitle = host.querySelector('.bm-calendar-selection-title');
+    host.querySelectorAll('.bm-calendar-day').forEach(dayBtn => {
+      dayBtn.addEventListener('click', function(){
+        const selectedKey = this.getAttribute('data-date');
+        host.querySelectorAll('.bm-calendar-day.selected').forEach(n => n.classList.remove('selected'));
+        this.classList.add('selected');
+        const selectedEvents = byDay.get(selectedKey) || [];
+        if(selectionTitle) selectionTitle.textContent = friendlyDate(selectedKey);
+        if(listHost) listHost.innerHTML = eventListHtml(selectedEvents, 'No scheduled items for ' + friendlyDate(selectedKey) + '.');
+      });
+    });
+  }
+  async function renderCalendar(){
+    const host = hosts.calendar;
+    if(!host) return;
+    const annualEvents = collectAnnualMeetingCalendarEvents();
+    const communityEvents = await collectCommunityCalendarEvents();
+    const merged = [];
+    [...annualEvents, ...communityEvents].forEach(ev => {
+      const key = dateKey(ev.date) + '|' + String(ev.title || '').toLowerCase();
+      if(key && !merged.some(x => x.__key === key)) merged.push(Object.assign({__key:key}, ev));
+    });
+    if(!merged.length){
+      setEmpty(host, 'No scheduled calendar dates right now.');
+      return;
+    }
+    renderCalendarMonth(host, merged);
+  }
+
+
+
+  function openCalendarModal(){
+    calendarEditingId = null;
+    if(document.getElementById('calendarModalTitle')) document.getElementById('calendarModalTitle').textContent = 'Add Calendar Item';
+    if(calendarModalSaveBtn) calendarModalSaveBtn.textContent = 'Save Calendar Item';
+    if(!calendarModalBackdrop) return;
+    document.getElementById('calendarEventTitle').value='';
+    document.getElementById('calendarEventDate').value='';
+    document.getElementById('calendarEventTime').value='';
+    document.getElementById('calendarEventLocation').value='';
+    document.getElementById('calendarEventNotes').value='';
+    if(calendarEventStatus) calendarEventStatus.textContent='';
+    calendarModalBackdrop.style.display='flex';
+    calendarModalBackdrop.setAttribute('aria-hidden','false');
+  }
+  function closeCalendarModal(){
+    if(!calendarModalBackdrop) return;
+    calendarModalBackdrop.style.display='none';
+    calendarModalBackdrop.setAttribute('aria-hidden','true');
+  }
+
+  function closeItemModal(){
+    if(!itemModalBackdrop) return;
+    itemModalBackdrop.style.display='none';
+    itemModalBackdrop.setAttribute('aria-hidden','true');
+  }
+
+  const boardSubmitterNameCache = new Map();
+  async function resolveBoardSubmitterName(rawValue){
+    const raw = String(rawValue || '').trim();
+    if(!raw) return '—';
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(raw)) return raw;
+    if(boardSubmitterNameCache.has(raw)) return boardSubmitterNameCache.get(raw);
+    const win = bridgeWin();
+    if(!win || !win.sb || typeof win.sb.from !== 'function') return raw;
+    let label = raw;
+    try{
+      let q = await win.sb.from('profiles').select('name,email').eq('id', raw).maybeSingle();
+      if(q && q.error && /disabled/i.test(String(q.error.message || q.error.details || ''))){
+        q = await win.sb.from('profiles').select('name,email').eq('id', raw).single();
+      }
+      if(q && !q.error){
+        const row = q.data || null;
+        label = String((row && (row.name || row.email)) || raw).trim() || raw;
+      }
+    }catch(_err){}
+    boardSubmitterNameCache.set(raw, label);
+    return label;
+  }
+  function cleanBoardItemDetails(raw){
+    if(raw == null) return '';
+    let text = String(raw);
+    text = text.replace(/\n?__ZUMMEE_BM_PHOTO__\s*:\s*\{[\s\S]*?\}(?=\n|$)/g, '');
+    text = text.replace(/__ZUMMEE_BM_PHOTO__\s*:\s*\{[\s\S]*?\}(?=\n|$)/g, '');
+    return text.replace(/\n{3,}/g, '\n\n').trim();
+  }
+  async function openBoardItemModal(itemId){
+    const win = bridgeWin();
+    if(!win || !win.sb || typeof win.sb.from !== 'function') throw new Error('Board hub engine not available');
+    const ctxCommunityId = String(getResolvedCommunityId() || '').trim();
+    if(!ctxCommunityId) throw new Error('No community selected.');
+    const q = await win.sb.from('BoardMemberActionItems').select('*').eq('community_id', ctxCommunityId).eq('id', String(itemId)).limit(1);
+    if(q && q.error) throw q.error;
+    const row = q && q.data && q.data[0] ? q.data[0] : null;
+    if(!row) throw new Error('Could not find that board item.');
+    const submitterName = await resolveBoardSubmitterName(row.submitter_name || row.created_by_email || row.created_by || '');
+    document.getElementById('itemModalTitle').textContent = String(row.title || 'Board Item');
+    document.getElementById('itemModalSub').textContent = row.status ? ('Status: ' + String(row.status)) : 'Review the submitted item details.';
+    document.getElementById('itemModalDetails').textContent = cleanBoardItemDetails(row.details || row.description || 'No details provided.') || 'No details provided.';
+    document.getElementById('itemModalCreatedBy').textContent = submitterName || '—';
+    document.getElementById('itemModalDue').textContent = friendlyDate(row.due_date) || '—';
+    document.getElementById('itemModalCreatedAt').textContent = friendlyDate(row.created_at) || '—';
+    itemModalBackdrop.style.display='flex';
+    itemModalBackdrop.setAttribute('aria-hidden','false');
+  }
+  async function saveCalendarEvent(){
+    try{
+      if(calendarEventStatus) calendarEventStatus.textContent='Saving…';
+      const win = bridgeWin();
+      if(!win || !win.sb || typeof win.sb.from !== 'function') throw new Error('Calendar engine not available yet.');
+      const ctx = typeof win.getCtx === 'function' ? win.getCtx() : null;
+      const companyId = String((ctx && ctx.companyId) || localStorage.getItem('activeCompanyId') || localStorage.getItem('zummee_company_id') || '').trim();
+      const communityId = String((ctx && isUuid(ctx.communityId) ? ctx.communityId : '') || getResolvedCommunityId() || '').trim();
+      if(!companyId || !communityId) throw new Error('Select a community first.');
+      const title = String(document.getElementById('calendarEventTitle').value || '').trim();
+      const date = String(document.getElementById('calendarEventDate').value || '').trim();
+      const time = String(document.getElementById('calendarEventTime').value || '').trim();
+      const location = String(document.getElementById('calendarEventLocation').value || '').trim();
+      const notes = String(document.getElementById('calendarEventNotes').value || '').trim();
+      if(!title || !date) throw new Error('Enter a title and date.');
+      const startsAt = time ? new Date(date + 'T' + time + ':00') : new Date(date + 'T00:00:00');
+      const payload = { company_id: companyId, community_id: communityId, title, location, notes, starts_at: startsAt.toISOString() };
+      let res;
+      if(calendarEditingId){
+        res = await win.sb.from('CommunityCalendarEvents').update(payload).eq('id', calendarEditingId).select('id').maybeSingle();
+      }else{
+        res = await win.sb.from('CommunityCalendarEvents').insert(payload).select('id').maybeSingle();
+      }
+      if(res && res.error) throw res.error;
+      if(typeof win.loadEvents === 'function') await win.loadEvents();
+      await renderFromBridge();
+      if(calendarEventStatus) calendarEventStatus.textContent='Calendar item saved.';
+      setTimeout(closeCalendarModal, 450);
+    }catch(err){
+      console.error(err);
+      if(calendarEventStatus) calendarEventStatus.textContent = err && (err.message||err.details||err.hint||err.code) ? (err.message||err.details||err.hint||err.code) : 'Could not save calendar item.';
+    }
+  }
+
+  async function openCalendarEditModal(id){
+    try{
+      const win = bridgeWin();
+      if(!win || !win.sb || typeof win.sb.from !== 'function') throw new Error('Calendar engine not available yet.');
+      const res = await win.sb.from('CommunityCalendarEvents').select('id,title,starts_at,location,notes').eq('id', String(id)).maybeSingle();
+      if(res && res.error) throw res.error;
+      const row = res && res.data;
+      if(!row) throw new Error('Could not find that calendar event.');
+      calendarEditingId = String(row.id);
+      const d = new Date(row.starts_at);
+      if(document.getElementById('calendarModalTitle')) document.getElementById('calendarModalTitle').textContent = 'Edit Calendar Item';
+      if(calendarModalSaveBtn) calendarModalSaveBtn.textContent = 'Save Changes';
+      document.getElementById('calendarEventTitle').value = row.title || '';
+      document.getElementById('calendarEventDate').value = dateKey(d);
+      document.getElementById('calendarEventTime').value = (d && !Number.isNaN(d.getTime()) && (d.getHours() || d.getMinutes())) ? (String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0')) : '';
+      document.getElementById('calendarEventLocation').value = row.location || '';
+      document.getElementById('calendarEventNotes').value = row.notes || '';
+      if(calendarEventStatus) calendarEventStatus.textContent='';
+      calendarModalBackdrop.style.display='flex';
+      calendarModalBackdrop.setAttribute('aria-hidden','false');
+    }catch(err){
+      console.error(err);
+      alert(err && (err.message||err.details||err.hint||err.code) ? (err.message||err.details||err.hint||err.code) : 'Could not open calendar event.');
+    }
+  }
+
+  async function deleteCalendarEvent(id){
+    try{
+      if(!window.confirm('Delete this calendar item?')) return;
+      const win = bridgeWin();
+      if(!win || !win.sb || typeof win.sb.from !== 'function') throw new Error('Calendar engine not available yet.');
+      const res = await win.sb.from('CommunityCalendarEvents').delete().eq('id', String(id));
+      if(res && res.error) throw res.error;
+      if(typeof win.loadEvents === 'function') await win.loadEvents();
+      await renderFromBridge();
+    }catch(err){
+      console.error(err);
+      alert(err && (err.message||err.details||err.hint||err.code) ? (err.message||err.details||err.hint||err.code) : 'Could not delete calendar event.');
+    }
+  }
+
+
+
+  function galleryPublicImageUrl(value){
+    try{
+      const raw = String(value || '').trim();
+      if(!raw) return '';
+      if(/^https?:\/\//i.test(raw)) return raw;
+      const win = bridgeWin();
+      const sb = (win && win.sb) || window.sb || window.supabaseClient;
+      if(sb && sb.storage && sb.storage.from){
+        const pub = sb.storage.from('community-gallery').getPublicUrl(raw);
+        return String(pub && pub.data && pub.data.publicUrl || raw);
+      }
+      return raw;
+    }catch(_e){ return String(value || ''); }
+  }
+  function gallerySelectedCommunityName(){
+    try{
+      if(communitySelect && communitySelect.selectedOptions && communitySelect.selectedOptions[0]){
+        return String(communitySelect.selectedOptions[0].textContent || '').trim();
+      }
+    }catch(_e){}
+    return String(localStorage.getItem('activeCommunityName') || localStorage.getItem('zummee_community') || localStorage.getItem('currentCommunityName') || '').trim();
+  }
+  async function loadGalleryApprovalPreview(){
+    const host = hosts.gallery || document.getElementById('galleryApprovalHost');
+    const status = document.getElementById('galleryApprovalStatus');
+    const pill = document.getElementById('galleryApprovalPill');
+    if(!host) return;
+    try{
+      const win = bridgeWin();
+      const sb = (win && win.sb) || window.sb || window.supabaseClient;
+      if(!sb || typeof sb.from !== 'function') throw new Error('Supabase client not ready.');
+      const communityName = gallerySelectedCommunityName();
+      let q = sb.from('community_gallery').select('*').eq('status','pending').order('created_at',{ascending:false}).limit(6);
+      if(communityName) q = q.eq('community', communityName);
+      const res = await q;
+      if(res && res.error) throw res.error;
+      const rows = res && res.data ? res.data : [];
+      if(pill) pill.textContent = rows.length ? (rows.length + ' Pending') : 'Review';
+      if(status) status.textContent = rows.length ? (rows.length + ' resident photo' + (rows.length === 1 ? '' : 's') + ' awaiting review.') : '';
+      if(!rows.length){
+        host.innerHTML = '<div class="board-empty">No resident photos awaiting approval for this community.</div>';
+        return;
+      }
+      host.innerHTML = rows.map(function(row){
+        const img = galleryPublicImageUrl(row.image_url || row.image_path || row.photo_url || '');
+        const who = row.submitted_by || row.resident_email || row.resident_name || 'Resident';
+        let when = '';
+        try{ when = new Date(row.created_at || Date.now()).toLocaleString([], {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}); }catch(_e){}
+        const caption = row.caption || 'No caption added.';
+        const id = String(row.id || '');
+        return '<article class="gallery-approval-row" data-gallery-approval-id="' + escapeHtml(id) + '">' +
+          '<img class="gallery-approval-thumb" src="' + escapeHtml(img) + '" alt="Resident submitted photo" loading="lazy">' +
+          '<div class="gallery-approval-copy"><div class="gallery-approval-title">' + escapeHtml(who) + '</div><div class="gallery-approval-meta">' + escapeHtml(communityName || row.community || 'Community') + (when ? ' • ' + escapeHtml(when) : '') + '</div><div class="gallery-approval-caption">' + escapeHtml(caption) + '</div></div>' +
+          '<div class="gallery-approval-actions"><a class="gallery-mini-btn primary" href="board_gallery_approvals.html">Open</a><button class="gallery-mini-btn" type="button" data-gallery-approve="' + escapeHtml(id) + '">Approve</button><button class="gallery-mini-btn danger" type="button" data-gallery-reject="' + escapeHtml(id) + '">Reject</button></div>' +
+          '</article>';
+      }).join('');
+    }catch(err){
+      console.error('Board gallery approvals preview failed:', err);
+      if(pill) pill.textContent = 'Review';
+      if(status) status.textContent = 'Could not load resident photo submissions.';
+      host.innerHTML = '<div class="board-empty">Resident photo submissions will appear on the approval page.</div>';
+    }
+  }
+  async function updateGalleryApprovalStatus(id, statusValue){
+    try{
+      const win = bridgeWin();
+      const sb = (win && win.sb) || window.sb || window.supabaseClient;
+      if(!sb || typeof sb.from !== 'function') throw new Error('Supabase client not ready.');
+      const payload = { status: statusValue, approved_at: new Date().toISOString(), approved_by: localStorage.getItem('zummee_user_email') || localStorage.getItem('user_email') || 'Staff' };
+      const res = await sb.from('community_gallery').update(payload).eq('id', String(id));
+      if(res && res.error) throw res.error;
+      await loadGalleryApprovalPreview();
+    }catch(err){
+      console.error('Board gallery approval update failed:', err);
+      alert(err && (err.message || err.details || err.hint || err.code) ? (err.message || err.details || err.hint || err.code) : 'Could not update this photo.');
+    }
+  }
+
+  function updatePills(){
+    const submittedCount = countItems(hosts.submitted);
+    const submittedConfirmed = !!window.__BOARD_SUBMITTED_CONFIRMED__;
+    const displaySubmittedCount = submittedConfirmed ? submittedCount : (window.__BOARD_LAST_CONFIRMED_SUBMITTED_COUNT__ != null ? window.__BOARD_LAST_CONFIRMED_SUBMITTED_COUNT__ : '…');
+    pills.submitted.textContent = 'Submitted: ' + displaySubmittedCount;
+    const priorityPill = document.getElementById('submittedItemsPriorityPill');
+    if(priorityPill) priorityPill.textContent = displaySubmittedCount + ' Submitted';
+    pills.maintenance.textContent = 'Maintenance: ' + countItems(hosts.maintenance);
+    pills.agenda.textContent = 'Agenda: ' + countItems(hosts.agenda);
+    pills.minutes.textContent = 'Minutes: ' + countItems(hosts.minutes);
+    if(pills.calendar){
+      const calendarCount = hosts.calendar ? hosts.calendar.querySelectorAll('.bm-calendar-day.scheduled').length : 0;
+      pills.calendar.textContent = 'Dates: ' + calendarCount;
+    }
+    try{ updateBoardCommandCenter(); }catch(_e){}
+  }
+  async function ensureBridgeReady(){
+    for(let i=0;i<40;i++){
+      const doc = bridgeDoc();
+      const win = bridgeWin();
+      const select = doc && doc.getElementById('zummeeCommunitySelect');
+      if(doc && win && select && select.options && select.options.length){ return {doc,win,select}; }
+      await wait(200);
+    }
+    throw new Error('Board Member Hub engine did not finish loading.');
+  }
+  async function populateCommunities(){
+    const {select} = await ensureBridgeReady();
+    const current = urlCommunityId() || getStoredCommunityUuid() || (isUuid(select.value) ? select.value : '');
+    communitySelect.innerHTML = '';
+    Array.from(select.options).forEach(opt=>{
+      const copy = document.createElement('option');
+      const optValue = String(opt.value || '').trim();
+      const optText = String(opt.textContent || '').trim();
+      const optId = isUuid(optValue) ? optValue : (isUuid(opt.getAttribute('data-community-id')) ? opt.getAttribute('data-community-id') : (isUuid(opt.getAttribute('data-id')) ? opt.getAttribute('data-id') : ''));
+      copy.value = optId || optValue;
+      if(optId){ copy.setAttribute('data-community-id', optId); }
+      copy.textContent = optText;
+      communitySelect.appendChild(copy);
+    });
+    if(current) communitySelect.value = current;
+  }
+  function syncLocalStorage(selectEl){
+    const val = String(selectEl && selectEl.value || '').trim();
+    const name = selectEl && selectEl.selectedOptions && selectEl.selectedOptions[0] ? String(selectEl.selectedOptions[0].textContent || '').trim() : '';
+    const id = isUuid(val) ? val : getResolvedCommunityId();
+    if(id){
+      localStorage.setItem('zummee_selected_community_id', id);
+      localStorage.setItem('activeCommunityId', id);
+      localStorage.setItem('zummeeActiveCommunityId', id);
+      localStorage.setItem('currentCommunityId', id);
+      try{ window.currentCommunityId=id; window.activeCommunityId=id; window.zummeeSelectedCommunityId=id; }catch(_e){}
+    }
+    if(name){
+      localStorage.setItem('activeCommunityName', name);
+      localStorage.setItem('zummee_community', name);
+    }
+  }
+  async function setCommunityAndRefresh(){
+    const {select} = await ensureBridgeReady();
+    const resolvedId = getResolvedCommunityId();
+    if(resolvedId && select.value !== resolvedId){
+      select.value = resolvedId;
+    } else if(communitySelect.value && isUuid(communitySelect.value) && select.value !== communitySelect.value){
+      select.value = communitySelect.value;
+    }
+    syncLocalStorage(communitySelect);
+    try { select.dispatchEvent(new Event('change', {bubbles:true})); } catch(e){}
+    await wait(900);
+    await renderFromBridge();
+  }
+
+
+  function scrollToBoardTarget(targetId){
+    const el = document.getElementById(targetId);
+    if(!el) return;
+    const card = el.closest('.card') || el;
+    card.scrollIntoView({behavior:'smooth', block:'start'});
+    if(targetId === 'newItemTitle'){ setTimeout(()=>{ try{ el.focus(); }catch(e){} }, 360); }
+  }
+  function buildCommandAttention(){
+    const host = document.getElementById('boardNeedsAttention');
+    const countEl = document.getElementById('boardAttentionCount');
+    if(!host) return;
+    const items = [];
+    const submittedRows = hosts.submitted ? Array.from(hosts.submitted.querySelectorAll('.item,.itemRow,.submitted-item')).filter(row => row && row.offsetParent !== null) : [];
+    submittedRows.slice(0,3).forEach((row)=>{
+      const titleNode = row.querySelector('.itemTitle,.title,strong,h3');
+      const title = String((titleNode && titleNode.textContent) || row.textContent || 'Submitted board item').replace(/\s+/g,' ').trim().slice(0,90);
+      items.push({title:'Review submitted item', meta:title || 'Board item awaiting review', action:'Open', target:'submittedItemsHost', icon:'1'});
+    });
+    const galleryCard = document.getElementById('galleryApprovalCard');
+    if(galleryCard){ items.push({title:'Gallery approvals', meta:(document.getElementById('galleryApprovalPill') && document.getElementById('galleryApprovalPill').textContent !== 'Review') ? document.getElementById('galleryApprovalPill').textContent + ' photo review' : 'Review resident photos before they publish.', action:'Review', target:'galleryApprovalCard', href:'board_gallery_approvals.html', icon:'2'}); }
+    const eventsCard = document.getElementById('communityEventsApprovalCard');
+    if(eventsCard){ items.push({title:'Community events', meta:'Create or approve events for residents.', action:'Open', target:'communityEventsApprovalCard', icon:'3'}); }
+    if(countEl) countEl.textContent = String(items.length);
+    if(!items.length){ host.innerHTML = '<div class="command-empty">Nothing needs board attention right now.</div>'; return; }
+    host.innerHTML = items.map(item => '<div class="command-attention-item" role="button" tabindex="0" aria-label="' + escapeHtml(item.action + ': ' + item.title) + '" ' + (item.href ? 'data-href="' + escapeHtml(item.href) + '"' : 'data-scroll-target="' + escapeHtml(item.target) + '"') + '><div class="command-attention-icon">' + escapeHtml(item.icon || '•') + '</div><div class="command-attention-text"><strong>' + escapeHtml(item.title) + '</strong><span>' + escapeHtml(item.meta) + '</span></div><div class="command-attention-chevron" aria-hidden="true">›</div></div>').join('');
+  }
+  function updateBoardCommandCenter(){
+    buildCommandAttention();
+    const setText = (id, value)=>{ const el=document.getElementById(id); if(el) el.textContent=String(value); };
+    setText('todaySubmittedMini', window.__BOARD_SUBMITTED_CONFIRMED__ ? countItems(hosts.submitted) : (window.__BOARD_LAST_CONFIRMED_SUBMITTED_COUNT__ != null ? window.__BOARD_LAST_CONFIRMED_SUBMITTED_COUNT__ : '…'));
+    setText('todayMaintenanceMini', countItems(hosts.maintenance));
+    setText('todayAgendaMini', countItems(hosts.agenda));
+  }
+  document.addEventListener('click', function(e){
+    const approve = e.target && e.target.closest ? e.target.closest('[data-gallery-approve]') : null;
+    const reject = e.target && e.target.closest ? e.target.closest('[data-gallery-reject]') : null;
+    if(approve){ e.preventDefault(); updateGalleryApprovalStatus(approve.getAttribute('data-gallery-approve'), 'approved'); return; }
+    if(reject){ e.preventDefault(); if(confirm('Reject this resident photo?')) updateGalleryApprovalStatus(reject.getAttribute('data-gallery-reject'), 'rejected'); return; }
+  });
+
+  document.addEventListener('click', function(e){
+    const btn = e.target && e.target.closest ? e.target.closest('[data-scroll-target],[data-href]') : null;
+    if(!btn) return;
+    const href = btn.getAttribute('data-href');
+    if(href){ e.preventDefault(); window.location.href = href; return; }
+    const target = btn.getAttribute('data-scroll-target');
+    if(target){ e.preventDefault(); scrollToBoardTarget(target); }
+  });
+  document.addEventListener('keydown', function(e){
+    const row = e.target && e.target.closest ? e.target.closest('.command-attention-item[data-scroll-target],.command-attention-item[data-href]') : null;
+    if(!row) return;
+    if(e.key === 'Enter' || e.key === ' '){
+      e.preventDefault();
+      const href = row.getAttribute('data-href');
+      if(href){ window.location.href = href; return; }
+      const target = row.getAttribute('data-scroll-target');
+      if(target) scrollToBoardTarget(target);
+    }
+  });
+
+  function cloneInto(sourceId, host, emptyText){
+    const doc = bridgeDoc();
+    const src = doc && doc.getElementById(sourceId);
+    if(!host) return;
+    if(!src){ setEmpty(host, emptyText); return; }
+    let html = src.innerHTML && src.innerHTML.trim() ? src.innerHTML : '<div class="board-empty">'+emptyText+'</div>';
+    if(sourceId === 'bmItems' && deletedSubmittedItemIds.size){
+      const scratch = document.createElement('div');
+      scratch.innerHTML = html;
+      scratch.querySelectorAll('.item').forEach(function(row){
+        const opener = row.querySelector('[data-open-item]');
+        const rowId = String((row.getAttribute('data-item-id')) || (opener && opener.getAttribute('data-open-item')) || '').trim();
+        if(rowId && deletedSubmittedItemIds.has(rowId)) row.remove();
+      });
+      html = scratch.innerHTML && scratch.innerHTML.trim() ? scratch.innerHTML : '<div class="board-empty">'+emptyText+'</div>';
+    }
+    host.innerHTML = html;
+  }
+
+  function postProcessMaintenanceItems(){
+    const host = hosts.maintenance;
+    if(!host) return;
+
+    function isCompletedRow(row){
+      const text = String(row && row.textContent || '').toLowerCase();
+      const pill = row && row.querySelector && row.querySelector('.bmStatusPill');
+      return !!((pill && pill.classList.contains('completed')) || text.includes('completed'));
+    }
+    function extractDate(row){
+      const text = String(row && row.textContent || '');
+      const match = text.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})(?:,?\s+(\d{1,2}:\d{2}(?::\d{2})?\s*[AP]M))?/i);
+      if(match){
+        const d = new Date(match[1] + (match[2] ? ' ' + match[2] : ''));
+        if(!isNaN(d.getTime())) return d;
+      }
+      return new Date();
+    }
+    function monthLabel(date){
+      try { return date.toLocaleDateString(undefined, {month:'long', year:'numeric'}); }
+      catch(e){ return 'Archived'; }
+    }
+    function cleanPills(scope){
+      scope.querySelectorAll('.bmUpdateText').forEach(el => el.remove());
+      scope.querySelectorAll('.bmStatusRow').forEach(row => { row.classList.add('bmStatusRowPillOnly'); });
+      scope.querySelectorAll('.bmStatusPill').forEach(pill => {
+        const txt = String(pill.textContent || '').trim().toLowerCase();
+        if(pill.classList.contains('submitted') || txt === 'submitted' || txt.includes('submitted')){
+          pill.textContent = 'Submitted to Management';
+          pill.classList.add('submitted');
+        }
+        if(txt.includes('complete')) pill.classList.add('completed');
+        if(txt.includes('vendor')) pill.classList.add('sent_to_vendor');
+        if(txt.includes('active') || txt.includes('progress')) pill.classList.add('active');
+      });
+    }
+
+    cleanPills(host);
+
+    const rows = Array.from(host.querySelectorAll('.bmMaintItem, .item, .itemRow'));
+    const completedRows = rows.filter(isCompletedRow);
+    const archiveWrap = document.getElementById('maintenanceArchiveWrap');
+    const archiveHost = document.getElementById('maintenanceArchiveHost');
+    const archiveToggle = document.getElementById('maintenanceArchiveToggle');
+    if(!archiveWrap || !archiveHost || !archiveToggle) return;
+
+    archiveHost.innerHTML = '';
+    resetLazyArchive('maintenance');
+    if(!completedRows.length){
+      archiveWrap.style.display = 'none';
+      archiveToggle.setAttribute('aria-expanded','false');
+      archiveHost.classList.remove('is-open');
+      return;
+    }
+
+    const groups = new Map();
+    completedRows.forEach(row => {
+      const d = extractDate(row);
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      if(!groups.has(key)) groups.set(key, {date:d, label:monthLabel(d), rows:[]});
+      groups.get(key).rows.push(row.cloneNode(true).outerHTML);
+      row.remove();
+    });
+
+    const sortedGroups = Array.from(groups.entries()).sort((a,b)=> b[0].localeCompare(a[0]));
+    lazyArchives.maintenance.groups = sortedGroups.map(([key, group]) => ({ key, label: group.label, rows: group.rows }));
+    lazyArchives.maintenance.total = completedRows.length;
+    lazyArchives.maintenance.rendered = false;
+    archiveToggle.textContent = `Archived Updates (${completedRows.length})`;
+    archiveWrap.style.display = 'flex';
+    archiveToggle.setAttribute('aria-expanded','false');
+    archiveHost.classList.remove('is-open');
+    archiveHost.innerHTML = '<div class="board-empty">Open Archived Updates to load older completed records.</div>';
+
+    if(!host.querySelector('.bmMaintItem, .item, .itemRow')){
+      host.innerHTML = '<div class="board-empty">No active maintenance updates right now.</div>';
+    }
+  }
+
+  function postProcessSubmittedItems(){
+    const host = hosts.submitted;
+    if(!host) return;
+    host.querySelectorAll('.itemActions').forEach(actions=>{
+      const openBtn = actions.querySelector('[data-open-item]');
+      if(!openBtn) return;
+      const itemId = String(openBtn.getAttribute('data-open-item') || '').trim();
+      if(!itemId) return;
+      const row = actions.closest('.item');
+      if(row) {
+        row.setAttribute('data-item-id', itemId);
+        if(deletedSubmittedItemIds.has(itemId)){
+          row.remove();
+          return;
+        }
+      }
+      if(!actions.querySelector('[data-delete-item]')){
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'pill delete-btn danger';
+        del.setAttribute('data-delete-item', itemId);
+        del.textContent = 'Delete';
+        if(openBtn.nextSibling){ actions.insertBefore(del, openBtn.nextSibling); } else { actions.appendChild(del); }
+      }
+      const allButtons = Array.from(actions.querySelectorAll('.pill, .btn'));
+      allButtons.forEach(btn=>{ btn.classList.add('action-btn'); });
+    });
+  }
+  function postProcessMinuteApprovals(){
+    const host = hosts.minutes;
+    if(!host) return;
+    const archiveWrap = document.getElementById('minutesArchiveWrap');
+    const archiveHost = document.getElementById('minutesArchiveHost');
+    const archiveToggle = document.getElementById('minutesArchiveToggle');
+    if(!archiveWrap || !archiveHost || !archiveToggle) return;
+
+    function rowStatus(row){
+      const text = String(row && row.textContent || '').toLowerCase();
+      if(text.includes('approved') || text.includes('auto-approved')) return 'approved';
+      if(text.includes('rejected')) return 'rejected';
+      return 'pending';
+    }
+    function extractDate(row){
+      const text = String(row && row.textContent || '');
+      const iso = text.match(/(\d{4}-\d{2}-\d{2})/);
+      if(iso){ const d = new Date(iso[1] + 'T12:00:00'); if(!isNaN(d.getTime())) return d; }
+      const slash = text.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})(?:,?\s+(\d{1,2}:\d{2}(?::\d{2})?\s*[AP]M))?/i);
+      if(slash){ const d = new Date(slash[1] + (slash[2] ? ' ' + slash[2] : '')); if(!isNaN(d.getTime())) return d; }
+      return new Date();
+    }
+    function monthLabel(date){
+      try { return date.toLocaleDateString(undefined, {month:'long', year:'numeric'}); }
+      catch(e){ return 'Archived'; }
+    }
+
+    const rows = Array.from(host.querySelectorAll('.itemRow, .item'));
+    const archivedRows = rows.filter(row => rowStatus(row) !== 'pending');
+    archiveHost.innerHTML = '';
+    resetLazyArchive('minutes');
+    if(!archivedRows.length){
+      archiveWrap.style.display = 'none';
+      archiveToggle.setAttribute('aria-expanded','false');
+      archiveHost.classList.remove('is-open');
+    }else{
+      const groups = new Map();
+      archivedRows.forEach(row => {
+        const d = extractDate(row);
+        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        if(!groups.has(key)) groups.set(key, {date:d, label:monthLabel(d), rows:[]});
+        groups.get(key).rows.push(row.cloneNode(true).outerHTML);
+        row.remove();
+      });
+      const sortedGroups = Array.from(groups.entries()).sort((a,b)=> b[0].localeCompare(a[0]));
+      lazyArchives.minutes.groups = sortedGroups.map(([key, group]) => ({ key, label: group.label, rows: group.rows }));
+      lazyArchives.minutes.total = archivedRows.length;
+      lazyArchives.minutes.rendered = false;
+      archiveToggle.textContent = `Archived Minutes (${archivedRows.length})`;
+      archiveWrap.style.display = 'flex';
+      archiveToggle.setAttribute('aria-expanded','false');
+      archiveHost.classList.remove('is-open');
+      archiveHost.innerHTML = '<div class="board-empty">Open Archived Minutes to load older approval records.</div>';
+    }
+
+    if(!host.querySelector('.itemRow, .item')){
+      host.innerHTML = '<div class="board-empty">No board minutes are awaiting approval for this community.</div>';
+    }
+  }
+
+  async function renderSubmittedFromSource(){
+    const host = hosts.submitted;
+    if(!host) return window.__BOARD_LAST_SOURCE_ROWS__ || [];
+    try{
+      const sb = window.supabaseClient || (window.ensureSupabase ? await window.ensureSupabase() : null) || window.sb;
+      const cid = String(getResolvedCommunityId() || '').trim();
+      if(!sb || typeof sb.from !== 'function' || !cid){
+        // v374: do not paint zero while Supabase/community is still booting.
+        return window.__BOARD_LAST_SOURCE_ROWS__ || [];
+      }
+      let query = sb
+        .from('BoardMemberActionItems')
+        .select('id,title,status,created_at,due_date,details,community_id')
+        .eq('community_id', cid);
+      try{ query = query.order('created_at', { ascending:false }); }catch(_e){}
+      const res = await query;
+      if(res && res.error) throw res.error;
+      const allRows = Array.isArray(res && res.data) ? res.data : [];
+      const rows = allRows.filter(function(r){
+        const status = String((r && r.status) || '').trim().toLowerCase();
+        // Active board submissions only. Archived/completed/deleted/converted items stay out.
+        return !status || ['open','submitted','pending','new','active','review','awaiting_review','awaiting employee review'].indexOf(status) !== -1;
+      });
+      window.__BOARD_SUBMITTED_CONFIRMED__ = true;
+      window.__BOARD_LAST_CONFIRMED_SUBMITTED_COUNT__ = rows.length;
+      window.__BOARD_LAST_SOURCE_ROWS__ = rows;
+      host.innerHTML = rows.length ? rows.map(function(r){
+        let when = '';
+        try{ when = r.created_at ? new Date(r.created_at).toLocaleString([], {month:'numeric', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit'}) : ''; }catch(_e){}
+        const title = escapeHtml(r.title || 'Board item');
+        const id = escapeHtml(String(r.id || ''));
+        return '<article class="item submitted-item" data-item-id="' + id + '" data-bm-item-id="' + id + '">' +
+          '<div class="itemTitle">' + title + '</div>' +
+          '<div class="muted tiny">' + (when ? ('Submitted ' + escapeHtml(when)) : 'Submitted item') + '</div>' +
+          '<div class="itemActions"><button class="pill action-btn" type="button" data-open-item="' + id + '">Open</button><button class="pill delete-btn danger action-btn" type="button" data-delete-item="' + id + '">Delete</button></div>' +
+          '</article>';
+      }).join('') : '<div class="board-empty">No submitted items right now.</div>';
+      return rows;
+    }catch(err){
+      console.warn('[BoardHub v374] submitted source render failed; preserving prior submitted UI', err);
+      // v374: failed/unauthorized/transient queries are not allowed to overwrite a known good count with zero.
+      if(window.__BOARD_LAST_SOURCE_ROWS__ && window.__BOARD_LAST_SOURCE_ROWS__.length){ return window.__BOARD_LAST_SOURCE_ROWS__; }
+      return [];
+    }
+  }
+
+  async function renderFromBridge(){
+    await renderSubmittedFromSource();
+    postProcessSubmittedItems();
+    try{
+      await ensureBridgeReady();
+      await renderCalendar();
+      cloneInto('bmMaintenanceItems', hosts.maintenance, 'No live maintenance updates right now.');
+      postProcessMaintenanceItems();
+      cloneInto('agendaItems', hosts.agenda, 'No agenda topics yet.');
+      cloneInto('minuteApprovalItems', hosts.minutes, 'No board minutes are awaiting approval for this community.');
+      postProcessMinuteApprovals();
+      await loadGalleryApprovalPreview();
+    }catch(bridgeErr){
+      console.warn('[BoardHub v374] hidden engine not ready; submitted items remain direct-loaded.', bridgeErr);
+    }
+    updatePills();
+  }
+  async function submitNewItem(){
+    statusEl.textContent='';
+    try{
+      const {doc,win} = await ensureBridgeReady();
+      const title = document.getElementById('newItemTitle').value || '';
+      const due = document.getElementById('newItemDue').value || '';
+      const details = document.getElementById('newItemDetails').value || '';
+      const photo = document.getElementById('newItemPhoto').files && document.getElementById('newItemPhoto').files[0] ? document.getElementById('newItemPhoto').files[0] : null;
+      const t = doc.getElementById('bmTitle');
+      const d = doc.getElementById('bmDue');
+      const de = doc.getElementById('bmDetails');
+      const p = doc.getElementById('bmPhoto');
+      if(t) t.value = title;
+      if(d) d.value = due;
+      if(de) de.value = details;
+      if(p && photo){
+        const dt = new DataTransfer();
+        dt.items.add(photo);
+        p.files = dt.files;
+        try{ p.dispatchEvent(new Event('change', {bubbles:true})); }catch(e){}
+      }
+      if(typeof win.__bmhub_submitNewItem !== 'function') throw new Error('Submit handler not available yet.');
+      const shouldAddAgenda = !!(document.getElementById('newItemAgendaFlag') && document.getElementById('newItemAgendaFlag').checked);
+
+      // Keep the hidden engine checkbox in sync too, but the visible shell also
+      // creates/refreshes the agenda record directly below so the Meeting Agenda
+      // Items section updates immediately on this page.
+      const engineAgendaFlag = doc.getElementById('bmAgendaFlag');
+      if(engineAgendaFlag) engineAgendaFlag.checked = shouldAddAgenda;
+
+      const createdItemId = await win.__bmhub_submitNewItem();
+      if(shouldAddAgenda && createdItemId && typeof win.__bmhub_createAgendaTopicFromNewItem === 'function'){
+        // If the hidden engine already added it, do not duplicate it.  The engine
+        // checkbox path is preferred; this direct path is a fallback for shells
+        // where the hidden checkbox is not present.
+        if(!engineAgendaFlag){
+          await win.__bmhub_createAgendaTopicFromNewItem(title, details);
+        }
+        statusEl.textContent = 'Item submitted and added to this month’s agenda.';
+      } else {
+        statusEl.textContent = 'Item submitted.';
+      }
+      document.getElementById('clearNewItemBtn').click();
+      await wait(1200);
+      if(typeof win.__bmhub_loadAgenda === 'function'){
+        try{ await win.__bmhub_loadAgenda(); }catch(_e){}
+      }
+      await renderFromBridge();
+    }catch(err){
+      console.error(err);
+      statusEl.textContent = err && err.message ? err.message : 'Could not submit the item.';
+    }
+  }
+  function clearNewItem(){
+    document.getElementById('newItemTitle').value='';
+    document.getElementById('newItemDue').value='';
+    document.getElementById('newItemDetails').value='';
+    document.getElementById('newItemPhoto').value='';
+    const agendaFlag = document.getElementById('newItemAgendaFlag');
+    if(agendaFlag) agendaFlag.checked = false;
+    statusEl.textContent='';
+  }
+  async function proxyLegacyAction(target){
+    const win = bridgeWin();
+    const doc = bridgeDoc();
+    if(!win || !doc || !target) return;
+    const attrNames = ['data-open-item','data-delete-item','data-create-work-order-item','data-complete-notify-item','data-open-work-order-item','data-agenda-id','data-minutes-approve','data-minutes-reject','data-bm-annual-preview','data-bm-annual-approve'];
+    for(const attr of attrNames){
+      const val = target.getAttribute && target.getAttribute(attr);
+      if(!val) continue;
+      if(attr === 'data-open-item') { await openBoardItemModal(String(val)); return; }
+      if(attr === 'data-delete-item') {
+        if(!window.confirm('Delete this board item? This cannot be undone.')) return;
+        const ctxCommunityId = String(getResolvedCommunityId() || '').trim();
+        if(!ctxCommunityId) throw new Error('No community selected.');
+        if(!win.sb || typeof win.sb.from !== 'function') throw new Error('Board hub engine not available');
+        const itemId = String(val);
+        const del = await win.sb.from('BoardMemberActionItems').delete().eq('id', itemId).eq('community_id', ctxCommunityId);
+        if(del && del.error) throw del.error;
+        deletedSubmittedItemIds.add(itemId);
+        const liveRow = hosts.submitted && hosts.submitted.querySelector('[data-item-id="' + CSS.escape(itemId) + '"]');
+        if(liveRow && liveRow.parentNode){
+          liveRow.parentNode.removeChild(liveRow);
+        }
+        const bridgeRow = doc.querySelector('[data-item-id="' + CSS.escape(itemId) + '"]') || doc.querySelector('[data-open-item="' + CSS.escape(itemId) + '"]')?.closest('.item');
+        if(bridgeRow && bridgeRow.parentNode){
+          bridgeRow.parentNode.removeChild(bridgeRow);
+        }
+        updatePills();
+        if(hosts.submitted && !hosts.submitted.querySelector('.item')){
+          hosts.submitted.innerHTML = '<div class="board-empty">No submitted items right now.</div>';
+        }
+        return;
+      }
+      if(attr === 'data-open-work-order-item') { window.location.href = 'resident_work_orders.html?open_work_order_id=' + encodeURIComponent(val); return; }
+      if(attr === 'data-create-work-order-item' && typeof win.__bmhub_createWorkOrder === 'function') {
+        const confirmed = await confirmCreateWorkOrder();
+        if(!confirmed) return;
+        const originalText = target.textContent || 'Create Work Order';
+        let createdId = null;
+        try{
+          target.disabled = true;
+          target.setAttribute('aria-busy','true');
+          target.dataset.bmConfirmedCreate = '1';
+          target.textContent = 'Processing…';
+        }catch(_e){}
+        try{
+          createdId = await win.__bmhub_createWorkOrder(String(val), target);
+          if(createdId){
+            target.textContent = 'Created';
+            target.classList.add('created');
+            target.setAttribute('data-created-work-order-id', String(createdId));
+            showBoardHubToast('Work order created.');
+            await wait(450);
+            await renderFromBridge();
+          } else {
+            showBoardHubToast('Could not create work order.');
+          }
+        }catch(err){
+          console.error('Create work order failed:', err);
+          showBoardHubToast('Could not create work order.');
+        }finally{
+          try{
+            delete target.dataset.bmConfirmedCreate;
+            target.removeAttribute('aria-busy');
+            if(!createdId){
+              target.disabled = false;
+              target.textContent = originalText;
+            }
+          }catch(_e){}
+        }
+        return;
+      }
+      if(attr === 'data-complete-notify-item' && typeof win.__bmhub_completeNotify === 'function') { await win.__bmhub_completeNotify(String(val)); await wait(1200); await renderFromBridge(); return; }
+      if(attr === 'data-agenda-id') {
+        if(!window.confirm('Delete this agenda topic?')) return;
+        const agendaId = String(val || '').trim();
+        const ctxCommunityId = String(getResolvedCommunityId() || '').trim();
+        if(!agendaId) return;
+        if(!ctxCommunityId) throw new Error('No community selected.');
+        if(!win.sb || typeof win.sb.from !== 'function') throw new Error('Board hub engine not available');
+
+        // Delete directly from the shell. Calling the hidden legacy delete helper
+        // opens a second confirm inside the hidden iframe, so the visible record
+        // looked confirmed but never actually deleted.
+        const del = await win.sb.from('BoardMeetingAgendaItems').delete().eq('id', agendaId).eq('community_id', ctxCommunityId);
+        if(del && del.error) throw del.error;
+
+        const liveRow = hosts.agenda && (target.closest('.itemRow') || target.closest('.item'));
+        if(liveRow && liveRow.parentNode) liveRow.parentNode.removeChild(liveRow);
+        if(typeof win.__bmhub_loadAgenda === 'function'){
+          try{ await win.__bmhub_loadAgenda(); }catch(_e){}
+        }
+        await wait(450);
+        await renderFromBridge();
+        return;
+      }
+      const button = doc.querySelector('['+attr+'="'+CSS.escape(String(val))+'"]');
+      if(button){ button.click(); await wait(900); await renderFromBridge(); return; }
+    }
+  }
+  document.addEventListener('click', async function(ev){
+    const calEdit = ev.target.closest('[data-cal-edit]');
+    const calDelete = ev.target.closest('[data-cal-delete]');
+    if(calEdit){ ev.preventDefault(); await openCalendarEditModal(calEdit.getAttribute('data-cal-edit')); return; }
+    if(calDelete){ ev.preventDefault(); await deleteCalendarEvent(calDelete.getAttribute('data-cal-delete')); return; }
+    const trigger = ev.target.closest('[data-open-item],[data-delete-item],[data-create-work-order-item],[data-complete-notify-item],[data-open-work-order-item],[data-agenda-id],[data-minutes-approve],[data-minutes-reject],[data-bm-annual-preview],[data-bm-annual-approve]');
+    if(trigger && !frame.contains(trigger)){
+      ev.preventDefault();
+      await proxyLegacyAction(trigger);
+      return;
+    }
+  });
+  communitySelect.addEventListener('change', async ()=>{ await setCommunityAndRefresh(); await loadHeroBrandLogo(); });
+  document.getElementById('submitNewItemBtn').addEventListener('click', submitNewItem);
+  document.getElementById('clearNewItemBtn').addEventListener('click', clearNewItem);
+  if(addCalendarEventBtn) addCalendarEventBtn.addEventListener('click', openCalendarModal);
+  if(calendarModalCancelBtn) calendarModalCancelBtn.addEventListener('click', closeCalendarModal);
+  if(calendarModalSaveBtn) calendarModalSaveBtn.addEventListener('click', saveCalendarEvent);
+  if(calendarModalBackdrop) {
+    calendarModalBackdrop.addEventListener('click', function(ev){
+      if(ev.target === calendarModalBackdrop) closeCalendarModal();
+    });
+  }
+  if(itemModalCloseBtn) itemModalCloseBtn.addEventListener('click', closeItemModal);
+  if(itemModalBackdrop) itemModalBackdrop.addEventListener('click', function(ev){ if(ev.target === itemModalBackdrop) closeItemModal(); });
+  frame.addEventListener('load', async ()=>{
+    try{
+      await populateCommunities();
+      await loadHeroBrandLogo();
+      await setCommunityAndRefresh();
+      await loadHeroBrandLogo();
+    }catch(err){
+      console.error(err);
+      try{ await paintHeroBrandLogo({ url:'', alt:'Company logo', isCompany:false }); }catch(_e){}
+      // v374: do not wipe direct-loaded Submitted Items if the hidden legacy engine is slow.
+      Object.keys(hosts).forEach(function(k){ if(k !== 'submitted') setEmpty(hosts[k], 'Board Member Hub is still loading. Refresh in a moment.'); });
+    }
+  });
+
+  // v347: keep Submitted Items locked to BoardMemberActionItems.status=open and prevent hidden bridge output from overwriting with stale zero.
+  (function(){
+    if(window.__BOARD_VISIBLE_SOURCE_GUARD__) return;
+    window.__BOARD_VISIBLE_SOURCE_GUARD__ = true;
+    async function refreshVisibleSubmitted(){
+      try{
+        if(typeof renderSubmittedFromSource === 'function'){
+          await renderSubmittedFromSource();
+          if(typeof updatePills === 'function') updatePills();
+        }
+      }catch(e){ console.warn('[v347 board] visible submitted guard refresh failed', e); }
+    }
+    function shouldRepair(){
+      try{
+        var last = window.__BOARD_LAST_SOURCE_ROWS__ || [];
+        if(!last.length) return false;
+        var host = document.getElementById('submittedItemsHost');
+        if(!host) return false;
+        var txt = String(host.textContent || '').toLowerCase();
+        return txt.indexOf('no submitted') !== -1 || txt.indexOf('0 submitted') !== -1 || !host.querySelector('[data-item-id],[data-bm-item-id],.submitted-item');
+      }catch(_e){ return false; }
+    }
+    function arm(){
+      var host = document.getElementById('submittedItemsHost');
+      if(!host || host.__v347SubmittedGuard) return;
+      host.__v347SubmittedGuard = true;
+      try{
+        new MutationObserver(function(){
+          if(shouldRepair()) setTimeout(refreshVisibleSubmitted, 20);
+        }).observe(host, { childList:true, subtree:true, characterData:true });
+      }catch(_e){}
+      setTimeout(refreshVisibleSubmitted, 400);
+      setTimeout(refreshVisibleSubmitted, 1800);
+      setTimeout(refreshVisibleSubmitted, 3600);
+    }
+    arm();
+  })();
+})();
+</script>
+
+
+<style id="compact-new-item-layout-final">
+  /* Final compact New Item layout */
+  #newItemTitle,#newItemDue,#newItemDetails,#newItemPhoto{box-sizing:border-box!important;}
+  .card .new-item-grid,.new-item-grid{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) 220px!important;
+    column-gap:20px!important;
+    row-gap:12px!important;
+    align-items:end!important;
+    width:100%!important;
+    padding-right:24px!important;
+    box-sizing:border-box!important;
+  }
+  .new-item-grid>div{min-width:0!important;width:100%!important;}
+  .new-item-grid label{display:block!important;margin:0 0 6px 0!important;}
+  .new-item-grid .full{grid-column:1/-1!important;}
+  #newItemTitle,#newItemDue{width:100%!important;height:42px!important;min-height:42px!important;padding:0 14px!important;}
+  #newItemDue{max-width:220px!important;justify-self:start!important;}
+  #newItemDetails{width:100%!important;height:108px!important;min-height:108px!important;padding:14px!important;resize:vertical!important;}
+  .new-item-grid .full:has(#newItemPhoto){display:flex!important;align-items:center!important;gap:12px!important;flex-wrap:wrap!important;margin-top:2px!important;}
+  .new-item-grid .full:has(#newItemPhoto) label{margin:0!important;}
+  .new-item-grid input[type="file"]{max-width:420px!important;}
+  .action-row{justify-content:flex-start!important;align-items:center!important;margin-top:10px!important;}
+  @media (max-width:900px){.card .new-item-grid,.new-item-grid{grid-template-columns:minmax(0,1fr) 210px!important;column-gap:16px!important;padding-right:22px!important;}#newItemDue{max-width:210px!important;}}
+  @media (max-width:620px){.card .new-item-grid,.new-item-grid{grid-template-columns:1fr!important;padding-right:0!important;}#newItemDue{max-width:none!important;}}
+</style>
+<script id="calendar-modal-keyboard-safe-scroll-fix">
+(function(){
+  function setCalendarModalViewportHeight(){
+    try{
+      var vv = window.visualViewport;
+      var h = vv && vv.height ? vv.height : window.innerHeight;
+      document.documentElement.style.setProperty('--board-vvh', Math.max(320, Math.floor(h)) + 'px');
+    }catch(_e){}
+  }
+  setCalendarModalViewportHeight();
+  try{
+    if(window.visualViewport){
+      window.visualViewport.addEventListener('resize', setCalendarModalViewportHeight);
+      window.visualViewport.addEventListener('scroll', setCalendarModalViewportHeight);
+    }
+    window.addEventListener('resize', setCalendarModalViewportHeight);
+  }catch(_e){}
+
+  document.addEventListener('focusin', function(e){
+    var el = e.target;
+    if(!el || !el.closest || !el.closest('.calendar-modal')) return;
+    setTimeout(function(){
+      try{
+        var modal = el.closest('.calendar-modal');
+        if(modal){
+          var modalRect = modal.getBoundingClientRect();
+          var elRect = el.getBoundingClientRect();
+          var offset = (elRect.top + elRect.height/2) - (modalRect.top + modalRect.height/2);
+          modal.scrollTop += offset;
+        }
+        el.scrollIntoView({block:'center', behavior:'smooth'});
+      }catch(_e){}
+    }, 275);
+  }, true);
+})();
+</script>
+<style id="calendar-visual-render-and-date-fix">
+#calendarHost .bm-calendar-day.scheduled{background:linear-gradient(180deg,#fff5f5 0%,#fee2e2 100%) !important;border-color:#ef4444 !important;box-shadow:0 0 0 2px rgba(239,68,68,.18), inset 0 1px 0 rgba(255,255,255,.82) !important;}
+#calendarHost .bm-calendar-day.scheduled .bm-calendar-num{color:#991b1b !important;}
+#calendarHost .bm-calendar-dot{background:#dc2626 !important;box-shadow:0 0 0 4px rgba(220,38,38,.16) !important;}
+#calendarModalBackdrop .calendar-modal,.calendar-modal{box-sizing:border-box !important;overflow-x:hidden !important;}
+#calendarModalBackdrop .calendar-form-grid,.calendar-form-grid{grid-template-columns:1fr !important;gap:12px !important;}
+#calendarModalBackdrop .calendar-form-grid > div,.calendar-form-grid > div{min-width:0 !important;width:100% !important;box-sizing:border-box !important;}
+#calendarEventDate,#calendarEventTitle,#calendarEventLocation,#calendarEventNotes{width:100% !important;max-width:100% !important;box-sizing:border-box !important;}
+#calendarEventDate{height:44px !important;min-height:44px !important;padding:0 12px !important;border-radius:16px !important;border:1px solid rgba(210,223,243,.95) !important;background:#fff !important;font-size:16px !important;color:#18345b !important;-webkit-appearance:none !important;appearance:none !important;}
+#calendarEventTime{width:100% !important;max-width:180px !important;height:36px !important;min-height:36px !important;box-sizing:border-box !important;}
+</style>
+
+
+<style id="new-item-gold-card-actual-final">
+  /* ACTUAL visible Board Member Hub New Item card gold styling */
+  .workspace > .card.new-item-gold-card,
+  .card.new-item-gold-card{
+    background:linear-gradient(135deg,#fff8da 0%,#f8d56a 42%,#eab83f 100%) !important;
+    border:2px solid rgba(255,255,255,.78) !important;
+    box-shadow:0 18px 36px rgba(184,134,11,.26), inset 0 1px 0 rgba(255,255,255,.70) !important;
+  }
+  .card.new-item-gold-card::after{
+    background:linear-gradient(120deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.36) 48%,rgba(255,255,255,0) 100%) !important;
+  }
+  .card.new-item-gold-card .section-title{
+    color:#17324d !important;
+    text-shadow:0 1px 0 rgba(255,255,255,.45) !important;
+    font-weight:950 !important;
+  }
+  .card.new-item-gold-card label,
+  .card.new-item-gold-card .tiny,
+  .card.new-item-gold-card .muted{
+    color:#17324d !important;
+  }
+  .card.new-item-gold-card input,
+  .card.new-item-gold-card textarea{
+    background:rgba(255,255,255,.84) !important;
+    border:1px solid rgba(120,78,0,.18) !important;
+  }
+</style>
+<style id="new-item-agenda-checkbox-polish">
+  .new-item-agenda-option{margin-top:-2px!important;}
+  .agenda-checkbox-row{
+    display:flex!important;align-items:center!important;gap:10px!important;
+    padding:12px 14px!important;border-radius:16px!important;
+    background:rgba(255,255,255,.58)!important;border:1px solid rgba(148,181,235,.45)!important;
+    color:#173763!important;font-weight:850!important;font-size:14px!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.72)!important;
+    cursor:pointer!important;
+  }
+  .agenda-checkbox-row input{width:18px!important;height:18px!important;accent-color:#d6a400!important;flex:0 0 auto!important;}
+  .agenda-checkbox-row span{line-height:1.25!important;}
+</style>
+<script src="company_logo_sync.js"></script>
+
+<script>
+(function(){
+  function s(v){ return String(v == null ? '' : v).trim(); }
+  function img(){ return document.getElementById('heroBrandLogo') || document.getElementById('companyLogo'); }
+  function parseLogoRef(raw){
+    raw=s(raw); if(!raw) return null;
+    if(/^https?:\/\//i.test(raw) || /^data:image\//i.test(raw)) return {url:raw};
+    if(raw.indexOf('|') !== -1){ var p=raw.split('|'); return {bucket:p.shift() || 'company_logos', path:p.join('|')}; }
+    return {bucket:'company_logos', path:raw};
+  }
+  function getStoredLogo(){
+    var keys=['company_logo','zummee_company_logo','manager_company_logo','companyLogo','pageCompanyLogo'];
+    for(var i=0;i<keys.length;i++){ try{ var v=s(localStorage.getItem(keys[i])); if(v) return v; }catch(e){} }
+    try{
+      for(var j=0;j<sessionStorage.length;j++){
+        var k=sessionStorage.key(j)||'';
+        if(k.indexOf('mh2_brand_logo_v1_')===0){
+          var o=JSON.parse(sessionStorage.getItem(k)||'{}');
+          if(o && o.url) return s(o.url);
+        }
+      }
+    }catch(e){}
+    return '';
+  }
+  function paint(url){
+    var el=img(); if(!el || !url) return false;
+    el.onload=function(){ el.style.visibility='visible'; el.style.opacity='1'; el.classList.add('is-visible','is-company'); };
+    el.onerror=function(){ el.style.visibility='hidden'; el.style.opacity='0'; };
+    el.src=url; el.alt='Company logo';
+    el.style.visibility='visible'; el.style.opacity='1';
+    el.classList.add('is-visible','is-company');
+    return true;
+  }
+  function client(){
+    try{ var f=document.getElementById('bridgeFrame'); if(f && f.contentWindow && f.contentWindow.sb && typeof f.contentWindow.sb.from==='function') return f.contentWindow.sb; }catch(e){}
+    try{ if(window.sb && typeof window.sb.from==='function') return window.sb; }catch(e){}
+    try{ if(window.supabaseClient && typeof window.supabaseClient.from==='function') return window.supabaseClient; }catch(e){}
+    return null;
+  }
+  function companyId(){
+    var keys=['activeCompanyId','zummee_company_id','company_id','selectedCompanyId'];
+    for(var i=0;i<keys.length;i++){ try{ var v=s(localStorage.getItem(keys[i])); if(v) return v; }catch(e){} }
+    try{ var f=document.getElementById('bridgeFrame'); var w=f && f.contentWindow; if(w && w.__supCompanyId) return s(w.__supCompanyId); }catch(e){}
+    return '';
+  }
+  async function syncBoardLogo(){
+    var stored=getStoredLogo();
+    if(stored) paint(stored);
+    var sb=client(); var cid=companyId();
+    if(!sb || !cid) return;
+    try{
+      var row=null;
+      try{
+        var r=await sb.from('companies').select('name,logo_path').eq('id',cid).maybeSingle();
+        if(r && r.data) row={logo:r.data.logo_path,name:r.data.name};
+      }catch(e){}
+      if(!row || !row.logo){
+        try{
+          var r2=await sb.from('company_branding').select('logo_url,logo_path,name,company_name').eq('company_id',cid).maybeSingle();
+          if(r2 && r2.data) row={logo:r2.data.logo_url||r2.data.logo_path,name:r2.data.name||r2.data.company_name};
+        }catch(e2){}
+      }
+      var ref=parseLogoRef(row && row.logo); if(!ref) return;
+      var url=s(ref.url);
+      if(!url && ref.bucket && ref.path && sb.storage && sb.storage.from){
+        var pub=sb.storage.from(ref.bucket).getPublicUrl(ref.path);
+        url=s(pub && pub.data && pub.data.publicUrl);
+      }
+      if(url){ try{ localStorage.setItem('company_logo',url); }catch(e3){} paint(url); }
+    }catch(e){ console.warn('Board Hub logo sync failed', e); }
+  }
+  window.syncBoardHubCompanyLogo = syncBoardLogo;
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(syncBoardLogo,300); setTimeout(syncBoardLogo,1500); }, {once:true});
+  } else {
+    setTimeout(syncBoardLogo,300); setTimeout(syncBoardLogo,1500);
+  }
+})();
+</script>
+
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+
+<!-- v374: Board rebuild owns submitted rendering; legacy soft renderer removed from this page. -->
+
+<script>
+// v377 final Board Hub submitted ownership lock.
+// Owns submitted count/list from a single confirmed UUID query. No boot-time zero writes.
+(function(){
+  function isUuid(v){return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||'').trim());}
+  function esc(v){return String(v==null?'':v).replace(/[&<>'"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c];});}
+  function getCid(){
+    try{var u=new URL(location.href); var q=u.searchParams.get('community_id')||u.searchParams.get('cid'); if(isUuid(q))return q.trim();}catch(e){}
+    var sel=document.getElementById('communitySelect')||document.getElementById('zummeeCommunitySelect')||document.querySelector('select[data-community-select],select[name="community"],select');
+    if(sel){
+      if(isUuid(sel.value)) return String(sel.value).trim();
+      var opt=sel.options&&sel.selectedIndex>=0?sel.options[sel.selectedIndex]:null;
+      if(opt){var vals=[opt.getAttribute('data-community-id'),opt.getAttribute('data-id'),opt.dataset&&opt.dataset.communityId,opt.dataset&&opt.dataset.id]; for(var i=0;i<vals.length;i++){if(isUuid(vals[i]))return String(vals[i]).trim();}}
+    }
+    var vals=[];
+    try{vals=[window.currentCommunityId,window.activeCommunityId,window.selectedCommunityId,window.zummeeSelectedCommunityId,localStorage.getItem('zummee_selected_community_id'),localStorage.getItem('activeCommunityId'),localStorage.getItem('zummeeActiveCommunityId'),localStorage.getItem('currentCommunityId')];}catch(e){}
+    for(var j=0;j<vals.length;j++){if(isUuid(vals[j]))return String(vals[j]).trim();}
+    return '';
+  }
+  function isActive(r){var st=String((r&&r.status)||'').trim().toLowerCase(); return !st || ['open','submitted','pending','new','active','review','awaiting_review','awaiting employee review'].indexOf(st)!==-1;}
+  async function sb(){
+    for(var i=0;i<30;i++){
+      var c=window.supabaseClient||window.sb||(window.ensureSupabase?await window.ensureSupabase().catch(function(){return null;}):null);
+      if(c&&typeof c.from==='function')return c;
+      await new Promise(function(r){setTimeout(r,100);});
+    }
+    return null;
+  }
+  async function load(){
+    var pill=document.getElementById('submittedCountPill');
+    var snap=[].slice.call(document.querySelectorAll('*')).filter(function(el){return /^Submitted Items$/i.test((el.textContent||'').trim());})[0];
+    var host=document.getElementById('submittedItemsHost')||document.getElementById('submittedItemsList');
+    if(pill&&!window.__BOARD_V377_CONFIRMED__) pill.textContent='Submitted: …';
+    var cid=getCid(); var client=await sb();
+    if(!cid||!client){console.warn('[BoardHub v377] waiting for UUID/client; preserving submitted UI'); return;}
+    try{
+      var res=await client.from('BoardMemberActionItems').select('id,title,status,created_at,due_date,details,community_id').eq('community_id',cid).limit(500);
+      if(res.error) throw res.error;
+      var rows=(res.data||[]).filter(isActive);
+      window.__BOARD_V377_CONFIRMED__=true;
+      window.__BOARD_LAST_CONFIRMED_SUBMITTED_COUNT__=rows.length;
+      if(pill) pill.textContent='Submitted: '+rows.length;
+      try{document.querySelectorAll('[data-submitted-count],#todaySubmittedMini').forEach(function(el){el.textContent=String(rows.length);});}catch(e){}
+      if(host){
+        host.innerHTML=rows.length?rows.map(function(r){var id=esc(r.id), title=esc(r.title||'Board item'); var when=''; try{when=r.created_at?new Date(r.created_at).toLocaleString([], {month:'numeric', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit'}):'';}catch(e){} return '<article class="item submitted-item" data-item-id="'+id+'" data-bm-item-id="'+id+'"><div class="itemTitle">'+title+'</div><div class="muted tiny">'+(when?'Submitted '+esc(when):'Submitted item')+'</div><div class="itemActions"><button class="pill action-btn" type="button" data-open-item="'+id+'">Open</button><button class="pill delete-btn danger action-btn" type="button" data-delete-item="'+id+'">Delete</button></div></article>';}).join(''):'<div class="board-empty">No submitted items right now.</div>';
+      }
+      console.log('[BoardHub v377] submitted loaded', rows.length, cid);
+    }catch(e){console.warn('[BoardHub v377] submitted query failed; preserving UI', e);}
+  }
+  window.__BOARD_V377_LOAD_SUBMITTED__=load;
+  document.addEventListener('DOMContentLoaded', function(){setTimeout(load,50); setTimeout(load,1000);});
+})();
+</script>
+
+</body>
+</html>
+<style id="new-item-field-shape-align-final">
+  /* Final New Item field alignment: same field shape + aligned right edge */
+  .card .new-item-grid,
+  .new-item-grid{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(280px,32%)!important;
+    column-gap:24px!important;
+    row-gap:14px!important;
+    align-items:end!important;
+    width:100%!important;
+    padding-right:0!important;
+    box-sizing:border-box!important;
+  }
+  .new-item-grid > div{
+    min-width:0!important;
+    width:100%!important;
+    box-sizing:border-box!important;
+  }
+  .new-item-grid .full{
+    grid-column:1 / -1!important;
+  }
+  #newItemTitle,
+  #newItemDue{
+    width:100%!important;
+    max-width:none!important;
+    height:52px!important;
+    min-height:52px!important;
+    padding:0 18px!important;
+    border-radius:24px!important;
+    border:1px solid #d9e2ee!important;
+    background:#ffffff!important;
+    box-shadow:none!important;
+    box-sizing:border-box!important;
+    font-size:17px!important;
+    line-height:52px!important;
+    color:#17304f!important;
+  }
+  #newItemDue{
+    justify-self:stretch!important;
+    -webkit-appearance:none!important;
+    appearance:none!important;
+    text-align:center!important;
+  }
+  #newItemDetails{
+    width:100%!important;
+    min-height:112px!important;
+    height:112px!important;
+    border-radius:24px!important;
+    border:1px solid #d9e2ee!important;
+    background:#ffffff!important;
+    box-shadow:none!important;
+    box-sizing:border-box!important;
+    padding:16px 18px!important;
+  }
+  .new-item-grid label{
+    display:block!important;
+    margin:0 0 8px 0!important;
+  }
+  @media (max-width:900px){
+    .card .new-item-grid,
+    .new-item-grid{
+      grid-template-columns:minmax(0,1fr) 240px!important;
+      column-gap:16px!important;
+      padding-right:0!important;
+    }
+  }
+  @media (max-width:620px){
+    .card .new-item-grid,
+    .new-item-grid{
+      grid-template-columns:1fr!important;
+    }
+  }
+</style>

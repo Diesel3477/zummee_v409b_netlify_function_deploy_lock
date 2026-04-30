@@ -1,0 +1,28 @@
+Daily Ops v79 Supabase Wiring Stabilization
+
+Base: op_v78b_dates_fix.zip
+Primary patched file: daily_ops_rebuild.html
+
+What changed:
+- Added a Daily Ops Cloud State Guard that hydrates and saves section state through public.daily_ops_state.
+- Converted the following Daily Ops sections from localStorage-only to Supabase-first with localStorage fallback:
+  - Reminders
+  - Quick Notes
+  - Vendors
+  - Important Dates
+  - Access Codes
+- Each save now updates the in-memory state, writes a local fallback copy, and debounces an upsert to daily_ops_state by user_id + community_id.
+- Page load now hydrates daily_ops_state before rendering the operational sections.
+- Existing local records are merged with Supabase records by id, preferring the newest updatedAt/createdAt record so older local data is not lost on first deploy.
+- Re-added ensureVendorCategoryOption so existing custom vendor categories do not break the vendor edit/load flow.
+
+Existing Supabase-backed sections preserved:
+- Board Members uses board member directory / Supabase fetch path.
+- Supervisor Communications uses supervisor_messages Supabase table path.
+
+Required database table:
+- public.daily_ops_state must exist. The existing supabase_daily_ops_migration.sql file in this build contains the table and RLS setup.
+
+Validation performed:
+- daily_ops_rebuild.html JavaScript parsed successfully with Node Function checks.
+- ops.html remains a redirect to daily_ops_rebuild.html.

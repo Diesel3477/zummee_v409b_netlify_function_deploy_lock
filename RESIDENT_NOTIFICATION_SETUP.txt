@@ -1,0 +1,17 @@
+Resident notification upgrade
+
+This build extends the existing assign-vendor-email Edge Function so that:
+1. the vendor still receives the assignment email
+2. the resident also receives an assignment update email if resident_email exists
+
+What changed:
+- assign-vendor-email now falls back safely if vendor_name is blank
+- assign-vendor-email sends a second email to the resident after vendor email succeeds
+- resident_work_orders.html now shows a success message when both vendor and resident were notified
+
+Required deployment step:
+supabase functions deploy assign-vendor-email --no-verify-jwt
+
+No new secrets are required beyond:
+- RESEND_API_KEY
+- VENDOR_FROM_EMAIL

@@ -1,0 +1,715 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Annual Meetings</title>
+
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+  :root{
+    --navy:#17324d;--navy2:#234d73;--muted:#5f7388;--bg:#ffffff;--card:#f6f1e1;--white:#ffffff;
+    --line:rgba(23,50,77,.10);--shadow:0 12px 30px rgba(15,47,74,.08);--radius:24px;
+    --good:#2e9d5b;--warn:#d59b00;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--navy)}
+  .shell{max-width:1180px;margin:0 auto;padding:18px 14px 28px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:#0f2f4a;color:#fff;padding:20px 22px;border-radius:30px;box-shadow:0 18px 42px rgba(15,47,74,.18)}
+  .brandWrap{display:flex;flex-direction:column;gap:4px}
+  .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:900;color:rgba(255,255,255,.72)}
+  .brand{font-size:34px;font-weight:900;line-height:1;letter-spacing:-.03em}
+  .topActions{display:flex;gap:10px;flex-wrap:wrap}
+  .btn{appearance:none;border:none;border-radius:999px;padding:0 18px;min-height:46px;font-weight:900;font-size:15px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;transition:.18s ease;background:var(--navy);color:#fff;box-shadow:0 8px 18px rgba(15,47,74,.14)}
+  .btn:hover{transform:translateY(-1px)}
+  .btn.secondary{background:#fff;color:var(--navy);box-shadow:0 8px 18px rgba(0,0,0,.09)}
+  .btn.ghost{background:rgba(255,255,255,.12);color:#fff;box-shadow:none;border:1px solid rgba(255,255,255,.18)}
+    h1{margin:0 0 6px;font-size:34px;line-height:1.04;letter-spacing:-.04em}
+  .lede{margin:0;color:var(--muted);font-size:15px;line-height:1.45}
+  .statusRow{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-weight:900;color:var(--navy);font-size:14px}
+  .dot{width:8px;height:8px;border-radius:999px;background:var(--warn)}
+  .dot.good{background:var(--good)}
+  .workspace{background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);padding:20px}
+  .workspaceHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+  .workspaceTitle{font-size:26px;font-weight:900;letter-spacing:-.03em}
+  .workspaceSub{margin-top:4px;max-width:760px;color:var(--muted);font-size:14px;line-height:1.42}
+  .workspaceMeta{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .pill.small{padding:8px 12px;font-size:13px}
+  .communityPicker{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;background:#fff;border:1px solid rgba(255,255,255,.18);box-shadow:0 8px 18px rgba(0,0,0,.08);min-height:42px}
+  .communityPicker label{font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#5f7388;white-space:nowrap}
+  .communityPicker select{appearance:none;border:none;background:transparent;color:var(--navy);font-weight:900;font-size:14px;min-width:220px;outline:none;padding-right:8px}
+  .workspaceMeta .communityPicker{background:#fff;border:1px solid var(--line);box-shadow:none;min-height:40px}
+  .workspaceMeta .communityPicker label{color:#5f7388}
+  @media (max-width: 900px){ .communityPicker{width:100%} .communityPicker select{min-width:0;width:100%} }
+  .statusText{width:100%;font-weight:800;color:var(--muted);font-size:13px;margin-top:2px}
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:stretch}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:12px 14px;box-shadow:0 8px 18px rgba(15,47,74,.05);height:100%}
+  .card h2{margin:0 0 8px;font-size:16px;line-height:1.1;letter-spacing:-.02em}
+  .fieldGrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 10px}
+  .noticeGrid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .compactGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px;row-gap:10px;align-items:start}
+  .compactGrid > .field{min-width:0;width:100%}
+  .scheduleCard .readonlyStat,.noticeCard .readonlyStat{min-height:58px;border-radius:14px;border:1px solid rgba(23,50,77,.08);background:#fff;padding:10px 12px;display:flex;flex-direction:column;justify-content:center}
+  .scheduleCard .readonlyStat strong,.noticeCard .readonlyStat strong{display:block;margin:0 0 4px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:900;color:#677a8f;white-space:nowrap}
+  .scheduleCard .readonlyStat span,.noticeCard .readonlyStat span{font-size:16px;font-weight:900;line-height:1.2;color:var(--navy)}
+  .compactLabel{display:block;margin:0 0 4px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:900;color:#677a8f;line-height:1.2}
+  .dateField{min-width:0;width:100%}
+  .dateField input{display:block;width:100%;max-width:100%;min-width:0;min-height:44px;height:44px;font-weight:800;font-size:14px;padding:0 12px}
+  .noticeCard .compactLabel{white-space:nowrap;letter-spacing:.04em}
+
+  .scheduleCard,.noticeCard{display:flex;flex-direction:column;justify-content:flex-start}
+  .scheduleCard .compactGrid,.noticeCard .compactGrid{margin-top:2px}
+  .scheduleCard .dateField,.noticeCard .dateField{min-width:0;overflow:hidden}
+  .scheduleCard .dateField input,.noticeCard .dateField input{display:block;width:100%;max-width:100%;min-width:0;height:42px;min-height:42px;padding:0 14px;border-radius:16px;font-size:13px;font-weight:800;text-align:left;line-height:42px;-webkit-appearance:none;appearance:none;background:#fff}
+  .scheduleCard .dateField input::-webkit-date-and-time-value,.noticeCard .dateField input::-webkit-date-and-time-value{text-align:left}
+  .scheduleCard .dateField input::-webkit-calendar-picker-indicator,.noticeCard .dateField input::-webkit-calendar-picker-indicator{opacity:.72}
+  .noticeCard{min-height:204px}
+  .scheduleCard input[type="date"],.noticeCard input[type="date"]{-webkit-appearance:none;appearance:none}
+  .field.span2{grid-column:1/-1}
+  .card.span2{grid-column:1/-1}
+  label{display:block;margin:0 0 4px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:900;color:#677a8f}
+  input,select,textarea{width:100%;min-width:0;min-height:36px;height:36px;border-radius:12px;border:1px solid rgba(23,50,77,.12);background:#fff;color:var(--navy);padding:0 10px;font-size:14px;box-shadow:none;outline:none}
+  textarea{padding:8px 10px;min-height:72px;height:auto;resize:vertical}
+  .readonly{display:flex;align-items:center;min-height:36px;border-radius:12px;border:1px solid rgba(23,50,77,.08);background:#fff;padding:0 10px;font-size:14px;font-weight:900;color:var(--navy)}
+  .subtle{font-size:12px;line-height:1.42;color:var(--muted)}
+  .miniGrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 10px}
+  .miniStat{background:#fff;border:1px solid rgba(23,50,77,.08);border-radius:14px;padding:10px}
+  .miniStat strong{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#677a8f;margin-bottom:4px}
+  .miniStat span{font-size:16px;font-weight:900;line-height:1.2;color:var(--navy)}
+  .logoBox{background:#fff;border:1px dashed rgba(23,50,77,.18);border-radius:14px;min-height:66px;padding:10px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-weight:800;font-size:12px;text-align:center}
+  .logoBox img{max-width:210px;max-height:64px;object-fit:contain}
+  .actionBar{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:14px;align-items:start}
+  .actionBar .btn{min-height:42px;padding:0 18px;width:100%}
+  .actionBar .secondaryRow{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+  .hiddenFrame{position:absolute;left:-99999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none}
+  @media (max-width: 700px){.grid,.actionBar,.actionBar .secondaryRow{grid-template-columns:1fr}.compactGrid,.fieldGrid,.miniGrid{grid-template-columns:1fr}.shell{padding:14px 10px 24px}h1{font-size:30px}.workspaceTitle{font-size:24px}}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+
+.mh2-actions .mh2-btn--ghost{display:none !important;}
+</style>
+<style>
+/* FORCE white text in Status & Details section */
+#boardSubmittedItemsSection,
+#boardSubmittedItemsSection *:not(button),
+#boardMemberHubStatus,
+#boardMemberHubStatus *:not(button),
+#annualMeetingApprovals,
+#annualMeetingApprovals *:not(button) {
+  color: #ffffff !important;
+}
+
+/* Secondary text (slightly dimmed white) */
+#boardSubmittedItemsSection .muted,
+#boardMemberHubStatus .muted,
+#annualMeetingApprovals .muted {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style>
+/* HARD OVERRIDE — force white text in dark section */
+.hub-zone:last-of-type,
+.hub-zone:last-of-type *:not(button):not(.badge):not(.pill) {
+  color: #ffffff !important;
+}
+
+/* Slightly softer for secondary text */
+.hub-zone:last-of-type .muted,
+.hub-zone:last-of-type p,
+.hub-zone:last-of-type span {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+</head>
+<body>
+  <main class="shell">
+    <section class="topbar">
+      <div class="brandWrap">
+        <div class="eyebrow">Dedicated workspace</div>
+        <div class="brand">Annual Meetings</div>
+      </div>
+      <div class="topActions">
+        <a class="btn ghost" href="manager_hub.html">← Back to Hub</a>
+        <a class="btn secondary" href="annual_meeting_records.html">Open Archive</a>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <div class="workspaceHead">
+        <div>
+          <div class="workspaceTitle">Annual Meeting Workspace</div>
+          <div class="workspaceSub">Manage annual meeting details, lock records, and generate packets.</div>
+        </div>
+        <div class="workspaceMeta">
+          <div class="communityPicker">
+            <label for="annualCommunitySelect">Community</label>
+            <select id="annualCommunitySelect" aria-label="Select community"></select>
+          </div>
+          <div class="pill small" id="communityPill">Community: <span id="communityName" style="font-weight:900"></span></div>
+          <div class="pill small" id="statusPill"><span class="dot" id="statusDot"></span><span id="statusPillText">Loading annual meeting status…</span></div>
+        </div>
+        <div class="statusText" id="statusText">Loading live annual meeting data…</div>
+      </div>
+
+      <div class="grid">
+        <div class="card scheduleCard">
+          <h2>Meeting Schedule</h2>
+          <div class="compactGrid">
+            <div class="field dateField">
+              <label class="compactLabel" for="lastDate">Last Annual Meeting Date</label>
+              <input id="lastDate" type="date">
+            </div>
+            <div class="field dateField">
+              <label class="compactLabel" for="nextDate">Next Annual Meeting Date</label>
+              <input id="nextDate" type="date">
+            </div>
+            <div class="field span2">
+              <div class="readonlyStat">
+                <strong>Expected Next Date</strong>
+                <span id="expectedDate">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Association Info</h2>
+          <div class="fieldGrid">
+            <div class="field span2">
+              <label for="associationLegalName">Association Legal Name</label>
+              <input id="associationLegalName" type="text" placeholder="Exact legal association name">
+            </div>
+            <div class="field">
+              <label for="quorumPercent">Quorum %</label>
+              <input id="quorumPercent" type="number" placeholder="e.g. 30">
+            </div>
+            <div class="field">
+              <label for="seatsOverride">Seats Up for Election</label>
+              <input id="seatsOverride" type="number" placeholder="Auto if blank">
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Meeting Details</h2>
+          <div class="fieldGrid">
+            <div class="field">
+              <label for="meetingTime">Meeting Time</label>
+              <select id="meetingTime"></select>
+            </div>
+            <div class="field">
+              <label for="meetingFormat">Meeting Format</label>
+              <select id="meetingFormat">
+                <option value="in_person">In-Person Meeting</option>
+                <option value="virtual">Virtual Meeting</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="meetingLocation">Meeting Location</label>
+              <input id="meetingLocation" type="text" placeholder="Clubhouse / address">
+            </div>
+            <div class="field">
+              <label for="meetingLink">Virtual Meeting Link</label>
+              <input id="meetingLink" type="url" placeholder="https://...">
+            </div>
+          </div>
+        </div>
+
+        <div class="card noticeCard">
+          <h2>Notice Setup</h2>
+          <div class="compactGrid">
+            <div class="field dateField">
+              <label class="compactLabel" for="nominationDeadline">Nomination Deadline</label>
+              <input id="nominationDeadline" type="date">
+            </div>
+            <div class="field dateField">
+              <label class="compactLabel" for="proxyReturnDeadline">Proxy Return Deadline</label>
+              <input id="proxyReturnDeadline" type="date">
+            </div>
+          </div>
+        </div>
+
+        <div class="card span2">
+          <h2>Packet Setup</h2>
+          <div class="miniGrid">
+            <div class="miniStat"><strong>30-Day Send Date</strong><span id="sendDate">—</span></div>
+            <div class="miniStat"><strong>Seats Up For Election</strong><span id="seatsCount">—</span></div>
+          </div>
+          <div style="margin-top:12px">
+            <label>Company Master Logo</label>
+            <div class="logoBox" id="logoBox">No company logo uploaded yet</div>
+          </div>
+        </div>
+
+        <div class="card span2">
+          <h2>Packet Notes</h2>
+          <p class="subtle">The packet uses the shared Notice, Proxy, and Nomination templates. It pulls in community dates, quorum %, board roster, seats up for election, the supervisor-managed return email, and the supervisor-managed company master logo.</p>
+        </div>
+      </div>
+
+      <div class="actionBar">
+        <button class="btn" id="saveBtn" type="button">Save Annual Meeting Info</button>
+        <button class="btn" id="packetBtn" type="button">Generate Annual Meeting Packet</button>
+        <div class="secondaryRow">
+          <button class="btn secondary" id="lockBtn" type="button">Lock Records</button>
+          <button class="btn secondary" id="presentationBtn" type="button">Create Annual Presentation</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <iframe id="opsFrame" class="hiddenFrame" src="ops.html" title="Annual meeting backend frame"></iframe>
+
+<script>
+(function(){
+  const frame = document.getElementById('opsFrame');
+  const els = {
+    statusText: document.getElementById('statusText'),
+    statusPillText: document.getElementById('statusPillText'),
+    statusDot: document.getElementById('statusDot'),
+    communityName: document.getElementById('communityName'),
+    annualCommunitySelect: document.getElementById('annualCommunitySelect'),
+    lastDate: document.getElementById('lastDate'),
+    expectedDate: document.getElementById('expectedDate'),
+    nextDate: document.getElementById('nextDate'),
+    associationLegalName: document.getElementById('associationLegalName'),
+    quorumPercent: document.getElementById('quorumPercent'),
+    seatsOverride: document.getElementById('seatsOverride'),
+    meetingTime: document.getElementById('meetingTime'),
+    meetingFormat: document.getElementById('meetingFormat'),
+    meetingLocation: document.getElementById('meetingLocation'),
+    meetingLink: document.getElementById('meetingLink'),
+    nominationDeadline: document.getElementById('nominationDeadline'),
+    proxyReturnDeadline: document.getElementById('proxyReturnDeadline'),
+    sendDate: document.getElementById('sendDate'),
+    seatsCount: document.getElementById('seatsCount'),
+    logoBox: document.getElementById('logoBox'),
+    lockBtn: document.getElementById('lockBtn'),
+    saveBtn: document.getElementById('saveBtn'),
+    packetBtn: document.getElementById('packetBtn'),
+    presentationBtn: document.getElementById('presentationBtn')
+  };
+
+  function setStatus(text, kind){
+    els.statusText.textContent = text;
+    if(kind === 'good'){
+      els.statusDot.className = 'dot good';
+    }else{
+      els.statusDot.className = 'dot';
+    }
+  }
+
+  function pad(v){ return v ? String(v) : ''; }
+  function formatDate(v){
+    if(!v) return '—';
+    try{ return new Date(v + 'T00:00:00').toLocaleDateString(undefined,{month:'long',day:'numeric',year:'numeric'}); }catch(_e){ return String(v); }
+  }
+  function getWin(){ try{ return frame.contentWindow; }catch(_e){ return null; } }
+  function getCommunityName(win){
+    try{
+      if(win && typeof win.getSelectedCommunityName === 'function') return String(win.getSelectedCommunityName() || '').trim();
+      if(win && win.ZummeeAuth && typeof win.ZummeeAuth.getSelectedCommunityName === 'function') return String(win.ZummeeAuth.getSelectedCommunityName() || '').trim();
+    }catch(_e){}
+    try{
+      return String(window.localStorage.getItem('currentCommunityName') || window.localStorage.getItem('activeCommunityName') || '').trim();
+    }catch(_e){}
+    return '';
+  }
+  function fillMeetingTimes(){
+    const arr=[];
+    for(let h=7; h<=21; h++) ['00','30'].forEach(mm=>{ const hh=((h+11)%12)+1; const ampm=h<12?'AM':'PM'; arr.push(`${hh}:${mm} ${ampm}`); });
+    els.meetingTime.innerHTML = arr.map(v=>`<option value="${v}">${v}</option>`).join('');
+  }
+
+  function getActiveCommunityId(){
+    try{
+      const qp = new URLSearchParams(window.location.search).get('community_id');
+      if(qp) return String(qp).trim();
+    }catch(_e){}
+    try{
+      return String(localStorage.getItem('selectedCommunityId') || localStorage.getItem('activeCommunityId') || localStorage.getItem('currentCommunityId') || '').trim();
+    }catch(_e2){}
+    return '';
+  }
+
+  function seedCommunityContext(){
+    const communityId = getActiveCommunityId();
+    if(!communityId) return;
+    try{ localStorage.setItem('selectedCommunityId', communityId); }catch(_e){}
+    try{ localStorage.setItem('activeCommunityId', communityId); }catch(_e2){}
+    try{ localStorage.setItem('currentCommunityId', communityId); }catch(_e3){}
+  }
+
+  function setCommunityStorage(id, name){
+    const cid = String(id || '').trim();
+    const cname = String(name || '').trim();
+    if(!cid) return;
+    try{ localStorage.setItem('selectedCommunityId', cid); }catch(_e){}
+    try{ localStorage.setItem('activeCommunityId', cid); }catch(_e2){}
+    try{ localStorage.setItem('currentCommunityId', cid); }catch(_e3){}
+    try{ localStorage.setItem('zummee_selected_community_id', cid); }catch(_e4){}
+    try{ localStorage.setItem('zummee_selected_community_v1', cid); }catch(_e5){}
+    if(cname){
+      try{ localStorage.setItem('currentCommunityName', cname); }catch(_e6){}
+      try{ localStorage.setItem('activeCommunityName', cname); }catch(_e7){}
+    }
+  }
+
+  async function getCommunityList(){
+    const win = getWin();
+    try{
+      if(win && typeof win.loadCommunities === 'function'){
+        const rows = await win.loadCommunities();
+        if(Array.isArray(rows) && rows.length){
+          return rows.map(function(row){
+            return { id:String((row&&row.id)||'').trim(), name:String((row&&row.name)||'').trim() };
+          }).filter(function(row){ return row.id && row.name; });
+        }
+      }
+    }catch(err){ console.warn('community list load failed', err); }
+    const selectedId = getActiveCommunityId();
+    const selectedName = getCommunityName(win) || 'Selected Community';
+    return selectedId ? [{ id:selectedId, name:selectedName }] : [];
+  }
+
+  async function populateCommunitySelect(){
+    if(!els.annualCommunitySelect) return;
+    const list = await getCommunityList();
+    const activeId = getActiveCommunityId();
+    els.annualCommunitySelect.innerHTML = '';
+    if(!list.length){
+      const opt = document.createElement('option');
+      opt.value = activeId || '';
+      opt.textContent = getCommunityName(getWin()) || 'Selected Community';
+      els.annualCommunitySelect.appendChild(opt);
+      return;
+    }
+    list.forEach(function(item){
+      const opt = document.createElement('option');
+      opt.value = item.id;
+      opt.textContent = item.name;
+      if(item.id === activeId) opt.selected = true;
+      els.annualCommunitySelect.appendChild(opt);
+    });
+    if(!els.annualCommunitySelect.value && activeId) els.annualCommunitySelect.value = activeId;
+  }
+
+  function switchCommunityFromPicker(){
+    const sel = els.annualCommunitySelect;
+    if(!sel) return;
+    const id = String(sel.value || '').trim();
+    const name = sel.options && sel.selectedIndex >= 0 ? String(sel.options[sel.selectedIndex].text || '').trim() : '';
+    if(!id) return;
+    setCommunityStorage(id, name);
+    try{
+      const url = new URL(window.location.href);
+      url.searchParams.set('community_id', id);
+      window.location.href = url.toString();
+    }catch(_e){
+      window.location.href = 'annual_meetings.html?community_id=' + encodeURIComponent(id);
+    }
+  }
+
+  async function hydrateBridge(){
+    const win = getWin();
+    if(!win) return false;
+    try{ seedCommunityContext(); }catch(_e){}
+    try{
+      if(typeof win.hydrateAnnualMeetingInputsFromCloud === 'function'){
+        await win.hydrateAnnualMeetingInputsFromCloud();
+      }
+    }catch(err){ console.warn('annual bridge hydrate failed', err); }
+    try{
+      if(typeof win.render === 'function') win.render();
+    }catch(_eRender){}
+    return true;
+  }
+
+  function readState(){
+    const win = getWin();
+    if(!win || typeof win.getBoardCriticalEntry !== 'function') return null;
+    const entry = win.getBoardCriticalEntry('annualMeeting') || {};
+    const expected = typeof win.addOneYear === 'function' ? (win.addOneYear(entry.lastDate) || '') : '';
+    const sendDate = typeof win.getAnnualMeetingSendDate === 'function' ? (win.getAnnualMeetingSendDate() || '') : '';
+    const seatsCount = typeof win.getSeatsUpForElection === 'function' ? (win.getSeatsUpForElection() || '') : '';
+    return { win, entry, expected, sendDate, seatsCount };
+  }
+
+  function render(){
+    const data = readState();
+    if(!data) return;
+    const { win, entry, expected, sendDate, seatsCount } = data;
+    els.communityName.textContent = getCommunityName(win) || 'Selected Community';
+    try{ if(els.annualCommunitySelect){ const activeId = getActiveCommunityId(); if(activeId) els.annualCommunitySelect.value = activeId; } }catch(_eSel){}
+    els.lastDate.value = pad(entry.lastDate);
+    els.expectedDate.textContent = formatDate(expected);
+    els.nextDate.value = pad(entry.nextDate);
+    els.associationLegalName.value = pad(entry.associationLegalName);
+    els.quorumPercent.value = pad(entry.quorumPercent);
+    els.seatsOverride.value = pad(entry.seatsOverride);
+    els.meetingTime.value = pad(entry.meetingTime || '7:00 PM');
+    els.meetingFormat.value = pad(entry.meetingFormat || 'in_person');
+    els.meetingLocation.value = pad(entry.meetingLocation);
+    els.meetingLink.value = pad(entry.meetingLink);
+    els.nominationDeadline.value = pad(entry.nominationDeadline);
+    els.proxyReturnDeadline.value = pad(entry.proxyReturnDeadline);
+    els.sendDate.textContent = formatDate(sendDate);
+    els.seatsCount.textContent = String(seatsCount || '—');
+    els.lockBtn.textContent = entry.lastLocked ? 'Unlock Records' : 'Lock Records';
+    els.statusPillText.textContent = entry.lastLocked ? 'Records locked' : (entry.nextDate ? 'Meeting scheduled' : 'Needs setup');
+    setStatus(entry.lastLocked ? 'Annual meeting info is locked and ready.' : 'Annual meeting workspace ready.', entry.lastLocked || entry.nextDate ? 'good' : '');
+    try{
+      const logoUrl = typeof win.getMasterCompanyLogoDataUrl === 'function' ? (win.getMasterCompanyLogoDataUrl() || '') : '';
+      const logoName = typeof win.getMasterCompanyLogoName === 'function' ? (win.getMasterCompanyLogoName() || '') : '';
+      if(logoUrl){ els.logoBox.innerHTML = `<img src="${logoUrl}" alt="Company Logo">`; }
+      else { els.logoBox.textContent = logoName || 'No company logo uploaded yet'; }
+    }catch(_e){ els.logoBox.textContent = 'No company logo uploaded yet'; }
+    const disabled = !!entry.lastLocked;
+    ['lastDate','associationLegalName','quorumPercent','seatsOverride','meetingTime','meetingFormat','meetingLocation','meetingLink','nominationDeadline','proxyReturnDeadline'].forEach(id=>{ els[id].disabled = disabled; });
+    // next date remains editable while unlocked only
+    els.nextDate.disabled = !!entry.lastLocked;
+  }
+
+  async function saveAll(){
+    const data = readState();
+    if(!data) return;
+    const { win } = data;
+    try{
+      if(typeof win.ensureBoardCriticalDatesShape === 'function') win.ensureBoardCriticalDatesShape();
+      const current = (typeof win.getBoardCriticalEntry === 'function') ? (win.getBoardCriticalEntry('annualMeeting') || {}) : null;
+      if(!current) throw new Error('Annual meeting entry is not ready');
+      if(current.lastLocked){ setStatus('Records are locked. Unlock them to make changes.'); return; }
+      current.lastDate = els.lastDate.value || '';
+      current.nextDate = els.nextDate.value || '';
+      const fieldMap = {
+        associationLegalName: els.associationLegalName.value,
+        quorumPercent: els.quorumPercent.value,
+        meetingTime: els.meetingTime.value,
+        meetingFormat: els.meetingFormat.value,
+        meetingLocation: els.meetingLocation.value,
+        meetingLink: els.meetingLink.value,
+        nominationDeadline: els.nominationDeadline.value,
+        proxyReturnDeadline: els.proxyReturnDeadline.value,
+        seatsOverride: els.seatsOverride.value
+      };
+      Object.entries(fieldMap).forEach(([key, value])=>{
+        if(typeof win.persistAnnualMeetingField === 'function') win.persistAnnualMeetingField(key, value || '');
+        else current[key] = String(value || '');
+      });
+      if(typeof win.saveState === 'function') win.saveState();
+      try{ if(typeof win.pushOpsCloud === 'function') await win.pushOpsCloud(); }catch(_e){}
+      try{ if(typeof win.hydrateAnnualMeetingInputsFromCloud === 'function') await win.hydrateAnnualMeetingInputsFromCloud(); }catch(_e2){}
+      render();
+      setStatus('Annual meeting info saved.', 'good');
+    }catch(err){
+      console.error(err);
+      setStatus('Could not save annual meeting info.');
+      alert('Could not save Annual Meeting info.');
+    }
+  }
+
+  async function toggleLock(){
+    const data = readState();
+    if(!data) return;
+    const { win } = data;
+    try{
+      if(typeof win.ensureBoardCriticalDatesShape === 'function') win.ensureBoardCriticalDatesShape();
+      const current = (typeof win.getBoardCriticalEntry === 'function') ? (win.getBoardCriticalEntry('annualMeeting') || {}) : null;
+      if(!current) throw new Error('Annual meeting entry is not ready');
+      if(!current.lastLocked && !(els.lastDate.value || '').trim()){
+        alert('Enter the last annual meeting date first.');
+        return;
+      }
+      if(current.lastLocked){
+        const okUnlock = window.confirm('Unlock Annual Meeting fields so the dates and meeting details can be changed?');
+        if(!okUnlock) return;
+      }
+      current.lastLocked = !current.lastLocked;
+      if(typeof win.saveState === 'function') win.saveState();
+      try{ if(typeof win.scheduleOpsCloud === 'function') win.scheduleOpsCloud(); }catch(_e){}
+      render();
+      setStatus(current.lastLocked ? 'Records locked.' : 'Records unlocked.', 'good');
+    }catch(err){
+      console.error(err);
+      alert('Could not update lock status.');
+    }
+  }
+
+  async function init(){
+    fillMeetingTimes();
+    seedCommunityContext();
+    try{ if(els.annualCommunitySelect) els.annualCommunitySelect.addEventListener('change', switchCommunityFromPicker); }catch(_eBind){}
+    setStatus('Loading live annual meeting data…');
+    let tries = 0;
+    const timer = setInterval(async function(){
+      tries += 1;
+      const win = getWin();
+      try{
+        if(win && typeof win.getBoardCriticalEntry === 'function' && win.document && win.document.body){
+          try{ await hydrateBridge(); }catch(_eHydrate){}
+          try{ await populateCommunitySelect(); }catch(_eCommunityList){}
+          clearInterval(timer);
+          try{ win.document.documentElement.style.background='transparent'; win.document.body.style.background='transparent'; }catch(_e){}
+          render();
+          return;
+        }
+      }catch(_e){}
+      if(tries > 150){ clearInterval(timer); setStatus('Could not load annual meeting data.'); }
+    }, 300);
+  }
+
+  document.getElementById('saveBtn').addEventListener('click', saveAll);
+  document.getElementById('lockBtn').addEventListener('click', toggleLock);
+  document.getElementById('packetBtn').addEventListener('click', async function(){
+    const data = readState();
+    if(!data) return;
+    try{
+      await saveAll();
+    }catch(_e){}
+    try{
+      const win = data.win;
+      if(!win) throw new Error('Annual meeting engine is not available.');
+      if(typeof win.ensureBoardCriticalDatesShape === 'function') win.ensureBoardCriticalDatesShape();
+      if(typeof win.getAnnualPacketData !== 'function') throw new Error('Packet preview is not available in this build.');
+      const packetData = win.getAnnualPacketData() || {};
+      const missingFields = (typeof win.getAnnualMeetingMissingFields === 'function') ? win.getAnnualMeetingMissingFields(packetData) : [];
+      if(Array.isArray(missingFields) && missingFields.length){
+        alert('Complete Annual Meeting details first: ' + missingFields.join(', '));
+        return;
+      }
+      setStatus('Building annual meeting packet preview…');
+      const mailing = (typeof win.fetchAnnualPacketCompanyMailing === 'function') ? await win.fetchAnnualPacketCompanyMailing() : {};
+      Object.assign(packetData, mailing || {});
+      const owners = (typeof win.fetchAnnualPacketOwners === 'function') ? await win.fetchAnnualPacketOwners() : [];
+      const ownerRows = (Array.isArray(owners) && owners.length) ? owners : [{ name:'', unit:'', street:'', city:'', state:'', zip:'' }];
+      const pdfAttachment = (typeof win.buildAnnualMeetingPdfAttachment === 'function')
+        ? await win.buildAnnualMeetingPdfAttachment(packetData, ownerRows)
+        : null;
+      if(!pdfAttachment || !pdfAttachment.content) throw new Error('Preview PDF could not be generated.');
+      let previewDraftId = null;
+      if(typeof win.stashAnnualMeetingPreviewDraft === 'function'){
+        previewDraftId = win.stashAnnualMeetingPreviewDraft({
+          data: packetData,
+          html: '',
+          residentCount: Array.isArray(ownerRows) ? ownerRows.length : 0,
+          packetMeta: { pdf_attachment: pdfAttachment }
+        });
+      }
+      const payload = {
+        createdAt: new Date().toISOString(),
+        data: packetData,
+        previewDraftId: previewDraftId,
+        residentCount: Array.isArray(ownerRows) ? ownerRows.length : 0,
+        packetMeta: { pdf_attachment: pdfAttachment }
+      };
+      const storeKey = (typeof win.getAnnualPacketPreviewStoreKey === 'function')
+        ? win.getAnnualPacketPreviewStoreKey()
+        : 'zummee_annual_packet_preview_page_v1';
+      try{ localStorage.setItem(storeKey, JSON.stringify(payload)); }catch(_eStore){}
+      try{ window.__annualMeetingPreviewAttachment = pdfAttachment; }catch(_e){}
+      setStatus('Opening annual meeting packet preview…', 'good');
+      window.location.href = 'annual_packet_preview.html';
+    }catch(err){
+      console.error(err);
+      setStatus('Could not open the annual meeting packet preview.');
+      alert((err && err.message) ? err.message : 'Could not open the packet preview.');
+    }
+  });
+  document.getElementById('presentationBtn').addEventListener('click', async function(){
+    try{ await saveAll(); }catch(_e){}
+    const communityId = getActiveCommunityId();
+    window.location.href = 'annual_presentation.html' + (communityId ? ('?community_id=' + encodeURIComponent(communityId)) : '');
+  });
+
+  ['lastDate','nextDate','associationLegalName','quorumPercent','seatsOverride','meetingTime','meetingFormat','meetingLocation','meetingLink','nominationDeadline','proxyReturnDeadline'].forEach(id=>{
+    document.getElementById(id).addEventListener('change', function(){ if(id === 'lastDate'){ const data = readState(); const win = data && data.win; const exp = (win && typeof win.addOneYear === 'function') ? win.addOneYear(els.lastDate.value) : ''; els.expectedDate.textContent = formatDate(exp); } });
+  });
+
+  frame.addEventListener('load', init);
+  init();
+})();
+</script>
+<script src="company_logo_sync.js"></script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

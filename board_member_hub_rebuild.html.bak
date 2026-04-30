@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Board Member Hub</title>
+<style>
+  :root{
+    --bg-top:#f7fbff;
+    --bg-bottom:#edf3f8;
+    --text:#17324d;
+    --muted:#5e7389;
+    --border:rgba(23,50,77,.10);
+    --border-strong:rgba(112,163,255,.52);
+    --shadow:0 18px 40px rgba(18,42,67,.10);
+    --soft-shadow:0 10px 24px rgba(18,42,67,.06);
+    --brand:#1d3b63;
+    --accent:#d4a93d;
+    --danger:#b42318;
+    --blue-top:rgba(255,255,255,.96);
+    --blue-bottom:rgba(244,249,254,.94);
+    --gold-top:rgba(255,248,227,.98);
+    --gold-bottom:rgba(246,232,170,.94);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,Arial,sans-serif;background:linear-gradient(180deg,var(--bg-top) 0%, var(--bg-bottom) 100%);color:var(--text)}
+  .page{max-width:1320px;margin:0 auto;padding:18px 18px 40px;border-radius:30px;position:relative;background:linear-gradient(180deg,rgba(255,255,255,.42),rgba(244,249,254,.34));border:1px solid rgba(37,99,235,.42);box-shadow:0 10px 24px rgba(18,42,67,.06),0 0 0 1px rgba(96,165,250,.22),0 8px 22px rgba(59,130,246,.12)}
+  .page::before{content:"";position:absolute;inset:0;border-radius:30px;pointer-events:none;box-shadow:inset 0 0 0 1px rgba(147,197,253,.35);}
+  .hero{background:linear-gradient(180deg,var(--blue-top),var(--blue-bottom));border:1px solid rgba(37,99,235,.42);box-shadow:0 10px 24px rgba(18,42,67,.06),0 0 0 1px rgba(96,165,250,.22),0 8px 22px rgba(59,130,246,.12);border-radius:30px;padding:22px 22px 18px;margin-bottom:18px;position:relative;overflow:hidden}
+  .hero::after,.card::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;box-shadow:inset 0 0 0 1px rgba(147,197,253,.35);}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+  .title{font-size:34px;font-weight:900;letter-spacing:-.02em;margin:0 0 6px;color:var(--brand)}
+  .subtitle{margin:0;color:var(--muted);font-size:14px}
+  .topbar-main{display:flex;align-items:flex-start;gap:16px;flex:1 1 auto;min-width:0}
+  .hero-brand-slot{display:flex;align-items:flex-start;justify-content:flex-end;flex:0 0 auto;margin-left:auto}
+  .hero-brand-logo{width:auto;height:56px;max-width:none;display:block;opacity:0;transform:translateY(4px);transition:opacity .2s ease, transform .2s ease}
+  .hero-brand-logo.is-visible{opacity:1;transform:translateY(0)}
+  .hero-brand-logo.is-company{filter:none}
+  .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-start;width:100%}
+  select, input[type="text"], input[type="date"], textarea{border:1px solid rgba(23,50,77,.12);border-radius:18px;padding:12px 14px;font-size:14px;color:var(--text);background:rgba(255,255,255,.92);width:100%;box-shadow:inset 0 1px 0 rgba(255,255,255,.78)}
+  textarea{min-height:104px;resize:vertical}
+  .community-select{min-width:240px;background:#fff}
+  .btn{appearance:none;border:none;border-radius:16px;padding:11px 16px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:var(--soft-shadow);text-decoration:none !important;display:inline-flex;align-items:center;justify-content:center}
+  .btn-primary{background:#1e3b67;color:#fff}
+  .btn-secondary{background:#fff;border:1px solid rgba(23,50,77,.12);color:var(--text)}
+  .stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;background:#fff;border:1px solid rgba(23,50,77,.10);font-size:13px;font-weight:700;color:var(--text);box-shadow:var(--soft-shadow)}
+  .pill.accent{background:linear-gradient(180deg,var(--gold-top),var(--gold-bottom));border-color:rgba(212,169,61,.30)}
+  .workspace{display:grid;grid-template-columns:1.05fr 1.05fr;gap:18px}
+  .card{background:linear-gradient(180deg,var(--blue-top),var(--blue-bottom));border:1px solid rgba(37,99,235,.42);border-radius:30px;box-shadow:0 10px 24px rgba(18,42,67,.06),0 0 0 1px rgba(96,165,250,.22),0 8px 22px rgba(59,130,246,.12);padding:22px;position:relative;overflow:hidden}
+  .card.span2{grid-column:span 2}
+  .submitted-priority{grid-column:span 2;background:linear-gradient(180deg,var(--blue-top),var(--blue-bottom));border:1px solid rgba(37,99,235,.42);box-shadow:0 10px 24px rgba(18,42,67,.06),0 0 0 1px rgba(96,165,250,.22),0 8px 22px rgba(59,130,246,.12)}
+  .submitted-priority .section-title{font-size:22px}
+  .submitted-priority .section-sub{font-size:14px;color:var(--muted)}
+  .submitted-priority .items{max-height:440px}
+  .submitted-count{background:#fff;border-color:rgba(23,50,77,.10);font-weight:800}
+  .calendar-card{grid-column:span 2}
+  .calendar-card .items{max-height:none;overflow:visible}
+  .calendar-card .calendarWrap{display:flex;flex-direction:column;gap:12px}
+  .calendar-card .calendarEvent{background:rgba(255,255,255,.94);border:1px solid rgba(210,223,243,.96);border-radius:16px;padding:12px 14px;display:flex;justify-content:space-between;gap:12px;align-items:center;box-shadow:0 1px 0 rgba(255,255,255,.92), inset 0 0 0 1px rgba(255,255,255,.70)}
+  .calendar-card .calendarLabel{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .calendar-card .calendarValue{font-size:16px;font-weight:800;color:var(--text);margin-top:4px}
+  .calendar-card .calendarMeta{font-size:12px;color:var(--muted);margin-top:4px}
+  .calendar-card .calendarPill{white-space:nowrap;background:#fff7df;border:1px solid rgba(212,169,61,.35);border-radius:999px;padding:8px 12px;font-size:12px;font-weight:800;color:#6c5314}
+  .section-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .section-title{font-size:19px;font-weight:900;margin:0;color:var(--brand)}
+  .section-sub{font-size:13px;color:var(--muted)}
+  .legacy-link{display:inline-flex;align-items:center;padding:10px 14px;border-radius:999px;background:#fff;border:1px solid rgba(23,50,77,.12);box-shadow:var(--soft-shadow);font-weight:800;color:var(--brand);text-decoration:none}
+  .items{display:flex;flex-direction:column;gap:12px;max-height:520px;overflow:auto;padding-right:4px}
+  .item, .itemRow, .bmMaintItem{background:rgba(255,255,255,.94);border:1px solid rgba(210,223,243,.96);border-radius:18px;padding:14px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start;box-shadow:0 1px 0 rgba(255,255,255,.92), inset 0 0 0 1px rgba(255,255,255,.72)}
+  .itemTitle{font-size:15px;font-weight:800;color:var(--text)}
+  .itemMain{flex:1 1 auto;min-width:0}
+  .muted{color:var(--muted)}
+  .tiny{font-size:12px}
+  .itemActions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  .itemActions .btn, .itemActions .pill{padding:8px 11px;border-radius:10px;font-size:13px;font-weight:700;border:1px solid rgba(24,49,83,.14);background:#fff;color:var(--text);text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+  #submittedItemsHost .itemActions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px!important;justify-content:stretch!important;align-items:stretch!important;width:100%;max-width:280px}
+  #submittedItemsHost .itemActions .btn, #submittedItemsHost .itemActions .pill{width:100%!important;min-width:0!important;height:38px!important;padding:0 12px!important;border-radius:10px!important;font-size:14px!important;display:flex!important;align-items:center!important;justify-content:center!important;white-space:nowrap!important;margin:0!important}
+  #submittedItemsHost .itemActions .danger, #submittedItemsHost .itemActions .delete-btn{background:#fff1f0!important;color:var(--danger)!important;border-color:rgba(180,35,24,.18)!important}
+  .itemActions .btnPrimary, .itemActions .btn-primary{background:var(--brand)!important;color:#fff!important;border-color:transparent}
+  .itemActions .danger, .danger{background:#fff1f0!important;color:var(--danger)!important;border-color:rgba(180,35,24,.18)!important}
+  .new-item-grid{display:grid;grid-template-columns:1fr 180px;gap:12px}
+  .new-item-grid .full{grid-column:1 / -1}
+  .action-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+  .board-empty{padding:18px;border-radius:16px;background:#fff;border:1px dashed rgba(24,49,83,.16);color:var(--muted);text-align:center}
+  .legacy-link{font-size:13px;color:var(--brand);font-weight:700;text-decoration:none}
+  .minutesPreview{margin-top:8px;padding:10px;border-radius:12px;background:#fff;border:1px solid rgba(210,223,243,.96);box-shadow:inset 0 0 0 1px rgba(255,255,255,.76);font-size:13px;line-height:1.45;max-height:180px;overflow:auto}
+  #bridgeFrame{position:absolute;left:-99999px;top:0;width:1280px;height:2000px;border:0;opacity:0;pointer-events:none}
+  
+  .calendar-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .calendar-btn{appearance:none;border:none;border-radius:12px;padding:10px 14px;font-size:14px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff}
+  .calendar-modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.42);display:none;align-items:center;justify-content:center;padding:20px;z-index:9999}
+  .calendar-modal{width:min(560px,100%);background:#fff;border-radius:22px;border:1px solid var(--border);box-shadow:0 24px 60px rgba(15,23,42,.24);padding:18px}
+  .calendar-modal h3{margin:0 0 6px;font-size:22px;font-weight:800;color:var(--text)}
+  .calendar-modal p{margin:0 0 14px;color:var(--muted);font-size:14px}
+  .calendar-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .calendar-form-grid .full{grid-column:1 / -1}
+  .calendar-modal textarea{min-height:96px}
+  .calendar-modal-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px}
+
+  .item-modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.42);display:none;align-items:center;justify-content:center;padding:20px;z-index:9999}
+  .item-modal{width:min(720px,100%);background:#fff;border-radius:22px;border:1px solid var(--border);box-shadow:0 24px 60px rgba(15,23,42,.24);padding:18px}
+  .item-modal h3{margin:0 0 4px;font-size:22px;font-weight:800;color:var(--text)}
+  .item-modal p{margin:0;color:var(--muted);font-size:14px}
+  .item-modal-grid{display:grid;grid-template-columns:1.4fr .9fr;gap:12px;margin-top:14px}
+  .item-modal-card{background:#f8fafc;border:1px solid var(--border);border-radius:16px;padding:14px}
+  .item-modal-label{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#64748b;margin-bottom:6px}
+  .item-modal-value{font-size:16px;font-weight:700;color:var(--text);line-height:1.4;white-space:pre-wrap;word-break:break-word}
+  .item-modal-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px}
+  @media(max-width:760px){.item-modal-grid{grid-template-columns:1fr}}
+  .calendar-status{font-size:13px;color:var(--muted);min-height:18px;margin-top:8px}
+
+  @media (max-width: 900px){
+    .topbar{align-items:flex-start}
+    .topbar-main{width:100%;justify-content:space-between;align-items:flex-start}
+    .hero-brand-slot{margin-left:0}
+    .workspace{grid-template-columns:1fr}
+    .card.span2{grid-column:auto}
+    .new-item-grid{grid-template-columns:1fr}
+    .community-select{min-width:200px;width:100%}
+    .calendar-form-grid{grid-template-columns:1fr}
+  }
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+
+.mh2-actions .mh2-btn--ghost{display:none !important;}
+</style>
+<style>/* removed conflicting board hub overrides */</style>
+<style>/* removed conflicting board hub overrides */</style>
+
+<style>
+/* Board Member Hub shell sync override */
+.page,.hero,.card{backdrop-filter:none;-webkit-backdrop-filter:none;}
+.card > .section-head{margin-bottom:14px;}
+</style>
+
+<style>
+/* cleanup pass: remove conflicting legacy overrides and keep submitted card on manager-hub light system */
+.submitted-priority, .submitted-priority *:not(button):not(.pill):not(.badge){ color: inherit !important; }
+.submitted-priority .section-title, .submitted-priority .itemTitle, .submitted-priority strong{ color: var(--brand) !important; }
+.submitted-priority .section-sub, .submitted-priority .muted, .submitted-priority .tiny, .submitted-priority .itemMeta, .submitted-priority .itemSubtitle{ color: var(--muted) !important; }
+.submitted-priority .item, .submitted-priority .itemRow{ background: rgba(255,255,255,.96); }
+</style>
+
+<style>
+/* final manager hub outline sync */
+.page, .hero, .card, .submitted-priority{
+  border:1px solid rgba(37,99,235,.42) !important;
+  box-shadow:0 10px 24px rgba(18,42,67,.06), 0 0 0 1px rgba(96,165,250,.22), 0 8px 22px rgba(59,130,246,.12) !important;
+}
+.page::before, .hero::after, .card::after{
+  box-shadow:inset 0 0 0 1px rgba(147,197,253,.35) !important;
+}
+</style>
+
+<style>
+/* submitted item record pop polish */
+#submittedItemsHost .item,
+#submittedItemsHost .itemRow{
+  background: linear-gradient(180deg, rgba(244,252,247,.98), rgba(236,248,240,.98)) !important;
+  border: 1px solid rgba(108,180,126,.34) !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,.92), inset 0 0 0 1px rgba(255,255,255,.76), 0 8px 18px rgba(70,140,90,.08) !important;
+}
+#submittedItemsHost .itemTitle{
+  color: #1b4d2f !important;
+}
+#submittedItemsHost .muted,
+#submittedItemsHost .tiny{
+  color: #567260 !important;
+}
+</style>
+</head>
+<body>
+<iframe id="bridgeFrame" src="board_member_hub.html?engine=1" title="Board Member Hub Engine"></iframe>
+<div class="page">
+  <section class="hero">
+    <div class="topbar">
+      <div class="topbar-main">
+        <div>
+          <h1 class="title">Board Member Hub</h1>
+        </div>
+        <div class="hero-brand-slot">
+          <img id="heroBrandLogo" class="hero-brand-logo" src="Zummee.png" alt="Zummee logo" />
+        </div>
+      </div>
+      <div class="controls">
+        <select id="communitySelect" class="community-select"></select>
+        <a class="btn btn-primary" href="manager_hub.html">Back to Hub</a>
+      </div>
+    </div>
+    <div class="stats">
+      <span class="pill accent" id="submittedCountPill">Submitted: 0</span>
+      <span class="pill" id="maintenanceCountPill">Maintenance: 0</span>
+      <span class="pill" id="agendaCountPill">Agenda: 0</span>
+      <span class="pill" id="minutesCountPill">Minutes: 0</span>
+    </div>
+  </section>
+
+  <section class="workspace">
+    <div class="card submitted-priority span2">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Submitted Items</h2>
+          <div class="section-sub">Existing board action items for the selected community.</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <span class="pill submitted-count" id="submittedItemsPriorityPill">0 Submitted</span>
+          <a class="legacy-link" href="board_member_hub.html?view=submitted">Open full list</a>
+        </div>
+      </div>
+      <div class="items" id="submittedItemsHost"></div>
+    </div>
+
+    <div class="card calendar-card span2">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Calendar</h2>
+          <div class="section-sub">Important annual meeting and board-related dates for this community.</div>
+        </div>
+        <div class="calendar-actions">
+          <span class="pill accent" id="calendarCountPill">Dates: 0</span>
+          <button id="addCalendarEventBtn" class="calendar-btn" type="button">Add Calendar Item</button>
+        </div>
+      </div>
+      <div class="items" id="calendarHost"></div>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">New Item</h2>
+          
+        </div>
+      </div>
+      <div class="new-item-grid">
+        <div>
+          <label class="tiny muted" for="newItemTitle">Title</label>
+          <input id="newItemTitle" type="text" placeholder="e.g., Replace lobby lighting" />
+        </div>
+        <div>
+          <label class="tiny muted" for="newItemDue">Due date</label>
+          <input id="newItemDue" type="date" />
+        </div>
+        <div class="full">
+          <label class="tiny muted" for="newItemDetails">Details</label>
+          <textarea id="newItemDetails" placeholder="Add any notes or context…"></textarea>
+        </div>
+        <div class="full">
+          <label class="tiny muted" for="newItemPhoto">Photo (optional)</label>
+          <input id="newItemPhoto" type="file" accept="image/*" />
+        </div>
+      </div>
+      <div class="action-row">
+        <button id="submitNewItemBtn" class="btn btn-primary" type="button">Submit Action Item</button>
+        <button id="clearNewItemBtn" class="btn btn-secondary" type="button">Clear</button>
+      </div>
+      <div class="tiny muted" id="newItemStatus" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card span2">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Live Maintenance Updates</h2>
+          <div class="section-sub">Track board-created maintenance work in a cleaner feed.</div>
+        </div>
+        <a class="legacy-link" href="board_member_hub.html#bmMaintenanceFeedCard">Open in legacy hub</a>
+      </div>
+      <div class="items" id="maintenanceItemsHost"></div>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Meeting Agenda Items</h2>
+          <div class="section-sub">Topics that will feed into the meeting agenda.</div>
+        </div>
+      </div>
+      <div class="items" id="agendaItemsHost"></div>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Minutes Awaiting Approval</h2>
+          <div class="section-sub">Board approvals that still need action.</div>
+        </div>
+        <a class="legacy-link" href="board_member_hub.html#minuteApprovalItems">Open approvals</a>
+      </div>
+      <div class="items" id="minuteApprovalHost"></div>
+    </div>
+  </section>
+</div>
+
+
+<div class="item-modal-backdrop" id="itemModalBackdrop" aria-hidden="true">
+  <div class="item-modal" role="dialog" aria-modal="true" aria-labelledby="itemModalTitle">
+    <h3 id="itemModalTitle">Board Item</h3>
+    <p id="itemModalSub">Review the submitted item details.</p>
+    <div class="item-modal-grid">
+      <div class="item-modal-card">
+        <div class="item-modal-label">Details</div>
+        <div class="item-modal-value" id="itemModalDetails">—</div>
+      </div>
+      <div class="item-modal-card">
+        <div class="item-modal-label">Submitted By</div>
+        <div class="item-modal-value" id="itemModalCreatedBy">—</div>
+        <div class="item-modal-label" style="margin-top:12px">Due Date</div>
+        <div class="item-modal-value" id="itemModalDue">—</div>
+        <div class="item-modal-label" style="margin-top:12px">Created</div>
+        <div class="item-modal-value" id="itemModalCreatedAt">—</div>
+      </div>
+    </div>
+    <div class="item-modal-actions">
+      <button id="itemModalCloseBtn" class="btn btn-primary" type="button">Close</button>
+    </div>
+  </div>
+</div>
+<div class="calendar-modal-backdrop" id="calendarModalBackdrop" aria-hidden="true">
+  <div class="calendar-modal" role="dialog" aria-modal="true" aria-labelledby="calendarModalTitle">
+    <h3 id="calendarModalTitle">Add Calendar Item</h3>
+    <p>Add an important board or annual-meeting date for this community.</p>
+    <div class="calendar-form-grid">
+      <div class="full">
+        <label class="tiny muted" for="calendarEventTitle">Title</label>
+        <input id="calendarEventTitle" type="text" placeholder="e.g., Board meeting" />
+      </div>
+      <div>
+        <label class="tiny muted" for="calendarEventDate">Date</label>
+        <input id="calendarEventDate" type="date" />
+      </div>
+      <div>
+        <label class="tiny muted" for="calendarEventTime">Time (optional)</label>
+        <input id="calendarEventTime" type="time" />
+      </div>
+      <div>
+        <label class="tiny muted" for="calendarEventLocation">Location (optional)</label>
+        <input id="calendarEventLocation" type="text" placeholder="Clubhouse or virtual" />
+      </div>
+      <div class="full">
+        <label class="tiny muted" for="calendarEventNotes">Notes (optional)</label>
+        <textarea id="calendarEventNotes" placeholder="Add any context board members should know."></textarea>
+      </div>
+    </div>
+    <div id="calendarEventStatus" class="calendar-status"></div>
+    <div class="calendar-modal-actions">
+      <button id="calendarModalCancelBtn" class="btn btn-secondary" type="button">Cancel</button>
+      <button id="calendarModalSaveBtn" class="btn btn-primary" type="button">Save Calendar Item</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const frame = document.getElementById('bridgeFrame');
+  const communitySelect = document.getElementById('communitySelect');
+  const deletedSubmittedItemIds = new Set();
+  const hosts = {
+    submitted: document.getElementById('submittedItemsHost'),
+    maintenance: document.getElementById('maintenanceItemsHost'),
+    agenda: document.getElementById('agendaItemsHost'),
+    minutes: document.getElementById('minuteApprovalHost'),
+    calendar: document.getElementById('calendarHost')
+  };
+  const pills = {
+    submitted: document.getElementById('submittedCountPill'),
+    maintenance: document.getElementById('maintenanceCountPill'),
+    agenda: document.getElementById('agendaCountPill'),
+    minutes: document.getElementById('minutesCountPill'),
+    calendar: document.getElementById('calendarCountPill')
+  };
+  const statusEl = document.getElementById('newItemStatus');
+  const addCalendarEventBtn = document.getElementById('addCalendarEventBtn');
+  const calendarModalBackdrop = document.getElementById('calendarModalBackdrop');
+  const calendarModalSaveBtn = document.getElementById('calendarModalSaveBtn');
+  const calendarModalCancelBtn = document.getElementById('calendarModalCancelBtn');
+  const calendarEventStatus = document.getElementById('calendarEventStatus');
+  const itemModalBackdrop = document.getElementById('itemModalBackdrop');
+  const itemModalCloseBtn = document.getElementById('itemModalCloseBtn');
+  const heroBrandLogo = document.getElementById('heroBrandLogo');
+
+  function parseCompanyLogoRef(raw){
+    raw = String(raw || '').trim();
+    if(!raw) return null;
+    if(/^https?:\/\//i.test(raw)) return { url: raw };
+    return { bucket:'company_logos', path: raw };
+  }
+  function preloadImage(url){
+    return new Promise(function(resolve, reject){
+      const img = new Image();
+      img.decoding = 'async';
+      img.onload = function(){ resolve(url); };
+      img.onerror = function(err){ reject(err || new Error('Image preload failed')); };
+      img.src = url;
+    });
+  }
+  async function paintHeroBrandLogo(payload){
+    if(!heroBrandLogo) return;
+    let url = String(payload && payload.url || '').trim() || 'Zummee.png';
+    let alt = String(payload && payload.alt || '').trim() || 'Zummee logo';
+    let isCompany = !!(payload && payload.isCompany);
+    try{ await preloadImage(url); }catch(_e){
+      url = 'Zummee.png';
+      alt = 'Zummee logo';
+      isCompany = false;
+      try{ await preloadImage(url); }catch(_e2){}
+    }
+    heroBrandLogo.classList.remove('is-visible');
+    heroBrandLogo.src = url;
+    heroBrandLogo.alt = alt;
+    heroBrandLogo.classList.toggle('is-company', isCompany);
+    requestAnimationFrame(function(){ heroBrandLogo.classList.add('is-visible'); });
+  }
+  async function loadHeroBrandLogo(){
+    if(!heroBrandLogo) return;
+    try{
+      const win = bridgeWin();
+      if(!win || !win.sb || typeof win.sb.from !== 'function') throw new Error('Board hub engine not available');
+      const ctx = typeof win.getCurrentContext === 'function' ? (await win.getCurrentContext()) : null;
+      const companyId = String((ctx && (ctx.company_id || ctx.companyId)) || localStorage.getItem('activeCompanyId') || localStorage.getItem('zummee_company_id') || '').trim();
+      if(!companyId) throw new Error('No company id');
+      const res = await win.sb.from('companies').select('logo_path,name').eq('id', companyId).maybeSingle();
+      if(res.error) throw res.error;
+      const row = res.data || {};
+      const ref = parseCompanyLogoRef(row.logo_path);
+      if(!ref) throw new Error('No company logo');
+      let url = String(ref.url || '').trim();
+      if(!url && ref.bucket && ref.path && win.sb.storage && win.sb.storage.from){
+        const pub = win.sb.storage.from(ref.bucket).getPublicUrl(ref.path);
+        url = String(pub && pub.data && pub.data.publicUrl || '').trim();
+      }
+      if(!url) throw new Error('No logo URL');
+      await paintHeroBrandLogo({ url:url, alt:String(row.name || 'Company logo'), isCompany:true });
+    }catch(_e){
+      await paintHeroBrandLogo({ url:'Zummee.png', alt:'Zummee logo', isCompany:false });
+    }
+  }
+
+  function bridgeWin(){ return frame && frame.contentWindow; }
+  function bridgeDoc(){ try { return frame && frame.contentDocument; } catch(e){ return null; } }
+  function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
+  function setEmpty(el, text){ if(el) el.innerHTML = '<div class="board-empty">'+text+'</div>'; }
+  function countItems(host){ return host ? host.querySelectorAll('.item, .itemRow, .bmMaintItem').length : 0; }
+  function friendlyDate(value){
+    const raw = String(value || '').trim();
+    if(!raw) return '';
+    const d = new Date(raw + (raw.length <= 10 ? 'T12:00:00' : ''));
+    if(Number.isNaN(d.getTime())) return raw;
+    return d.toLocaleDateString([], { month:'short', day:'numeric', year:'numeric' });
+  }
+  function renderCalendar(){
+    const host = hosts.calendar;
+    if(!host) return;
+    const doc = bridgeDoc();
+    const body = doc && doc.getElementById('bmAnnualMeetingsBody');
+    if(!body){ setEmpty(host, 'No calendar dates are available right now.'); return; }
+    const title = body.querySelector('.bmCriticalTitle');
+    const desc = body.querySelector('.bmCriticalDesc, .sub');
+    const titleText = title ? String(title.textContent||'').trim() : '';
+    const descText = desc ? String(desc.textContent||'').trim() : '';
+    const events = [];
+    body.querySelectorAll('.bmStat, .statCard').forEach(card=>{
+      const label = String((card.querySelector('.label')||{}).textContent || '').trim();
+      const value = String((card.querySelector('.value')||{}).textContent || '').trim();
+      if(label && value) events.push({label, value, meta: descText || titleText || ''});
+    });
+    if(events.length === 0){
+      const rawText = String(body.textContent || '').trim();
+      if(rawText && !/^loading/i.test(rawText)){
+        host.innerHTML = '<div class="board-empty">' + rawText + '</div>';
+      } else {
+        setEmpty(host, 'No calendar dates are available right now.');
+      }
+      return;
+    }
+    host.innerHTML = '<div class="calendarWrap">' + events.map(ev => (
+      '<div class="calendarEvent">' +
+        '<div class="calendarMain">' +
+          '<div class="calendarLabel">' + ev.label + '</div>' +
+          '<div class="calendarValue">' + ev.value + '</div>' +
+          (ev.meta ? '<div class="calendarMeta">' + ev.meta + '</div>' : '') +
+        '</div>' +
+        '<div class="calendarPill">Upcoming</div>' +
+      '</div>'
+    )).join('') + '</div>';
+  }
+
+
+  function openCalendarModal(){
+    if(!calendarModalBackdrop) return;
+    document.getElementById('calendarEventTitle').value='';
+    document.getElementById('calendarEventDate').value='';
+    document.getElementById('calendarEventTime').value='';
+    document.getElementById('calendarEventLocation').value='';
+    document.getElementById('calendarEventNotes').value='';
+    if(calendarEventStatus) calendarEventStatus.textContent='';
+    calendarModalBackdrop.style.display='flex';
+    calendarModalBackdrop.setAttribute('aria-hidden','false');
+  }
+  function closeCalendarModal(){
+    if(!calendarModalBackdrop) return;
+    calendarModalBackdrop.style.display='none';
+    calendarModalBackdrop.setAttribute('aria-hidden','true');
+  }
+
+  function closeItemModal(){
+    if(!itemModalBackdrop) return;
+    itemModalBackdrop.style.display='none';
+    itemModalBackdrop.setAttribute('aria-hidden','true');
+  }
+
+  const boardSubmitterNameCache = new Map();
+  async function resolveBoardSubmitterName(rawValue){
+    const raw = String(rawValue || '').trim();
+    if(!raw) return '—';
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(raw)) return raw;
+    if(boardSubmitterNameCache.has(raw)) return boardSubmitterNameCache.get(raw);
+    const win = bridgeWin();
+    if(!win || !win.sb || typeof win.sb.from !== 'function') return raw;
+    let label = raw;
+    try{
+      let q = await win.sb.from('profiles').select('name,email').eq('id', raw).maybeSingle();
+      if(q && q.error && /disabled/i.test(String(q.error.message || q.error.details || ''))){
+        q = await win.sb.from('profiles').select('name,email').eq('id', raw).single();
+      }
+      if(q && !q.error){
+        const row = q.data || null;
+        label = String((row && (row.name || row.email)) || raw).trim() || raw;
+      }
+    }catch(_err){}
+    boardSubmitterNameCache.set(raw, label);
+    return label;
+  }
+  function cleanBoardItemDetails(raw){
+    if(raw == null) return '';
+    let text = String(raw);
+    text = text.replace(/\n?__ZUMMEE_BM_PHOTO__\s*:\s*\{[\s\S]*?\}(?=\n|$)/g, '');
+    text = text.replace(/__ZUMMEE_BM_PHOTO__\s*:\s*\{[\s\S]*?\}(?=\n|$)/g, '');
+    return text.replace(/\n{3,}/g, '\n\n').trim();
+  }
+  async function openBoardItemModal(itemId){
+    const win = bridgeWin();
+    if(!win || !win.sb || typeof win.sb.from !== 'function') throw new Error('Board hub engine not available');
+    const ctxCommunityId = String((communitySelect && communitySelect.value) || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('activeCommunityId') || '').trim();
+    if(!ctxCommunityId) throw new Error('No community selected.');
+    const q = await win.sb.from('BoardMemberActionItems').select('*').eq('community_id', ctxCommunityId).eq('id', String(itemId)).limit(1);
+    if(q && q.error) throw q.error;
+    const row = q && q.data && q.data[0] ? q.data[0] : null;
+    if(!row) throw new Error('Could not find that board item.');
+    const submitterName = await resolveBoardSubmitterName(row.submitter_name || row.created_by_email || row.created_by || '');
+    document.getElementById('itemModalTitle').textContent = String(row.title || 'Board Item');
+    document.getElementById('itemModalSub').textContent = row.status ? ('Status: ' + String(row.status)) : 'Review the submitted item details.';
+    document.getElementById('itemModalDetails').textContent = cleanBoardItemDetails(row.details || row.description || 'No details provided.') || 'No details provided.';
+    document.getElementById('itemModalCreatedBy').textContent = submitterName || '—';
+    document.getElementById('itemModalDue').textContent = friendlyDate(row.due_date) || '—';
+    document.getElementById('itemModalCreatedAt').textContent = friendlyDate(row.created_at) || '—';
+    itemModalBackdrop.style.display='flex';
+    itemModalBackdrop.setAttribute('aria-hidden','false');
+  }
+  async function saveCalendarEvent(){
+    try{
+      if(calendarEventStatus) calendarEventStatus.textContent='Saving…';
+      const win = bridgeWin();
+      if(!win || !win.sb || typeof win.sb.from !== 'function') throw new Error('Calendar engine not available yet.');
+      const ctx = typeof win.getCtx === 'function' ? win.getCtx() : null;
+      const companyId = String((ctx && ctx.companyId) || localStorage.getItem('activeCompanyId') || localStorage.getItem('zummee_company_id') || '').trim();
+      const communityId = String((ctx && ctx.communityId) || (communitySelect && communitySelect.value) || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('activeCommunityId') || '').trim();
+      if(!companyId || !communityId) throw new Error('Select a community first.');
+      const title = String(document.getElementById('calendarEventTitle').value || '').trim();
+      const date = String(document.getElementById('calendarEventDate').value || '').trim();
+      const time = String(document.getElementById('calendarEventTime').value || '').trim();
+      const location = String(document.getElementById('calendarEventLocation').value || '').trim();
+      const notes = String(document.getElementById('calendarEventNotes').value || '').trim();
+      if(!title || !date) throw new Error('Enter a title and date.');
+      const startsAt = time ? new Date(date + 'T' + time + ':00') : new Date(date + 'T00:00:00');
+      const payload = { company_id: companyId, community_id: communityId, title, location, notes, starts_at: startsAt.toISOString() };
+      const res = await win.sb.from('CommunityCalendarEvents').upsert(payload).select('id').maybeSingle();
+      if(res && res.error) throw res.error;
+      if(typeof win.loadEvents === 'function') await win.loadEvents();
+      await renderFromBridge();
+      if(calendarEventStatus) calendarEventStatus.textContent='Calendar item saved.';
+      setTimeout(closeCalendarModal, 450);
+    }catch(err){
+      console.error(err);
+      if(calendarEventStatus) calendarEventStatus.textContent = err && (err.message||err.details||err.hint||err.code) ? (err.message||err.details||err.hint||err.code) : 'Could not save calendar item.';
+    }
+  }
+
+  function updatePills(){
+    const submittedCount = countItems(hosts.submitted);
+    pills.submitted.textContent = 'Submitted: ' + submittedCount;
+    const priorityPill = document.getElementById('submittedItemsPriorityPill');
+    if(priorityPill) priorityPill.textContent = submittedCount + ' Submitted';
+    pills.maintenance.textContent = 'Maintenance: ' + countItems(hosts.maintenance);
+    pills.agenda.textContent = 'Agenda: ' + countItems(hosts.agenda);
+    pills.minutes.textContent = 'Minutes: ' + countItems(hosts.minutes);
+    if(pills.calendar){
+      const calendarCount = hosts.calendar ? hosts.calendar.querySelectorAll('.calendarEvent').length : 0;
+      pills.calendar.textContent = 'Dates: ' + calendarCount;
+    }
+  }
+  async function ensureBridgeReady(){
+    for(let i=0;i<40;i++){
+      const doc = bridgeDoc();
+      const win = bridgeWin();
+      const select = doc && doc.getElementById('zummeeCommunitySelect');
+      if(doc && win && select && select.options && select.options.length){ return {doc,win,select}; }
+      await wait(200);
+    }
+    throw new Error('Board Member Hub engine did not finish loading.');
+  }
+  async function populateCommunities(){
+    const {select} = await ensureBridgeReady();
+    const current = localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('activeCommunityId') || select.value || '';
+    communitySelect.innerHTML = '';
+    Array.from(select.options).forEach(opt=>{
+      const copy = document.createElement('option');
+      copy.value = opt.value;
+      copy.textContent = opt.textContent;
+      communitySelect.appendChild(copy);
+    });
+    if(current) communitySelect.value = current;
+  }
+  function syncLocalStorage(selectEl){
+    const val = String(selectEl && selectEl.value || '').trim();
+    const name = selectEl && selectEl.selectedOptions && selectEl.selectedOptions[0] ? String(selectEl.selectedOptions[0].textContent || '').trim() : '';
+    if(val){
+      localStorage.setItem('zummee_selected_community_id', val);
+      localStorage.setItem('activeCommunityId', val);
+      localStorage.setItem('zummeeActiveCommunityId', val);
+      localStorage.setItem('currentCommunityId', val);
+    }
+    if(name){
+      localStorage.setItem('activeCommunityName', name);
+      localStorage.setItem('zummee_community', name);
+    }
+  }
+  async function setCommunityAndRefresh(){
+    const {select} = await ensureBridgeReady();
+    if(communitySelect.value && select.value !== communitySelect.value){
+      select.value = communitySelect.value;
+    }
+    syncLocalStorage(communitySelect);
+    try { select.dispatchEvent(new Event('change', {bubbles:true})); } catch(e){}
+    await wait(900);
+    await renderFromBridge();
+  }
+  function cloneInto(sourceId, host, emptyText){
+    const doc = bridgeDoc();
+    const src = doc && doc.getElementById(sourceId);
+    if(!host) return;
+    if(!src){ setEmpty(host, emptyText); return; }
+    let html = src.innerHTML && src.innerHTML.trim() ? src.innerHTML : '<div class="board-empty">'+emptyText+'</div>';
+    if(sourceId === 'bmItems' && deletedSubmittedItemIds.size){
+      const scratch = document.createElement('div');
+      scratch.innerHTML = html;
+      scratch.querySelectorAll('.item').forEach(function(row){
+        const opener = row.querySelector('[data-open-item]');
+        const rowId = String((row.getAttribute('data-item-id')) || (opener && opener.getAttribute('data-open-item')) || '').trim();
+        if(rowId && deletedSubmittedItemIds.has(rowId)) row.remove();
+      });
+      html = scratch.innerHTML && scratch.innerHTML.trim() ? scratch.innerHTML : '<div class="board-empty">'+emptyText+'</div>';
+    }
+    host.innerHTML = html;
+  }
+  function postProcessSubmittedItems(){
+    const host = hosts.submitted;
+    if(!host) return;
+    host.querySelectorAll('.itemActions').forEach(actions=>{
+      const openBtn = actions.querySelector('[data-open-item]');
+      if(!openBtn) return;
+      const itemId = String(openBtn.getAttribute('data-open-item') || '').trim();
+      if(!itemId) return;
+      const row = actions.closest('.item');
+      if(row) {
+        row.setAttribute('data-item-id', itemId);
+        if(deletedSubmittedItemIds.has(itemId)){
+          row.remove();
+          return;
+        }
+      }
+      if(!actions.querySelector('[data-delete-item]')){
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'pill delete-btn danger';
+        del.setAttribute('data-delete-item', itemId);
+        del.textContent = 'Delete';
+        if(openBtn.nextSibling){ actions.insertBefore(del, openBtn.nextSibling); } else { actions.appendChild(del); }
+      }
+      const allButtons = Array.from(actions.querySelectorAll('.pill, .btn'));
+      allButtons.forEach(btn=>{ btn.classList.add('action-btn'); });
+    });
+  }
+  async function renderFromBridge(){
+    await ensureBridgeReady();
+    cloneInto('bmItems', hosts.submitted, 'No submitted items right now.');
+    postProcessSubmittedItems();
+    renderCalendar();
+    cloneInto('bmMaintenanceItems', hosts.maintenance, 'No live maintenance updates right now.');
+    cloneInto('agendaItems', hosts.agenda, 'No agenda topics yet.');
+    cloneInto('minuteApprovalItems', hosts.minutes, 'No board minutes are awaiting approval for this community.');
+    updatePills();
+  }
+  async function submitNewItem(){
+    statusEl.textContent='';
+    try{
+      const {doc,win} = await ensureBridgeReady();
+      const title = document.getElementById('newItemTitle').value || '';
+      const due = document.getElementById('newItemDue').value || '';
+      const details = document.getElementById('newItemDetails').value || '';
+      const photo = document.getElementById('newItemPhoto').files && document.getElementById('newItemPhoto').files[0] ? document.getElementById('newItemPhoto').files[0] : null;
+      const t = doc.getElementById('bmTitle');
+      const d = doc.getElementById('bmDue');
+      const de = doc.getElementById('bmDetails');
+      const p = doc.getElementById('bmPhoto');
+      if(t) t.value = title;
+      if(d) d.value = due;
+      if(de) de.value = details;
+      if(p && photo){
+        const dt = new DataTransfer();
+        dt.items.add(photo);
+        p.files = dt.files;
+        try{ p.dispatchEvent(new Event('change', {bubbles:true})); }catch(e){}
+      }
+      if(typeof win.__bmhub_submitNewItem !== 'function') throw new Error('Submit handler not available yet.');
+      await win.__bmhub_submitNewItem();
+      statusEl.textContent = 'Item submitted.';
+      document.getElementById('clearNewItemBtn').click();
+      await wait(1200);
+      await renderFromBridge();
+    }catch(err){
+      console.error(err);
+      statusEl.textContent = err && err.message ? err.message : 'Could not submit the item.';
+    }
+  }
+  function clearNewItem(){
+    document.getElementById('newItemTitle').value='';
+    document.getElementById('newItemDue').value='';
+    document.getElementById('newItemDetails').value='';
+    document.getElementById('newItemPhoto').value='';
+    statusEl.textContent='';
+  }
+  async function proxyLegacyAction(target){
+    const win = bridgeWin();
+    const doc = bridgeDoc();
+    if(!win || !doc || !target) return;
+    const attrNames = ['data-open-item','data-delete-item','data-create-work-order-item','data-complete-notify-item','data-open-work-order-item','data-agenda-id','data-minutes-approve','data-minutes-reject','data-bm-annual-preview','data-bm-annual-approve'];
+    for(const attr of attrNames){
+      const val = target.getAttribute && target.getAttribute(attr);
+      if(!val) continue;
+      if(attr === 'data-open-item') { await openBoardItemModal(String(val)); return; }
+      if(attr === 'data-delete-item') {
+        if(!window.confirm('Delete this board item? This cannot be undone.')) return;
+        const ctxCommunityId = String((communitySelect && communitySelect.value) || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('activeCommunityId') || '').trim();
+        if(!ctxCommunityId) throw new Error('No community selected.');
+        if(!win.sb || typeof win.sb.from !== 'function') throw new Error('Board hub engine not available');
+        const itemId = String(val);
+        const del = await win.sb.from('BoardMemberActionItems').delete().eq('id', itemId).eq('community_id', ctxCommunityId);
+        if(del && del.error) throw del.error;
+        deletedSubmittedItemIds.add(itemId);
+        const liveRow = hosts.submitted && hosts.submitted.querySelector('[data-item-id="' + CSS.escape(itemId) + '"]');
+        if(liveRow && liveRow.parentNode){
+          liveRow.parentNode.removeChild(liveRow);
+        }
+        const bridgeRow = doc.querySelector('[data-item-id="' + CSS.escape(itemId) + '"]') || doc.querySelector('[data-open-item="' + CSS.escape(itemId) + '"]')?.closest('.item');
+        if(bridgeRow && bridgeRow.parentNode){
+          bridgeRow.parentNode.removeChild(bridgeRow);
+        }
+        updatePills();
+        if(hosts.submitted && !hosts.submitted.querySelector('.item')){
+          hosts.submitted.innerHTML = '<div class="board-empty">No submitted items right now.</div>';
+        }
+        return;
+      }
+      if(attr === 'data-open-work-order-item') { window.location.href = 'resident_work_orders.html?open_work_order_id=' + encodeURIComponent(val); return; }
+      if(attr === 'data-create-work-order-item' && typeof win.__bmhub_createWorkOrder === 'function') { await win.__bmhub_createWorkOrder(String(val)); await wait(1200); await renderFromBridge(); return; }
+      if(attr === 'data-complete-notify-item' && typeof win.__bmhub_completeNotify === 'function') { await win.__bmhub_completeNotify(String(val)); await wait(1200); await renderFromBridge(); return; }
+      if(attr === 'data-agenda-id' && typeof win.__bmhub_deleteAgenda === 'function') { if(window.confirm('Delete this agenda topic?')){ await win.__bmhub_deleteAgenda(String(val)); await wait(600); await renderFromBridge(); } return; }
+      const button = doc.querySelector('['+attr+'="'+CSS.escape(String(val))+'"]');
+      if(button){ button.click(); await wait(900); await renderFromBridge(); return; }
+    }
+  }
+  document.addEventListener('click', async function(ev){
+    const trigger = ev.target.closest('[data-open-item],[data-delete-item],[data-create-work-order-item],[data-complete-notify-item],[data-open-work-order-item],[data-agenda-id],[data-minutes-approve],[data-minutes-reject],[data-bm-annual-preview],[data-bm-annual-approve]');
+    if(trigger && !frame.contains(trigger)){
+      ev.preventDefault();
+      await proxyLegacyAction(trigger);
+      return;
+    }
+  });
+  communitySelect.addEventListener('change', async ()=>{ await setCommunityAndRefresh(); await loadHeroBrandLogo(); });
+  document.getElementById('submitNewItemBtn').addEventListener('click', submitNewItem);
+  document.getElementById('clearNewItemBtn').addEventListener('click', clearNewItem);
+  if(addCalendarEventBtn) addCalendarEventBtn.addEventListener('click', openCalendarModal);
+  if(calendarModalCancelBtn) calendarModalCancelBtn.addEventListener('click', closeCalendarModal);
+  if(calendarModalSaveBtn) calendarModalSaveBtn.addEventListener('click', saveCalendarEvent);
+  if(calendarModalBackdrop) {
+    calendarModalBackdrop.addEventListener('click', function(ev){
+      if(ev.target === calendarModalBackdrop) closeCalendarModal();
+    });
+  }
+  if(itemModalCloseBtn) itemModalCloseBtn.addEventListener('click', closeItemModal);
+  if(itemModalBackdrop) itemModalBackdrop.addEventListener('click', function(ev){ if(ev.target === itemModalBackdrop) closeItemModal(); });
+  frame.addEventListener('load', async ()=>{
+    try{
+      await populateCommunities();
+      await loadHeroBrandLogo();
+      await setCommunityAndRefresh();
+      await loadHeroBrandLogo();
+    }catch(err){
+      console.error(err);
+      try{ await paintHeroBrandLogo({ url:'Zummee.png', alt:'Zummee logo', isCompany:false }); }catch(_e){}
+      Object.values(hosts).forEach(h=>setEmpty(h, 'Board Member Hub is still loading. Refresh in a moment.'));
+    }
+  });
+})();
+</script>
+
+
+<style id="compact-new-item-layout-final">
+  /* Final compact New Item layout */
+  #newItemTitle,#newItemDue,#newItemDetails,#newItemPhoto{box-sizing:border-box!important;}
+  .card .new-item-grid,.new-item-grid{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) 220px!important;
+    column-gap:20px!important;
+    row-gap:12px!important;
+    align-items:end!important;
+    width:100%!important;
+    padding-right:24px!important;
+    box-sizing:border-box!important;
+  }
+  .new-item-grid>div{min-width:0!important;width:100%!important;}
+  .new-item-grid label{display:block!important;margin:0 0 6px 0!important;}
+  .new-item-grid .full{grid-column:1/-1!important;}
+  #newItemTitle,#newItemDue{width:100%!important;height:42px!important;min-height:42px!important;padding:0 14px!important;}
+  #newItemDue{max-width:220px!important;justify-self:start!important;}
+  #newItemDetails{width:100%!important;height:108px!important;min-height:108px!important;padding:14px!important;resize:vertical!important;}
+  .new-item-grid .full:has(#newItemPhoto){display:flex!important;align-items:center!important;gap:12px!important;flex-wrap:wrap!important;margin-top:2px!important;}
+  .new-item-grid .full:has(#newItemPhoto) label{margin:0!important;}
+  .new-item-grid input[type="file"]{max-width:420px!important;}
+  .action-row{justify-content:flex-start!important;align-items:center!important;margin-top:10px!important;}
+  @media (max-width:900px){.card .new-item-grid,.new-item-grid{grid-template-columns:minmax(0,1fr) 210px!important;column-gap:16px!important;padding-right:22px!important;}#newItemDue{max-width:210px!important;}}
+  @media (max-width:620px){.card .new-item-grid,.new-item-grid{grid-template-columns:1fr!important;padding-right:0!important;}#newItemDue{max-width:none!important;}}
+</style>
+</body>
+</html>
+<style id="new-item-field-shape-align-final">
+  /* Final New Item field alignment: same field shape + aligned right edge */
+  .card .new-item-grid,
+  .new-item-grid{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(280px,32%)!important;
+    column-gap:24px!important;
+    row-gap:14px!important;
+    align-items:end!important;
+    width:100%!important;
+    padding-right:0!important;
+    box-sizing:border-box!important;
+  }
+  .new-item-grid > div{
+    min-width:0!important;
+    width:100%!important;
+    box-sizing:border-box!important;
+  }
+  .new-item-grid .full{
+    grid-column:1 / -1!important;
+  }
+  #newItemTitle,
+  #newItemDue{
+    width:100%!important;
+    max-width:none!important;
+    height:52px!important;
+    min-height:52px!important;
+    padding:0 18px!important;
+    border-radius:24px!important;
+    border:1px solid #d9e2ee!important;
+    background:#ffffff!important;
+    box-shadow:none!important;
+    box-sizing:border-box!important;
+    font-size:17px!important;
+    line-height:52px!important;
+    color:#17304f!important;
+  }
+  #newItemDue{
+    justify-self:stretch!important;
+    -webkit-appearance:none!important;
+    appearance:none!important;
+    text-align:center!important;
+  }
+  #newItemDetails{
+    width:100%!important;
+    min-height:112px!important;
+    height:112px!important;
+    border-radius:24px!important;
+    border:1px solid #d9e2ee!important;
+    background:#ffffff!important;
+    box-shadow:none!important;
+    box-sizing:border-box!important;
+    padding:16px 18px!important;
+  }
+  .new-item-grid label{
+    display:block!important;
+    margin:0 0 8px 0!important;
+  }
+  @media (max-width:900px){
+    .card .new-item-grid,
+    .new-item-grid{
+      grid-template-columns:minmax(0,1fr) 240px!important;
+      column-gap:16px!important;
+      padding-right:0!important;
+    }
+  }
+  @media (max-width:620px){
+    .card .new-item-grid,
+    .new-item-grid{
+      grid-template-columns:1fr!important;
+    }
+  }
+</style>

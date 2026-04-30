@@ -1,0 +1,46 @@
+create extension if not exists pgcrypto;
+
+create table if not exists public."BoardMinutesEmailActions" (
+  id uuid primary key default gen_random_uuid(),
+  approval_id uuid not null references public."BoardMeetingMinutesApprovals"(id) on delete cascade,
+  recipient_email text not null,
+  recipient_name text null,
+  action_token_hash text not null unique,
+  action_type text not null default 'approve_reject',
+  expires_at timestamptz not null,
+  used_at timestamptz null,
+  action_taken text null,
+  created_at timestamptz not null default now(),
+  constraint board_minutes_email_actions_action_taken_chk
+    check (action_taken is null or action_taken in ('approved','rejected'))
+);
+
+create index if not exists bm_email_actions_approval_id_idx
+  on public."BoardMinutesEmailActions"(approval_id);
+
+create index if not exists bm_email_actions_expires_at_idx
+  on public."BoardMinutesEmailActions"(expires_at);
+
+alter table public."BoardMinutesEmailActions" enable row level security;
+
+drop policy if exists "bm_email_actions_select_authenticated" on public."BoardMinutesEmailActions";
+create policy "bm_email_actions_select_authenticated"
+on public."BoardMinutesEmailActions"
+for select
+to authenticated
+using (true);
+
+drop policy if exists "bm_email_actions_insert_authenticated" on public."BoardMinutesEmailActions";
+create policy "bm_email_actions_insert_authenticated"
+on public."BoardMinutesEmailActions"
+for insert
+to authenticated
+with check (true);
+
+drop policy if exists "bm_email_actions_update_authenticated" on public."BoardMinutesEmailActions";
+create policy "bm_email_actions_update_authenticated"
+on public."BoardMinutesEmailActions"
+for update
+to authenticated
+using (true)
+with check (true);

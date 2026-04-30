@@ -1,0 +1,4535 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script>
+// v840: ensureSupabase Promise shim (clean)
+function ensureSupabaseSync(){
+  try{
+    // Prefer the actual Supabase client (has .from). Some builds expose the library as window.supabase (has createClient only).
+    if(window.sb && typeof window.sb.from === 'function') return window.sb;
+    if(window.supabaseClient && typeof window.supabaseClient.from === 'function') return window.supabaseClient;
+    if(window.supabase && typeof window.supabase.from === 'function') return window.supabase;
+    if(typeof getSupabaseClientSafe === 'function'){
+      var c = getSupabaseClientSafe();
+      if(c && typeof c.from === 'function') return c;
+    }
+  }catch(e){}
+  return null;
+}
+function ensureSupabase(){
+  return new Promise(function(resolve){
+    var c = ensureSupabaseSync();
+    if(c) return resolve(c);
+    var start = Date.now();
+    var t = setInterval(function(){
+      var cc = ensureSupabaseSync();
+      if(cc){
+        clearInterval(t);
+        resolve(cc);
+      } else if(Date.now() - start > 4000){
+        clearInterval(t);
+        resolve(null);
+      }
+    }, 50);
+  });
+}
+</script>
+
+
+<script>
+/** v9_STABLE_REWRITE_2026-01-21
+ * Global constants + safety net. Kept minimal to avoid breaking legacy inline scripts.
+ */
+(function() {
+  // Shared keys (some scripts reference these identifiers directly)
+  window.ZUMMEE_KEYS = {
+    COMMUNITIES_KEY: "zummee_communities_v1",
+    SELECTED_COMMUNITY_KEY: "zummee_selected_community_v1",
+    USERS_KEY: "zummee_users_v1",
+    SESSION_KEY: "zummee_session_v1"
+  };
+  // Provide legacy globals for compatibility
+  window.COMMUNITIES_KEY = window.ZUMMEE_KEYS.COMMUNITIES_KEY;
+  window.SELECTED_COMMUNITY_KEY = window.ZUMMEE_KEYS.SELECTED_COMMUNITY_KEY;
+
+  // Scope communities + selected community per user so users only see their own communities.
+  // This keeps data from bleeding across users on shared devices/browsers.
+  window.ZUMMEE_applyUserScope = function(userId){
+    try{
+      var uid = String(userId||"").trim();
+      if(!uid) return;
+      var baseComms = "zummee_communities_v1";
+      var baseSel = "zummee_selected_community_v1";
+      var commKey = baseComms + "__user__" + uid;
+      var selKey  = baseSel  + "__user__" + uid;
+
+      
+
+      // One-time migration: move legacy global communities/selected community into user-scoped keys.
+      try{
+        var legacyCommsKey = baseComms;
+        var legacySelKey = baseSel;
+        var hasScoped = false;
+        try{ hasScoped = !!localStorage.getItem(commKey); }catch(e){}
+        if(!hasScoped){
+          var legacy = null;
+          try{ legacy = localStorage.getItem(legacyCommsKey); }catch(e2){}
+          if(legacy){
+            try{ localStorage.setItem(commKey, legacy); }catch(e3){}
+            try{ localStorage.removeItem(legacyCommsKey); }catch(e4){}
+          }
+        }
+        var hasScopedSel = false;
+        try{ hasScopedSel = !!localStorage.getItem(selKey); }catch(e5){}
+        if(!hasScopedSel){
+          var legacySel = null;
+          try{ legacySel = localStorage.getItem(legacySelKey); }catch(e6){}
+          if(legacySel){
+            try{ localStorage.setItem(selKey, legacySel); }catch(e7){}
+            try{ localStorage.removeItem(legacySelKey); }catch(e8){}
+          }
+        }
+      }catch(_m){}
+
+      if(!window.ZUMMEE_KEYS) window.ZUMMEE_KEYS = {};
+
+// Merge supervisor-assigned company communities into this user's scoped community list.
+window.ZUMMEE_mergeAssignedCommunities = function(userId, companyName){
+  try{
+    var uid = String(userId||"").trim();
+    var company = String(companyName||"").trim();
+    if(!uid || !company) return;
+
+    // Read assignments map: { communityId: userId }
+    var assignKey = "zummee_company_assignments_v2__" + company;
+    var raw = null;
+    try{ raw = localStorage.getItem(assignKey); }catch(_e){ raw = null; }
+    if(!raw) return;
+
+    var map = {};
+    try{ map = JSON.parse(raw) || {}; }catch(_e){ map = {}; }
+
+    // Collect community ids assigned to this user
+    var assignedIds = [];
+    Object.keys(map||{}).forEach(function(cid){
+      if(String(map[cid]||"") === uid) assignedIds.push(String(cid));
+    });
+    if(!assignedIds.length) return;
+
+    // Get community names from company master list
+    var companyCommsKey = "zummee_company_communities_v1__" + company;
+    var companyComms = [];
+    try{ companyComms = JSON.parse(localStorage.getItem(companyCommsKey)||"[]") || []; }catch(_e){ companyComms = []; }
+    var nameById = {};
+    companyComms.forEach(function(c){
+      if(!c) return;
+      var id = String(c.id || c.communityId || c.value || "").trim();
+      var name = String(c.name || c.communityName || c.label || c.text || "").trim();
+      if(id) nameById[id] = name || id;
+    });
+
+    // User-scoped communities key
+    var commKey = "zummee_communities_v1__user_" + uid;
+    var existing = [];
+    try{ existing = JSON.parse(localStorage.getItem(commKey)||"[]") || []; }catch(_e){ existing = []; }
+
+    var seen = {};
+    existing.forEach(function(c){
+      var id = (c && (c.id || c.communityId || c.value)) ? String(c.id || c.communityId || c.value) : "";
+      if(id) seen[id]=true;
+    });
+
+    var changed = false;
+    assignedIds.forEach(function(id){
+      if(!id || seen[id]) return;
+      existing.push({ id: id, name: nameById[id] || id });
+      seen[id]=true;
+      changed=true;
+    });
+
+    if(changed){
+      try{ localStorage.setItem(commKey, JSON.stringify(existing)); }catch(_e){}
+      try{ localStorage.setItem("zummee_communities_v1", JSON.stringify(existing)); }catch(_e){}
+      try{ window.dispatchEvent(new CustomEvent("communities:updated", { detail: { userId: uid } })); }catch(_e){}
+    }
+  }catch(e){ console.warn("mergeAssignedCommunities failed:", e); }
+};
+
+      window.ZUMMEE_KEYS.COMMUNITIES_KEY = commKey;
+      window.ZUMMEE_KEYS.SELECTED_COMMUNITY_KEY = selKey;
+
+      window.COMMUNITIES_KEY = commKey;
+      window.SELECTED_COMMUNITY_KEY = selKey;
+
+      try{ COMMUNITIES_KEY = commKey; }catch(_e){}
+      try{ SELECTED_COMMUNITY_KEY = selKey; }catch(_e){}
+
+      try{ localStorage.setItem("zummee_user_id_v1", uid); }catch(_e){}
+    }catch(_e){}
+  };
+
+
+  // Non-fatal error banner (helps debug without white-screen)
+  window.addEventListener("error", function(e) {
+    try {
+      var msg = (e && e.message) ? e.message : "Unknown error";
+      console.error("Zummee error:", e.error || e);
+      var bar = document.getElementById("zummeeErrorBar");
+      if(!bar) {
+        bar = document.createElement("div");
+        bar.id = "zummeeErrorBar";
+        bar.style.position = "fixed";
+        bar.style.top = "0";
+        bar.style.left = "0";
+        bar.style.right = "0";
+        bar.style.zIndex = "1000000";
+        bar.style.background = "#b91c1c";
+        bar.style.color = "#fff";
+        bar.style.padding = "10px 14px";
+        bar.style.fontFamily = "ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial";
+        bar.style.fontSize = "13px";
+        bar.style.boxShadow = "0 4px 14px rgba(0,0,0,.25)";
+        bar.style.cursor = "pointer";
+        bar.title = "Click to dismiss";
+        bar.addEventListener("click", function(){ bar.remove(); });
+        document.documentElement.appendChild(bar);
+      }
+      bar.textContent = "Page error: " + msg;
+    } catch(_) {}
+  }, true);
+
+  window.addEventListener("unhandledrejection", function(e) {
+    try {
+      var msg = (e && e.reason && (e.reason.message || e.reason)) ? (e.reason.message || String(e.reason)) : "Unhandled promise rejection";
+      console.error("Zummee rejection:", e.reason);
+      var bar = document.getElementById("zummeeErrorBar");
+      if(!bar) {
+        bar = document.createElement("div");
+        bar.id = "zummeeErrorBar";
+        bar.style.position = "fixed";
+        bar.style.top = "0";
+        bar.style.left = "0";
+        bar.style.right = "0";
+        bar.style.zIndex = "1000000";
+        bar.style.background = "#b91c1c";
+        bar.style.color = "#fff";
+        bar.style.padding = "10px 14px";
+        bar.style.fontFamily = "ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial";
+        bar.style.fontSize = "13px";
+        bar.style.boxShadow = "0 4px 14px rgba(0,0,0,.25)";
+        bar.style.cursor = "pointer";
+        bar.title = "Click to dismiss";
+        bar.addEventListener("click", function(){ bar.remove(); });
+        document.documentElement.appendChild(bar);
+      }
+      bar.textContent = "Page error: " + msg;
+    } catch(_) {}
+  });
+})();
+</script>
+
+<script>
+  // Global community keys (some scripts reference these identifiers directly)
+  var COMMUNITIES_KEY = (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.COMMUNITIES_KEY) || "zummee_communities_v1";
+  var SELECTED_COMMUNITY_KEY = (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.SELECTED_COMMUNITY_KEY) || "zummee_selected_community_v1";
+  var ZUMMEE_SELECTED_COMMUNITY_KEY = "zummee_selected_community_v1";
+</script>
+
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Manager Hub</title>
+<style>
+  
+  
+  
+  
+  /* --- Remove Daily Routine everywhere --- */
+  [data-card-id="daily_routine"],
+  [href*="daily_routine"],
+  [href*="daily-routine"] { display:none !important; }
+/* --- Manager Hub: remove Daily Routine card --- */
+  .card[data-card-id="daily_routine"], [data-card-id="daily_routine"] { display:none !important; }
+/* --- Manager Hub: permanently remove Daily Routine --- */
+  [data-card-id="daily_routine"],
+  [data-card-id="dailyRoutine"] { display:none !important; }
+/* --- Manager Hub cleanup (remove title/clock/customize UI) --- */
+  .hub-title-row, .hubTitleRow { display:none !important; }
+  #todayBanner, .hub-clock, .hubClock, .clock, .hub-time { display:none !important; }
+:root{--bg:#f6f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--shadow:0 10px 30px rgba(0,0,0,.08);--r:14px}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
+  .wrap{max-width:980px;margin:0 auto;padding:20px 14px 60px}
+  .top{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-bottom:14px}
+  a.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:#fff;color:var(--text);
+    padding:10px 12px;border-radius:12px;text-decoration:none;font-weight:800;font-size:13px;box-shadow:0 1px 0 rgba(0,0,0,.02)}
+  a.btn:hover{border-color:#d1d5db;box-shadow:0 8px 20px rgba(0,0,0,.06)}
+  a.active{border-color:rgba(37,99,235,.55);box-shadow:0 10px 24px rgba(37,99,235,.12)}
+  h1{margin:0;font-size:30px;letter-spacing:-.02em}
+  /* Manager Hub title + clock row */
+  .hub-title-row{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 10px}
+  #todayBanner.hub-clock{font-size:14px;color:#6b7280;white-space:nowrap}
+  @media (max-width:520px){
+    .hub-title-row{justify-content:center;text-align:center}
+    #todayBanner.hub-clock{width:100%;text-align:center}
+  }
+  .sub{color:var(--muted);font-size:14px;margin:10px 0 18px;line-height:1.4}
+  .cards{display:grid;grid-template-columns:1fr;gap:12px}
+    /* Hub cards: inner glow + shimmer + motion */
+  :root{--hubGlow: rgba(37,99,235,.45);--hubGlowHover: rgba(37,99,235,.75);--hubGlowWidth: 3px}
+  .card{position:relative;overflow:hidden;background:var(--card);border:0;border-radius:var(--r);padding:16px;
+    box-shadow: inset 0 0 0 var(--hubGlowWidth) var(--hubGlow), var(--shadow);
+    transition: transform .18s ease, box-shadow .18s ease;}
+  /* Premium shimmer sweep */
+  .card::after{content:"";position:absolute;top:-40%;left:-120%;width:60%;height:180%;
+    background:linear-gradient(110deg,transparent 0%,rgba(255,255,255,.45) 50%,transparent 100%);
+    transform:skewX(-18deg);transition:left .55s ease;pointer-events:none;}
+  .cards .card{will-change: transform, opacity;}
+  @media (prefers-reduced-motion:no-preference){
+    .cards .card{animation: hubCardIn 420ms ease-out both;}
+    .cards .card:hover{transform: translateY(-4px) scale(1.01);
+      box-shadow: inset 0 0 0 var(--hubGlowWidth) var(--hubGlowHover), 0 12px 28px rgba(37,99,235,.18);}
+    .cards .card:hover::after{left:130%;}
+    @keyframes hubCardIn{from{opacity:0; transform: translateY(10px);}to{opacity:1; transform: translateY(0);}}
+    50%{filter:saturate(1.05)}100%{filter:saturate(1)}}
+    /* light stagger so the grid feels responsive */
+    .cards .card:nth-child(1){animation-delay:20ms}
+    .cards .card:nth-child(2){animation-delay:55ms}
+    .cards .card:nth-child(3){animation-delay:90ms}
+    .cards .card:nth-child(4){animation-delay:125ms}
+    .cards .card:nth-child(5){animation-delay:160ms}
+    .cards .card:nth-child(6){animation-delay:195ms}
+    .cards .card:nth-child(7){animation-delay:230ms}
+    .cards .card:nth-child(8){animation-delay:265ms}
+    .cards .card:nth-child(9){animation-delay:300ms}
+    .cards .card:nth-child(10){animation-delay:335ms}
+    .cards .card:nth-child(11){animation-delay:370ms}
+    .cards .card:nth-child(12){animation-delay:405ms}
+  }
+  .title{font-weight:900;font-size:18px;margin:0 0 6px}
+  .desc{color:var(--muted);margin:0 0 12px;font-size:13px;line-height:1.35}
+  @media (min-width:720px){.cards{grid-template-columns:1fr 1fr}}
+  /* On larger desktop screens, use 3 columns so hub cards don't get overly wide */
+  @media (min-width:1024px){.cards{grid-template-columns:repeat(3, 1fr)}}
+
+  /* --- Tagline animation + mobile shortening --- */
+  .zummee-header__subtitle.zummee-tagline-animate{
+    animation: zummeeTaglineIn 520ms ease-out both;
+  }
+  @keyframes zummeeTaglineIn{
+    from{opacity:0; transform: translateY(6px);}
+    to{opacity:0.9; transform: translateY(0);}
+  }
+
+  /* --- Community color coding --- */
+  #zummeeCommunitySwatch{
+    width:12px;height:12px;border-radius:999px;display:inline-block;
+    border:1px solid rgba(15,47,74,0.25);
+    background: var(--communityAccent, #ffffff);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    transform: translateY(1px);
+  }
+  .zummee-header{
+    border-bottom-color: var(--communityAccentBorder, #6faedc) !important;
+  }
+  #zummeeCommunitySelect{
+    border-color: var(--communityAccentBorder, rgba(15,47,74,0.25)) !important;
+  }
+
+  /* Hub card sizing + icon normalization (keep cards consistent) */
+  .card.with-icon{
+    min-height:220px;
+  }
+
+  /* Force every hub card icon to the same box so tall images don't stretch cards */
+  .card.with-icon .card-icon{
+    width:72px;
+    height:72px;
+    max-width:72px;
+    max-height:72px;
+    object-fit:contain;
+    opacity:.95;
+    margin-top:10px;
+    margin-bottom:6px;
+  }
+
+  .card.with-icon .btn{
+    margin-top:10px;
+  }
+
+
+  /* Increase hub date & time size */
+  .clock, .date, .time{
+    
+    transform-origin: center;
+  }
+
+
+/* Reduce house logo size */
+.manager-hub img{}
+
+/* Shorten community selector by 25% */
+.community-select,
+#communitySelect,
+select[name="community"]{
+  width: 75% !important;
+  max-width: 75% !important;
+}
+
+
+/* Increase house logo size by 25% */
+.manager-hub img,
+.hub-icon{
+  
+}
+
+
+/* House logo responsive sizing */
+.manager-hub img,
+.hub-icon{
+  transform: scale(1.25);
+}
+
+@media (max-width: 768px){
+  .manager-hub img,
+  .hub-icon{
+    transform: scale(0.9);
+  }
+}
+
+
+/* Mobile spacing adjustments for hub header */
+@media (max-width: 768px){
+  .manager-hub{
+    gap: 12px;
+  }
+  .manager-hub .hub-header,
+  .manager-hub header{
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .manager-hub img,
+  .hub-icon{
+    margin-bottom: 8px;
+  }
+}
+
+/* Hub header divider + responsive stacking */
+.zummee-header{
+  border-bottom: 1px solid rgba(15,47,74,0.12);
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+}
+
+/* Shorter community selector on desktop */
+#zummeeCommunitySelect{
+  width: 75%;
+  max-width: 320px;
+  min-width: 0 !important;
+}
+
+@media (max-width: 768px){
+  /* Stack logo/title/controls and center on mobile */
+  .zummee-header{
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+  }
+  .zummee-header__titles{
+    align-items: center;
+  }
+  .zummee-header__controls{
+    margin-left: 0 !important;
+    width: 100%;
+    justify-content: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+  #zummeeCommunitySelect{
+    width: 90% !important;
+    max-width: 520px;
+  }
+}
+@media (max-width: 768px){
+  #zummeeCommunitySelect{
+    flex: 0 0 100%;
+  }
+  .zummee-header__controls button,
+  .zummee-header__controls .btn{
+    flex: 0 0 auto;
+  }
+}
+
+.hub-card-icon { width:56px; height:56px; margin-bottom:10px; object-fit:contain; }
+
+    /* --- Manager Hub card reordering (drag & drop) --- */
+  .hub-title-actions{display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; justify-content:flex-end;}
+  .hub-reset{padding:9px 12px; border-radius:12px; font-weight:900; font-size:13px;}
+  #hubCustomizeHint{color:var(--muted);font-size:12px}
+
+  /* Drag UX */
+  .cards .card{cursor:grab; position:relative; transition: transform 180ms ease, box-shadow 180ms ease, outline-color 180ms ease; }
+  .cards .card:active{cursor:grabbing;}
+  body.hub-dragging .cards .card a{pointer-events:none;} /* prevent accidental navigation during drag */
+  .cards .card.drag-over{outline:2px dashed rgba(37,99,235,.55); outline-offset:4px;}
+  .cards .card.dragging{
+    opacity:0.92;
+    transform: rotate(0.15deg) scale(1.01);
+    box-shadow: 0 18px 48px rgba(15,47,74,0.22);
+  }
+
+
+/* v933: unified sign-out modal (shared look) */
+.zum-modal-backdrop{
+  position:fixed; inset:0; background:rgba(0,0,0,.45);
+  display:none; align-items:center; justify-content:center;
+  z-index:99999; padding:20px;
+}
+.zum-modal{
+  background:#fff; border-radius:16px; padding:22px 24px;
+  width:min(520px,92vw);
+  box-shadow:0 20px 60px rgba(0,0,0,.20);
+  border:3px solid rgba(15,47,74,0.35);
+}
+.zum-modal-title{font-size:22px; font-weight:900; color:#0f2f4a;}
+.zum-modal-body{margin-top:8px; color:#546577; font-size:16px;}
+.zum-modal-actions{display:flex; justify-content:flex-end; gap:10px; margin-top:18px; flex-wrap:wrap;}
+.zum-btn{
+  border-radius:14px; padding:10px 16px; font-weight:900; cursor:pointer;
+  border:1px solid rgba(15,47,74,0.28);
+}
+.zum-btn.secondary{ background:rgba(255,255,255,0.95); color:#0f2f4a; }
+.zum-btn.primary{ background:#0f2f4a; color:#fff; border-color:#0f2f4a; }
+@media (max-width:720px){
+  .zum-btn{ min-height:44px; font-size:16px; }
+}
+
+
+/* v934: modal fade + pop animation */
+@keyframes zumFadeIn { from{opacity:0;} to{opacity:1;} }
+@keyframes zumPopIn { from{opacity:0; transform: translateY(8px) scale(0.985);} to{opacity:1; transform: translateY(0) scale(1);} }
+.zum-modal-backdrop{
+  animation: zumFadeIn 160ms ease-out 1;
+}
+.zum-modal{
+  animation: zumPopIn 180ms ease-out 1;
+}
+
+
+
+/* ===== Alert styling for Manager Hub cards (Ops + Board Member) ===== */
+.cards .card.ops-alert{
+  background: linear-gradient(135deg, rgba(255,229,229,0.95), rgba(255,214,214,0.95)) !important;
+  border: 2px solid rgba(229,72,72,0.95) !important;
+  box-shadow: 0 0 0 2px rgba(229,72,72,0.85), 0 10px 22px rgba(229,72,72,0.30) !important;
+}
+.cards .card.ops-alert:hover{
+  box-shadow: 0 0 0 2px rgba(229,72,72,0.95), 0 14px 30px rgba(229,72,72,0.38) !important;
+}
+.cards .card.ops-alert .title,
+.cards .card.ops-alert h3,
+.cards .card.ops-alert h2{
+  color: #b22222 !important;
+}
+
+/* Keep BM alert consistent if present */
+.cards .card.bm-alert{
+  background: linear-gradient(135deg, rgba(255,229,229,0.92), rgba(255,214,214,0.92)) !important;
+  border: 2px solid rgba(229,72,72,0.85) !important;
+  box-shadow: 0 0 0 2px rgba(229,72,72,0.70), 0 10px 22px rgba(229,72,72,0.25) !important;
+}
+
+</style>
+<script>
+(() => {
+  const SESSION_KEY = "zummee_session_v1";
+
+  function getSupabaseSession(){
+    function extract(o){
+      try{
+        if(!o) return null;
+        if(o.user && o.user.id) return { id:o.user.id, email:(o.user.email||"") };
+        if(o.currentSession && o.currentSession.user && o.currentSession.user.id) return { id:o.currentSession.user.id, email:(o.currentSession.user.email||"") };
+        if(o.session && o.session.user && o.session.user.id) return { id:o.session.user.id, email:(o.session.user.email||"") };
+      }catch(_e){}
+      return null;
+    }
+    function scan(store){
+      try{
+        for(var i=0;i<store.length;i++){
+          var key = store.key(i);
+          if(!key) continue;
+          if(!(key === 'sb-zummee-auth' || /^sb-.*-auth-token$/.test(key))) continue;
+          var raw = null;
+          try{ raw = store.getItem(key); }catch(_e){}
+          if(!raw) continue;
+          var obj = null;
+          try{ obj = JSON.parse(raw); }catch(_e2){}
+          var ex = extract(obj);
+          if(ex && ex.id) return ex;
+        }
+      }catch(_e3){}
+      return null;
+    }
+    try{
+      var a = scan(localStorage) || scan(sessionStorage);
+      if(a && a.id){
+        return { provider:"supabase", userId:a.id, email:(a.email||""), supabase:true };
+      }
+    }catch(_e4){}
+    return null;
+  }
+
+  let SELECTED_COMMUNITY_KEY = (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.SELECTED_COMMUNITY_KEY) || "zummee_selected_community_v1";
+
+  function safeParse(raw){ try { return JSON.parse(raw); } catch(e){ return null; } }
+  function getSession(){
+    var ses = safeParse((sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY) || ""));
+    if(ses && ses.userId){
+      try{ if(window.ZUMMEE_applyUserScope){ window.ZUMMEE_applyUserScope(ses.userId); } }catch(_e){}
+      try{ SELECTED_COMMUNITY_KEY = (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.SELECTED_COMMUNITY_KEY) || SELECTED_COMMUNITY_KEY; }catch(_e){}
+      try{ COMMUNITIES_KEY = (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.COMMUNITIES_KEY) || COMMUNITIES_KEY; }catch(_e){}
+      return ses;
+    }
+    var sbSes = getSupabaseSession();
+    if(sbSes){
+      try{ if(window.ZUMMEE_applyUserScope){ window.ZUMMEE_applyUserScope(sbSes.userId); } }catch(_e){}
+      try{ SELECTED_COMMUNITY_KEY = (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.SELECTED_COMMUNITY_KEY) || SELECTED_COMMUNITY_KEY; }catch(_e){}
+      try{ COMMUNITIES_KEY = (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.COMMUNITIES_KEY) || COMMUNITIES_KEY; }catch(_e){}
+      return sbSes;
+    }
+    return null;
+  }
+
+  function requireAuth(){
+    const ses = getSession();
+    if(!ses || !ses.userId){
+      window.location.href = "login.html";
+      return null;
+    }
+    return ses;
+  }
+
+  window.ZummeeAuth = {
+    requireAuth,
+    getSession,
+    getUserId: () => (getSession() && getSession().userId) || "",
+    getSelectedCommunityId: () => {
+      try { return localStorage.getItem(SELECTED_COMMUNITY_KEY) || ""; } catch(e){ return ""; }
+    },
+    scopedKey: (baseKey) => {
+      const ses = getSession();
+      const u = (ses && ses.userId) ? ses.userId : "";
+      const c = (() => { try { return localStorage.getItem(SELECTED_COMMUNITY_KEY) || ""; } catch(e){ return ""; } })();
+      if(u && c) return `${baseKey}::${u}::${c}`;
+      if(u) return `${baseKey}::${u}`;
+      return baseKey;
+    },
+	    signOut: () => { try{sessionStorage.removeItem(SESSION_KEY);}catch(e){}
+	      try{localStorage.removeItem(SESSION_KEY);}catch(e2){}
+	      // Supabase auth cleanup (support default sb-*-auth-token and custom sb-zummee-auth)
+	      try{
+	        [localStorage, sessionStorage].forEach(function(store){
+	          try{
+	            for(var i=store.length-1;i>=0;i--){
+	              var k = store.key(i);
+	              if(!k) continue;
+	              if(k === 'sb-zummee-auth' || /^sb-.*-auth-token$/.test(k) || /^sb-zummee-auth/.test(k)){
+	                try{ store.removeItem(k); }catch(_e){}
+	              }
+	            }
+	          }catch(_e2){}
+	        });
+	      }catch(_e3){}
+	      try{ if(window.sb && window.sb.auth && window.sb.auth.signOut){ window.sb.auth.signOut(); } }catch(e5){}
+	      window.location.replace("login.html"); }
+  };
+})();
+</script>
+<style>
+.hub-card{
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+</style><style>
+/* --- Hub card sizing + centered text above/below icons (override) --- */
+.card.with-icon{
+  min-height: 240px;           /* larger tiles */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  gap: 12px;
+}
+.card.with-icon .icon,
+.card.with-icon img{
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+/* If cards use a title + subtitle, keep them centered */
+.card.with-icon h3,
+.card.with-icon .title{
+  margin: 0;
+  text-align: center;
+}
+.card.with-icon p,
+.card.with-icon .subtitle,
+.card.with-icon .desc{
+  margin: 0;
+  text-align: center;
+}
+
+/* Hub icons: enforce consistent sizing (override any legacy rules) */
+.card.with-icon .card-icon{
+  width:72px !important;
+  height:72px !important;
+  max-width:72px !important;
+  max-height:72px !important;
+  object-fit:contain !important;
+  display:block;
+  margin:10px auto 6px auto !important;
+}
+/* Hub cards: lock consistent height & layout */
+.card.with-icon{
+  min-height:220px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+}
+.card.with-icon .btn{ margin-top:10px; }
+</style>
+<style>
+  /* Hide Supervisor Access card by default (fail-closed). */
+  #supervisorHubCard { display: none; }
+  #supervisorHubCard.zummee-allow { display: block; }
+</style>
+</head>
+<body data-page-title="Manager Hub">
+
+<!-- Page-aware header title helper -->
+<script>
+(function(){
+  function applyPageTitle(){
+    try{
+      var t = (document.body && document.body.dataset && document.body.dataset.pageTitle) ? document.body.dataset.pageTitle : "";
+      if(!t) return;
+      document.title = t;
+      var h1 = document.querySelector('.wrap > h1') || document.querySelector('.wrap h1');
+      if(h1) h1.textContent = t;
+    }catch(e){ /* no-op */ }
+  }
+  document.addEventListener('DOMContentLoaded', applyPageTitle);
+})();
+</script>
+<script>
+  // --- Cloud Communities (company-wide) ---
+  (function(){
+    const SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsY3d1dXd5cmdubWxteHBjYWltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMjI5MTAsImV4cCI6MjA4NDU5ODkxMH0.3pZZLufFv5SUHREjgPys-q8SnYVMzHona-yeXMVHuOg";
+
+    async function ensureSupabase() {
+      if(window.sb) return window.sb;
+      if(!window.supabase) throw new Error("Supabase library not loaded");
+      window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        auth: { storageKey:'sb-zummee-auth', storage: window.localStorage, persistSession:true, autoRefreshToken:true, detectSessionInUrl:true  }
+      });
+
+      // --- Auth bootstrap fallback ---
+      // If the auth payload exists but supabase-js hasn't hydrated a session yet,
+      // force-hydrate using access_token + refresh_token so requests include auth.
+      try{
+        const raw = localStorage.getItem('sb-zummee-auth');
+        if(raw){
+          const s = JSON.parse(raw);
+          const at = s?.access_token || s?.currentSession?.access_token;
+          const rt = s?.refresh_token || s?.currentSession?.refresh_token;
+          if(at && rt){
+            await window.sb.auth.setSession({ access_token: at, refresh_token: rt });
+          }
+          // Also seed our legacy uid cache if missing.
+          if(!localStorage.getItem('zummee_user_id_v1') && at){
+            const payload = JSON.parse(atob(at.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+            if(payload?.sub) localStorage.setItem('zummee_user_id_v1', payload.sub);
+          }
+        }
+      }catch(_e){}
+      return window.sb;
+    }
+
+    async function getSessionSafe(sb, ms){
+      ms = ms || 5000;
+      return await Promise.race([
+        sb.auth.getSession(),
+        new Promise((resolve) => {
+          let done = false;
+          const sub = sb.auth.onAuthStateChange((event, session) => {
+            if(done) return;
+            if(event === 'INITIAL_SESSION' || session){
+              done = true;
+              try{ sub.data.subscription.unsubscribe(); }catch(_e){}
+              resolve({ data: { session } });
+            }
+          });
+          setTimeout(() => {
+            if(done) return;
+            done = true;
+            try{ sub.data.subscription.unsubscribe(); }catch(_e){}
+            resolve({ data: { session: null }, error: new Error('session timeout') });
+          }, ms);
+        })
+      ]);
+    }
+
+    function safeLocalSet(k,v){ try{ localStorage.setItem(k,v); }catch(_e){} }
+    function safeLocalGet(k){ try{ return localStorage.getItem(k)||""; }catch(_e){ return ""; } }
+
+    async function requireUid() {
+      const sb = await ensureSupabase();
+      const s = await getSessionSafe(sb, 5000);
+      const uid = s.data?.session?.user?.id;
+      if(uid) return uid;
+
+	      // Fallback 1: cached uid
+	      const cached = localStorage.getItem("zummee_user_id_v1");
+	      if (cached) {
+	        console.warn("Auth session missing; using cached uid from localStorage.");
+	        return cached;
+	      }
+
+	      // Fallback 2: decode uid from sb-zummee-auth payload
+	      try{
+	        const raw = localStorage.getItem("sb-zummee-auth");
+	        if(raw){
+	          const st = JSON.parse(raw);
+	          const token = st?.access_token || st?.currentSession?.access_token;
+	          if(token){
+	            const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g,'+').replace(/_/g,'/')));
+	            const sub = payload?.sub;
+	            if(sub){
+	              safeLocalSet("zummee_user_id_v1", sub);
+	              console.warn("Auth session missing; derived uid from sb-zummee-auth.");
+	              return sub;
+	            }
+	          }
+	        }
+	      }catch(_e){}
+
+	      throw new Error("Not signed in");
+    }
+
+    async function getProfile() {
+      const sb = await ensureSupabase();
+      const uid = await requireUid();
+
+      // Defaults from session (works even if Profiles table read fails)
+      let company0 = "";
+      let company_id0 = "";
+      let selected0 = "";
+      let dept = "";
+      let role = "";
+      let name = "";
+
+      let email = "";
+      try{
+        const sess = (await sb.auth.getSession()).data?.session;
+        email = String(sess?.user?.email||"").toLowerCase();
+      }catch(_e){}
+
+      // Try Profiles table (best source of truth)
+      // NOTE: Some databases don't have selected_community_id yet; request it separately to avoid 400s.
+      try{
+        const q = await sb.from("profiles").select("*").eq("id", uid).maybeSingle();
+        if(!q.error && q.data){
+          company0 = (q.data.company||"").trim();
+          company_id0 = String(q.data.company_id||"").trim();
+          dept = (q.data.department||"").trim();
+          role = (q.data.role||"").trim();
+          name = (q.data.name||"").trim();
+        }
+      }catch(_e){ /* fall back to session + local */ }
+
+      // Role/Company source-of-truth: userdirectory (keeps UI gates accurate even if Profiles is stale)
+      // Fixes cases where an admin promotes a user to Supervisor but their Profiles row still says Employee.
+      try{
+        const udq = await sb
+          .from('userdirectory')
+          .select('role,company_id,profile_name,profile_email,created_at')
+          .eq('auth_user_id', uid)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if(udq && !udq.error && Array.isArray(udq.data) && udq.data.length){
+          const r = udq.data[0] || {};
+          const udRole = String(r.role || '').trim();
+          if(udRole){
+            role = udRole;
+            // Keep dept consistent with Supervisor UI gates.
+            if(!dept && (udRole === 'Supervisor' || udRole === 'Admin' || udRole === 'CompanyAdmin')) dept = 'Supervisor';
+          }
+          if(!company_id0 && r.company_id) company_id0 = String(r.company_id||'').trim();
+          if(!name && r.profile_name) name = String(r.profile_name||'').trim();
+          if(!email && r.profile_email) email = String(r.profile_email||'').trim().toLowerCase();
+
+          // Best-effort: write back to Profiles so future reads are consistent.
+          try{
+            const patch = {};
+            if(role) patch.role = role;
+            if(dept) patch.department = dept;
+            if(company_id0) patch.company_id = company_id0;
+            if(name) patch.name = name;
+            if(Object.keys(patch).length){
+              await sb.from('profiles').update(patch).eq('id', uid);
+            }
+          }catch(_e2){ /* ignore */ }
+        }
+      }catch(_e){ /* ignore */ }
+
+      // selected community (optional column)
+      // If your Profiles table doesn't have this column yet, PostgREST will return 400.
+      // We memoize that and stop requesting it to avoid noisy console errors.
+      try{
+        const hasCol = safeLocalGet('zummee_profiles_has_selected_community_id');
+        if(hasCol !== '0'){
+          const q2 = await sb.from("profiles").select("*").eq("id", uid).maybeSingle();
+          if(!q2.error && q2.data){
+            selected0 = (q2.data.selected_community_id||"").trim();
+            safeLocalSet('zummee_profiles_has_selected_community_id','1');
+          } else if(q2.error){
+            safeLocalSet('zummee_profiles_has_selected_community_id','0');
+          }
+        }
+      }catch(_e){ safeLocalSet('zummee_profiles_has_selected_community_id','0'); }
+
+      // Fallback to local selected community if DB column isn't present
+      if(!selected0){
+        try{ selected0 = String(localStorage.getItem("zummee_selected_community_id")||"").trim(); }catch(_e){}
+      }
+
+      // Bootstrap Admin fallback + local company fallback
+      if(email === "companyadmin@zummee.local"){
+        if(!role) role = "Admin";
+        if(!dept) dept = "Supervisor";
+        if(!name) name = "CompanyAdmin";
+      }
+
+      let company = company0;
+      if(!company){
+        try{ company = String(localStorage.getItem("zummee_company")||"").trim(); }catch(_e){}
+      }
+
+      // Global auth state: single source of truth for UI gates
+      try{
+        window.ZUMMEE_AUTH = window.ZUMMEE_AUTH || {};
+        window.ZUMMEE_AUTH.isLoggedIn = true;
+        window.ZUMMEE_AUTH.userId = uid;
+        window.ZUMMEE_AUTH.email = email;
+        // IMPORTANT: Never keep previous user's role/department/company.
+        // Logging in/out in the same browser shares localStorage; these must be overwritten.
+        window.ZUMMEE_AUTH.name = name || "";
+        window.ZUMMEE_AUTH.company = company || "";
+        window.ZUMMEE_AUTH.department = dept || "";
+        window.ZUMMEE_AUTH.role = role || "";
+      }catch(_e){}
+
+      // Persist minimal context for page-level gating (Supervisor Access can load before globals are ready)
+      // localStorage is shared across logins in the same browser; always overwrite on login.
+      try{ localStorage.setItem('zummee_role', String(role||'')); }catch(_e){}
+      try{ localStorage.setItem('zummee_department', String(dept||'')); }catch(_e){}
+      try{ localStorage.setItem('zummee_company', String(company||'')); }catch(_e){}
+      try{ if(company_id0) localStorage.setItem('zummee_company_id', String(company_id0||'')); }catch(_e){}
+
+      // Expose legacy globals + notify listeners (Supervisor Access, badges, etc.)
+      try{
+        window.__zummeeCompany = company;
+        window.__zummeeUserDepartment = dept;
+        window.__zummeeUserRole = role;
+        window.__zummeeUserName = name;
+        window.dispatchEvent(new CustomEvent("profile:loaded", { detail: { userId: uid, company: company, department: dept, role: role, name: name, id: uid } }));
+        window.dispatchEvent(new CustomEvent("auth:ready", { detail: window.ZUMMEE_AUTH }));
+      }catch(_e){}
+
+      return { uid, company: company, company_id: company_id0, selected: selected0, department: dept, role: role, name: name };
+    }
+
+    function els() {
+      return {
+        select: document.getElementById("zummeeCommunitySelect"),
+        swatch: document.getElementById("zummeeCommunitySwatch"),
+        btnAdd: document.getElementById("zummeeCommunityAdd"),
+        btnRename: document.getElementById("zummeeCommunityRename"),
+        btnRemove: document.getElementById("zummeeCommunityRemove"),
+      };
+    }
+
+    function setSwatch(company){
+      const e = els().swatch;
+      if(!e) return;
+      let h=0; for(let i=0;i<company.length;i++) h=(h*31 + company.charCodeAt(i))>>>0;
+      const hue = h % 360;
+      e.style.background = `hsl(${hue} 70% 45%)`;
+      e.title = company || "No company";
+    }
+
+
+    function rebindButton(btn, handler){
+      if(!btn || !btn.parentNode) return btn;
+      const clone = btn.cloneNode(true);
+      btn.parentNode.replaceChild(clone, btn);
+      clone.onclick = handler;
+      return clone;
+    }
+
+
+    function hardBind(btn, handler){
+      if(!btn) return btn;
+      // remove inline onclick if any
+      try{ btn.onclick = null; btn.removeAttribute("onclick"); }catch(_e){}
+      // Remove any previously attached listeners by replacing node (inline attrs will be re-applied below if present in HTML, so also remove onclick)
+      const clone = btn.cloneNode(true);
+      try{ clone.onclick = null; clone.removeAttribute("onclick"); }catch(_e){}
+      btn.parentNode && btn.parentNode.replaceChild(clone, btn);
+      // Capture-phase handler to prevent any other handlers from firing (old + new)
+      clone.addEventListener("click", function(ev){
+        try{ ev.preventDefault(); }catch(_e){}
+        try{ ev.stopImmediatePropagation(); }catch(_e){}
+        return handler();
+      }, true);
+      return clone;
+    }
+
+    function bindSelect(select) {
+      if(!select) return;
+      select.onchange = async ()=>{
+        const val = String(select.value||"").trim();
+        safeLocalSet("zummee_selected_community_id", val);
+        try{
+          const sb = await ensureSupabase();
+          const uid = await requireUid();
+          await sb.from("profiles").update({ selected_community_id: val || null }).eq("id", uid);
+        }catch(_e){}
+        document.dispatchEvent(new CustomEvent("community:changed", { detail: { community_id: val } }));
+      };
+    }
+
+    function getLocalCommunitiesKey(profile){
+      // Communities are stored per-user (scoped via ZUMMEE_applyUserScope).
+      return (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.COMMUNITIES_KEY) || window.COMMUNITIES_KEY || ("zummee_communities_v1__user__" + profile.uid);
+    }
+
+    function readLocalCommunities(profile){
+      try{
+        const raw = localStorage.getItem(getLocalCommunitiesKey(profile)) || "[]";
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr : [];
+      }catch(_e){
+        return [];
+      }
+    }
+
+    function writeLocalCommunities(profile, list){
+      try{ localStorage.setItem(getLocalCommunitiesKey(profile), JSON.stringify(list||[])); }catch(_e){}
+    }
+
+    async function listCommunities(profile) {
+  // Cloud-first: use company-wide communities; employees see only assigned communities.
+  profile = profile || {};
+  const company = String(profile.company||"").trim();
+  if(!company) return [];
+
+  let companyList = [];
+  try{
+    if(typeof window.ensureSupabase==="function") { await window.ensureSupabase(); }
+    const sb = window.sb || null;
+          if(!sb){ alert('Supabase client not initialized. Please refresh and try again.'); return; }
+if(sb){
+      // Pull from cloud (PropertyCommunities), then cache.
+      let qBuilder = window.sb
+        .from('PropertyCommunities')
+        .select('id,name,created_at');
+
+      // Prefer company_id when available (PropertyCommunities schema uses company_id as the true FK)
+      if(String(profile.company_id||"").trim()){
+        qBuilder = qBuilder.eq('company_id', String(profile.company_id).trim());
+      }else{
+        // Use a pattern match as company names may include suffix/prefix variations.
+        // (Avoid exact-match cache clobbering when employee profile company differs slightly.)
+        qBuilder = qBuilder.ilike('company', '%'+company+'%');
+      }
+
+      const q = await qBuilder.order('name', {ascending:true});
+      if(!q.error && Array.isArray(q.data)){
+        companyList = q.data
+          .filter(r=>r && r.id && r.name)
+          .map(r=>({id:String(r.id), name:String(r.name)}));
+        // IMPORTANT: do NOT overwrite a previously-good cache with an empty list.
+        // This can happen when a non-privileged user has a slightly different company string.
+        if(companyList.length){
+          try{
+            localStorage.setItem("zummee_company_communities_v1__"+company, JSON.stringify(companyList));
+            // case-insensitive helper cache
+            localStorage.setItem("zummee_company_communities_v1__"+company.toLowerCase(), JSON.stringify(companyList));
+          }catch(_e){}
+        }
+      }
+    }
+  }catch(e){
+    console.warn("listCommunities cloud fetch failed:", e);
+  }
+
+  // Fallback to cached company list
+  if(!companyList.length){
+    try{
+      const raw = localStorage.getItem("zummee_company_communities_v1__"+company) ||
+                  localStorage.getItem("zummee_company_communities_v1__"+company.toLowerCase()) || "[]";
+      const arr = JSON.parse(raw) || [];
+      companyList = arr.filter(c=>c && c.id && c.name).map(c=>({id:String(c.id), name:String(c.name)}));
+    }catch(_e){ companyList=[]; }
+  }
+
+  // As a last fallback, keep legacy local communities (admin-only historical behavior)
+  if(!companyList.length){
+    const legacy = readLocalCommunities(profile) || [];
+    companyList = legacy.filter(c=>c && c.id && c.name).map(c=>({id:String(c.id), name:String(c.name)}));
+  }
+
+  // If employee (or non-privileged), filter to assigned communities only.
+    // For employees (or non-privileged), return ONLY communities explicitly assigned to them.
+  const role = String(profile.role||"").trim().toLowerCase();
+  const dept = String(profile.department||profile.dept||"").trim().toLowerCase();
+  const isPriv = role.includes("admin") || role.includes("supervisor") || role.includes("companyadmin") ||
+                 dept.includes("admin") || dept.includes("supervisor") || dept.includes("companyadmin");
+
+  if(!isPriv){
+    // Employees (and other non-privileged roles) must ONLY see communities explicitly assigned to them.
+    const uid = String(profile.uid || profile.auth_user_id || profile.user_id || profile.id || '').trim();
+    if(!uid) return [];
+
+    // Resolve UUID company_id (CommunityAssignments uses company_id uuid)
+    let companyId = (profile && (profile.company_id || profile.companyId)) || localStorage.getItem('zummee_active_company_id') || null;
+    try{
+      if(!companyId){
+        if(typeof window.getCompanyRow==='function'){
+          const crow = await window.getCompanyRow(company);
+          companyId = (crow && crow.id) ? crow.id : null;
+        }
+      }
+    }catch(_e){}
+
+    // 1) Fetch assigned community IDs for this user in this company
+    let assignedIds = [];
+    try{
+      if(typeof window.ensureSupabase==='function') await window.ensureSupabase();
+      const sb = window.sb || null;
+      if(sb && companyId){
+        const qa = await sb
+          .from('CommunityAssignments')
+          .select('community_id')
+          .eq('user_id', uid)
+          .eq('company_id', companyId);
+
+        if(!qa.error && Array.isArray(qa.data)){
+          assignedIds = qa.data.map(r=>String(r.community_id||'').trim()).filter(Boolean);
+          try{
+            const k = 'zummee_assigned_community_ids_v1__'+uid+'__'+String(companyId);
+            localStorage.setItem(k, JSON.stringify(assignedIds));
+          }catch(_e){}
+        }else if(qa.error){
+          console.warn('CommunityAssignments read blocked or failed:', qa.error);
+        }
+      }
+    }catch(e){
+      console.warn('CommunityAssignments fetch failed:', e);
+    }
+
+    // Cache fallback if cloud call couldn't run
+    if(!assignedIds.length){
+      try{
+        const k = 'zummee_assigned_community_ids_v1__'+uid+'__'+String(companyId||company);
+        assignedIds = JSON.parse(localStorage.getItem(k)||'[]') || [];
+      }catch(_e){ assignedIds=[]; }
+    }
+
+    // If nothing is assigned, show nothing (prevents unassigned communities leaking into employee dropdown).
+    if(!assignedIds.length) return [];
+
+    // 2) Prefer fetching names from PropertyCommunities using the assigned IDs
+    try{
+      if(typeof window.ensureSupabase==='function') await window.ensureSupabase();
+      const sb = window.sb || null;
+      if(sb){
+        let qb = sb.from('PropertyCommunities').select('id,name').in('id', assignedIds);
+        if(companyId) qb = qb.eq('company_id', companyId);
+        else qb = qb.eq('company', company);
+
+        const qc = await qb.order('name', {ascending:true});
+        if(!qc.error && Array.isArray(qc.data)){
+          companyList = qc.data.filter(r=>r && r.id && r.name).map(r=>({id:String(r.id), name:String(r.name)}));
+        }else if(qc && qc.error){
+          console.warn('PropertyCommunities fetch (assigned-only) failed:', qc.error);
+        }
+      }
+    }catch(e){
+      console.warn('PropertyCommunities assigned-only fetch failed:', e);
+    }
+
+    // 3) Always enforce assignment filtering (even if we already had a companyList from cache)
+    const set = new Set(assignedIds.map(String));
+    companyList = (companyList||[]).filter(c=>c && set.has(String(c.id)));
+  }
+
+  // Ensure stable shape + sort by name
+  return companyList
+    .filter(c=>c && c.id && c.name)
+    .map(c=>({ id:String(c.id), name:String(c.name) }))
+    .sort((a,b)=>a.name.localeCompare(b.name));
+}
+
+    function renderSelect(select, list, selectedId) {
+      if(!select) return;
+      const desired = String(selectedId||"").trim() || safeLocalGet("zummee_selected_community_id");
+      select.innerHTML = "";
+      const o0 = document.createElement("option");
+      o0.value = "";
+      o0.textContent = list.length ? "Select a community" : ((window.__zummeeIsPriv===false) ? "No assigned communities" : "No communities yet");
+      select.appendChild(o0);
+
+      list.forEach(c=>{
+        const o=document.createElement("option");
+        o.value = String(c.id);
+        o.textContent = c.name;
+        select.appendChild(o);
+      });
+
+      if(desired && list.some(c=>String(c.id)===String(desired))) {
+        select.value = String(desired);
+      } else {
+        select.value = "";
+        safeLocalSet("zummee_selected_community_id","");
+      }
+      select.disabled = false;
+      bindSelect(select);
+    }
+
+    async function refreshUI() {
+      const {select} = els();
+      if(!select) return;
+      try{
+        const profile = await getProfile();
+        setSwatch(profile.company);
+
+const role = String(profile.role||"").trim().toLowerCase();
+window.__zummeeIsPriv = (role.includes("admin") || role.includes("supervisor"));
+        if(!profile.company){
+          renderSelect(select, [], "");
+          return;
+        }
+        const list = await listCommunities(profile);
+        renderSelect(select, list, profile.selected);
+      }catch(e){
+        console.error(e);
+        renderSelect(select, [], "");
+      }
+    }
+
+    
+// --- Active Company Context (Privileged users) ---
+async function __getActiveCompanyContext(profile){
+  if(typeof window.ensureSupabase==="function") { await window.ensureSupabase(); }
+    const sb = window.sb || null;
+  if(!sb) return { company_id: (profile.company_id||"").trim(), company_name: (profile.company||"").trim() };
+
+  // Prefer profile.company_id if present
+  let company_id = String(profile.company_id||"").trim();
+  let company_name = String(profile.company||"").trim();
+
+  // LocalStorage fallback for privileged users (remember last active company)
+  const ls_id = String(localStorage.getItem("zummee_active_company_id")||"").trim();
+  const ls_name = String(localStorage.getItem("zummee_active_company_name")||"").trim();
+  if(!company_id && ls_id) company_id = ls_id;
+  if(!company_name && ls_name) company_name = ls_name;
+
+  if(company_id) {
+    // Keep remembered
+    localStorage.setItem("zummee_active_company_id", company_id);
+    if(company_name) localStorage.setItem("zummee_active_company_name", company_name);
+    return { company_id, company_name };
+  }
+
+
+  // v786 hotfix: Supervisors are scoped to their own company; never prompt them with the full Companies list.
+  // If company_id is missing for a Supervisor, attempt to resolve it by company name; otherwise fail-closed.
+  const roleLower = String(profile.role||"").trim().toLowerCase();
+  const deptLower = String(profile.department||"").trim().toLowerCase();
+  const isAdminLike = (roleLower.includes("admin") || roleLower.includes("companyadmin"));
+  const isSupervisor = (roleLower.includes("supervisor") || deptLower.includes("supervisor"));
+  if(isSupervisor && !isAdminLike){
+    if(company_name){
+      try{
+        const r = await sb.from("Companies").select("id,name").eq("name", company_name).maybeSingle();
+        if(r && r.data && r.data.id){
+          company_id = String(r.data.id);
+          localStorage.setItem("zummee_active_company_id", company_id);
+          localStorage.setItem("zummee_active_company_name", company_name);
+          return { company_id, company_name };
+        }
+      }catch(_e){}
+    }
+    console.warn("Supervisor missing company_id; cannot select arbitrary company. Please set company_id on the profile.");
+    return { company_id:"", company_name: company_name||"" };
+  }
+  // No company_id available: fetch Companies and ask once
+  const { data, error } = await sb.from("Companies").select("id,name").order("name",{ascending:true});
+  if(error || !data || !data.length){
+    console.warn("Companies list unavailable for active company selection:", error);
+    return { company_id:"", company_name:"" };
+  }
+
+  // Build a simple numbered prompt
+  const lines = data.slice(0, 50).map((c,i)=>`${i+1}. ${c.name}`).join("\n");
+  const choice = prompt("Select Active Company (enter number):\n\n" + lines);
+  const n = parseInt(String(choice||"").trim(),10);
+  if(!n || n<1 || n>data.length) return { company_id:"", company_name:"" };
+
+  company_id = String(data[n-1].id);
+  company_name = String(data[n-1].name||"").trim();
+
+  localStorage.setItem("zummee_active_company_id", company_id);
+  localStorage.setItem("zummee_active_company_name", company_name);
+  return { company_id, company_name };
+}
+
+async function addCommunity(){  const profile = await getProfile();
+
+  // Resolve active company context (CompanyAdmin/Admin/Supervisor)
+  const ctx = await __getActiveCompanyContext(profile);
+  if(ctx.company_id) profile.company_id = ctx.company_id;
+  if(ctx.company_name) profile.company = ctx.company_name;
+  // Employees should not be able to add communities
+  const role = String(profile.role||"").trim().toLowerCase();
+  const isPriv = role.includes("companyadmin") || role.includes("admin") || role.includes("supervisor");
+  if(!isPriv) return alert("Only CompanyAdmin/Admin/Supervisor can add communities.");
+
+  const companyIdForInsert = String(profile.company_id||"").trim();
+  if(!companyIdForInsert){
+    return alert("No Active Company selected. Please select a company when prompted, then try again.");
+  }
+
+  const name = prompt("Community name:");
+  if(!name) return;
+  const clean = name.trim();
+  if(!clean) return;
+
+  // Avoid duplicates (cloud + cache)
+  const existing = await listCommunities(profile);
+  const exists = existing.some(c=>String(c.name||"").trim().toLowerCase() === clean.toLowerCase());
+  if(exists) return alert("That community already exists.");
+
+  let newId = "";
+
+  // Cloud-first: write to PropertyCommunities (requires company_id FK)
+  try{
+    if(typeof window.ensureSupabase==="function") { await window.ensureSupabase(); }
+    const sb = window.sb || null;
+    if(sb){
+      const companyId = companyIdForInsert;
+      if(!companyId){
+        alert("Your profile is missing company_id. Open Profile and re-save your Management Company, then try again.");
+        return;
+      }
+
+      // Prefer upsert on (company_id,name) if that unique constraint exists, else fall back to insert.
+      let q = await sb
+        .from('PropertyCommunities')
+        .upsert([{ company_id: companyId, company: String(profile.company).trim(), name: clean }], { onConflict: 'company_id,name' })
+        .select('id,name')
+        .maybeSingle();
+
+      if(q && q.error){
+        q = await sb
+          .from('PropertyCommunities')
+          .insert([{ company_id: companyId, company: String(profile.company).trim(), name: clean }])
+          .select('id,name')
+          .maybeSingle();
+      }
+
+      if(q && !q.error && q.data && q.data.id){
+        newId = String(q.data.id);
+      }else if(q && q.error){
+        console.warn("PropertyCommunities insert/upsert failed:", q.error);
+        alert("Could not create community in cloud: " + (q.error.message || q.error.details || JSON.stringify(q.error)));
+        return; // do NOT create local-only ghost communities
+      }else{
+        alert("Could not create community in cloud (unknown response).");
+        return;
+      }
+    }
+  }catch(e){
+    console.warn("PropertyCommunities write failed:", e);
+    alert("Could not create community in cloud: " + (e.message || e));
+    return; // do NOT create local-only ghost communities
+  }
+
+
+  // Update company cache immediately so the new community appears without a reload
+  try{
+    const company = String(profile.company||"").trim();
+    const k1 = "zummee_company_communities_v1__"+company;
+    const k2 = "zummee_company_communities_v1__"+company.toLowerCase();
+    const arr = JSON.parse(localStorage.getItem(k1)||localStorage.getItem(k2)||"[]")||[];
+    if(newId && !arr.some(x=>String(x.id)===String(newId))){
+      arr.push({id:String(newId), name: clean});
+      arr.sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+      localStorage.setItem(k1, JSON.stringify(arr));
+      localStorage.setItem(k2, JSON.stringify(arr));
+    }
+  }catch(_e){}
+
+  // Update local user cache (legacy) so older pages still see it
+  try{
+    const list = readLocalCommunities(profile);
+    const idToUse = newId || (String(Date.now()) + "_" + Math.random().toString(16).slice(2));
+    list.push({ id: idToUse, name: clean });
+    writeLocalCommunities(profile, list);
+  }catch(_e){}
+
+  document.dispatchEvent(new CustomEvent("communities:changed"));
+  await refreshUI();
+  const {select} = els();
+  if(select){
+    if(newId) select.value = String(newId);
+    select.dispatchEvent(new Event("change"));
+  }
+}
+
+async function renameCommunity(){
+  const e = els();
+  const profile = await getProfile();
+  const id = String(e.select?.value||"").trim();
+  if(!id) return alert("Select a community first.");
+
+  const role = String(profile.role||"").trim().toLowerCase();
+  const isPriv = role.includes("admin") || role.includes("supervisor");
+  if(!isPriv) return alert("Only Admin/Supervisor can rename communities.");
+
+  const cur = e.select.options[e.select.selectedIndex]?.textContent || "";
+  const name = prompt("New community name:", cur);
+  if(!name) return;
+  const clean = name.trim();
+  if(!clean) return;
+
+  // Cloud-first rename
+  try{
+    if(typeof window.ensureSupabase==="function") { await window.ensureSupabase(); }
+    const sb = window.sb || null;
+    if(sb && profile.company){
+      const q = await sb
+        .from('PropertyCommunities')
+        .update({ name: clean })
+        .eq('id', id)
+        .ilike('company', String(profile.company).trim())
+        .select('id,name')
+        .maybeSingle();
+      if(q && q.error){
+        console.warn("PropertyCommunities rename failed:", q.error);
+      }
+    }
+  }catch(err){
+    console.warn("PropertyCommunities rename exception:", err);
+  }
+
+  // Update local legacy list if present
+  try{
+    const list = readLocalCommunities(profile);
+    const idx = list.findIndex(c=>String(c.id)===String(id));
+    if(idx !== -1){
+      list[idx].name = clean;
+      writeLocalCommunities(profile, list);
+    }
+  }catch(_e){}
+
+  document.dispatchEvent(new CustomEvent("communities:changed"));
+  await refreshUI();
+  if(e.select) e.select.value = id;
+}
+
+    async function removeCommunity(){
+  const e = els();
+  const profile = await getProfile();
+  const id = String(e.select?.value||"").trim();
+  if(!id) return alert("Select a community first.");
+
+  const role = String(profile.role||"").trim().toLowerCase();
+  const isPriv = role.includes("admin") || role.includes("supervisor");
+  if(!isPriv) return alert("Only Admin/Supervisor can remove communities.");
+
+  if(!confirm("Remove this community? This will remove it for the company and unassign it from employees.")) return;
+
+  // Cloud-first delete
+  try{
+    if(typeof window.ensureSupabase==="function") { await window.ensureSupabase(); }
+    const sb = window.sb || null;
+    if(sb && profile.company){
+      // Remove assignments referencing this community (best-effort)
+      try{
+        await window.sb
+          .from('CommunityAssignments')
+          .delete()
+          .eq('community_id', id)
+          .ilike('company', String(profile.company).trim());
+      }catch(_e){}
+
+      const q = await sb
+        .from('PropertyCommunities')
+        .delete()
+        .eq('id', id)
+        .ilike('company', String(profile.company).trim());
+      if(q && q.error){
+        console.warn("PropertyCommunities delete failed:", q.error);
+      }
+    }
+  }catch(err){
+    console.warn("PropertyCommunities delete exception:", err);
+  }
+
+  // Update local legacy list
+  try{
+    const list = readLocalCommunities(profile).filter(c=>String(c.id)!==String(id));
+    writeLocalCommunities(profile, list);
+  }catch(_e){}
+
+  document.dispatchEvent(new CustomEvent("communities:changed"));
+  await refreshUI();
+}
+
+    document.addEventListener("DOMContentLoaded", ()=>{
+      const e = els();
+      bindSelect(e.select);
+      if(e.btnAdd) e.btnAdd = rebindButton(e.btnAdd, addCommunity);
+      if(e.btnRename) e.btnRename = rebindButton(e.btnRename, renameCommunity);
+      if(e.btnRemove) e.btnRemove = rebindButton(e.btnRemove, removeCommunity);
+      refreshUI();
+      try{ window.__zummeeCommunityMgmtV2Bound = true; }catch(_e){}
+    });
+
+    document.addEventListener("communities:changed", ()=>refreshUI());
+  })();
+</script>
+
+<script>(()=>{ if(window.ZummeeAuth) window.ZummeeAuth.requireAuth(); })();</script>
+
+<style>
+  .zummee-header {
+    position: relative;
+    top: auto;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 18px 28px;
+    transition: padding 180ms ease, box-shadow 180ms ease, background 180ms ease;
+    border-bottom: 1px solid #6faedc;
+    background: #9fc9ec;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  }
+  .zummee-header__logo {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+  }
+  .zummee-header__logo img {
+    height: 96px;
+    width: auto;
+    display: block;
+  }
+  .zummee-header__titles {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+  }
+  .zummee-header__title {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #0f2f4a;
+  }
+  .zummee-header__subtitle {
+    margin-top: 6px;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #0f2f4a;
+    opacity: 0.9;
+  }
+  @media (max-width: 640px) {
+    .zummee-header {
+      padding: 12px 16px;
+      gap: 12px;
+    }
+    .zummee-header__logo img {
+      height: 96px;
+    }
+    .zummee-header__title {
+      font-size: 1.1rem;
+    }
+    .zummee-header__subtitle {
+      font-size: 0.9rem;
+    }
+  }
+
+  /* Community controls: keep the dropdown on top, action buttons underneath */
+  .zummee-header__controls{
+    margin-left:auto;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:10px;
+  }
+  .zummee-header__communityRow,
+  .zummee-header__communityActions{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+  }
+  .zummee-header__communityLabel{
+    font-size:0.95rem;
+    font-weight:600;
+    color:#0f2f4a;
+    opacity:0.95;
+  }
+  @media (max-width: 768px){
+    .zummee-header__controls{ align-items:center; width:100%; }
+    .zummee-header__communityRow,
+    .zummee-header__communityActions{ justify-content:center; }
+  }
+
+  /* Manager Hub header shrink-on-scroll */
+  .zummee-header.zummee-header--shrink{
+    padding: 10px 18px !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
+  }
+  .zummee-header.zummee-header--shrink .zummee-header__logo img{
+    height: 64px !important;
+  }
+  .zummee-header.zummee-header--shrink .zummee-header__title{
+    font-size: 1.25rem !important;
+  }
+  .zummee-header.zummee-header--shrink .zummee-header__subtitle{
+    margin-top: 4px !important;
+    font-size: 0.95rem !important;
+  }
+
+</style>
+<header class="zummee-header">
+  <a class="zummee-header__logo" href="index.html" aria-label="Go to Home">
+    <img src="Zummee.png" alt="Zummee Logo">
+  </a>
+  <div class="zummee-header__titles">
+    <h1 class="zummee-header__title">Zummee Property Manager</h1>
+    <div class="zummee-header__subtitle">Manager Hub</div>
+  </div>
+
+  <div class="zummee-header__controls">
+    <div class="zummee-header__communityRow">
+      <label class="zummee-header__communityLabel">Community</label>
+      <span id="zummeeCommunitySwatch" aria-hidden="true"></span>
+      <select id="zummeeCommunitySelect" style="padding:8px 10px;border:1px solid rgba(15,47,74,0.25);border-radius:10px;background:#ffffff;min-width:220px;"></select>
+    </div>
+    <div class="zummee-header__communityActions">
+      <!-- Community add/rename/remove controls removed (managed by Supervisor/Admin flows) -->
+      <a href="profile.html" style="padding:8px 10px;border-radius:10px;border:1px solid rgba(15,47,74,0.25);background:rgba(255,255,255,0.9);cursor:pointer;text-decoration:none;font-weight:700;color:#0f2f4a;">Profile</a>
+      <button id="zummeeSignOut" type="button" style="padding:8px 10px;border-radius:10px;border:1px solid rgba(15,47,74,0.25);background:rgba(255,255,255,0.9);cursor:pointer;" onclick="return window.zummeeSignOutNow && window.zummeeSignOutNow(event)">Sign out</button>
+    </div>
+  </div>
+</header>
+<script>
+(function(){
+  const hdr = document.querySelector('.zummee-header');
+  if(!hdr) return;
+  const apply = ()=> {
+    const y = window.scrollY || document.documentElement.scrollTop || 0;
+    if(y > 16) hdr.classList.add('zummee-header--shrink');
+    else hdr.classList.remove('zummee-header--shrink');
+  };
+  window.addEventListener('scroll', apply, {passive:true});
+  window.addEventListener('pageshow', apply);
+  window.addEventListener('resize', apply);
+  apply();
+})();
+</script>
+
+
+<script>
+/* Hub Sign Out (v329) - inline handler, no popup */
+// Hub Sign Out: open modal only
+window.zummeeSignOutNow = function(ev){
+  try{ if(ev){ ev.preventDefault(); ev.stopPropagation(); } }catch(_e){}
+  try{ window.zumOpenSignOutModal && window.zumOpenSignOutModal(); }catch(_e){}
+  return false;
+};
+
+// Actual sign-out implementation (called by modal OK)
+window.zummeePerformSignOut = async function(){
+  const SESSION_KEY = "zummee_session_v1";
+  try{ localStorage.removeItem(SESSION_KEY); }catch(_e){}
+  try{ sessionStorage.removeItem(SESSION_KEY); }catch(_e){}
+  // Clear any Supabase auth tokens (defensive)
+  try{
+    [localStorage, sessionStorage].forEach(function(store){
+      try{
+        for(var i=store.length-1;i>=0;i--){
+          var k = store.key(i);
+          if(k && (k === 'sb-zummee-auth' || /^sb-.*-auth-token$/.test(k) || /^sb-zummee-auth/.test(k))){
+            try{ store.removeItem(k); }catch(_e2){}
+          }
+        }
+      }catch(_e3){}
+    });
+  }catch(_e4){}
+
+  try{
+    if(window.ZummeeAuth && typeof window.ZummeeAuth.signOut === "function"){
+      var r = window.ZummeeAuth.signOut();
+      if(r && typeof r.then === "function") await r;
+    }else if(window.sb && window.sb.auth && typeof window.sb.auth.signOut === "function"){
+      await window.sb.auth.signOut();
+    }
+  }catch(_e5){}
+
+  // Clear in-memory role flags to prevent cross-account bleed
+  try{
+    if(window.ZUMMEE_AUTH){ window.ZUMMEE_AUTH = {}; }
+    window.__zummeeUserRole = "";
+    window.__zummeeUserDepartment = "";
+    window.__zummeeUserName = "";
+    window.__zummeeCompany = "";
+    window.__zummeeProfile = null;
+  }catch(_e6){}
+
+  try{ window.location.href = "login.html"; }catch(_e7){}
+  return false;
+};
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // Supabase init (shared)
+  var SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
+  var SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsY3d1dXd5cmdubWxteHBjYWltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMjI5MTAsImV4cCI6MjA4NDU5ODkxMH0.3pZZLufFv5SUHREjgPys-q8SnYVMzHona-yeXMVHuOg";
+  window.sb = window.sb || window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { storageKey:'sb-zummee-auth', storage: window.localStorage, persistSession:true, autoRefreshToken:true, detectSessionInUrl:true  }
+  });
+
+  // Auth hang guard: prevents infinite pending promises on some pages.
+  (function(){
+    try{
+      const sb = window.sb;
+      if(!sb || !sb.auth || sb.__zummeeHangGuard) return;
+      sb.__zummeeHangGuard = true;
+      const origGetUser = sb.auth.getUser ? sb.auth.getUser.bind(sb.auth) : null;
+      const origGetSession = sb.auth.getSession ? sb.auth.getSession.bind(sb.auth) : null;
+
+      if(origGetUser){
+        sb.auth.getUser = async function(){
+          try{
+            return await Promise.race([
+              origGetUser(),
+              new Promise((_,rej)=>setTimeout(()=>rej(new Error('getUser timeout')), 4000))
+            ]);
+          }catch(e){
+            try{
+              const s = origGetSession ? await origGetSession() : { data:{ session:null } };
+              return { data:{ user: s.data?.session?.user || null }, error: null };
+            }catch(_e2){
+              return { data:{ user: null }, error: e };
+            }
+          }
+        };
+      }
+
+      if(origGetSession){
+        sb.auth.getSession = async function(){
+          try{
+            return await Promise.race([
+              origGetSession(),
+              new Promise((_,rej)=>setTimeout(()=>rej(new Error('getSession timeout')), 4000))
+            ]);
+          }catch(e){
+            return await new Promise((resolve)=>{
+              let done = false;
+              const sub = sb.auth.onAuthStateChange((event, session)=>{
+                if(done) return;
+                if(event === 'INITIAL_SESSION' || session){
+                  done = true;
+                  try{ sub.data.subscription.unsubscribe(); }catch(_e3){}
+                  resolve({ data:{ session: session || null }, error: null });
+                }
+              });
+              setTimeout(()=>{
+                if(done) return;
+                done = true;
+                try{ sub.data.subscription.unsubscribe(); }catch(_e4){}
+                resolve({ data:{ session: null }, error: e });
+              }, 1200);
+            });
+          }
+        };
+      }
+    }catch(_e){}
+  })();
+
+  // --- Cloud Communities (Hub) ---
+  async function requireUid(){
+    const u = await window.sb.auth.getUser();
+    const uid = u.data?.user?.id;
+    if(!uid) throw new Error("Not signed in");
+    return uid;
+  }
+
+  async function getMyCompany(){
+    const uid = await requireUid();
+    const q = await window.sb.from("profiles")
+      .select("company,company_id,selected_community_id")
+      .eq("id", uid)
+      .maybeSingle();
+    if(q.error) throw q.error;
+    return {
+      uid,
+      company: (q.data?.company || "").trim(),
+      company_id: String(q.data?.company_id || "").trim(),
+      selected: String(q.data?.selected_community_id || "").trim()
+    };
+  }
+
+  async function loadCommunities(){
+    const ctx = await getMyCompany();
+    // Prefer company_id (stable) over company name (can have casing/spaces issues)
+    if(!ctx.company_id && !ctx.company) return [];
+    let q = window.sb.from("PropertyCommunities")
+      .select("id,name,company_id,company,created_at")
+      .order("name", { ascending:true });
+    q = ctx.company_id ? q.eq("company_id", ctx.company_id) : q.eq("company", ctx.company);
+    q = await q;
+    if(q.error) throw q.error;
+    return q.data || [];
+  }
+
+  async function ensureDefaultCommunityCloud(){
+    const ctx = await getMyCompany();
+    const list = await loadCommunities();
+    if(!list.length) return { list:[], selected:"" };
+    let selected = ctx.selected;
+    if(!selected || !list.find(x => String(x.id) === selected)){
+      selected = String(list[0].id);
+      const up = await window.sb.from("profiles")
+        .update({ selected_community_id: selected })
+        .eq("id", ctx.uid);
+      if(up.error) throw up.error;
+    }
+    return { list, selected };
+  }
+
+  async function renderCommunities(){
+    const select = document.getElementById("zummeeCommunitySelect");
+    const swatch = document.getElementById("zummeeCommunitySwatch");
+    if(!select) return;
+
+    const payload = await ensureDefaultCommunityCloud();
+    select.innerHTML = "";
+    (payload.list||[]).forEach((c, i)=>{
+      const opt = document.createElement("option");
+      opt.value = String(c.id);
+      opt.textContent = c.name;
+      select.appendChild(opt);
+    });
+    if(payload.selected) select.value = payload.selected;
+    select.disabled = !(payload.list && payload.list.length);
+
+    // simple swatch
+    if(swatch){
+      const idx = Math.max(0, Array.from(select.options).findIndex(o => o.value===select.value));
+      const colors = ["#2563eb","#16a34a","#d97706","#7c3aed","#dc2626","#0891b2","#9333ea","#4b5563"];
+      swatch.style.width="12px"; swatch.style.height="12px"; swatch.style.borderRadius="999px";
+      swatch.style.border="1px solid rgba(15,47,74,0.25)";
+      swatch.style.background = colors[idx % colors.length];
+    }
+
+    select.onchange = async ()=>{
+      try{
+        const ctx = await getMyCompany();
+        const v = String(select.value||"").trim();
+        if(!v) return;
+        const up = await window.sb.from("profiles")
+          .update({ selected_community_id: v })
+          .eq("id", ctx.uid);
+        if(up.error) throw up.error;
+        // let other parts of the app react
+        document.dispatchEvent(new Event("community:changed"));
+      }catch(e){
+        alert("Community select failed: " + (e?.message || e));
+      }
+    };
+  }
+
+  window.addCommunity = async function(){
+    try{
+      const name = (prompt("New community name:") || "").trim();
+      if(!name) return;
+
+      // Use Active Company context for privileged users (CompanyAdmin/Admin/Supervisor).
+      // This avoids requiring CompanyAdmin to set a company in Profile every time.
+      const profile = (typeof window.getProfile === "function") ? await window.getProfile() : {};
+      const role = String(profile.role||profile.department||"").toLowerCase();
+      const isPriv = role.includes("companyadmin") || role.includes("admin") || role.includes("supervisor");
+      if(!isPriv) return alert("Only CompanyAdmin/Admin/Supervisor can add communities.");
+
+      // Resolve active company_id + name (stored in localStorage once selected)
+      let company_id = String(profile.company_id||"").trim() || String(localStorage.getItem("zummee_active_company_id")||"").trim();
+      let company = String(profile.company||"").trim() || String(localStorage.getItem("zummee_active_company_name")||"").trim();
+
+      // If missing, prompt from Companies table and remember selection
+      if((!company_id || !company) && typeof window.__getActiveCompanyContext === "function"){
+        const ctx = await window.__getActiveCompanyContext(profile);
+        if(ctx && ctx.company_id) company_id = String(ctx.company_id||"").trim();
+        if(ctx && ctx.company_name) company = String(ctx.company_name||"").trim();
+      }
+
+      if(!company_id){
+        return alert("No Active Company selected. Please select a company when prompted, then try again.");
+      }
+
+      if(typeof window.ensureSupabase==="function") { await window.ensureSupabase(); }
+    const sb = window.sb || null;
+      if(!sb) throw new Error("Supabase client not ready");
+
+      // If company name still missing, fetch it once
+      if(!company){
+        const c = await sb.from("Companies").select("name").eq("id", company_id).maybeSingle();
+        if(c && !c.error && c.data && c.data.name) company = String(c.data.name).trim();
+      }
+
+      const ins = await sb.from("PropertyCommunities")
+        .insert([{ company: company || null, company_id, name }])
+        .select("id")
+        .single();
+      if(ins.error) throw ins.error;
+
+      // set as selected
+      const uid = String(profile.id||profile.uid||profile.user_id||"").trim();
+      if(uid){
+        const up = await sb.from("profiles")
+          .update({ selected_community_id: String(ins.data.id) })
+          .eq("id", uid);
+        if(up.error) throw up.error;
+      }
+
+      // refresh UI
+      if(typeof window.populateCommunitiesDropdown === "function"){
+        await window.populateCommunitiesDropdown();
+      }else{
+        location.reload();
+      }
+    }catch(e){
+      alert("Add community failed: " + (e?.message || e));
+      console.warn(e);
+    }
+  }
+
+  window.renameCommunity = async function(){
+    try{
+      const sel = document.getElementById("zummeeCommunitySelect");
+      const id = sel ? String(sel.value||"").trim() : "";
+      if(!id) return alert("Select a community first.");
+      const currentName = sel.options[sel.selectedIndex]?.textContent || "";
+      const name = (prompt("Rename community:", currentName) || "").trim();
+      if(!name) return;
+      const ctx = await getMyCompany();
+      if(typeof window.ensureSupabase==="function") { await window.ensureSupabase(); }
+    const sb = window.sb || null;
+      if(!sb) throw new Error("Supabase client not ready");
+      const up = await sb.from("PropertyCommunities")
+        .update({ name })
+        .eq("id", id);
+      if(up.error) throw up.error;
+      await renderCommunities();
+      if(sel) sel.value = id;
+      document.dispatchEvent(new Event("community:changed"));
+      alert("Community renamed.");
+    }catch(e){
+      alert("Rename failed: " + (e?.message || e));
+    }
+  };
+
+  window.removeCommunity = async function(){
+    try{
+      const sel = document.getElementById("zummeeCommunitySelect");
+      const id = sel ? String(sel.value||"").trim() : "";
+      if(!id) return alert("Select a community first.");
+      const name = sel.options[sel.selectedIndex]?.textContent || "this community";
+      if(!confirm('Remove "'+name+'"?')) return;
+      const ctx = await getMyCompany();
+      if(typeof window.ensureSupabase==="function") { await window.ensureSupabase(); }
+    const sb = window.sb || null;
+      if(!sb) throw new Error("Supabase client not ready");
+      const del = await sb.from("PropertyCommunities")
+        .delete()
+        .eq("id", id);
+      if(del.error) throw del.error;
+
+      // choose new default
+      let nextId = "";
+      const q = await sb.from("PropertyCommunities")
+        .select("id")
+        .eq("company", ctx.company)
+        .order("name", { ascending:true })
+        .limit(1);
+      if(q.error) throw q.error;
+      if(q.data && q.data.length) nextId = String(q.data[0].id);
+
+      const up = await window.sb.from("profiles")
+        .update({ selected_community_id: nextId || null })
+        .eq("id", ctx.uid);
+      if(up.error) throw up.error;
+
+      await renderCommunities();
+      document.dispatchEvent(new Event("community:changed"));
+      alert("Community removed.");
+    }catch(e){
+      alert("Remove failed: " + (e?.message || e));
+    }
+  };
+
+  document.addEventListener("DOMContentLoaded", ()=>{
+    if(window.__zummeeCommunityMgmtV2Bound) return; // prevent double prompts
+    // wire buttons
+    const btnAdd = document.getElementById("zummeeCommunityAdd");
+    const btnRen = document.getElementById("zummeeCommunityRename");
+    const btnRem = document.getElementById("zummeeCommunityRemove");
+    if(btnAdd) btnAdd.addEventListener("click", ()=> window.addCommunity && window.addCommunity());
+    if(btnRen) btnRen.addEventListener("click", ()=> window.renameCommunity && window.renameCommunity());
+    if(btnRem) btnRem.addEventListener("click", ()=> window.removeCommunity && window.removeCommunity());
+
+    // load dropdown
+    renderCommunities().catch(e=>{
+      console.warn(e);
+      // if user isn't signed in yet, keep disabled
+      const sel=document.getElementById("zummeeCommunitySelect");
+      if(sel) sel.disabled=true;
+    });
+  });
+</script>
+
+
+
+
+  <div class="wrap">
+
+<div class="hub-title-row">
+  <h1>Manager Hub</h1>
+  <div class="hub-title-actions">
+  <div id="todayBanner" class="hub-clock"></div>
+  <button class="btnLike hub-reset" id="hubResetLayout" type="button" title="Reset card order">Reset Layout</button>
+</div>
+</div>
+<script>
+(function(){
+  const el = document.getElementById("todayBanner");
+  if(!el) return;
+  function update(){
+    const d = new Date();
+    const dateOpts = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
+    const timeOpts = { hour:'numeric', minute:'2-digit', second:'2-digit' };
+    el.textContent = d.toLocaleDateString(undefined, dateOpts) + " • " + d.toLocaleTimeString(undefined, timeOpts);
+  }
+  update();
+  setInterval(update, 1000);
+})();
+</script>
+
+
+
+    <p class="sub"></p>
+
+    <div class="cards" id="hubCards">
+      <div class="card with-icon" data-card-id="daily_ops" id="dailyOpsCard">
+<div class="title">Daily Ops Manager</div>
+        <a class="btn" href="ops.html">Open Daily Ops</a>
+      
+  <img src="ops_icon.png" alt="Daily Ops" class="card-icon" />
+</div>
+      
+
+    
+      <div class="card with-icon" data-card-id="mileage">
+<div class="title">Mileage Tracker</div>
+        <a class="btn" href="mileage.html">Open Mileage Tracker</a>
+        <img src="mileage_icon.png" alt="Mileage" class="card-icon" />
+      </div>
+
+      <div class="card with-icon" data-card-id="inspections">
+<div class="title">Community Inspections</div>
+        <a class="btn" href="inspections.html">Open Inspections</a>
+        <img src="Mag.jpg" alt="Inspections" class="card-icon" />
+      </div>
+
+      <div class="card with-icon" id="boardMemberHubCard" data-card-id="board_member_hub">
+<div class="title">Board Member Hub</div>
+        <a class="btn" href="board_member_hub.html">Open Board Member Hub</a>
+        <img src="board_meetings_icon.jpg" alt="Board Member Hub" class="card-icon" />
+      </div>
+
+
+      <div class="card with-icon" data-card-id="directory">
+<div class="title">Company Directory</div>
+        <a class="btn" href="company_directory.html">Open Directory</a>
+        <img src="company_directory_icon.png" alt="Company Directory" class="card-icon company-icon" />
+      </div>
+
+
+      <div class="card with-icon" data-card-id="training">
+<div class="title">Manager Info and Training</div>
+        <a class="btn" href="manager_info_training.html">Open Manager Info</a>
+        <img src="manager_info_training_icon.png" alt="Manager Info and Training" class="card-icon" />
+      </div>
+      <div class="card with-icon" data-card-id="board_meetings">
+<div class="title">Board Meetings</div>
+        <a class="btn" href="board_meetings.html">Open Board Meetings</a>
+        <img src="board_meetings_icon.jpg" alt="Board Meetings" class="card-icon" />
+      </div>
+
+
+
+      
+      <div class="card with-icon" data-card-id="preferred_vendors">
+<div class="title">Preferred Vendors</div>
+<a class="btn" href="preferred_vendors.html">Open Preferred Vendors</a>
+        <img src="company_directory_icon.png" alt="Preferred Vendors" class="card-icon company-icon" />
+      </div>
+
+
+      <div class="card with-icon" data-card-id="pool_ops">
+<div class="title">Pool Opening &amp; Closing</div>
+<a class="btn" href="pool_ops.html">Open Pool Ops</a>
+        <img src="ops_icon.png" alt="Pool Ops" class="card-icon" />
+      </div>
+
+<div class="card with-icon" id="supervisorHubCard" data-card-id="supervisor_access">
+<div class="title">Supervisor Access</div>
+        <a class="btn" href="supervisor_access.html">Open Supervisor Access</a>
+        <img src="lock.jpg" alt="Supervisor Access" class="card-icon" />
+      </div>
+
+
+
+</div>
+
+<script>
+/* Manager Hub: card order (drag & drop, always-on) + FLIP animation + Reset Layout */
+(function(){
+  const wrap = document.getElementById("hubCards") || document.querySelector(".cards");
+  if(!wrap) return;
+
+  const KEY_BASE = "zummee_hub_card_order_v3";
+  function getUserId(){
+    try{ return String(localStorage.getItem("zummee_user_id_v1")||"").trim(); }catch(_e){ return ""; }
+  }
+  function storageKey(){
+    const uid = getUserId();
+    return uid ? (KEY_BASE + "__user__" + uid) : KEY_BASE;
+  }
+
+// Cloud sync (Supabase) for card order so it follows the user across devices
+const PREF_KEY = KEY_BASE; // stored per-user in Supabase
+
+function getSbClient(){
+  try{
+    const sb = (typeof ensureSupabaseSync === "function") ? ensureSupabaseSync() : (window.sb || window.supabaseClient || window.supabase);
+    if(sb && typeof sb.from === "function") return sb;
+  }catch(_e){}
+  return null;
+}
+
+async function getAuthUserId(){
+  // Prefer cached user id used elsewhere, then Supabase auth
+  const local = getUserId();
+  if(local) return local;
+  const sb = getSbClient();
+  if(!sb || !sb.auth || typeof sb.auth.getUser !== "function") return "";
+  try{
+    const res = await sb.auth.getUser();
+    return String(res?.data?.user?.id || "").trim();
+  }catch(_e){ return ""; }
+}
+
+async function loadOrderCloud(){
+  const sb = getSbClient();
+  if(!sb) return null;
+  const uid = await getAuthUserId();
+  if(!uid) return null;
+  try{
+    const { data, error } = await sb
+      .from("user_ui_prefs")
+      .select("pref_value, updated_at")
+      .eq("user_id", uid)
+      .eq("pref_key", PREF_KEY)
+      .maybeSingle();
+    if(error || !data) return null;
+    const v = data.pref_value;
+    if(Array.isArray(v)) return v;
+    if(v && Array.isArray(v.order)) return v.order;
+    return null;
+  }catch(_e){
+    return null;
+  }
+}
+
+let __saveCloudTimer = null;
+function saveOrderCloudDebounced(order){
+  if(__saveCloudTimer) clearTimeout(__saveCloudTimer);
+  __saveCloudTimer = setTimeout(async ()=>{
+    const sb = getSbClient();
+    if(!sb) return;
+    const uid = await getAuthUserId();
+    if(!uid) return;
+    try{
+      await sb.from("user_ui_prefs").upsert({
+        user_id: uid,
+        pref_key: PREF_KEY,
+        pref_value: order,
+        updated_at: new Date().toISOString()
+      }, { onConflict: "user_id,pref_key" });
+    }catch(_e){}
+  }, 600);
+}
+
+
+  function cards(){
+    return Array.from(wrap.querySelectorAll(".card[data-card-id]"));
+  }
+
+  function saveOrder(){
+    const order = cards().map(c => c.getAttribute("data-card-id")).filter(Boolean);
+    try{ localStorage.setItem(storageKey(), JSON.stringify(order)); }catch(_e){}
+    saveOrderCloudDebounced(order);
+  }
+
+  function applyOrder(){
+    let order = [];
+    try{ order = JSON.parse(localStorage.getItem(storageKey())||"[]") || []; }catch(_e){ order=[]; }
+    if(!order.length) return;
+
+    const byId = {};
+    cards().forEach(c => { byId[c.getAttribute("data-card-id")] = c; });
+
+    // Append in saved order
+    order.forEach(id => { const el = byId[id]; if(el) wrap.appendChild(el); });
+
+    // Append any new cards not in saved list
+    cards().forEach(c => {
+      const id = c.getAttribute("data-card-id");
+      if(id && !order.includes(id)) wrap.appendChild(c);
+    });
+  }
+
+  // --- FLIP animation for smooth rearrange ---
+  function measure(){
+    const m = new Map();
+    cards().forEach(c => m.set(c, c.getBoundingClientRect()));
+    return m;
+  }
+  function flip(prev, draggingEl){
+    cards().forEach(c => {
+      if(c === draggingEl) return;
+      const a = c.getBoundingClientRect();
+      const b = prev.get(c);
+      if(!b) return;
+      const dx = b.left - a.left;
+      const dy = b.top  - a.top;
+      if(!dx && !dy) return;
+
+      c.style.transition = "transform 0s";
+      c.style.transform = `translate(${dx}px, ${dy}px)`;
+      // next frame animate to natural position
+      requestAnimationFrame(() => {
+        c.style.transition = "transform 180ms ease";
+        c.style.transform = "";
+        // cleanup
+        window.setTimeout(() => {
+          c.style.transition = "";
+          c.style.transform = "";
+        }, 220);
+      });
+    });
+  }
+
+  // --- Drag and drop (always enabled) ---
+  let dragging = null;
+  function clearOver(){
+    cards().forEach(c => c.classList.remove("drag-over"));
+  }
+
+  function onDragStart(e){
+    dragging = e.currentTarget;
+    dragging.classList.add("dragging");
+    document.body.classList.add("hub-dragging");
+
+    try{ e.dataTransfer.effectAllowed = "move"; }catch(_e){}
+    try{ e.dataTransfer.setData("text/plain", dragging.getAttribute("data-card-id")||""); }catch(_e){}
+  }
+
+  function onDragEnd(){
+    if(dragging) dragging.classList.remove("dragging");
+    dragging = null;
+    clearOver();
+    document.body.classList.remove("hub-dragging");
+    saveOrder();
+  }
+
+  function onDragOver(e){
+    if(!dragging) return;
+    e.preventDefault();
+
+    const target = e.currentTarget;
+    if(!target || target === dragging) return;
+
+    clearOver();
+    target.classList.add("drag-over");
+
+    const rect = target.getBoundingClientRect();
+    const after = (e.clientY - rect.top) > (rect.height / 2);
+
+    const prev = measure();
+    if(after){
+      const next = target.nextElementSibling;
+      if(next) wrap.insertBefore(dragging, next);
+      else wrap.appendChild(dragging);
+    }else{
+      wrap.insertBefore(dragging, target);
+    }
+    flip(prev, dragging);
+  }
+
+  function onDrop(e){
+    if(!dragging) return;
+    e.preventDefault();
+    clearOver();
+    saveOrder();
+  }
+
+  function bind(){
+    cards().forEach(card => {
+      card.setAttribute("draggable", "true");
+      card.addEventListener("dragstart", onDragStart);
+      card.addEventListener("dragend", onDragEnd);
+      card.addEventListener("dragover", onDragOver);
+      card.addEventListener("drop", onDrop);
+    });
+
+    // prevent accidental navigation during a drag
+    wrap.addEventListener("click", (e)=>{
+      if(document.body.classList.contains("hub-dragging")){
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }, true);
+
+    const resetBtn = document.getElementById("hubResetLayout");
+    if(resetBtn){
+      resetBtn.addEventListener("click", ()=>{
+        try{ localStorage.removeItem(storageKey()); }catch(_e){}
+        window.location.reload();
+      });
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", ()=>{
+    applyOrder();
+
+// Try cloud order after local apply (non-blocking). If present, it becomes source of truth.
+(async ()=>{
+  const cloud = await loadOrderCloud();
+  if(Array.isArray(cloud) && cloud.length){
+    // Only re-apply if different
+    let local = [];
+    try{ local = JSON.parse(localStorage.getItem(storageKey())||"[]") || []; }catch(_e){ local=[]; }
+    const same = JSON.stringify(local) === JSON.stringify(cloud);
+    if(!same){
+      try{ localStorage.setItem(storageKey(), JSON.stringify(cloud)); }catch(_e){}
+      applyOrder();
+    }
+  }
+})();
+    bind();
+  });
+})();
+</script>
+
+<!-- Supervisor Only: Community Assignments
+<section class="card" id="supervisorBox" style="display:none; margin-top:18px">
+  <div class="card__header">
+    <h2>Supervisor Access</h2>
+    <p class="muted">Assign company communities to registered users. Assigned communities will appear automatically in the user’s community dropdown on this device.</p>
+    <div id="sup_companySetter" style="display:none; margin-top:10px; padding:10px; border:1px dashed rgba(15,47,74,0.35); border-radius:12px; background:rgba(255,255,255,0.7)">
+      <div style="font-weight:800; color:#0f2f4a; margin-bottom:6px;">Company is not set</div>
+      <div class="sup-row">
+        <input id="sup_companyInput" placeholder="Enter company name (e.g., BlueSky Management)" />
+        <button class="btn" id="sup_setCompanyBtn" type="button">Set Company</button>
+      </div>
+      <div class="muted tiny" style="margin-top:6px;">Setting the company enables Supervisor assignments and company-wide views.</div>
+    </div>
+    <div id="sup_companyAdminPicker" style="display:none; margin-top:10px; padding:10px; border:1px solid rgba(15,47,74,0.18); border-radius:12px; background:rgba(255,255,255,0.85)">
+      <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap">
+        <div style="min-width:240px; flex:1">
+          <label for="sup_companySelect" style="display:block; font-weight:800; color:#0f2f4a; margin-bottom:6px;">Company</label>
+          <select id="sup_companySelect"><option value="">Loading companies…</option></select>
+          <div class="muted tiny" style="margin-top:6px;">Admins can manage users across all companies.</div>
+        </div>
+        <button class="btn" id="sup_refreshCompaniesBtn" type="button">Refresh</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="sup-grid2">
+    <div class="sup-subcard">
+      <h3>Company Communities</h3>
+      <div class="sup-row">
+        <input id="sup_newCommunityName" placeholder="Add community name" />
+        <button class="btn" id="sup_addCommunityBtn" type="button">Add</button>
+        <button class="btn btn--ghost" id="sup_editCommunityBtn" type="button" disabled>Edit</button>
+      </div>
+      <div id="sup_status" class="muted tiny" style="margin-top:8px;"></div>
+      <div id="sup_companyCommunityList" class="sup-list"></div>
+      <p class="muted tiny">Tip: this is the master list supervisors assign from.</p>
+    </div>
+
+    <div class="sup-subcard sup-subcard--wide">
+  <div class="sup-subhead">
+    <div>
+      <h3 style="margin:0">Supervisor Tools</h3>
+      <div class="muted tiny" style="margin-top:4px;">Manage employees, assign communities, and review current assignments.</div>
+    </div>
+    <div class="sup-tabs" role="tablist" aria-label="Supervisor tools tabs">
+      <button class="sup-tab is-active" type="button" data-sup-tab="assign">Assignments</button>
+      <button class="sup-tab" type="button" data-sup-tab="employees">Employees</button>
+      <button class="sup-tab" type="button" data-sup-tab="current">Current</button>
+    </div>
+  </div>
+
+  <div id="sup_tab_assign" class="sup-tabpanel">
+    <h4 style="margin:10px 0 6px">Assign Communities</h4>
+    <p class="muted tiny" style="margin-top:-4px; margin-bottom:10px;">Assign each community to the employee who manages it.</p>
+
+    <div id="sup_bulkBox" class="sup-bulk">
+      <div class="sup-bulk__grid">
+        <div class="sup-bulk__left">
+          <label style="display:block; font-weight:800; color:#0f2f4a; margin-bottom:6px;">Bulk assign to employee</label>
+          <select id="sup_bulkEmployeeSelect"><option value="">Select employee…</option></select>
+          <div class="muted tiny tiny-status" style="margin-top:6px;">Select communities to bulk assign.</div>
+        </div>
+        <div class="sup-bulk__actions">
+          <button class="btn btn--ghost" id="sup_selectAllBtn" type="button">Select all</button>
+          <button class="btn btn--ghost" id="sup_clearSelBtn" type="button">Clear</button>
+          <button class="btn" id="sup_bulkAssignBtn" type="button" disabled>Assign to Selected</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="sup_perCommunityAssign" class="sup-list"></div>
+    <div class="muted tiny" style="margin-top:8px;">Tip: selecting an employee grants them access to that community automatically.</div>
+  </div>
+
+  <div id="sup_tab_employees" class="sup-tabpanel" style="display:none">
+    <h4 style="margin:10px 0 6px">Company Employees</h4>
+    <div class="muted tiny" style="margin-top:-4px; margin-bottom:10px;">Select a company to view employees and grant Supervisor access.</div>
+    <div id="sup_employeeList" class="sup-emp"></div>
+  </div>
+
+  <div id="sup_tab_current" class="sup-tabpanel" style="display:none">
+    <h4 style="margin:10px 0 6px">Current Assignments</h4>
+    <div id="sup_assignmentPreview" class="sup-list"></div>
+  </div>
+</div>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* Supervisor Access layout (Manager Hub) */
+  #supervisorBox{display:none;}
+  .sup-grid2{ display:grid; grid-template-columns: 1fr; gap:14px; }
+  @media (min-width: 980px){ .sup-grid2{ grid-template-columns: 420px 1fr; align-items:start; } }
+  .sup-subcard{ background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:14px; }
+  .sup-row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .sup-between{ justify-content:space-between; }
+  .sup-row input, .sup-row select{ flex:1; min-width: 220px; }
+  .sup-divider{ height:1px; background:#e5e7eb; margin:12px 0; }
+  .sup-list{ display:flex; flex-direction:column; gap:10px; margin-top:10px; }
+  .sup-list .item{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px; border:1px solid #e5e7eb; border-radius:10px; background:#fafafa; }
+  .sup-checks{ display:flex; flex-direction:column; gap:8px; padding-top:8px; max-height:260px; overflow:auto; border:1px solid #e5e7eb; border-radius:10px; padding:10px; background:#fff; }
+  .sup-checks .check{ display:flex; align-items:center; gap:10px; }
+  
+  .sup-emp{ display:flex; flex-direction:column; gap:8px; max-height:240px; overflow:auto; border:1px solid #e5e7eb; border-radius:10px; padding:10px; background:#fff; }
+  .sup-emp .emp{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 10px; border:1px solid #eef2f7; border-radius:10px; background:#fafafa; }
+  .sup-emp .emp .meta{ display:flex; flex-direction:column; gap:2px; }
+  .sup-emp .emp .meta .name{ font-weight:800; }
+  .sup-emp .emp .meta .sub{ font-size:12px; color:#556; }
+  .sup-emp .pill{ display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid rgba(15,47,74,0.25); font-size:12px; font-weight:800; color:#0f2f4a; background:rgba(15,47,74,0.06); margin-left:6px;}
+
+/* Pill variants */
+.pill--admin{ border-color: rgba(220,38,38,0.35) !important; color:#991b1b !important; background: rgba(220,38,38,0.08) !important; }
+.pill--employee{ border-color: rgba(107,114,128,0.35) !important; color:#374151 !important; background: rgba(107,114,128,0.08) !important; }
+.pill--warn{ border-color: rgba(245,158,11,0.45) !important; color:#92400e !important; background: rgba(245,158,11,0.10) !important; }
+.sup-checks input[type="checkbox"]{ width:16px; height:16px; }
+.sup-subhead{ display:flex; justify-content:space-between; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:6px; }
+.sup-tabs{ display:flex; gap:6px; flex-wrap:wrap; }
+.sup-tab{ border:1px solid rgba(15,47,74,0.18); background:rgba(255,255,255,0.85); color:#0f2f4a; font-weight:800; padding:8px 10px; border-radius:999px; cursor:pointer; }
+.sup-tab.is-active{ background:#0f2f4a; color:#fff; border-color:#0f2f4a; }
+.sup-tabpanel{ margin-top:4px; }
+.sup-bulk{ margin:8px 0 10px; padding:10px; border:1px solid rgba(15,47,74,0.18); border-radius:12px; background:rgba(255,255,255,0.85); }
+.sup-bulk__grid{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+.sup-bulk__left{ min-width:240px; flex:1; }
+.sup-bulk__actions{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+</style>
+
+<script>
+(function(){
+  var box = document.getElementById("supervisorBox");
+  var hubCard = document.getElementById("supervisorHubCard");
+  if(!box) return;
+
+  function $(id){ return document.getElementById(id); }
+  var elList = $("sup_companyCommunityList");
+  var elAssign = $("sup_perCommunityAssign");
+  var elPreview = $("sup_assignmentPreview");
+  var elStatus = $("sup_status");
+
+  // Community rename/edit state (Supervisor Access)
+  var _selectedCommunityId = "";
+  var _selectedCommunityName = "";
+  var _lastRename = null; // {company,id,from,to,at,by}
+
+  function setStatusText(t){
+    try{ if(elStatus){ elStatus.textContent = String(t||""); } }catch(_e){}
+  }
+  function setStatusHtml(h){
+    try{ if(elStatus){ elStatus.innerHTML = String(h||""); } }catch(_e){}
+  }
+
+  function auditKey(company){ return "zummee_comm_audit_v1__" + company; }
+  function loadAudit(company){ return loadJSON(auditKey(company), {}); }
+  function saveAudit(company, obj){ saveJSON(auditKey(company), obj||{}); }
+
+  function setSelectedCommunity(id, name){
+    _selectedCommunityId = String(id||"");
+    _selectedCommunityName = String(name||"");
+    var btnEdit = $("sup_editCommunityBtn");
+    if(btnEdit){
+      btnEdit.disabled = !_selectedCommunityId;
+    }
+  }
+
+  async function renameCommunityCloud(company, id, newName){
+    if(!company || !id || !newName || !window.sb) return false;
+    try{
+      var q = await window.sb.from('PropertyCommunities')
+        .update({ name: newName })
+        .eq('company', company)
+        .eq('id', id);
+      if(q && q.error) throw q.error;
+      return true;
+    }catch(e){
+      console.warn("renameCommunityCloud failed:", e);
+      return false;
+    }
+  }
+
+  async function doRenameCommunity(company, id, fromName, toName){
+    var auth = window.ZUMMEE_AUTH || {};
+    var by = String(auth.name || auth.email || auth.userId || "Admin");
+    var at = new Date().toISOString();
+    // Cloud first
+    var ok = await renameCommunityCloud(company, id, toName);
+    // Update local cache so UI matches immediately
+    var key = companyCommunitiesKey(company);
+    var list = loadJSON(key, []);
+    list = (list||[]).map(function(c){
+      if(String(c.id)===String(id)) return { id: c.id, name: toName };
+      return c;
+    });
+    saveJSON(key, list);
+
+    // Save audit note locally (schema-safe)
+    var audit = loadAudit(company);
+    audit[String(id)] = { renamedBy: by, renamedAt: at, from: fromName, to: toName };
+    saveAudit(company, audit);
+
+    _lastRename = { company: company, id: id, from: fromName, to: toName, at: at, by: by };
+
+    // Status with Undo
+    setStatusHtml('Renamed to <strong>' + esc(toName) + '</strong>. <button class="btn btn--ghost" id="sup_undoRenameBtn" type="button" style="padding:6px 10px; margin-left:8px;">Undo</button>');
+    return ok;
+  }
+
+  async function undoLastRename(){
+    try{
+      if(!_lastRename) return false;
+      var r = _lastRename;
+      _lastRename = null;
+      var ok = await renameCommunityCloud(r.company, r.id, r.from);
+      // Update local cache
+      var key = companyCommunitiesKey(r.company);
+      var list = loadJSON(key, []);
+      list = (list||[]).map(function(c){
+        if(String(c.id)===String(r.id)) return { id: c.id, name: r.from };
+        return c;
+      });
+      saveJSON(key, list);
+
+      // Update audit
+      var audit = loadAudit(r.company);
+      audit[String(r.id)] = { renamedBy: r.by, renamedAt: r.at, from: r.to, to: r.from };
+      saveAudit(r.company, audit);
+
+      setSelectedCommunity(r.id, r.from);
+      setStatusText("Undo complete.");
+      refreshAll();
+      return ok;
+    }catch(e){
+      console.warn("undoLastRename failed:", e);
+      setStatusText("Undo failed.");
+      return false;
+    }
+  }
+
+  // Handle Undo click in status area
+  if(elStatus){
+    elStatus.addEventListener("click", function(e){
+      var t = e && e.target;
+      if(t && t.id === "sup_undoRenameBtn"){
+        e.preventDefault();
+        undoLastRename();
+      }
+    });
+  }
+
+
+
+
+  function esc(s){ return String(s||"").replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]); }); }
+
+  function getCompany(){
+    try{
+      var auth = window.ZUMMEE_AUTH || {};
+      var role = String(auth.role || window.__zummeeUserRole || '').trim();
+      if(role === 'Admin'){
+        var picked = String(localStorage.getItem('zummee_admin_selected_company')||'').trim();
+        if(picked) return picked;
+      }
+      return String(window.__zummeeCompany || localStorage.getItem('zummee_company') || '').trim();
+    }catch(_e){
+      return String(window.__zummeeCompany || '').trim();
+    }
+  }
+
+  async function setCompanyName(newCompany){
+    var c = String(newCompany||"").trim();
+    if(!c) return false;
+    try{ localStorage.setItem("zummee_company", c); }catch(_e){}
+    window.__zummeeCompany = c;
+    // Try to persist to Profiles if signed in
+    try{
+      if(typeof window.ensureSupabase==="function") { await window.ensureSupabase(); }
+    const sb = window.sb || null;
+    if(sb){
+        var sess = await window.sb.auth.getSession();
+        var uid = sess.data?.session?.user?.id;
+        if(uid){
+          await window.sb.from("profiles").upsert([{ id: uid, company: c }], { onConflict: "id" });
+        }
+      }
+    }catch(_e){}
+    // Notify listeners (badges, etc.)
+    try{ window.dispatchEvent(new CustomEvent("profile:loaded", { detail: { company: c, role: window.__zummeeUserRole||"", department: window.__zummeeUserDepartment||"" } })); }catch(_e){}
+    return true;
+  }
+
+  function assignmentsKey(company){ return "zummee_company_assignments_v2__" + company; }
+  function companyCommunitiesKey(company){ return "zummee_company_communities_v1__" + company; }
+
+  function loadJSON(key, fallback){
+    try{ var v = localStorage.getItem(key); if(!v) return fallback; return JSON.parse(v); }catch(_e){ return fallback; }
+  }
+  function saveJSON(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+
+  function normalizeCommunity(c){
+    if(!c) return null;
+    var id = String(c.id || c.communityId || c.value || "").trim();
+    var name = String(c.name || c.communityName || c.label || c.text || "").trim();
+    if(!id && name) id = String(Date.now()) + "_" + Math.random().toString(16).slice(2);
+    if(!name) name = id;
+    return { id:id, name:name };
+  }
+
+  // Cloud sync: Communities + CommunityAssignments (Supabase) with local fallback cache
+  async function syncCompanyFromCloud(company){
+    if(!company || !window.sb) return { communities: null, assignments: null };
+    try{
+      // Load communities for company
+      var qc = await window.sb.from('PropertyCommunities')
+        .select('id,name,company')
+        .eq('company', company)
+        .order('name', { ascending: true });
+      if(qc && qc.error) throw qc.error;
+      var comms = (qc && qc.data) ? qc.data : [];
+      var cleaned = comms.map(function(r){ return normalizeCommunity({ id: r.id, name: r.name }); }).filter(Boolean);
+
+      // Load assignments for company
+      var qa = await window.sb.from('CommunityAssignments')
+        .select('community_id,user_id,company')
+        .eq('company', company);
+      if(qa && qa.error) throw qa.error;
+      var rows = (qa && qa.data) ? qa.data : [];
+      var map = {};
+      rows.forEach(function(r){
+        if(r && r.community_id){
+          var cid = String(r.community_id);
+          var uid = r.user_id ? String(r.user_id) : "";
+          if(uid) map[cid]=uid;
+        }
+      });
+
+      // Persist into local cache keys so the rest of the app can use them
+      try{ saveJSON(companyCommunitiesKey(company), cleaned); }catch(_e){}
+      try{ saveJSON(assignmentsKey(company), map); }catch(_e){}
+      return { communities: cleaned, assignments: map };
+    }catch(e){
+      console.warn("syncCompanyFromCloud failed:", e);
+      return { communities: null, assignments: null };
+    }
+  }
+
+  async function addCommunityToCloud(company, name){
+    if(!company || !name || !window.sb) return false;
+    try{
+      // Prevent obvious duplicates (case-insensitive) by checking first
+      var q = await window.sb.from('PropertyCommunities').select('id,name').eq('company', company).ilike('name', name);
+      if(q && q.error) throw q.error;
+      if(q && q.data && q.data.length){
+        return true; // already exists
+      }
+      var _u = await window.sb.auth.getUser();
+      var _uid = (_u && _u.data && _u.data.user && _u.data.user.id) ? _u.data.user.id : null;
+      var ins = await window.sb.from('PropertyCommunities').insert({ company: company, name: name, owner_id: _uid }).select('id').single();
+      if(ins && ins.error) throw ins.error;
+      return true;
+    }catch(e){
+      console.warn("addCommunityToCloud failed:", e);
+      return false;
+    }
+  }
+
+
+  async function deleteCommunityFromCloud(company, communityId){
+    if(!company || !communityId || !window.sb) return false;
+    try{
+      // First delete any assignments referencing this community (prevents FK issues if you add FKs later)
+      var delA = await window.sb.from('CommunityAssignments')
+        .delete()
+        .eq('company', company)
+        .eq('community_id', communityId);
+      if(delA && delA.error) throw delA.error;
+
+      // Then delete the community itself
+      var delC = await window.sb.from('PropertyCommunities')
+        .delete()
+        .eq('company', company)
+        .eq('id', communityId);
+      if(delC && delC.error) throw delC.error;
+
+      return true;
+    }catch(e){
+      console.warn("deleteCommunityFromCloud failed:", e);
+      return false;
+    }
+  }
+
+
+  async function setAssignmentInCloud(company, communityId, userId){
+    if(!company || !communityId || !window.sb) return false;
+    try{
+      if(userId){
+        // Upsert (requires unique constraint on (company, community_id))
+        var up = await window.sb.from('CommunityAssignments')
+        .upsert({ company: company, community_id: communityId, user_id: userId }, { onConflict: 'user_id,community_id' });
+        if(up && up.error) throw up.error;
+      }else{
+        var del = await window.sb.from('CommunityAssignments')
+          .delete()
+          .eq('company', company)
+          .eq('community_id', communityId);
+        if(del && del.error) throw del.error;
+      }
+      return true;
+    }catch(e){
+      console.warn("setAssignmentInCloud failed:", e);
+      return false;
+    }
+  }
+
+  function renderCompanyCommunities(list){
+    // Always show communities in alphabetical order (by name)
+    list = (list||[]).slice().sort(function(a,b){
+      var na = String((a && a.name) || "").trim().toLowerCase();
+      var nb = String((b && b.name) || "").trim().toLowerCase();
+      return na.localeCompare(nb);
+    });
+
+    // Reset selection if selected id no longer exists
+    if(_selectedCommunityId){
+      var still = (list||[]).some(function(c){ return String(c.id)===String(_selectedCommunityId); });
+      if(!still) setSelectedCommunity("", "");
+    }
+
+    elList.innerHTML = "";
+    if(!list.length){
+      elList.innerHTML = '<div class="muted">No company communities yet.</div>';
+      return;
+    }
+
+    var company = getCompany();
+    var audit = company ? loadAudit(company) : {};
+
+    list.forEach(function(c){
+      var row = document.createElement("div");
+      row.className = "item";
+      row.setAttribute("data-id", String(c.id));
+      row.setAttribute("data-name", String(c.name||""));
+
+      var auditLine = "";
+      var a = audit && audit[String(c.id)];
+      if(a && (a.renamedAt || a.renamedBy)){
+        var when = "";
+        try{
+          when = new Date(a.renamedAt).toLocaleString();
+        }catch(_e){ when = String(a.renamedAt||""); }
+        auditLine = '<div class="muted tiny" style="margin-top:2px;">Last renamed by <strong>'+esc(a.renamedBy||"")+'</strong>' + (when?(' on '+esc(when)):'') + '</div>';
+      }
+
+      row.innerHTML =
+        '<div style="flex:1; min-width:0;">' +
+          '<div class="sup-name" style="font-weight:800; cursor:text;">'+esc(c.name)+'</div>' +
+          auditLine +
+        '</div>' +
+        '<div style="display:flex; gap:8px; align-items:center;">' +
+          '<button class="btn btn--ghost" data-inline-rename="'+esc(c.id)+'" type="button">Rename</button>' +
+          '<button class="btn btn--ghost" data-remove="'+esc(c.id)+'" type="button">Remove</button>' +
+        '</div>';
+
+      // selected styling
+      if(String(_selectedCommunityId) === String(c.id)){
+        row.style.outline = "2px solid rgba(15,47,74,0.35)";
+        row.style.background = "rgba(15,47,74,0.04)";
+      }
+
+      // Click row to select
+      row.addEventListener("click", function(ev){
+        // Avoid selecting when clicking buttons (but still select for convenience)
+        setSelectedCommunity(String(c.id), String(c.name||""));
+        // Prefill input for convenience
+        var inp = $("sup_newCommunityName");
+        if(inp && inp !== document.activeElement) inp.value = String(c.name||"");
+        // Re-render selection highlight
+        renderCompanyCommunities(list);
+      });
+
+      elList.appendChild(row);
+    });
+
+    // Inline rename handler (button)
+    elList.querySelectorAll("button[data-inline-rename]").forEach(function(btn){
+      btn.addEventListener("click", async function(ev){
+        ev.stopPropagation();
+        var id = btn.getAttribute("data-inline-rename");
+        var company = getCompany(); if(!company) return;
+        var currentName = "";
+        try{
+          var row = btn.closest(".item");
+          currentName = row ? (row.getAttribute("data-name")||"") : "";
+        }catch(_e){}
+        if(!currentName){
+          // fallback from cache
+          var key = companyCommunitiesKey(company);
+          var list0 = loadJSON(key, []);
+          var found = (list0||[]).find(function(c){ return String(c.id)===String(id); });
+          currentName = found ? String(found.name||"") : "";
+        }
+
+        // In-place editor UI
+        var rowEl = null;
+        try{ rowEl = btn.closest(".item"); }catch(_e){}
+        if(!rowEl) return;
+
+        var nameHost = rowEl.querySelector(".sup-name");
+        if(!nameHost) return;
+
+        var oldName = String(currentName||nameHost.textContent||"").trim();
+        var input = document.createElement("input");
+        input.value = oldName;
+        input.style.width = "100%";
+        input.style.padding = "6px 8px";
+        input.style.borderRadius = "10px";
+        input.style.border = "1px solid rgba(15,47,74,0.25)";
+
+        var actions = document.createElement("div");
+        actions.style.display = "flex";
+        actions.style.gap = "8px";
+        actions.style.marginTop = "6px";
+
+        var bSave = document.createElement("button");
+        bSave.type = "button";
+        bSave.className = "btn";
+        bSave.textContent = "Save";
+
+        var bCancel = document.createElement("button");
+        bCancel.type = "button";
+        bCancel.className = "btn btn--ghost";
+        bCancel.textContent = "Cancel";
+
+        actions.appendChild(bSave);
+        actions.appendChild(bCancel);
+
+        // Replace nameHost content
+        nameHost.innerHTML = "";
+        nameHost.appendChild(input);
+        nameHost.appendChild(actions);
+
+        input.focus();
+        input.select();
+
+        async function finish(save){
+          if(!save){
+            // restore
+            nameHost.textContent = oldName;
+            refreshAll();
+            return;
+          }
+          var newName = String(input.value||"").trim();
+          if(!newName){ alert("Enter a community name."); return; }
+          if(newName === oldName){ nameHost.textContent = oldName; return; }
+
+          // Prevent duplicates within the company
+          var key = companyCommunitiesKey(company);
+          var list0 = loadJSON(key, []);
+          var dup = (list0||[]).some(function(c){ return String(c.id)!==String(id) && String(c.name||"").trim().toLowerCase()===newName.toLowerCase(); });
+          if(dup){ alert("A community with that name already exists for this company."); return; }
+
+          bSave.disabled = true;
+          bCancel.disabled = true;
+          await doRenameCommunity(company, id, oldName, newName);
+          setSelectedCommunity(id, newName);
+          refreshAll();
+        }
+
+        bSave.addEventListener("click", function(e){ e.stopPropagation(); finish(true); });
+        bCancel.addEventListener("click", function(e){ e.stopPropagation(); finish(false); });
+        input.addEventListener("keydown", function(e){
+          if(e.key === "Enter"){ e.preventDefault(); finish(true); }
+          if(e.key === "Escape"){ e.preventDefault(); finish(false); }
+        });
+      });
+    });
+
+    // Remove handler
+    elList.querySelectorAll("button[data-remove]").forEach(function(btn){
+      btn.addEventListener("click", async function(ev){
+        ev.stopPropagation();
+        try{
+          var id = btn.getAttribute("data-remove");
+          var company = getCompany(); if(!company) return;
+
+          if(!confirm("Remove this community? This will also clear any employee assignments for it.")) return;
+
+          btn.disabled = true;
+          var oldText = btn.textContent;
+          btn.textContent = "Removing…";
+
+          // Cloud-first delete (source of truth)
+          var okCloud = await deleteCommunityFromCloud(company, id);
+
+          // Update local cache
+          var key = companyCommunitiesKey(company);
+          var list = loadJSON(key, []);
+          list = list.filter(function(c){ return String(c.id)!==String(id); });
+          saveJSON(key, list);
+
+          // Clear local assignment cache for this community
+          var aKey = assignmentsKey(company);
+          var map = loadJSON(aKey, {});
+          if(map && typeof map === "object"){
+            try{ delete map[String(id)]; }catch(_e){}
+            saveJSON(aKey, map);
+          }
+
+          // Clear selection if needed
+          if(String(_selectedCommunityId) === String(id)) setSelectedCommunity("", "");
+
+          btn.textContent = okCloud ? "Removed" : "Removed (local)";
+          setTimeout(function(){ try{ btn.textContent = oldText; }catch(_e){} try{ btn.disabled = false; }catch(_e){} }, 800);
+
+          refreshAll();
+        }catch(e){
+          console.warn("Remove community failed:", e);
+          try{ btn.disabled = false; btn.textContent = "Remove"; }catch(_e){}
+          alert("Could not remove community. Check permissions (RLS) and try again.");
+        }
+      });
+    });
+  }
+
+  function buildEmployeeOptions(users, selectedId){
+    var html = "<option value=\"\">Unassigned…</option>";
+    (users||[]).forEach(function(u){
+      var id = String(u.id||"");
+      var name = (u.name || u.full_name || u.email || u.id);
+      html += "<option value=\""+esc(id)+"\"" + (String(selectedId||"")===id?" selected":"") + ">"+esc(name)+"</option>";
+    });
+    return html;
+  }
+
+  // Backward-compatible alias (some parts of the UI call buildUserOptions)
+  function buildUserOptions(users, selectedId){
+    return buildEmployeeOptions(users, selectedId);
+  }
+
+
+  function renderPerCommunityAssign(communities, users, map){
+    if(!elAssign) return;
+    elAssign.innerHTML = "";
+
+    // Always reset bulk employee dropdown on each render so it never shows employees
+    // from a previously selected company (especially when switching companies).
+    var _bulkEmpEl = document.getElementById("sup_bulkEmployeeSelect");
+    var _bulkAssignBtnEl = document.getElementById("sup_bulkAssignBtn");
+    if(_bulkEmpEl){
+      _bulkEmpEl.value = "";
+      // Keep only the placeholder until we repopulate below.
+      _bulkEmpEl.innerHTML = "<option value=\"\">Select employee…</option>";
+    }
+    if(_bulkAssignBtnEl){
+      _bulkAssignBtnEl.disabled = true;
+    }
+    communities = (communities||[]).slice().sort(function(a,b){
+      var na = String((a&&a.name)||"").trim().toLowerCase();
+      var nb = String((b&&b.name)||"").trim().toLowerCase();
+      return na.localeCompare(nb);
+    });
+    if(!communities.length){
+      elAssign.innerHTML = "<div class=\"muted\">No company communities to assign.</div>";
+      return;
+    }
+    map = map || {};
+    // Build user lookup + options
+    var usersById2 = {};
+    (users||[]).forEach(function(u){ if(u && u.id) usersById2[String(u.id)] = u; });
+
+    // Bulk controls (if present)
+    var bulkBox = document.getElementById("sup_bulkBox");
+    var bulkEmp = document.getElementById("sup_bulkEmployeeSelect");
+    var bulkAssignBtn = document.getElementById("sup_bulkAssignBtn");
+    var bulkSelAll = document.getElementById("sup_selectAllBtn");
+    var bulkClear = document.getElementById("sup_clearSelBtn");
+
+    function getSelectedCommunityIds(){
+      return Array.from(elAssign.querySelectorAll('input[type="checkbox"][data-cid]:checked'))
+        .map(function(cb){ return cb.getAttribute("data-cid"); })
+        .filter(Boolean);
+    }
+    function updateBulkState(){
+      if(!bulkAssignBtn || !bulkEmp) return;
+      var ids = getSelectedCommunityIds();
+      var uid = String(bulkEmp.value||"");
+      bulkAssignBtn.disabled = !(ids.length && uid);
+      if(bulkBox){
+        bulkBox.querySelector(".tiny-status") && (bulkBox.querySelector(".tiny-status").textContent =
+          ids.length ? (ids.length + " selected") : "Select communities to bulk assign.");
+      }
+    }
+
+    if(bulkEmp){
+      // Populate employee dropdown once per render
+      bulkEmp.innerHTML = "<option value=\"\">Select employee…</option>" + buildUserOptions(users, "");
+      // Use direct handler assignment to avoid stacking multiple listeners across refreshes.
+      bulkEmp.onchange = updateBulkState;
+    }
+    if(bulkSelAll){
+      bulkSelAll.onclick = function(){
+        elAssign.querySelectorAll('input[type="checkbox"][data-cid]').forEach(function(cb){ cb.checked = true; });
+        updateBulkState();
+      };
+    }
+    if(bulkClear){
+      bulkClear.onclick = function(){
+        elAssign.querySelectorAll('input[type="checkbox"][data-cid]').forEach(function(cb){ cb.checked = false; });
+        updateBulkState();
+      };
+    }
+    if(bulkAssignBtn){
+      bulkAssignBtn.onclick = async function(){
+        var company = getCompany(); if(!company) return;
+        var uid = String(bulkEmp && bulkEmp.value || "");
+        var ids = getSelectedCommunityIds();
+        if(!uid || !ids.length) return;
+        if(elStatus) elStatus.textContent = "Assigning " + ids.length + " community" + (ids.length===1?"":"ies") + "…";
+        // Write to cloud first (preferred), then local cache.
+        if(typeof window.ensureSupabase==="function") { await window.ensureSupabase(); }
+    const sb = window.sb || null;
+    if(sb){
+          try{
+            var rows = ids.map(function(cid){ return { company: company, community_id: cid, user_id: uid }; });
+            var up = await window.sb.from("CommunityAssignments")
+              .upsert(rows, { onConflict: "user_id,community_id" });
+            if(up && up.error) throw up.error;
+          }catch(e){
+            console.warn("bulk assign failed:", e);
+            if(elStatus) elStatus.textContent = "Bulk assign failed (check permissions).";
+            return;
+          }
+        }
+        // Update local cache map
+        var akey = assignmentsKey(company);
+        var map2 = loadJSON(akey, {});
+        ids.forEach(function(cid){ map2[String(cid)] = uid; });
+        saveJSON(akey, map2);
+        if(elStatus) elStatus.textContent = "Assigned " + ids.length + " community" + (ids.length===1?"":"ies") + ".";
+        refreshAll();
+      };
+    }
+
+    // Render rows
+    var company = getCompany();
+    var communitiesById2 = {};
+    communities.forEach(function(c){ communitiesById2[String(c.id)] = c; });
+
+    communities.forEach(function(c){
+      var cid = String(c.id);
+      var assignedUid = String(map[cid]||"");
+      var row = document.createElement("div");
+      row.className = "item";
+      // left side: checkbox + name + status pill
+      var left = document.createElement("div");
+      left.style.flex = "1";
+      left.style.minWidth = "0";
+      left.style.display = "flex";
+      left.style.alignItems = "center";
+      left.style.gap = "10px";
+
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.setAttribute("data-cid", cid);
+      cb.addEventListener("change", updateBulkState);
+
+      var nameWrap = document.createElement("div");
+      nameWrap.style.minWidth = "0";
+      nameWrap.innerHTML = "<div style=\"font-weight:800;\">"+esc(c.name||"")+"</div>" +
+        "<div class=\"muted tiny\" data-assign-status></div>";
+
+      left.appendChild(cb);
+      left.appendChild(nameWrap);
+
+      // right: employee select
+      var right = document.createElement("div");
+      right.style.display = "flex";
+      right.style.alignItems = "center";
+      right.style.gap = "8px";
+
+      var sel = document.createElement("select");
+      sel.innerHTML = buildUserOptions(users, assignedUid);
+      sel.addEventListener("change", async function(){
+        var company = getCompany(); if(!company) return;
+        var uid = String(sel.value||"");
+        if(elStatus) elStatus.textContent = "Saving assignment…";
+        var ok = true;
+        if(typeof window.ensureSupabase==="function") { await window.ensureSupabase(); }
+    const sb = window.sb || null;
+    if(sb){
+          ok = await setAssignmentInCloud(company, cid, uid);
+        }
+        // Update local cache
+        var akey = assignmentsKey(company);
+        var map2 = loadJSON(akey, {});
+        if(uid) map2[cid] = uid; else delete map2[cid];
+        saveJSON(akey, map2);
+        if(elStatus) elStatus.textContent = ok ? "Assignment saved." : "Saved locally (cloud failed).";
+        refreshAll();
+      });
+
+      right.appendChild(sel);
+      row.appendChild(left);
+      row.appendChild(right);
+
+      // status pill text
+      var st = row.querySelector('[data-assign-status]');
+      if(st){
+        if(assignedUid){
+          var uu = usersById2[assignedUid] || {};
+          var nm2 = String(uu.name || uu.full_name || uu.email || 'Employee').trim();
+          var role2 = String(uu.role || '').trim();
+          var dept2 = String(uu.department || '').trim();
+          var pill2 = (role2==='Admin') ? '<span class="pill pill--admin">Admin</span>' : (dept2==='Supervisor' ? '<span class="pill">Supervisor</span>' : '<span class="pill pill--employee">Employee</span>');
+          st.innerHTML = 'Assigned: ' + esc(nm2) + ' ' + pill2;
+        }else{
+          st.innerHTML = '<span class="pill pill--warn">Unassigned</span>';
+        }
+      }
+
+      elAssign.appendChild(row);
+    });
+
+    updateBulkState();
+  }
+
+  function renderAssignmentsPreview(map, usersById, communitiesById){
+    elPreview.innerHTML = "";
+    map = map || {};
+    communitiesById = communitiesById || {};
+    var cids = Object.keys(map);
+    // Build list of unassigned communities (those present in company list but not mapped)
+    var allCids = Object.keys(communitiesById || {});
+    var unassigned = allCids.filter(function(cid){
+      var uid = String(map[cid]||"").trim();
+      return !uid;
+    }).map(function(cid){ return (communitiesById[cid] && communitiesById[cid].name) ? communitiesById[cid].name : cid; })
+      .sort(function(a,b){ return String(a).toLowerCase().localeCompare(String(b).toLowerCase()); });
+
+    if(!cids.length){
+      // No assignments yet, but we can still show unassigned if communities exist
+      if(unassigned.length){
+        elPreview.innerHTML = "<div class=\"item\"><div><strong>Unassigned</strong> <span class=\"pill pill--warn\">Needs manager</span><div class=\"muted tiny\">"+esc(unassigned.join(", "))+"</div></div></div>";
+      }else{
+        elPreview.innerHTML = "<div class=\"muted\">No assignments yet.</div>";
+      }
+      return;
+    }
+
+    // If there are some assignments, show unassigned summary first (if any)
+    if(unassigned.length){
+      var uRow = document.createElement("div");
+      uRow.className = "item";
+      uRow.innerHTML = "<div><strong>Unassigned</strong> <span class=\"pill pill--warn\">Needs manager</span><div class=\"muted tiny\">"+esc(unassigned.join(", "))+"</div></div>";
+      elPreview.appendChild(uRow);
+    }
+
+    // Invert: userId -> [communityName]
+    var byUser = {};
+    cids.forEach(function(cid){
+      var uid = String(map[cid]||"");
+      if(!uid) return;
+      if(!byUser[uid]) byUser[uid]=[];
+      var cn = (communitiesById[cid] && communitiesById[cid].name) ? communitiesById[cid].name : cid;
+      byUser[uid].push(cn);
+    });
+    var uids = Object.keys(byUser);
+    if(!uids.length){
+      elPreview.innerHTML = "<div class=\"muted\">No assignments yet.</div>";
+      return;
+    }
+    uids.sort(function(a,b){
+      var ua = usersById[a] || {};
+      var ub = usersById[b] || {};
+      var na = (ua.name || ua.full_name || ua.email || a).toLowerCase();
+      var nb = (ub.name || ub.full_name || ub.email || b).toLowerCase();
+      return na.localeCompare(nb);
+    });
+    uids.forEach(function(uid){
+      var u = usersById[uid] || { id: uid };
+      var uname = (u.name || u.full_name || u.email || uid);
+      var commNames = byUser[uid] || [];
+      var row = document.createElement("div");
+      row.className = "item";
+      var role2 = String(u.role || "").trim();
+      var dept2 = String(u.department || "").trim();
+      var pill2 = (role2==="Admin") ? "<span class=\"pill pill--admin\">Admin</span>" : (dept2==="Supervisor" ? "<span class=\"pill\">Supervisor</span>" : "<span class=\"pill pill--employee\">Employee</span>");
+      row.innerHTML = "<div><strong>"+esc(uname)+"</strong> "+pill2+"<div>"+esc(commNames.join(", "))+"</div></div>" +
+        "<button class=\"btn btn--ghost\" data-clear-user=\""+esc(uid)+"\">Clear</button>";
+      elPreview.appendChild(row);
+    });
+    elPreview.querySelectorAll("button[data-clear-user]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var uid = btn.getAttribute("data-clear-user");
+        var company = getCompany(); if(!company) return;
+        var akey = assignmentsKey(company);
+        var map2 = loadJSON(akey, {});
+        Object.keys(map2||{}).forEach(function(cid){ if(String(map2[cid]||"")===String(uid)) delete map2[cid]; });
+        saveJSON(akey, map2);
+        refreshAll();
+      });
+    });
+  }
+
+  function ensureSupervisorVisible(profile){
+  // Do not rely on cached globals (they can bleed between logins). Use the provided profile.
+  var dept = String((profile && profile.department) || "").trim();
+  var role = String((profile && profile.role) || "").trim();
+  // Only true supervisors/admins should see Supervisor Access.
+  // Avoid substring matches so normal employees don't accidentally get access.
+  var deptL = dept.toLowerCase();
+  var roleL = role.toLowerCase().replace(/\s+/g, "");
+  var isSup = (deptL === "supervisor" || roleL === "supervisor" || roleL === "admin" || roleL === "companyadmin");
+  box.style.display = isSup ? "" : "none";
+  if(hubCard) hubCard.style.display = isSup ? "" : "none";
+  if(isSup){ initAdminCompanyPicker(); refreshAll(); }
+}
+
+  // Board Members should ONLY see the Board Member Hub card.
+  // We treat role values like: "BoardMember", "Board Member", "boardmember".
+  function ensureBoardMemberHubOnly(profile){
+    var role = String((profile && profile.role) || "").trim();
+    var roleL = role.toLowerCase().replace(/\s+/g, "");
+    var isBoard = (roleL === "boardmember" || roleL === "board" || roleL === "board_member");
+    var cardsWrap = document.querySelector('.cards');
+    if(!cardsWrap) return;
+    var allCards = Array.prototype.slice.call(cardsWrap.querySelectorAll('.card'));
+    var bmCard = document.getElementById('boardMemberHubCard') || cardsWrap.querySelector('[data-card-id="board_member_hub"]');
+    var customizeBar = document.getElementById('hubCustomizeBar');
+    var hint = document.getElementById('hubCustomizeHint');
+
+    if(isBoard){
+      allCards.forEach(function(c){
+        if(bmCard && c === bmCard) c.style.display = "";
+        else c.style.display = "none";
+      });
+      if(customizeBar) customizeBar.style.display = "none";
+      if(hint) hint.style.display = "none";
+    } else {
+      // restore defaults for non-board users (except Supervisor Access which is handled elsewhere)
+      allCards.forEach(function(c){ c.style.display = ""; });
+      if(customizeBar) customizeBar.style.display = "";
+    }
+  }
+
+  
+
+  var elCompanySelect = $("sup_companySelect");
+  var elCompanyAdminPicker = document.getElementById("sup_companyAdminPicker");
+  var elCompanySetter = document.getElementById("sup_companySetter");
+  var elEmpList = document.getElementById("sup_employeeList");
+
+  function isAdmin(){
+    var auth = window.ZUMMEE_AUTH || {};
+    var role = String(auth.role || window.__zummeeUserRole || "").trim();
+    var roleL = role.toLowerCase().replace(/\s+/g, "");
+    return (roleL === "admin" || roleL === "companyadmin");
+  }
+
+  function renderCompanyOptions(companies){
+    if(!elCompanySelect) return;
+    elCompanySelect.innerHTML = '<option value="">Select a company…</option>';
+    companies.forEach(function(c){
+      var opt=document.createElement('option');
+      opt.value=c;
+      opt.textContent=c;
+      elCompanySelect.appendChild(opt);
+    });
+    var picked = String(localStorage.getItem("zummee_admin_selected_company")||"").trim();
+    if(picked) elCompanySelect.value = picked;
+  }
+
+  async function loadAllCompanies(){
+    // Match Profile page company dropdown: pull from Companies table.
+    if(!window.sb) return [];
+    try{
+      var q = await window.sb.from('Companies')
+        .select('name,active')
+        .eq('active', true)
+        .order('name', { ascending: true });
+      if(q && q.error) throw q.error;
+      var rows = (q && q.data) ? q.data : [];
+      var out = [];
+      for(var i=0;i<rows.length;i++){
+        var nm = rows[i] && rows[i].name ? String(rows[i].name) : '';
+        nm = nm.trim();
+        if(nm) out.push(nm);
+      }
+      // De-dupe defensively
+      var seen = {}; var uniq = [];
+      out.forEach(function(n){ if(!seen[n]){ seen[n]=true; uniq.push(n); } });
+      return uniq;
+    }catch(_e){
+      return [];
+    }
+  }
+
+  function renderEmployees(users, company){
+    if(!elEmpList) return;
+    elEmpList.innerHTML='';
+    if(!users.length){
+      elEmpList.innerHTML='<div class="muted">No users found for this company.</div>';
+      return;
+    }
+    users.forEach(function(u){
+      var dept=String(u.department||'').trim();
+      var role=String(u.role||'').trim();
+      var row=document.createElement('div');
+      row.className='emp';
+      var display=(u.name||u.full_name||u.email||u.id);
+      var pill = (dept==='Supervisor') ? '<span class="pill">Supervisor</span>' : '';
+      row.innerHTML = '<div class="meta"><div class="name">'+esc(display)+pill+'</div>' +
+        '<div class="sub">'+esc(u.email||'')+'</div></div>' +
+        '<div class="sup-row" style="gap:8px; justify-content:flex-end">' +
+        '<button class="btn btn--ghost" data-toggle-sup="'+esc(u.id)+'">'+(dept==='Supervisor'?'Remove Supervisor':'Make Supervisor')+'</button>' +
+        '</div>';
+      elEmpList.appendChild(row);
+    });
+    elEmpList.querySelectorAll('button[data-toggle-sup]').forEach(function(btn){
+      btn.addEventListener('click', async function(){
+        if(!window.sb) { if(elStatus) elStatus.textContent='Supervisor toggles require database connection.'; return; }
+        var uid = btn.getAttribute('data-toggle-sup');
+        var u = _usersById[String(uid)] || {};
+        var cur = String(u.department||'').trim();
+        var next = (cur==='Supervisor') ? 'Manager' : 'Supervisor';
+        if(elStatus) elStatus.textContent=(next==='Supervisor'?'Granting':'Removing') + ' Supervisor…';
+        try{
+          await window.sb.from("profiles").upsert([{ id: uid, company: company, department: next }], { onConflict: 'id' });
+        }catch(e){
+          if(elStatus) elStatus.textContent='Could not update user. Check permissions.';
+          return;
+        }
+        if(elStatus) elStatus.textContent='Updated.';
+        await refreshAll();
+      });
+    });
+  }
+
+  async function initAdminCompanyPicker(){
+    if(!elCompanyAdminPicker) return;
+    if(!isAdmin()){
+      elCompanyAdminPicker.style.display='none';
+      return;
+    }
+    elCompanyAdminPicker.style.display='';
+    var companies = await loadAllCompanies();
+    renderCompanyOptions(companies);
+  }
+var _cacheUsers = [];
+  var _usersById = {};
+  var _communities = [];
+
+  async function refreshAll(){
+    var company = getCompany();
+    var setter = elCompanySetter;
+    // Admins pick a company from the dropdown; Supervisors set their own company once.
+    if(!company){
+      if(isAdmin()){
+        if(setter) setter.style.display="none";
+        if(elCompanyAdminPicker) elCompanyAdminPicker.style.display="";
+        if(elStatus) elStatus.textContent="Select a company to manage.";
+      }else{
+        if(setter) setter.style.display="";
+        if(elStatus) elStatus.textContent="Set company to manage assignments.";
+      }
+      return;
+    }
+    if(isAdmin() && elCompanyAdminPicker) elCompanyAdminPicker.style.display="";
+    if(setter) setter.style.display = "none";
+
+    // Sync from cloud first (writes to local cache keys)
+    await syncCompanyFromCloud(company);
+
+    var commKey = companyCommunitiesKey(company);
+    _communities = loadJSON(commKey, []).map(normalizeCommunity).filter(Boolean);
+    // Keep UI consistent: sort communities alphabetically
+    _communities.sort(function(a,b){
+      var na = String((a && a.name) || "").trim().toLowerCase();
+      var nb = String((b && b.name) || "").trim().toLowerCase();
+      return na.localeCompare(nb);
+    });
+
+    var communitiesById = {};
+    _communities.forEach(function(c){ communitiesById[String(c.id)] = c; });
+
+    renderCompanyCommunities(_communities);
+
+    if(typeof window.ensureSupabase==="function") { await window.ensureSupabase(); }
+    const sb = window.sb || null;
+    if(sb){
+      try{
+        // Keep this schema-compatible: most projects store name (not full_name) and may not persist email in Profiles.
+        var q = await window.sb.from("profiles").select("*").eq("company", company);
+        _cacheUsers = (q && q.data) ? q.data : [];
+      }catch(_e){ _cacheUsers = []; }
+    }
+
+    _usersById = {};
+    _cacheUsers.forEach(function(u){ _usersById[String(u.id)] = u; });
+    // Admin-only: show employee list with Supervisor toggles
+    if(isAdmin()){
+      if(elEmpList) elEmpList.style.display='';
+      renderEmployees(_cacheUsers, company);
+    }else{
+      if(elEmpList){ elEmpList.style.display='none'; elEmpList.innerHTML=''; }
+    }
+
+    var akey = assignmentsKey(company);
+    var map = loadJSON(akey, {});
+    renderPerCommunityAssign(_communities, _cacheUsers, map);
+    renderAssignmentsPreview(map, _usersById, communitiesById);
+  }
+
+    // Admin company picker wiring
+  if(elCompanySelect){
+    elCompanySelect.addEventListener('change', function(){
+      var v = String(elCompanySelect.value||'').trim();
+      try{ localStorage.setItem('zummee_admin_selected_company', v); }catch(_e){}
+      refreshAll();
+    });
+  }
+  var btnRefreshCompanies = $("sup_refreshCompaniesBtn");
+  if(btnRefreshCompanies){
+    btnRefreshCompanies.addEventListener('click', async function(){
+      if(elStatus) elStatus.textContent='Refreshing companies…';
+      await initAdminCompanyPicker();
+      if(elStatus) elStatus.textContent='';
+      refreshAll();
+    });
+  }
+
+var btnSetCompany = $("sup_setCompanyBtn");
+  if(btnSetCompany){
+    btnSetCompany.addEventListener("click", async function(){
+      var v = String($("sup_companyInput").value||"").trim();
+      if(!v){ if(elStatus) elStatus.textContent="Enter a company name."; return; }
+      if(elStatus) elStatus.textContent="Saving company…";
+      var ok = await setCompanyName(v);
+      if(ok){
+        document.getElementById("sup_companySetter").style.display = "none";
+        if(elStatus) elStatus.textContent="Company set to " + v + ".";
+        refreshAll();
+      }else{
+        if(elStatus) elStatus.textContent="Could not set company.";
+      }
+    });
+  }
+
+  var btnAddCommunity = $("sup_addCommunityBtn");
+  if(btnAddCommunity){
+    btnAddCommunity.addEventListener("click", async function(){
+      try{
+        var company = getCompany();
+        var setter = document.getElementById("sup_companySetter");
+        if(!company){
+          if(setter) setter.style.display="";
+          if(elStatus) elStatus.textContent="Select or set a company first.";
+          return;
+        }
+        if(setter) setter.style.display="none";
+        var name = String($("sup_newCommunityName").value||"").trim();
+        if(!name){ if(elStatus) elStatus.textContent="Enter a community name."; return; }
+
+        // Cloud insert + refresh cache
+        if(elStatus) elStatus.textContent="Adding community…";
+        var ok = await addCommunityToCloud(company, name);
+        if(!ok){
+          if(elStatus) elStatus.textContent="Could not add community. Check Supabase permissions (RLS).";
+          alert("Could not add community. If this keeps happening, open DevTools > Console and share the first red error.");
+          return;
+        }
+
+        $("sup_newCommunityName").value = "";
+        if(elStatus) elStatus.textContent="Community added.";
+        await refreshAll();
+      }catch(err){
+        if(elStatus) elStatus.textContent="Add failed.";
+        alert("Add failed: " + (err && (err.message||err.error_description) ? (err.message||err.error_description) : err));
+      }
+    });
+  }
+
+  
+  var btnEditCommunity = $("sup_editCommunityBtn");
+  if(btnEditCommunity){
+    btnEditCommunity.addEventListener("click", async function(){
+      try{
+        var company = getCompany();
+        var setter = document.getElementById("sup_companySetter");
+        if(!company){
+          if(setter) setter.style.display="";
+          setStatusText("Select or set a company first.");
+          return;
+        }
+        if(!_selectedCommunityId){
+          setStatusText("Select a community from the list to edit.");
+          return;
+        }
+        var id = _selectedCommunityId;
+        var current = _selectedCommunityName;
+        var proposed = String($("sup_newCommunityName").value||"").trim();
+        var newName = proposed || prompt("Rename community:", current);
+        if(newName === null) return; // cancelled
+        newName = String(newName||"").trim();
+        if(!newName){ alert("Enter a community name."); return; }
+        if(newName === current){ setStatusText("No changes."); return; }
+
+        // Prevent duplicates
+        var key = companyCommunitiesKey(company);
+        var list0 = loadJSON(key, []);
+        var dup = (list0||[]).some(function(c){ return String(c.id)!==String(id) && String(c.name||"").trim().toLowerCase()===newName.toLowerCase(); });
+        if(dup){ alert("A community with that name already exists for this company."); return; }
+
+        setStatusText("Renaming…");
+        await doRenameCommunity(company, id, current, newName);
+        setSelectedCommunity(id, newName);
+        $("sup_newCommunityName").value = newName;
+        refreshAll();
+      }catch(e){
+        console.warn("Edit community failed:", e);
+        setStatusText("Rename failed.");
+        alert("Could not rename community. Check permissions (RLS) and try again.");
+      }
+    });
+  }
+
+// Assign per-community: on change, persist { communityId: userId }
+  if(elAssign){
+    elAssign.addEventListener("change", async function(e){
+      var tgt = e && e.target;
+      if(!tgt || !tgt.matches || !tgt.matches("select[data-community]")) return;
+      var company = getCompany();
+      var setter = document.getElementById("sup_companySetter");
+      if(!company){ if(setter) setter.style.display=""; if(elStatus) elStatus.textContent="Set company to manage assignments."; return; }
+      if(setter) setter.style.display="none";
+      var cid = String(tgt.getAttribute("data-community")||"");
+      var uid = String(tgt.value||"");
+
+      if(elStatus) elStatus.textContent="Saving…";
+      var ok = await setAssignmentInCloud(company, cid, uid || "");
+      if(!ok){ if(elStatus) elStatus.textContent="Could not save assignment."; return; }
+
+      // Update local cache immediately for UI + legacy pages
+      var akey = assignmentsKey(company);
+      var map = loadJSON(akey, {});
+      if(uid){ map[cid]=uid; } else { delete map[cid]; }
+      try{ saveJSON(akey, map); }catch(_e){}
+      if(elStatus) elStatus.textContent="Saved.";
+
+      try{ window.dispatchEvent(new CustomEvent("communities:updated", { detail: { userId: uid } })); }catch(_e){}
+      await refreshAll();
+    });
+  }
+
+  // Show/hide based on profile department
+  window.addEventListener("profile:loaded", function(ev){
+    var d = (ev && ev.detail) || {};
+    var dept = String((window.__zummeeProfile && window.__zummeeProfile.department) || "").trim();
+    if(!dept && window.__zummeeUserDepartment) dept = String(window.__zummeeUserDepartment).trim();
+
+    (async function(){
+      try{
+        var company = String(d.company||"").trim();
+        if(window.sb && d.userId){
+          var q = await window.sb.from("profiles").select("*").eq("id", d.userId).maybeSingle();
+          if(q && q.data){
+            window.__zummeeCompany = (q.data.company||company||"").trim();
+            window.__zummeeUserDepartment = (q.data.department||"").trim();
+            ensureSupervisorVisible({ department: window.__zummeeUserDepartment, role: window.__zummeeUserRole });
+            ensureBoardMemberHubOnly({ role: window.__zummeeUserRole, department: window.__zummeeUserDepartment });
+          } else {
+            ensureSupervisorVisible({ department: dept, role: window.__zummeeUserRole });
+            ensureBoardMemberHubOnly({ role: window.__zummeeUserRole, department: dept });
+          }
+        } else {
+          ensureSupervisorVisible({ department: dept, role: window.__zummeeUserRole });
+          ensureBoardMemberHubOnly({ role: window.__zummeeUserRole, department: dept });
+        }
+      }catch(_e){
+        ensureSupervisorVisible({ department: dept, role: window.__zummeeUserRole });
+        ensureBoardMemberHubOnly({ role: window.__zummeeUserRole, department: dept });
+      }
+    })();
+  });
+// ---- Supervisor Access: tabs (Assignments / Employees / Current) ----
+function initSupervisorTabs(){
+  var box = document.getElementById('supervisorBox');
+  if(!box) return;
+  var tabs = Array.prototype.slice.call(box.querySelectorAll('.sup-tab'));
+  if(!tabs.length) return;
+
+  var panels = {
+    assign: document.getElementById('sup_tab_assign'),
+    employees: document.getElementById('sup_tab_employees'),
+    current: document.getElementById('sup_tab_current')
+  };
+
+  function activate(name){
+    tabs.forEach(function(t){
+      var on = (t.getAttribute('data-sup-tab') === name);
+      t.classList.toggle('is-active', on);
+    });
+    Object.keys(panels).forEach(function(k){
+      if(!panels[k]) return;
+      panels[k].style.display = (k === name) ? '' : 'none';
+    });
+  }
+
+  tabs.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      activate(btn.getAttribute('data-sup-tab'));
+    });
+  });
+
+  // Default tab
+  activate('assign');
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  setTimeout(initSupervisorTabs, 0);
+});
+
+})();
+</script>
+
+  </div>
+<script>
+(() => {
+  function applyTagline(){
+    const el = document.querySelector(".zummee-header__subtitle");
+    if(!el) return;
+    // Store full text once
+    if(!el.dataset.fullText) el.dataset.fullText = (el.textContent || "").trim();
+    // Default short text (you can change this later)
+    const shortText = el.dataset.shortText || "Property Assistant";
+    const isMobile = window.matchMedia("(max-width: 640px)").matches;
+    el.textContent = isMobile ? shortText : el.dataset.fullText;
+    el.classList.remove("zummee-tagline-animate");
+    // reflow to restart animation
+    void el.offsetWidth;
+    el.classList.add("zummee-tagline-animate");
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    applyTagline();
+    window.addEventListener("resize", () => {
+      // Debounce-ish
+      clearTimeout(window.__zummeeTaglineT);
+      window.__zummeeTaglineT = setTimeout(applyTagline, 120);
+    });
+  });
+})();
+</script>
+
+<script>
+(() => {
+  function safeParse(raw){ try { return JSON.parse(raw); } catch(e){ return null; } }
+  function hashToHue(str){
+    let h = 0;
+    for(let i=0;i<str.length;i++){ h = (h*31 + str.charCodeAt(i)) >>> 0; }
+    return h % 360;
+  }
+  function getAccent(seed){
+    const hue = hashToHue(seed || "community");
+    // Pleasant, brand-consistent blue-green range
+    const base = 190 + (hue % 70); // 190-259
+    return {
+      bg: `hsl(${base} 55% 78%)`,
+      border: `hsl(${base} 55% 55%)`
+    };
+  }
+
+  function getSelectedCommunity(){
+    const commKey = (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.COMMUNITIES_KEY) || window.COMMUNITIES_KEY || "zummee_communities_v1";
+    const selKey = (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.SELECTED_COMMUNITY_KEY) || window.SELECTED_COMMUNITY_KEY || "zummee_selected_community_v1";
+    let selectedId = "";
+    try { selectedId = localStorage.getItem(selKey) || ""; } catch(e) {}
+    let list = [];
+    try { list = safeParse(localStorage.getItem(commKey) || "[]") || []; } catch(e) {}
+    const match = list.find(c => c && (c.id === selectedId || c.name === selectedId));
+    return match || (selectedId ? { id:selectedId, name:selectedId } : null);
+  }
+
+  function applyAccent(){
+    const sw = document.getElementById("zummeeCommunitySwatch");
+    const select = document.getElementById("zummeeCommunitySelect");
+    const c = getSelectedCommunity();
+
+    if(!c){
+      document.documentElement.style.removeProperty("--communityAccent");
+      document.documentElement.style.removeProperty("--communityAccentBorder");
+      if(sw) sw.style.background = "#ffffff";
+      return;
+    }
+
+    const seed = String(c.id || c.name || "");
+    const a = getAccent(seed);
+    document.documentElement.style.setProperty("--communityAccent", a.bg);
+    document.documentElement.style.setProperty("--communityAccentBorder", a.border);
+    if(sw) sw.style.background = a.bg;
+
+    // Add a dot to each option label (cross-browser).
+    if(select){
+      Array.from(select.options || []).forEach(opt => {
+        if(!opt) return;
+        const baseText = (opt.dataset.baseText || opt.textContent || "").replace(/^●\s+/, "");
+        opt.dataset.baseText = baseText;
+        opt.textContent = "● " + baseText;
+        // Some browsers ignore option background; harmless where unsupported.
+        const ao = getAccent(opt.value || baseText);
+        opt.style.backgroundColor = ao.bg;
+        opt.style.color = "#0f2f4a";
+      });
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    applyAccent();
+
+    const select = document.getElementById("zummeeCommunitySelect");
+    if(select){
+      select.addEventListener("change", () => setTimeout(applyAccent, 0));
+    }
+
+    // If other scripts repopulate the dropdown a moment later.
+    setTimeout(applyAccent, 250);
+  });
+})();
+</script>
+
+<script>
+(function(){
+  if(window.__zummeeMergeAssignedOnce) return;
+  window.__zummeeMergeAssignedOnce = true;
+  window.addEventListener("profile:loaded", function(ev){
+    try{
+      var d = (ev && ev.detail) || {};
+      if(window.ZUMMEE_mergeAssignedCommunities){
+        window.ZUMMEE_mergeAssignedCommunities(d.userId || d.id, d.company || d.companyName || "");
+      }
+    }catch(_e){}
+  });
+})();
+</script>
+
+
+<script>
+/* HUB_LONGPRESS_REORDER */
+(function(){
+  function onReady(fn){
+    if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", fn);
+    else fn();
+  }
+  onReady(function(){
+    // Use existing hub customize functions if present
+    var setCustomize = null;
+    try{
+      // setCustomize is inside the hub script scope; but we can trigger the hidden toggle by simulating click if it exists
+      var toggleBtn = document.getElementById("hubCustomizeToggle");
+      // fallback: add a hidden toggle button if script created one, otherwise we rely on body class toggling via click handlers
+      function toggle(){
+        if(toggleBtn) { toggleBtn.click(); return; }
+        // If no toggle button exists, try toggling body class only (drag will be enabled by existing script when on)
+        document.body.classList.toggle("hub-customize");
+      }
+
+      var HOLD_MS = 550;
+      var t = null;
+      function start(){ cancel(); t = setTimeout(toggle, HOLD_MS); }
+      function cancel(){ if(t){ clearTimeout(t); t=null; } }
+
+      var cards = document.querySelectorAll(".cards .card[data-card-id]");
+      cards.forEach(function(card){
+        card.addEventListener("touchstart", start, {passive:true});
+        card.addEventListener("touchend", cancel);
+        card.addEventListener("touchmove", cancel);
+        card.addEventListener("touchcancel", cancel);
+
+        card.addEventListener("mousedown", start);
+        card.addEventListener("mouseup", cancel);
+        card.addEventListener("mouseleave", cancel);
+      });
+    }catch(_e){}
+  });
+})();
+</script>
+
+
+<script>
+  // Clear cached hub order so removed cards cannot reappear
+  try{
+    localStorage.removeItem("hubCardOrder");
+    localStorage.removeItem("hubOrder");
+  }catch(e){}
+</script>
+
+
+
+
+
+
+<!-- ZUMMEE PATCH v510: Force Manager Hub Add -> Supabase POST -->
+
+
+
+<!-- ZUMMEE PATCH v511: Hard override Manager Hub Add click -->
+
+
+<script>
+/* Supervisor card visibility: hidden by default, show instantly for cached privileged users, then confirm with profile. */
+document.addEventListener("DOMContentLoaded", () => {
+  const card = document.getElementById("supervisorHubCard");
+  if (!card) return;
+
+  const isPriv = (p) => {
+    const role = String(p?.role || p?.user_role || p?.access_level || p?.access || "").toLowerCase().trim();
+    const dept = String(p?.department || p?.dept || "").toLowerCase().trim();
+    const authRole = String(window?.ZUMMEE_AUTH?.role || "").toLowerCase().trim();
+    const authDept = String(window?.ZUMMEE_AUTH?.department || "").toLowerCase().trim();
+    const s = [role, dept, authRole, authDept].filter(Boolean).join(" ");
+    const flag = !!(p?.is_supervisor || p?.is_admin || p?.is_companyadmin);
+    return flag || /\b(companyadmin|admin|supervisor)\b/.test(s) || /(company\s*admin)/.test(s);
+  };
+
+  // Start hidden (CSS), but show immediately if we already know user is privileged from cached state.
+  const cachedProfile = window.__zummeeProfile || window.__profile || null;
+  if (isPriv(cachedProfile || {})) {
+    card.classList.add("zummee-allow");
+    card.style.display = "";
+  } else if (isPriv({})) {
+    // Covers the case where ZUMMEE_AUTH already carries role/department
+    card.classList.add("zummee-allow");
+    card.style.display = "";
+  } else {
+    card.style.display = "none";
+  }
+
+  // Confirm with fresh profile (async) and correct visibility.
+  (async () => {
+    let profile = null;
+    for (let i = 0; i < 6; i++) {
+      try {
+        if (typeof window.getProfile === "function") profile = await window.getProfile();
+        else profile = window.__zummeeProfile || window.__profile || null;
+      } catch (e) {
+        profile = null;
+      }
+      if (profile && (profile.role || profile.department || profile.dept || profile.user_role || profile.access_level || profile.access || profile.is_supervisor || profile.is_admin || profile.is_companyadmin)) break;
+      await new Promise(r => setTimeout(r, 120));
+    }
+
+    try {
+      if (isPriv(profile || {})) {
+        card.classList.add("zummee-allow");
+        card.style.display = "";
+      } else {
+        card.classList.remove("zummee-allow");
+        card.style.display = "none";
+      }
+    } catch (e) {
+      console.warn("Supervisor card role check failed:", e);
+      card.classList.remove("zummee-allow");
+      card.style.display = "none";
+    }
+  })();
+});
+</script>
+
+<script>
+/* v530 CLEAN: Manager Hub Add Community -> real Supabase insert into PropertyCommunities.
+   - CompanyAdmin/Admin/Supervisor choose an Active Company once; remembered in localStorage.
+   - Employees should not use this button (UI already hides/guards).
+*/
+(function(){
+  function isPriv(profile){
+    const role = String(profile?.role||"").toLowerCase().trim();
+    const dept = String(profile?.department||profile?.dept||"").toLowerCase().trim();
+    return ["companyadmin","admin","supervisor"].includes(role) || ["companyadmin","admin","supervisor"].includes(dept);
+  }
+
+  async function ensureSB(){
+    if(!window.sb && typeof window.ensureSupabase === "function"){
+      await window.ensureSupabase();
+    }
+    return window.sb;
+  }
+
+  async function fetchCompanies(){
+    const sb = await ensureSB();
+    if(!sb) throw new Error("Supabase not initialized");
+    // Try both table casings
+    let res = await sb.from("Companies").select("id,name").order("name", {ascending:true});
+    if(res.error){
+      res = await sb.from("companies").select("id,name").order("name", {ascending:true});
+    }
+    if(res.error) throw res.error;
+    return res.data || [];
+  }
+
+  async function getActiveCompany(profile){
+    // 1) profile.company_id if present
+    if(profile?.company_id) return { id: profile.company_id, name: profile.company || profile.company_name || "" };
+
+    // 2) remembered selection
+    const savedId = localStorage.getItem("zummee_active_company_id") || "";
+    const savedName = localStorage.getItem("zummee_active_company_name") || "";
+    if(savedId) return { id: savedId, name: savedName };
+
+    // 3) prompt once
+    const companies = await fetchCompanies();
+    if(!companies.length) throw new Error("No companies found");
+
+    const menu = companies.map((c,i)=>`${i+1}) ${c.name}`).join("\n");
+    const pick = prompt("Select Active Company (enter number):\n\n"+menu);
+    const n = Number(String(pick||"").trim());
+    if(!Number.isFinite(n) || n<1 || n>companies.length) return null;
+
+    const chosen = companies[n-1];
+    localStorage.setItem("zummee_active_company_id", chosen.id);
+    localStorage.setItem("zummee_active_company_name", chosen.name);
+    return { id: chosen.id, name: chosen.name };
+  }
+
+  async function addCommunityCloud(){
+    const profile = (typeof window.getProfile === "function") ? await window.getProfile() : (window.__zummeeProfile || window.__profile || null);
+    if(!profile) return alert("Profile unavailable.");
+
+    if(!isPriv(profile)) return alert("Access denied.");
+
+    const active = await getActiveCompany(profile);
+    if(!active?.id) return; // user canceled
+
+    const raw = prompt("New Community Name:");
+    const name = (raw||"").trim();
+    if(!name) return;
+
+    const sb = await ensureSB();
+    if(!sb) return alert("Supabase not initialized.");
+
+    const payload = {
+      name,
+      company_id: active.id,
+      company: active.name || profile.company || profile.company_name || ""
+    };
+
+    const { error } = await sb.from("PropertyCommunities").insert([payload]);
+    if(error){
+      console.error("PropertyCommunities insert failed:", error);
+      alert("Could not create community. Check Console for details.");
+      return;
+    }
+
+    // Refresh view
+    location.reload();
+  }
+
+  // Expose a single canonical entrypoint so any legacy code that calls
+  // addCommunity() will go through the cloud insert path.
+  window.addCommunity = addCommunityCloud;
+
+  // Belt-and-suspenders: intercept Add clicks in the capture phase so
+  // no previously-registered legacy handlers can swallow the click.
+  document.addEventListener("click", (e)=>{
+    const t = e.target;
+    if(t && t.id === "zummeeCommunityAdd"){
+      try{ e.preventDefault(); }catch(_e){}
+      try{ e.stopImmediatePropagation(); }catch(_e){}
+      addCommunityCloud();
+    }
+  }, true);
+
+  document.addEventListener("DOMContentLoaded", ()=>{
+    const btn = document.getElementById("zummeeCommunityAdd");
+    if(!btn) return;
+
+    // IMPORTANT: The Add button already has legacy addEventListener handlers attached earlier in page load.
+    // If we simply add another listener, the earlier capture/bubble listeners may still run first.
+    // To guarantee our Supabase POST runs (and ONLY our handler), we replace the node with a clone.
+    const clone = btn.cloneNode(true);
+    btn.parentNode.replaceChild(clone, btn);
+
+    clone.onclick = (e)=>{
+      try{ e.preventDefault(); }catch(_e){}
+      addCommunityCloud();
+    };
+
+    // Also intercept clicks in capture phase to prevent any earlier legacy
+    // addEventListener handlers from running.
+    clone.addEventListener('click', (ev)=>{
+      try{
+        ev.preventDefault();
+        ev.stopPropagation();
+        ev.stopImmediatePropagation();
+      }catch(_e){}
+      addCommunityCloud();
+    }, true);
+  });
+})();
+</script>
+
+
+<!-- v933: Unified Sign out modal -->
+<div id="zum_signOutModal" class="zum-modal-backdrop">
+  <div class="zum-modal" role="dialog" aria-modal="true" aria-labelledby="zum_signOutTitle">
+    <div class="zum-modal-title" id="zum_signOutTitle">Sign out</div>
+    <div class="zum-modal-body">Are you sure you want to sign out?</div>
+    <div class="zum-modal-actions">
+      <button class="zum-btn secondary" type="button" id="zum_signOutCancel">Cancel</button>
+      <button class="zum-btn primary" type="button" id="zum_signOutOk">Sign out</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+// v933: unified sign-out modal helpers
+(function(){
+  function qs(id){ return document.getElementById(id); }
+  window.zumOpenSignOutModal = function(){
+    const m = qs('zum_signOutModal'); if(!m) return;
+    m.style.display='flex';
+    setTimeout(()=>{ try{ qs('zum_signOutOk')?.focus?.(); }catch(_e){} }, 20);
+  };
+  window.zumCloseSignOutModal = function(){
+    const m = qs('zum_signOutModal'); if(!m) return;
+    m.style.display='none';
+  };
+  
+  // v1003: robust button bindings (prevents "popup OK button not working")
+  function bindSignOutModal(){
+    const m = qs('zum_signOutModal');
+    const ok = qs('zum_signOutOk');
+    const cancel = qs('zum_signOutCancel');
+    if(ok && !ok.__zum_bound){
+      ok.__zum_bound = true;
+      ok.addEventListener('pointerdown', (ev)=>{ try{ ev.preventDefault(); ev.stopPropagation(); ev.stopImmediatePropagation(); }catch(_e){} }, true);
+      ok.addEventListener('click', async (ev)=>{
+        try{ ev.preventDefault(); ev.stopPropagation(); ev.stopImmediatePropagation(); }catch(_e){}
+        try{ window.zumCloseSignOutModal && window.zumCloseSignOutModal(); }catch(_e){}
+        try{ await (window.zummeePerformSignOut ? window.zummeePerformSignOut() : null); }catch(_e){}
+      }, true);
+    }
+    if(cancel && !cancel.__zum_bound){
+      cancel.__zum_bound = true;
+      cancel.addEventListener('pointerdown', (ev)=>{ try{ ev.preventDefault(); ev.stopPropagation(); ev.stopImmediatePropagation(); }catch(_e){} }, true);
+      cancel.addEventListener('click', (ev)=>{
+        try{ ev.preventDefault(); ev.stopPropagation(); ev.stopImmediatePropagation(); }catch(_e){}
+        try{ window.zumCloseSignOutModal && window.zumCloseSignOutModal(); }catch(_e){}
+      }, true);
+    }
+    if(m && !m.__zum_bound){
+      m.__zum_bound = true;
+      m.addEventListener('pointerdown', (ev)=>{ /* block click-through */ try{ ev.stopPropagation(); }catch(_e){} }, true);
+      m.addEventListener('click', (ev)=>{
+        const t = ev.target;
+        if(t && t.id === 'zum_signOutModal'){
+          try{ ev.preventDefault(); ev.stopPropagation(); }catch(_e){}
+          try{ window.zumCloseSignOutModal && window.zumCloseSignOutModal(); }catch(_e){}
+        }
+      }, true);
+    }
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', bindSignOutModal);
+  }else{
+    bindSignOutModal();
+  }
+
+document.addEventListener('click', (ev)=>{
+    const t = ev.target;
+    const m = qs('zum_signOutModal');
+    if(!m || m.style.display!=='flex') return;
+    if(t && (t.id==='zum_signOutCancel')){ window.zumCloseSignOutModal(); return; }
+    if(t && (t.id==='zum_signOutOk')){ window.zumCloseSignOutModal(); try{ window.zummeePerformSignOut && window.zummeePerformSignOut(); }catch(_e){} return; }
+    if(t && t.id==='zum_signOutModal'){ window.zumCloseSignOutModal(); return; }
+  });
+  document.addEventListener('keydown',(ev)=>{
+    const m = qs('zum_signOutModal');
+    if(!m || m.style.display!=='flex') return;
+    if(ev.key==='Escape'){ window.zumCloseSignOutModal(); }
+  });
+})();
+
+</script>
+
+<script>
+// v955: Add community button id alias (supports sup_addCommunityBtn and sup_addCommunityBtn)
+(function(){
+  function wire(){
+    var a = document.getElementById('sup_addCommunityBtn');
+    var b = document.getElementById('sup_addCommunityBtn');
+    if(a && b && a!==b){
+      b.addEventListener('click', function(ev){
+        try{ ev.preventDefault(); ev.stopPropagation(); }catch(e){}
+        a.click();
+      });
+    }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', wire);
+  else wire();
+})();
+</script>
+
+
+<script>
+(function(){
+  function makeCardNavigate(cardId, href){
+    const card = document.getElementById(cardId);
+    if(!card) return;
+    card.style.cursor = "pointer";
+    // If there's already a button link inside, keep it working.
+    card.addEventListener("click", function(e){
+      // allow normal link clicks
+      const a = e.target && e.target.closest ? e.target.closest("a") : null;
+      if(a) return;
+      window.location.href = href;
+    });
+  }
+  document.addEventListener("DOMContentLoaded", function(){
+    makeCardNavigate("boardMemberHubCard", "board_member_hub.html");
+  });
+})();
+</script>
+
+<script>
+// v1140: Board Member Hub card attention rules
+// Red when (A) there are ANY open Board Member action items OR (B) there are ANY overdue items.
+(function(){
+  function safeGetLS(k){ try{ return String(localStorage.getItem(k)||'').trim(); }catch(_e){ return ''; } }
+  function getActiveCommunityId(){
+    return safeGetLS('zummee_selected_community_id') || safeGetLS('activeCommunityId') || safeGetLS('zummee_community_id');
+  }
+
+  function normalizeStatus(s){
+    return String(s||'').trim().toLowerCase();
+  }
+
+  function isCompleteRow(r){
+    // Consider complete if completed_at is set OR status is complete-ish OR legacy marker exists in details.
+    try{
+      if(r && r.completed_at) return true;
+      var st = normalizeStatus(r && r.status);
+      if(st && ['complete','completed','closed','done','resolved'].includes(st)) return true;
+      var details = String((r && r.details) || '');
+      if(/__ZUMMEE_BM_STATUS__:\s*COMPLETE\|/i.test(details)) return true;
+    }catch(_e){}
+    return false;
+  }
+
+  function isOverdueRow(r){
+    try{
+      if(isCompleteRow(r)) return false;
+      if(!r || !r.due_date) return false;
+      // due_date comes back as YYYY-MM-DD
+      var due = new Date(String(r.due_date) + 'T00:00:00');
+      if(isNaN(due.getTime())) return false;
+      var now = new Date();
+      // Compare by local date only
+      var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      return due < today;
+    }catch(_e){}
+    return false;
+  }
+
+  function ensureStyles(){
+    if(document.getElementById('bmHubAlertStyles')) return;
+    var s = document.createElement('style');
+    s.id = 'bmHubAlertStyles';
+    s.textContent = "\n"+
+      "#boardMemberHubCard.bm-alert{ background: rgba(220, 38, 38, 0.14) !important; border-color: rgba(220, 38, 38, 0.45) !important; }\n"+
+      "#boardMemberHubCard .bm-alert-badge{ display:inline-block; margin-left:10px; padding:2px 10px; border-radius:999px; font-size:12px; font-weight:900; background: rgba(220, 38, 38, 0.18); border:1px solid rgba(220, 38, 38, 0.45); }\n"+
+      // Daily Ops card has a strong blue inset glow by default; override it so the alert is visually obvious.
+      "#dailyOpsCard.ops-alert{ background: linear-gradient(135deg, rgba(255, 228, 228, 0.95), rgba(255, 214, 214, 0.92)) !important; "+
+      "box-shadow: inset 0 0 0 var(--hubGlowWidth) rgba(220, 38, 38, 0.70), 0 12px 28px rgba(220, 38, 38, 0.18) !important; }\n"+
+      "#dailyOpsCard.ops-alert:hover{ box-shadow: inset 0 0 0 var(--hubGlowWidth) rgba(220, 38, 38, 0.85), 0 16px 34px rgba(220, 38, 38, 0.22) !important; }\n"+
+      "#dailyOpsCard .ops-alert-badge{ display:inline-block; margin-left:10px; padding:2px 10px; border-radius:999px; font-size:12px; font-weight:900; background: rgba(220, 38, 38, 0.18); color: #b91c1c; border:1px solid rgba(220, 38, 38, 0.35); }\n";
+    document.head.appendChild(s);
+  }
+
+  function ensureBadgeEl(card){
+    var existing = card.querySelector('.bm-alert-badge');
+    if(existing) return existing;
+    // Try to attach near the title if present
+    var titleEl = card.querySelector('.title') || card.querySelector('h2') || card.querySelector('h3') || card;
+    var badge = document.createElement('span');
+    badge.className = 'bm-alert-badge';
+    badge.style.display = 'none';
+    badge.textContent = '';
+    titleEl.appendChild(badge);
+    return badge;
+  }
+
+  function setCardState(openCount, overdueCount){
+    var card = document.getElementById('boardMemberHubCard');
+    if(!card) return;
+    ensureStyles();
+
+    var badge = ensureBadgeEl(card);
+    var isAlert = (openCount > 0) || (overdueCount > 0);
+
+    if(isAlert){
+      card.classList.add('bm-alert');
+      var parts = [];
+      if(openCount > 0) parts.push("Open " + openCount);
+      if(overdueCount > 0) parts.push("Overdue " + overdueCount);
+      badge.textContent = parts.join(" • ");
+      badge.style.display = 'inline-block';
+    }else{
+      card.classList.remove('bm-alert');
+      badge.textContent = '';
+      badge.style.display = 'none';
+    }
+  }
+
+  async function refreshBoardMemberHubAttention(){
+    var card = document.getElementById('boardMemberHubCard');
+    if(!card) return;
+    if(!window.sb){ setCardState(0,0); return; }
+
+    var communityId = getActiveCommunityId();
+    if(!communityId){ setCardState(0,0); return; }
+
+    try{
+      var q = await window.sb
+        .from('BoardMemberActionItems')
+        .select('id,details,status,completed_at,due_date')
+        .eq('community_id', communityId)
+        .limit(500);
+
+      if(q && q.error) throw q.error;
+      var rows = (q && q.data) ? q.data : [];
+
+      var openCount = 0;
+      var overdueCount = 0;
+
+      for(var i=0;i<rows.length;i++){
+        var r = rows[i] || {};
+        if(!isCompleteRow(r)){
+          openCount++;
+          if(isOverdueRow(r)) overdueCount++;
+        }
+      }
+
+      setCardState(openCount, overdueCount);
+    }catch(_e){
+      setCardState(0,0);
+    }
+  }
+
+  function schedule(){
+    refreshBoardMemberHubAttention();
+    document.addEventListener('community:changed', function(){
+      setTimeout(refreshBoardMemberHubAttention, 150);
+    });
+    setInterval(refreshBoardMemberHubAttention, 60000);
+  }
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', schedule);
+  else schedule();
+})();
+
+
+// Daily Ops Non-Negotiables attention: turn Daily Ops card red until today's non-negotiables are marked complete.
+  (function(){
+    var NONNEG_TEMPLATE_KEY = "zummee_nonnegotiables_template_v1";
+    var NONNEG_COMPLETION_TABLE = "daily_ops_nonneg_completion";
+    var NONNEG_COMPLETION_KEY = "zummee_nonneg_completion_mark_v1";
+
+    function getDateKeyLocal(){
+      try{
+        var d = new Date();
+        var y = d.getFullYear();
+        var m = String(d.getMonth()+1).padStart(2,'0');
+        var day = String(d.getDate()).padStart(2,'0');
+        return y + "-" + m + "-" + day;
+      }catch(_e){ return ""; }
+    }
+
+    async function getNonNegTemplateCount(){
+      // Cloud-first: count active Non-Neg template items from structured table.
+      var countSup = 0;
+      try{
+        var sb = await ensureSupabase();
+        var companyId = (window.activeCompanyId || localStorage.getItem("activeCompanyId") || "").trim();
+        if(sb && companyId){
+          var q = await sb
+            .from("daily_ops_template_items")
+            .select("id", { count: "exact", head: true })
+            .eq("company_id", companyId)
+            .eq("template_type", "nonneg")
+            .eq("is_active", true);
+          if(q && !q.error){
+            countSup = (typeof q.count === "number") ? q.count : 0;
+          }
+        }
+      }catch(_e){ /* fall back */ }
+
+      if(countSup > 0) return countSup;
+
+      // Fallback: legacy localStorage-only template (device-scoped).
+      try{
+        var raw = localStorage.getItem(NONNEG_TEMPLATE_KEY);
+        if(!raw) return 0;
+        var arr = JSON.parse(raw);
+        if(!Array.isArray(arr)) return 0;
+        var seen = {};
+        var n = 0;
+        for(var i=0;i<arr.length;i++){
+          var s = String(arr[i]||"").trim();
+          if(!s) continue;
+          if(seen[s]) continue;
+          seen[s]=1;
+          n++;
+        }
+        return n;
+      }catch(_e2){ return 0; }
+    }
+
+    function setDailyOpsCardState(needsAttention){
+      var card = document.getElementById("dailyOpsCard");
+      if(!card) return;
+      ensureStyles();
+      if(needsAttention){
+        card.classList.add("ops-alert");
+      }else{
+        card.classList.remove("ops-alert");
+      }
+    }
+
+    async function isCompletedToday(){
+      var templateCount = await getNonNegTemplateCount();
+      if(templateCount <= 0) return true; // nothing required => no attention
+      var dateKey = getDateKeyLocal();
+      if(!dateKey) return true;
+
+      // First: use the local Daily Ops state (daily_ops_manager_v9) to determine whether today's Non-Negotiables are completed.
+      // This reflects the actual checkboxes the user sees in ops.html and avoids "sticky complete" markers.
+      try{
+        var baseKey = "daily_ops_manager_v9";
+        var uidLocal = "";
+        var cidLocal = "";
+        try{
+          uidLocal = (window.ZummeeAuth && typeof window.ZummeeAuth.getUserId === "function") ? (window.ZummeeAuth.getUserId()||"") : "";
+          cidLocal = (window.ZummeeAuth && typeof window.ZummeeAuth.getSelectedCommunityId === "function") ? (window.ZummeeAuth.getSelectedCommunityId()||"") : "";
+        }catch(_e){}
+        cidLocal = cidLocal || (localStorage.getItem("activeCommunityId")||localStorage.getItem("zummee_selected_community_id")||"");
+        uidLocal = uidLocal || (localStorage.getItem("activeUserId")||localStorage.getItem("auth_user_id")||"");
+
+        var candidates = [];
+        if(uidLocal && cidLocal) candidates.push(baseKey + "::" + uidLocal + "::" + cidLocal);
+        if(uidLocal) candidates.push(baseKey + "::" + uidLocal);
+        if(cidLocal) candidates.push(baseKey + "::" + cidLocal);
+        candidates.push(baseKey);
+
+        var rawState = null;
+        for(var i=0;i<candidates.length;i++){
+          var r = null;
+          try{ r = localStorage.getItem(candidates[i]); }catch(_e2){ r=null; }
+          if(r){ rawState = r; break; }
+        }
+
+        if(rawState){
+          var st = JSON.parse(rawState);
+          var bucket = st && st.meta && st.meta.nonNegDoneByDate ? st.meta.nonNegDoneByDate[dateKey] : null;
+          if(bucket && typeof bucket === "object"){
+            var doneCount = 0;
+            for(var k in bucket){ if(bucket[k]) doneCount++; }
+            // If we have local completion info, use it as the source of truth.
+            return doneCount >= templateCount;
+          }
+        }
+      }catch(_eLocal){ /* ignore and fall through */ }
+
+
+      try{
+        // Cloud-first structured completion: compare completed count vs template count.
+        var sb = await ensureSupabase();
+        var uid = await requireUid();
+        window.__zummee_uid_cached = uid;
+        var companyId = (window.activeCompanyId || localStorage.getItem("activeCompanyId") || "").trim();
+        if(!companyId) return true;
+        var q = await sb
+          .from("daily_ops_item_completion")
+          .select("id", { count: "exact", head: true })
+          .eq("company_id", companyId)
+          .eq("user_id", uid)
+          .eq("day", dateKey);
+        if(q && q.error) throw q.error;
+        var doneCount = (typeof q.count === "number") ? q.count : 0;
+        return doneCount >= templateCount;
+      }catch(_e){
+        // If we cannot check Supabase (table missing/RLS/etc.), fall back to the local marker written by ops.html.
+        try{
+          var raw = localStorage.getItem(NONNEG_COMPLETION_KEY) || "{}";
+          var obj = JSON.parse(raw);
+          var bucket = (obj && obj[dateKey]) ? obj[dateKey] : null;
+          if(!bucket || typeof bucket !== 'object') return false;
+
+          // Get best-effort identity (uid/email). Prefer Supabase auth if available on this page.
+          var uid2 = (window.__zummee_uid_cached || "").trim();
+          var email2 = "";
+          try{
+            var sb2 = await ensureSupabase();
+            if(sb2 && sb2.auth && typeof sb2.auth.getUser === "function"){
+              var u2 = await sb2.auth.getUser();
+              uid2 = uid2 || (u2 && u2.data && u2.data.user && u2.data.user.id ? String(u2.data.user.id) : "");
+              email2 = (u2 && u2.data && u2.data.user && u2.data.user.email) ? String(u2.data.user.email) : "";
+            }
+          }catch(_eAuth){}
+          email2 = email2 || ((window.sessionUser && window.sessionUser.email) || (window.__sessionUser && window.__sessionUser.email) || "").trim();
+
+          if(uid2 && bucket[uid2] && bucket[uid2].completed_at) return true;
+          if(email2 && bucket[email2] && bucket[email2].completed_at) return true;
+
+          // As a last resort (single-user device), treat any completion marker for today as complete.
+          // This prevents the hub from staying red when the user just completed in ops.html but identity keys differ.
+          for(var k in bucket){
+            if(bucket[k] && bucket[k].completed_at) return true;
+          }
+          return false;
+        }catch(_e2){
+          return false;
+        }
+      }
+    }
+
+async function refresh(){
+      try{
+        var done = await isCompletedToday();
+        setDailyOpsCardState(!done);
+      }catch(_e){
+        setDailyOpsCardState(false);
+      }
+    }
+
+    function schedule(){
+      refresh();
+      document.addEventListener("community:changed", function(){ setTimeout(refresh, 150); });
+      // When returning from Daily Ops via back button (bfcache), re-check.
+      window.addEventListener("focus", function(){ setTimeout(refresh, 50); });
+      window.addEventListener("pageshow", function(){ setTimeout(refresh, 50); });
+      document.addEventListener("visibilitychange", function(){
+        if(!document.hidden) setTimeout(refresh, 50);
+      });
+      setInterval(refresh, 60000);
+    }
+
+    if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", schedule);
+    else schedule();
+  })();
+
+})();
+</script>
+
+
+
+
+
+</body>
+</html>

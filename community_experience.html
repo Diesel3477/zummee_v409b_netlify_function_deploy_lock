@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Community Experience</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="shared/supabase-client.js?v=2026-04-26-190"></script>
+  <script src="shared/resident-auth.js?v=2026-04-26-190"></script>
+  <script src="company_logo_sync.js?v=2026-04-26-190"></script>
+  
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+    :root{--blue:#12324d;--line:#9bc9ff;--muted:#5f7288;--bg:#eef5fb}*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:var(--blue);background:linear-gradient(180deg,#f1f7ff 0%,#edf5fd 50%,#f8fbff 100%)}.shell{max-width:1180px;margin:0 auto;padding:24px 22px 54px}.hero,.card{background:rgba(255,255,255,.96);border:2px solid var(--line);border-radius:34px;box-shadow:0 18px 46px rgba(18,50,77,.10)}.hero{padding:24px 28px;display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center}.kicker{font-size:13px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;color:#6c7f94}.hero h1{margin:4px 0 0;font-size:34px;line-height:1.02;letter-spacing:-.04em}.heroLogo{height:58px;max-width:210px;object-fit:contain;display:none}.heroLogo.is-visible{display:block}.heroRight{display:flex;flex-direction:column;align-items:flex-end;gap:12px}.btn{border:2px solid var(--line);background:#fff;color:var(--blue);border-radius:18px;padding:13px 17px;font-weight:950;font-size:15px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}.signoutBtn{min-width:126px;align-self:flex-end}.btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}.layout{display:grid;grid-template-columns:1.35fr .75fr;gap:20px;margin-top:22px}.card{padding:22px}.card h2{margin:0;font-size:28px;letter-spacing:-.04em}.sub{margin:7px 0 0;color:var(--muted);font-size:16px;line-height:1.35}.quickGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px}.quickCard{min-height:132px;border:2px solid var(--line);background:#fff;border-radius:24px;padding:18px;text-decoration:none;color:var(--blue);display:grid;grid-template-columns:1fr auto;gap:14px;align-items:start;box-shadow:0 10px 22px rgba(18,50,77,.06);transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}.quickCard:hover{transform:translateY(-1px);box-shadow:0 14px 26px rgba(18,50,77,.09);border-color:#78b8ff}.quickText{min-width:0;display:flex;flex-direction:column;gap:6px}.quickCard strong{font-size:20px;letter-spacing:-.03em}.quickCard span.quickDesc{color:var(--muted);font-size:14px;line-height:1.34}.quickPill{justify-self:end;align-self:start;border-radius:999px;padding:6px 10px;background:#eef6ff;border:1px solid rgba(59,130,246,.18);font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.08em;color:#1d4ed8;white-space:nowrap}.feedComposer{margin-top:16px;border:1px solid rgba(18,50,77,.12);border-radius:24px;padding:16px;background:#fbfdff}.composerTop,.postHead,.eventItem{display:flex;align-items:center;gap:12px}.avatar{width:48px;height:48px;border-radius:18px;background:linear-gradient(135deg,#12324d,#5b9bdb);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:950}.inputLook{flex:1;min-height:48px;border-radius:999px;background:#f3f7fb;border:1px solid rgba(18,50,77,.10);display:flex;align-items:center;padding:0 18px;color:#6a7b8f;font-weight:800}.post{margin-top:16px;border:1px solid rgba(18,50,77,.10);border-radius:24px;background:#fff;padding:18px}.postMeta strong{display:block}.postMeta span{display:block;color:var(--muted);font-size:13px;margin-top:2px}.postBody{margin-top:14px;line-height:1.48;color:#2c4660}.postActions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.reaction{border:1px solid rgba(18,50,77,.10);border-radius:999px;padding:9px 13px;background:#f8fbff;font-weight:850;color:#415a73}.sideStack{display:flex;flex-direction:column;gap:20px}.eventItem{padding:13px;border-radius:18px;background:#fff;border:1px solid rgba(18,50,77,.10);margin-top:12px}.dateBox{width:54px;min-width:54px;height:54px;border-radius:18px;background:#eef6ff;border:1px solid rgba(59,130,246,.16);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:950}.dateBox span:first-child{font-size:12px;color:#1d4ed8}.dateBox span:last-child{font-size:22px}.miniTitle{font-weight:950}.miniCopy{font-size:13px;color:var(--muted);margin-top:3px}.notice{padding:14px;border-radius:18px;background:#fff8e6;border:1px solid rgba(180,120,0,.16);color:#725000;font-weight:800;margin-top:14px}.footerActions{margin-top:18px;display:flex;gap:12px;flex-wrap:wrap}
+.galleryCard{margin-top:20px}.residentUploader{margin-top:16px;border:1px solid rgba(18,50,77,.12);border-radius:24px;padding:16px;background:#fbfdff}.uploadGrid{display:grid;grid-template-columns:1fr;gap:12px}.uploadGrid textarea{width:100%;min-height:92px;border:1px solid rgba(18,50,77,.14);border-radius:18px;padding:14px;font:inherit;color:var(--blue);background:#fff;resize:vertical}.uploadGrid input[type=file]{width:100%;border:1px solid rgba(18,50,77,.14);border-radius:18px;padding:12px;background:#fff;color:var(--blue)}.statusLine{margin-top:10px;font-size:14px;font-weight:850;color:var(--muted)}.statusLine.ok{color:#166534}.statusLine.bad{color:#991b1b}.approvalNote{margin-top:12px;padding:12px 14px;border-radius:18px;background:#eef6ff;border:1px solid rgba(59,130,246,.16);font-size:14px;color:#38536e;font-weight:750}.galleryGrid{margin-top:16px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.galleryTile{border:1px solid rgba(18,50,77,.12);border-radius:24px;background:#fff;overflow:hidden;box-shadow:0 10px 22px rgba(18,50,77,.06)}.galleryTile img{width:100%;height:220px;object-fit:cover;display:block;background:#eef5fb}.galleryBody{padding:14px}.galleryMeta{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--muted);font-size:13px;font-weight:800}.galleryCaption{margin-top:8px;color:#2c4660;line-height:1.42}.galleryActions{margin-top:12px;display:flex;gap:10px;flex-wrap:wrap}.galleryAction{border:1px solid rgba(18,50,77,.10);border-radius:999px;padding:8px 12px;background:#f8fbff;font-weight:850;color:#415a73;cursor:pointer}.galleryAction.is-liked{background:#eaf4ff;border-color:#8fc4ff;color:#0f3a5f}.commentBox{margin-top:12px;display:none;gap:8px}.commentBox.is-open{display:flex}.commentBox input{flex:1;border:1px solid rgba(18,50,77,.12);border-radius:999px;padding:10px 12px;font:inherit}.commentList{margin-top:10px;display:grid;gap:8px}.commentItem{background:#f8fbff;border:1px solid rgba(18,50,77,.08);border-radius:14px;padding:9px 11px;color:#38536e;font-size:13px}.pendingUploads{margin-top:12px;font-size:13px;color:var(--muted);font-weight:800}@media(max-width:760px){.galleryGrid{grid-template-columns:1fr}.galleryTile img{height:190px}}
+
+/* V240 Instagram-style two-row community gallery */
+.galleryCard{margin-top:20px}
+.galleryCard .sub{max-width:780px}
+.instagramGallery{display:grid !important;grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:10px !important;margin-top:16px !important}
+.instagramGallery .galleryTile{border-radius:18px !important;box-shadow:none !important}
+.instagramGallery .galleryTile img{height:128px !important;aspect-ratio:1/1;object-fit:cover}
+.instagramGallery .galleryBody{padding:10px !important}
+.instagramGallery .galleryMeta{font-size:11px !important}
+.instagramGallery .galleryCaption{font-size:12px !important;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* V243 gallery interaction notifications */
+.galleryNoticeBar{margin-top:12px;border:1px solid rgba(18,50,77,.10);background:#f8fbff;border-radius:18px;padding:10px 12px;color:#38536e;font-size:13px;font-weight:800;display:none}
+.galleryNoticeBar.is-visible{display:block}
+.galleryNoticeBar strong{color:#12324d}
+/* V241 show compact likes/comments on Instagram gallery */.instagramGallery .galleryActions{display:flex !important;margin-top:8px !important;gap:6px !important;flex-wrap:wrap !important}.instagramGallery .galleryAction{font-size:11px !important;padding:6px 9px !important;border-radius:999px !important}.instagramGallery .commentBox{display:none !important;margin-top:8px !important;gap:6px !important}.instagramGallery .commentBox.is-open{display:flex !important}.instagramGallery .commentBox input{font-size:12px !important;padding:7px 9px !important;min-width:0 !important}.instagramGallery .commentList{display:grid !important;margin-top:7px !important;gap:6px !important}.instagramGallery .commentItem{font-size:11px !important;padding:7px 8px !important;line-height:1.25 !important}
+.residentUploader{margin-top:14px !important;padding:14px !important;border-radius:20px !important}
+.uploadGrid{grid-template-columns:1fr 1.2fr auto !important;align-items:center !important}
+.uploadGrid textarea{min-height:48px !important;border-radius:16px !important}
+@media(max-width:900px){.instagramGallery{grid-template-columns:repeat(4,minmax(0,1fr)) !important}.instagramGallery .galleryTile img{height:116px !important}.uploadGrid{grid-template-columns:1fr !important}}
+@media(max-width:620px){.instagramGallery{grid-template-columns:repeat(2,minmax(0,1fr)) !important}.instagramGallery .galleryTile img{height:150px !important}}
+.garageSaleSection{margin-top:16px;border:2px solid var(--line);background:#fff;border-radius:24px;padding:18px;text-decoration:none;color:var(--blue);display:grid;grid-template-columns:1fr auto;align-items:start;gap:14px;box-shadow:0 10px 22px rgba(18,50,77,.06);transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}.garageSaleSection:hover{transform:translateY(-1px);box-shadow:0 14px 26px rgba(18,50,77,.09);border-color:#78b8ff}.garageSaleSection h3{margin:0 0 6px;font-size:22px;letter-spacing:-.03em}.garageSaleSection p{margin:0;color:var(--muted);line-height:1.35}
+/* V196 compact resident action cards */
+.quickGrid{gap:12px}
+.quickCard{min-height:92px;border-radius:20px;padding:14px 16px;align-items:center}
+.quickCard strong{font-size:17px}
+.quickCard span.quickDesc{font-size:13px;line-height:1.25}
+.garageSaleSection{margin-top:12px;border-radius:20px;padding:14px 16px;align-items:center}
+.garageSaleSection h3{font-size:17px;margin:0 0 4px}
+.garageSaleSection p{font-size:13px;line-height:1.25}
+.quickPill{font-size:10px;padding:6px 10px}
+@media(max-width:760px){.quickCard,.garageSaleSection{grid-template-columns:1fr}.quickPill{justify-self:start}}@media(max-width:900px){.layout{grid-template-columns:1fr}.hero{grid-template-columns:1fr auto;padding:22px 22px;align-items:center}.quickGrid{grid-template-columns:1fr}.heroRight{align-items:flex-end;justify-self:end;gap:10px}.hero h1{font-size:30px}.heroLogo{max-width:170px;height:46px}.shell{padding:18px 14px 42px}.card{padding:18px;border-radius:24px}.quickCard{min-height:116px}}@media(max-width:620px){.hero{grid-template-columns:1fr}.heroRight{align-items:flex-start;justify-self:start}}
+  
+/* V197 - Community Experience cards match Employee Hub compact card style */
+.card .quickGrid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:18px;
+  margin-top:20px;
+}
+.card .quickCard{
+  position:relative;
+  overflow:hidden;
+  min-height:136px;
+  border:2px solid #9bc9ff;
+  border-radius:26px;
+  padding:26px 24px 22px 30px;
+  background:linear-gradient(180deg,#f7fcff 0%,#e8f5ff 100%);
+  box-shadow:none;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  align-items:stretch;
+}
+.card .quickCard::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:24px;
+  bottom:24px;
+  width:10px;
+  border-radius:0 999px 999px 0;
+  background:linear-gradient(180deg,#6aaeea,#9bc9ff);
+}
+.card .quickCard:hover{
+  transform:translateY(-2px);
+  box-shadow:0 14px 28px rgba(18,50,77,.10);
+  border-color:#78b8ff;
+}
+.card .quickText{
+  gap:8px;
+  padding-right:8px;
+}
+.card .quickCard strong{
+  font-size:22px;
+  line-height:1.05;
+  letter-spacing:-.04em;
+  color:#2a4668;
+}
+.card .quickCard span.quickDesc{
+  font-size:13px;
+  line-height:1.28;
+  color:#5f7288;
+}
+.card .quickPill{
+  align-self:flex-end;
+  justify-self:end;
+  margin-top:16px;
+  border:2px solid #b7d8ff;
+  background:rgba(255,255,255,.78);
+  color:#456f9f;
+  padding:7px 14px;
+  font-size:12px;
+  letter-spacing:.16em;
+  font-weight:950;
+}
+.garageSaleSection{display:none!important}
+@media(max-width:900px){
+  .card .quickGrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+  .card .quickCard{min-height:132px;padding:24px 20px 20px 28px;border-radius:24px}
+  .card .quickCard strong{font-size:20px}
+}
+@media(max-width:760px){
+  .card .quickGrid{grid-template-columns:1fr}
+  .card .quickCard{min-height:112px}
+  .card .quickPill{align-self:flex-end}
+}
+
+  
+/* V295 Instagram modal gallery preview */
+.galleryCardHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.galleryCardHeader h2{margin:0}.galleryCardHeader .sub{margin-top:8px}
+.viewGalleryBtn{border:2px solid #9cc9ff;background:#fff;color:#12324d;border-radius:999px;padding:10px 18px;font-weight:950;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;box-shadow:0 8px 18px rgba(18,50,77,.06)}
+.instagramGallery{grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:6px !important;margin-top:18px !important;max-width:100%}
+.instagramGallery .galleryTile{border:0 !important;border-radius:0 !important;background:#eef5fb !important;box-shadow:none !important;position:relative;cursor:pointer;aspect-ratio:1/1;min-width:0}
+.instagramGallery .galleryTile img{width:100% !important;height:100% !important;aspect-ratio:1/1 !important;object-fit:cover !important;display:block !important;background:#eef5fb !important}
+.instagramGallery .galleryBody{display:none !important}
+.instagramGallery .galleryTile:active img{transform:scale(.985)}
+.galleryModal{position:fixed;inset:0;z-index:9999;background:rgba(3,12,24,.92);display:none;align-items:center;justify-content:center;padding:20px}
+.galleryModal.is-open{display:flex}
+.galleryModalShell{width:min(980px,96vw);height:min(760px,86vh);background:#fff;border-radius:26px;overflow:hidden;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);box-shadow:0 24px 80px rgba(0,0,0,.38);border:1px solid rgba(255,255,255,.16)}
+.galleryModalImageWrap{background:#050b14;position:relative;display:flex;align-items:center;justify-content:center;min-width:0}
+.galleryModalImageWrap img{width:100%;height:100%;object-fit:contain;display:block}
+.galleryModalClose,.galleryModalNav{position:absolute;border:0;border-radius:999px;background:rgba(255,255,255,.94);color:#12324d;font-weight:950;cursor:pointer;box-shadow:0 10px 24px rgba(0,0,0,.24)}
+.galleryModalClose{top:14px;right:14px;width:42px;height:42px;font-size:24px;line-height:1}
+.galleryModalNav{top:50%;transform:translateY(-50%);width:44px;height:44px;font-size:30px;line-height:1}
+.galleryModalPrev{left:14px}.galleryModalNext{right:14px}
+.galleryModalSide{padding:24px;display:flex;flex-direction:column;min-width:0}
+.galleryModalKicker{font-size:12px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;color:#6f84a0;margin-bottom:10px}
+.galleryModalTitle{font-size:24px;line-height:1.1;font-weight:950;color:#12324d;margin-bottom:8px}
+.galleryModalMeta{font-size:14px;font-weight:850;color:#62758d;margin-bottom:18px}
+.galleryModalCaption{border:1px solid rgba(18,50,77,.12);background:#f8fbff;border-radius:18px;padding:14px;line-height:1.45;color:#2c4660;font-weight:700;min-height:72px}
+.galleryModalActions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.galleryModalActions .galleryAction{font-size:14px;padding:10px 14px}
+.galleryModalCount{margin-top:auto;color:#6f84a0;font-weight:850;font-size:13px}
+body.gallery-modal-open{overflow:hidden}
+
+/* V297 gallery UX polish: comments live in modal, Like wording, resident-safe names */
+.residentUploader #galleryCaptionInput{display:none !important;}
+.galleryModalCommentArea{margin-top:14px;border-top:1px solid rgba(18,50,77,.10);padding-top:14px;}
+.galleryModalCommentBox{display:flex;gap:8px;margin-top:10px;}
+.galleryModalCommentBox input{flex:1;border:1px solid rgba(18,50,77,.12);border-radius:999px;padding:10px 12px;font:inherit;color:#12324d;background:#fff;min-width:0;}
+.galleryModalCommentBox button{white-space:nowrap;}
+.galleryModalSide .commentList{display:grid;margin-top:10px;gap:8px;max-height:160px;overflow:auto;}
+.galleryModalSide .commentItem{background:#f8fbff;border:1px solid rgba(18,50,77,.08);border-radius:14px;padding:9px 11px;color:#38536e;font-size:13px;line-height:1.35;}
+.galleryModalTitle{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+@media(max-width:760px){.galleryCardHeader{align-items:flex-start}.viewGalleryBtn{padding:8px 12px;font-size:12px}.instagramGallery{grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:4px !important}.galleryModal{padding:0}.galleryModalShell{width:100vw;height:100vh;border-radius:0;grid-template-columns:1fr;grid-template-rows:1fr auto}.galleryModalSide{padding:16px 18px;max-height:34vh;overflow:auto}.galleryModalTitle{font-size:20px}.galleryModalNav{width:40px;height:40px}}
+
+</style>
+<style id="zummee-global-hero-header-refactor">
+/* v224: safe header refactor - stack contextual actions under the wired logo */
+.heroRight{display:flex !important;flex-direction:column !important;align-items:flex-end !important;justify-content:flex-start !important;gap:10px !important;}
+.heroRight img,.heroRight .logo,.heroRight .heroLogo{margin:0 !important;}
+.heroRight .btn,.heroRight button,.heroRight a{align-self:flex-end !important;}
+@media(max-width:800px){.heroRight{width:100% !important;align-items:flex-end !important;}}
+</style>
+
+<style id="zummee-v239-community-cards-true-compact">
+/* v239: true compact Community Experience cards - overrides older V197 tall card rules */
+.card .quickGrid{
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  gap:12px !important;
+  margin-top:14px !important;
+}
+.card .quickCard{
+  min-height:72px !important;
+  height:auto !important;
+  border-radius:18px !important;
+  padding:13px 14px 12px 20px !important;
+  display:flex !important;
+  flex-direction:column !important;
+  justify-content:space-between !important;
+  gap:8px !important;
+}
+.card .quickCard::before{
+  top:14px !important;
+  bottom:14px !important;
+  width:7px !important;
+}
+.card .quickText{
+  gap:4px !important;
+  padding-right:0 !important;
+}
+.card .quickCard strong{
+  font-size:16px !important;
+  line-height:1.05 !important;
+}
+.card .quickCard span.quickDesc{
+  font-size:11.5px !important;
+  line-height:1.18 !important;
+}
+.card .quickPill{
+  margin-top:4px !important;
+  padding:4px 10px !important;
+  font-size:9px !important;
+  letter-spacing:.14em !important;
+}
+@media(max-width:900px){
+  .card .quickGrid{grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:10px !important;}
+  .card .quickCard{min-height:78px !important;padding:12px 12px 11px 18px !important;border-radius:17px !important;}
+  .card .quickCard strong{font-size:15px !important;}
+  .card .quickCard span.quickDesc{font-size:11px !important;}
+}
+@media(max-width:760px){
+  .card .quickGrid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+  .card .quickCard{min-height:84px !important;}
+}
+</style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero"><div><div class="kicker">Resident Home</div><h1>Community Experience</h1></div><div class="heroRight"><img id="pageCompanyLogo" class="heroLogo" alt="Company logo"><button class="btn signoutBtn" type="button" onclick="signOutResidentExperience()">Sign out</button></div></section>
+    <section class="layout"><div><section class="card"><h2 id="communityName">Your Community</h2><p class="sub">Stay connected with updates, events, reservations, and maintenance tools in one resident-friendly place.</p><div class="quickGrid">
+  <a class="quickCard" href="upcoming_community_events.html" onclick="return openUpcomingCommunityEvents(event)">
+    <div class="quickText"><strong>Upcoming Community Events</strong><span class="quickDesc">View gatherings, meetings, reminders, and important dates.</span></div>
+    <span class="quickPill">Events</span>
+  </a>
+  <a class="quickCard" href="community_reservations.html">
+    <div class="quickText"><strong>Community Reservations</strong><span class="quickDesc">Reserve community amenities and review reservation information.</span></div>
+    <span class="quickPill">Reservations</span>
+  </a>
+  <a class="quickCard" href="work_order_submit.html">
+    <div class="quickText"><strong>Resident Work Orders</strong><span class="quickDesc">Submit maintenance requests and check your request status.</span></div>
+    <span class="quickPill">Work Orders</span>
+  </a>
+  <a class="quickCard" href="community_garage_sale.html">
+    <div class="quickText"><strong>Community Garage Sale</strong><span class="quickDesc">View resident sale posts, community sale dates, and neighborhood swap announcements.</span></div>
+    <span class="quickPill">Garage Sale</span>
+  </a>
+  <a class="quickCard" href="community_documents.html">
+    <div class="quickText"><strong>Community Documents</strong><span class="quickDesc">Access governing documents, forms, and important community files.</span></div>
+    <span class="quickPill">Documents</span>
+  </a>
+  <a class="quickCard" href="community_voting.html">
+    <div class="quickText"><strong>Annual Meeting &amp; Voting</strong><span class="quickDesc">View annual meeting notices, proxy documents, ballots, and active voting items.</span></div>
+    <span class="quickPill">Voting</span>
+  </a>
+  <a class="quickCard" href="community_directory.html">
+    <div class="quickText"><strong>Community Directory</strong><span class="quickDesc">Opt in and view resident contact information shared with the community.</span></div>
+    <span class="quickPill">Directory</span>
+  </a>
+  <a class="quickCard" href="architectural_change_request.html">
+    <div class="quickText"><strong>Architectural Change Request (ACC)</strong><span class="quickDesc">Submit exterior improvement requests and track approval status.</span></div>
+    <span class="quickPill">ACC</span>
+  </a>
+  <a id="messagePropertyManagerCard" class="quickCard residentOnlyCard" href="message_property_manager.html">
+    <div class="quickText"><strong>Message Property Manager</strong><span class="quickDesc">Send a question or support message directly to your assigned property manager.</span></div>
+    <span class="quickPill">Message</span>
+  </a>
+</div></section><section class="card galleryCard"><div class="galleryCardHeader"><div><h2>Community Gallery</h2><p class="sub">A two-row photo gallery for approved resident photos and Zummee local event highlights.</p></div><button id="viewFullGalleryBtn" class="viewGalleryBtn" type="button">View Gallery</button></div><div id="galleryNotificationBar" class="galleryNoticeBar"></div><div id="approvedGalleryGrid" class="galleryGrid instagramGallery"></div><div class="residentUploader"><div class="uploadGrid"><input id="galleryPhotoInput" type="file" accept="image/*" /><button id="submitGalleryPostBtn" class="btn primary" type="button">Submit Photo for Board Review</button></div><div id="gallerySubmitStatus" class="statusLine"></div><div class="approvalNote">Resident photos appear after board approval. Local Zummee event photos may appear for communities in your area.</div><div id="pendingGalleryNote" class="pendingUploads"></div></div></section><section class="card" style="margin-top:20px"><h2>Community Feed</h2><p class="sub">A Facebook-style community board for official updates and resident-friendly announcements.</p><div class="feedComposer"><div class="composerTop"><div class="avatar" id="avatarInitials">CE</div><div class="inputLook">Community updates will appear here.</div></div></div><div id="feedList"></div></section></div><aside class="sideStack"><section class="card"><h2>Upcoming</h2><p class="sub">Quick view of community events.</p><div id="eventsList"></div><div class="footerActions"><a class="btn primary" href="upcoming_community_events.html" onclick="return openUpcomingCommunityEvents(event)">View events</a></div></section><section class="card"><h2>Reservations</h2><p class="sub">Start a reservation request for community spaces.</p><div class="notice">Reservation workflow is ready for the next build phase.</div><div class="footerActions"><a class="btn" href="community_reservations.html">Open reservations</a></div></section></aside></section>
+  </main>
+<div id="galleryModal" class="galleryModal" aria-hidden="true">
+  <div class="galleryModalShell" role="dialog" aria-modal="true" aria-label="Community gallery photo preview">
+    <div class="galleryModalImageWrap">
+      <button class="galleryModalClose" type="button" data-gallery-close>×</button>
+      <button class="galleryModalNav galleryModalPrev" type="button" data-gallery-prev>‹</button>
+      <img id="galleryModalImg" alt="Community gallery photo">
+      <button class="galleryModalNav galleryModalNext" type="button" data-gallery-next>›</button>
+    </div>
+    <aside class="galleryModalSide">
+      <div class="galleryModalKicker">Community Gallery</div>
+      <div id="galleryModalTitle" class="galleryModalTitle">Community photo</div>
+      <div id="galleryModalMeta" class="galleryModalMeta"></div>
+      <div id="galleryModalCaption" class="galleryModalCaption"></div>
+      <div id="galleryModalActions" class="galleryModalActions"></div>
+      <div id="galleryModalCount" class="galleryModalCount"></div>
+    </aside>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));async function getClient(){if(window.ensureSupabase)return await window.ensureSupabase();return window.supabaseClient||window.sb||null}
+function getViewerRole(){const keys=['zummee_role','zummee_user_role','userRole','role','activeRole','account_type','zummee_account_type'];for(const k of keys){try{const v=String(localStorage.getItem(k)||'').toLowerCase().trim();if(v)return v;}catch(e){}}try{const p=JSON.parse(localStorage.getItem('zummee_profile_v1')||'{}');if(p&&p.role)return String(p.role).toLowerCase().trim();}catch(e){}try{const u=JSON.parse(localStorage.getItem('zummee_user')||'{}');if(u&&(u.user_type||u.role))return String(u.user_type||u.role).toLowerCase().trim();}catch(e){}return '';}
+function lockResidentOnlyCards(resident){const role=getViewerRole();const isResident=!!resident||role==='resident'||role==='owner'||role==='homeowner';const card=$('messagePropertyManagerCard');if(card&&!isResident){card.style.display='none';card.setAttribute('aria-hidden','true');}}
+function openUpcomingCommunityEvents(ev){try{if(ev)ev.preventDefault()}catch(_e){} window.location.href='upcoming_community_events.html'; return false;}
+let galleryContext={communityName:'',communityId:'',residentName:'Resident',residentId:'',residentEmail:'',companyId:'',areaKey:''};
+let galleryRealtimeChannels=[];
+let galleryRealtimePostIds=[];
+let galleryReloadTimer=null;let galleryRowsCache=[];let galleryModalRows=[];let galleryModalIndex=0;function initials(name){return String(name||'Community Experience').split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase()||'CE'}function setLogo(url){const img=$('pageCompanyLogo');if(!img)return;if(url){img.src=url;img.style.display='block';img.classList.add('is-visible')}else{img.removeAttribute('src');img.style.display='none';img.classList.remove('is-visible')}}async function loadContext(){let ctx=null;try{if(window.ZummeeResidentAuth){const res=await window.ZummeeResidentAuth.requireResident({redirect:false});ctx=res.ctx;if(res&&!res.ok&&res.reason==='not_logged_in'&&!(new URLSearchParams(location.search).get('preview')==='manager')){location.replace('login.html?next=community_experience.html');return}}}catch(e){}const sb=await getClient();const resident=ctx&&ctx.resident||null;lockResidentOnlyCards(resident);let communityName=(resident&&(resident.community_name||resident.community||resident.communityName))||localStorage.getItem('currentCommunityName')||localStorage.getItem('zummeeCurrentCommunityName')||'Your Community';$('communityName').textContent=communityName;$('avatarInitials').textContent=initials(communityName);let communityId=(resident&&(resident.community_id||resident.communityId))||localStorage.getItem('zummee_selected_community_id')||localStorage.getItem('activeCommunityId')||localStorage.getItem('currentCommunityId')||'';let companyId=(resident&&resident.company_id)||localStorage.getItem('zummee_company_id')||localStorage.getItem('company_id')||'';galleryContext={communityName:communityName,communityId:communityId,residentName:(resident&&(resident.name||resident.resident_name||resident.full_name))||localStorage.getItem('resident_name')||'Resident',residentId:(resident&&(resident.id||resident.resident_id))||localStorage.getItem('resident_id')||'',residentEmail:(resident&&(resident.email||resident.resident_email))||localStorage.getItem('resident_email')||'',companyId:companyId,areaKey:(resident&&(resident.area_key||resident.market_key||resident.region_key||resident.city||resident.area))||localStorage.getItem('zummee_area_key')||localStorage.getItem('resident_area_key')||''};try{if(sb&&companyId){const r=await sb.from('companies').select('name,logo_path').eq('id',companyId).maybeSingle();if(r&&!r.error&&r.data&&r.data.logo_path){let path=r.data.logo_path;let url=/^https?:\/\//i.test(path)?path:sb.storage.from('company_logos').getPublicUrl(path).data.publicUrl;setLogo(url)}}}catch(e){}loadFeed(communityName);loadEvents();loadGallery();loadGalleryNotifications();wireGalleryUploader()}function loadFeed(name){const rows=[{t:'Welcome to '+name,b:'This is the new resident landing page for community updates, events, reservations, and work orders.'},{t:'Maintenance requests',b:'Use Resident Work Orders when you need to submit or review a maintenance request.'}];$('feedList').innerHTML=rows.map(r=>`<article class="post"><div class="postHead"><div class="avatar">${esc(initials(name))}</div><div class="postMeta"><strong>${esc(r.t)}</strong><span>Official community update</span></div></div><div class="postBody">${esc(r.b)}</div><div class="postActions"><span class="reaction">Helpful</span><span class="reaction">Save</span></div></article>`).join('')}async function loadEvents(){const host=$('eventsList');try{const sb=await getClient();if(!sb){throw new Error('no client')}let q=sb.from('community_events').select('id,title,event_date,event_location').eq('status','approved').order('event_date',{ascending:true,nullsFirst:false}).limit(3);if(galleryContext.communityId)q=q.eq('community_id',galleryContext.communityId);else if(galleryContext.communityName)q=q.eq('community_name',galleryContext.communityName);const r=await q;if(r.error)throw r.error;const rows=r.data||[];if(!rows.length){host.innerHTML='<div class="eventItem"><div><div class="miniTitle">No approved events yet</div><div class="miniCopy">Board-approved events will appear here.</div></div></div>';return}host.innerHTML=rows.map(row=>{const d=row.event_date?new Date(row.event_date):null;const mon=d&&!isNaN(d)?d.toLocaleString(undefined,{month:'short'}):'TBD';const day=d&&!isNaN(d)?String(d.getDate()):'';const copy=(d&&!isNaN(d)?d.toLocaleString(undefined,{weekday:'short',hour:'numeric',minute:'2-digit'}):'Date/time to be announced')+(row.event_location?' • '+esc(row.event_location):'');return `<div class="eventItem"><div class="dateBox"><span>${esc(mon)}</span><span>${esc(day)}</span></div><div><div class="miniTitle">${esc(row.title||'Community Event')}</div><div class="miniCopy">${copy}</div></div></div>`}).join('')}catch(e){host.innerHTML='<div class="eventItem"><div><div class="miniTitle">Upcoming events</div><div class="miniCopy">Open the events page for community updates.</div></div></div>'}}
+function publicImageUrl(path){try{const sb=window.supabaseClient||window.sb;if(!path)return'';if(/^https?:\/\//i.test(path))return path;return sb.storage.from('community-gallery').getPublicUrl(path).data.publicUrl}catch(e){return path||''}}
+function setGalleryStatus(msg,type){const el=$('gallerySubmitStatus');if(!el)return;el.textContent=msg||'';el.className='statusLine '+(type||'')}
+function galleryCommunityFilter(q){return q.eq('community', galleryContext.communityName)}
+function looksLikeEmail(v){return /@/.test(String(v||''));}
+function galleryOwnerName(row){
+  const name=(row&& (row.resident_name||row.owner_name||row.submitted_name||row.submitted_by_name||row.name))||'';
+  if(name && !looksLikeEmail(name)) return name;
+  const submitted=(row&&row.submitted_by)||'';
+  if(submitted && !looksLikeEmail(submitted)) return submitted;
+  return 'Resident';
+}
+async function loadGallery(){const sb=await getClient();const grid=$('approvedGalleryGrid');const pending=$('pendingGalleryNote');if(!grid||!sb)return;try{let q=sb.from('community_gallery').select('*').eq('status','approved').order('created_at',{ascending:false}).limit(8);q=galleryCommunityFilter(q);const res=await q;if(res.error)throw res.error;const rows=res.data||[];galleryRowsCache=rows;grid.innerHTML=rows.length?rows.map(renderGalleryTile).join(''):'<div class="notice">No approved community photos yet.</div>';galleryRealtimePostIds=rows.map(r=>r.id);wireGalleryRealtime(galleryRealtimePostIds);}catch(e){console.warn('Gallery load failed',e);grid.innerHTML='<div class="notice">Community gallery will appear after setup is complete.</div>'}try{if(pending){let pq=sb.from('community_gallery').select('id,status').eq('status','pending').limit(20);pq=galleryCommunityFilter(pq);const pr=await pq;const n=(pr.data||[]).length;pending.textContent=n?`${n} photo${n===1?'':'s'} awaiting board review.`:''}}catch(_e){}}
+function renderGalleryTile(row){const url=publicImageUrl(row.image_url);return `<article class="galleryTile" data-gallery-post="${esc(row.id)}" data-gallery-open="${esc(row.id)}"><img src="${esc(url)}" alt="Community photo" loading="lazy"><div class="galleryBody"><div class="galleryMeta"><span>${esc(galleryOwnerName(row))}</span><span>${new Date(row.created_at||Date.now()).toLocaleDateString()}</span></div><div class="galleryCaption">${esc(row.caption||'')}</div><div class="galleryActions"><button class="galleryAction" type="button" data-like-gallery="${esc(row.id)}">Like · <span>${Number(row.likes_count||0)}</span></button><button class="galleryAction" type="button" data-comment-toggle="${esc(row.id)}">Comment</button></div><div class="commentBox" id="commentBox_${esc(row.id)}"><input id="commentInput_${esc(row.id)}" placeholder="Write a kind comment…"><button class="galleryAction" type="button" data-add-comment="${esc(row.id)}">Post</button></div><div class="commentList" id="comments_${esc(row.id)}"></div></div></article>`}
+async function loadGalleryComments(ids){if(!ids||!ids.length)return;const sb=await getClient();if(!sb)return;try{const r=await sb.from('resident_gallery_comments').select('*').in('post_id',ids).eq('status','visible').order('created_at',{ascending:true});if(r.error)throw r.error;const by={};(r.data||[]).forEach(c=>{(by[c.post_id]=by[c.post_id]||[]).push(c)});ids.forEach(id=>{const host=$('comments_'+id);if(host)host.innerHTML=(by[id]||[]).slice(-4).map(c=>`<div class="commentItem"><strong>${esc(c.commenter_name||'Resident')}:</strong> ${esc(c.comment||'')}</div>`).join('')})}catch(e){console.warn('Comments load failed',e)}}
+function wireGalleryUploader(){const btn=$('submitGalleryPostBtn');if(btn&&btn.dataset.wired!=='1'){btn.dataset.wired='1';btn.addEventListener('click',submitGalleryPost)}const view=$('viewFullGalleryBtn');if(view&&view.dataset.wired!=='1'){view.dataset.wired='1';view.addEventListener('click',function(){openFullGalleryModal()})}if(document.body.dataset.galleryClickWired!=='1'){document.body.dataset.galleryClickWired='1';document.addEventListener('click',async function(ev){const open=ev.target.closest('[data-gallery-open]');const close=ev.target.closest('[data-gallery-close]');const prev=ev.target.closest('[data-gallery-prev]');const next=ev.target.closest('[data-gallery-next]');const like=ev.target.closest('[data-like-gallery]');const tog=ev.target.closest('[data-comment-toggle]');const add=ev.target.closest('[data-add-comment]');if(close){ev.preventDefault();closeGalleryModal();return}if(prev){ev.preventDefault();moveGalleryModal(-1);return}if(next){ev.preventDefault();moveGalleryModal(1);return}if(open&&!like&&!tog&&!add){ev.preventDefault();openGalleryModalById(open.getAttribute('data-gallery-open'));return}if(like){ev.preventDefault();await likeGalleryPost(like.getAttribute('data-like-gallery'),like);return}if(tog){ev.preventDefault();const box=$('commentBox_'+tog.getAttribute('data-comment-toggle'));if(box)box.classList.toggle('is-open');return}if(add){ev.preventDefault();await addGalleryComment(add.getAttribute('data-add-comment'));return}});document.addEventListener('keydown',function(ev){if(!$('galleryModal')||!$('galleryModal').classList.contains('is-open'))return;if(ev.key==='Escape')closeGalleryModal();if(ev.key==='ArrowLeft')moveGalleryModal(-1);if(ev.key==='ArrowRight')moveGalleryModal(1);});let sx=0;const modal=$('galleryModal');if(modal){modal.addEventListener('touchstart',e=>{sx=e.touches&&e.touches[0]?e.touches[0].clientX:0},{passive:true});modal.addEventListener('touchend',e=>{const ex=e.changedTouches&&e.changedTouches[0]?e.changedTouches[0].clientX:sx;if(Math.abs(ex-sx)>55)moveGalleryModal(ex<sx?1:-1)},{passive:true});}}}
+async function loadFullGalleryRows(){const sb=await getClient();if(!sb)return galleryRowsCache||[];try{let q=sb.from('community_gallery').select('*').eq('status','approved').order('created_at',{ascending:false}).limit(200);q=galleryCommunityFilter(q);const r=await q;if(r.error)throw r.error;return r.data||[]}catch(e){console.warn('Full gallery load failed',e);return galleryRowsCache||[]}}
+function openGalleryModalById(id){const rows=galleryRowsCache||[];const idx=Math.max(0,rows.findIndex(r=>String(r.id)===String(id)));openGalleryModal(rows,idx)}
+async function openFullGalleryModal(){const rows=await loadFullGalleryRows();openGalleryModal(rows,0)}
+function openGalleryModal(rows,index){if(!rows||!rows.length)return;galleryModalRows=rows;galleryModalIndex=Math.max(0,Math.min(index||0,rows.length-1));const modal=$('galleryModal');if(modal){modal.classList.add('is-open');modal.setAttribute('aria-hidden','false');document.body.classList.add('gallery-modal-open');renderGalleryModal()}}
+function closeGalleryModal(){const modal=$('galleryModal');if(modal){modal.classList.remove('is-open');modal.setAttribute('aria-hidden','true')}document.body.classList.remove('gallery-modal-open')}
+function moveGalleryModal(delta){if(!galleryModalRows.length)return;galleryModalIndex=(galleryModalIndex+delta+galleryModalRows.length)%galleryModalRows.length;renderGalleryModal()}
+function renderGalleryModal(){const row=galleryModalRows[galleryModalIndex];if(!row)return;const img=$('galleryModalImg');const title=$('galleryModalTitle');const meta=$('galleryModalMeta');const cap=$('galleryModalCaption');const actions=$('galleryModalActions');const count=$('galleryModalCount');if(img)img.src=publicImageUrl(row.image_url);if(title)title.textContent=galleryOwnerName(row);if(meta)meta.textContent=`${row.community||galleryContext.communityName||'Community'} • ${new Date(row.created_at||Date.now()).toLocaleDateString()}`;if(cap)cap.textContent=row.caption||'No caption added.';if(actions)actions.innerHTML=`<button class="galleryAction" type="button" data-like-gallery="${esc(row.id)}">Like · <span>${Number(row.likes_count||0)}</span></button><button class="galleryAction" type="button" data-comment-toggle="${esc(row.id)}">Comment</button><div class="galleryModalCommentArea" style="flex-basis:100%"><div class="galleryModalCommentBox commentBox is-open" id="commentBox_${esc(row.id)}"><input id="commentInput_${esc(row.id)}" placeholder="Write a comment…"><button class="galleryAction" type="button" data-add-comment="${esc(row.id)}">Post</button></div><div class="commentList" id="comments_${esc(row.id)}"></div></div>`;if(count)count.textContent=`${galleryModalIndex+1} of ${galleryModalRows.length}`;loadGalleryComments([row.id]);}
+
+
+function scheduleGalleryReload(){
+  clearTimeout(galleryReloadTimer);
+  galleryReloadTimer=setTimeout(function(){ loadGallery(); }, 450);
+}
+function updateGalleryLikeCount(postId,count){
+  const btn=document.querySelector(`[data-like-gallery="${CSS.escape(String(postId))}"]`);
+  if(!btn)return;
+  const span=btn.querySelector('span');
+  if(span)span.textContent=String(Number(count||0));
+}
+async function wireGalleryRealtime(postIds){
+  const sb=await getClient();
+  if(!sb||!sb.channel)return;
+  try{
+    galleryRealtimeChannels.forEach(ch=>{try{sb.removeChannel(ch)}catch(_e){}});
+    galleryRealtimeChannels=[];
+    const postFilterParts=[];
+    if(galleryContext.communityId)postFilterParts.push(`community_id=eq.${galleryContext.communityId}`);
+    if(galleryContext.areaKey)postFilterParts.push(`area_key=eq.${galleryContext.areaKey}`);
+    const postChannel=sb.channel('zummee-gallery-posts-'+Date.now())
+      .on('postgres_changes',{event:'*',schema:'public',table:'community_gallery'},function(payload){
+        const row=payload.new||payload.old||{};
+        const sameCommunity=galleryContext.communityId&&row.community_id===galleryContext.communityId;
+        const sameArea=galleryContext.areaKey&&row.area_key===galleryContext.areaKey;
+        if(!sameCommunity&&!sameArea)return;
+        if(payload.eventType==='UPDATE'&&row.id&&typeof row.likes_count!=='undefined') updateGalleryLikeCount(row.id,row.likes_count);
+        if(payload.eventType!=='UPDATE'||(payload.old&&payload.new&&payload.old.status!==payload.new.status)) scheduleGalleryReload();
+      })
+      .subscribe();
+    galleryRealtimeChannels.push(postChannel);
+    const commentChannel=sb.channel('zummee-gallery-comments-'+Date.now())
+      .on('postgres_changes',{event:'*',schema:'public',table:'resident_gallery_comments'},function(payload){
+        const row=payload.new||payload.old||{};
+        if(!row.post_id||!galleryRealtimePostIds.includes(row.post_id))return;
+        loadGalleryComments([row.post_id]);
+      })
+      .subscribe();
+    galleryRealtimeChannels.push(commentChannel);
+    wireGalleryNotificationRealtime();
+  }catch(e){console.warn('Gallery realtime setup failed',e)}
+}
+
+async function createGalleryInteractionNotification(postId,kind,message){const sb=await getClient();if(!sb||!postId)return;try{const pr=await sb.from('community_gallery').select('id,community_id,community_name,resident_id,resident_email,resident_name').eq('id',postId).maybeSingle();const post=pr&&pr.data;if(!post)return;const rid=post.resident_id||null;const remail=post.resident_email||null;const aid=galleryContext.residentId||null;const aemail=galleryContext.residentEmail||null;if((rid&&aid&&String(rid)===String(aid))||(remail&&aemail&&String(remail).toLowerCase()===String(aemail).toLowerCase()))return;if(!rid&&!remail)return;await sb.from('resident_gallery_notifications').insert({post_id:postId,community_id:post.community_id||galleryContext.communityId||null,community_name:post.community_name||galleryContext.communityName||null,recipient_resident_id:rid,recipient_email:remail,recipient_name:post.resident_name||'Resident',actor_resident_id:aid,actor_email:aemail,actor_name:galleryContext.residentName||'Resident',notification_type:kind,message:message,is_read:false});}catch(e){console.warn('Gallery notification skipped',e)}}
+async function loadGalleryNotifications(){const sb=await getClient();const bar=$('galleryNotificationBar');if(!bar||!sb)return;try{let q=sb.from('resident_gallery_notifications').select('*').order('created_at',{ascending:false}).limit(6);if(galleryContext.residentId)q=q.eq('recipient_resident_id',galleryContext.residentId);else if(galleryContext.residentEmail)q=q.eq('recipient_email',galleryContext.residentEmail);else return;const r=await q;if(r.error)throw r.error;const rows=r.data||[];const unread=rows.filter(x=>!x.is_read).length;if(!rows.length){bar.classList.remove('is-visible');bar.innerHTML='';return}const latest=rows[0];bar.classList.add('is-visible');bar.innerHTML=`<strong>${unread||rows.length} gallery notification${(unread||rows.length)===1?'':'s'}:</strong> ${esc(latest.message||'Someone interacted with your photo.')}`;}catch(e){console.warn('Gallery notifications load failed',e)}}
+function wireGalleryNotificationRealtime(){getClient().then(function(sb){if(!sb||!sb.channel)return;try{const ch=sb.channel('zummee-gallery-notifications-'+Date.now()).on('postgres_changes',{event:'*',schema:'public',table:'resident_gallery_notifications'},function(payload){const row=payload.new||payload.old||{};const matches=(galleryContext.residentId&&String(row.recipient_resident_id||'')===String(galleryContext.residentId))||(galleryContext.residentEmail&&String(row.recipient_email||'').toLowerCase()===String(galleryContext.residentEmail).toLowerCase());if(matches)loadGalleryNotifications();}).subscribe();galleryRealtimeChannels.push(ch);}catch(e){console.warn('Gallery notification realtime setup failed',e)}})}
+async function submitGalleryPost(){const sb=await getClient();const fileEl=$("galleryPhotoInput");const capEl=$("galleryCaptionInput");const file=fileEl&&fileEl.files&&fileEl.files[0];const caption=(capEl&&capEl.value||"").trim();if(!sb){setGalleryStatus("Gallery is still loading. Try again in a moment.","bad");console.error("GALLERY SUBMIT ERROR: Supabase client unavailable");return}if(!file){setGalleryStatus("Please choose a photo first.","bad");return}let path="";try{setGalleryStatus("Uploading photo…","");const ext=(file.name.split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"")||"jpg";const safeCommunity=(galleryContext.communityName||"community").replace(/[^a-zA-Z0-9_-]/g,"-");path=`${safeCommunity}/${Date.now()}-${Math.random().toString(16).slice(2)}.${ext}`;const up=await sb.storage.from("community-gallery").upload(path,file,{cacheControl:"3600",upsert:false,contentType:file.type||"image/jpeg"});if(up.error){console.error("GALLERY STORAGE UPLOAD ERROR:",up.error);const msg=up.error.message||JSON.stringify(up.error);setGalleryStatus(`Storage upload failed: ${msg}`,"bad");alert(`Storage upload failed: ${msg}`);return}const pub=sb.storage.from("community-gallery").getPublicUrl(path);const imageUrl=pub&&pub.data&&pub.data.publicUrl?pub.data.publicUrl:path;const row={community:galleryContext.communityName||"",image_url:imageUrl,caption:caption,submitted_by:galleryContext.residentName||"Resident",status:"pending"};setGalleryStatus("Saving photo for board review…","");const ins=await sb.from("community_gallery").insert(row).select("id").single();if(ins.error){console.error("GALLERY DATABASE INSERT ERROR:",ins.error,"ROW:",row);const msg=ins.error.message||JSON.stringify(ins.error);setGalleryStatus(`Database save failed: ${msg}`,"bad");alert(`Database save failed: ${msg}`);try{await sb.storage.from("community-gallery").remove([path])}catch(_cleanupErr){}return}console.log("GALLERY SUBMIT SUCCESS:",ins.data);fileEl.value="";if(capEl)capEl.value="";setGalleryStatus("Photo submitted for board approval.","ok");await loadGallery()}catch(e){console.error("GALLERY SUBMIT UNEXPECTED ERROR:",e);const msg=e&&e.message?e.message:JSON.stringify(e);setGalleryStatus(`Unexpected gallery error: ${msg}`,"bad");alert(`Unexpected gallery error: ${msg}`)}}
+async function likeGalleryPost(id,btn){const sb=await getClient();if(!sb||!id||!btn)return;const key='zummee_gallery_liked_'+id;try{if(localStorage.getItem(key)==='1'){btn.classList.add('is-liked');return}const span=btn.querySelector('span');const current=Number(span&&span.textContent||0)+1;if(span)span.textContent=current;btn.classList.add('is-liked');localStorage.setItem(key,'1');const fresh=await sb.from('community_gallery').select('likes_count').eq('id',id).maybeSingle();const next=Number(fresh&&fresh.data&&fresh.data.likes_count||0)+1;await sb.from('community_gallery').update({likes_count:next}).eq('id',id);updateGalleryLikeCount(id,next);await createGalleryInteractionNotification(id,'like',(galleryContext.residentName||'A resident')+' liked your gallery photo.')}catch(e){console.warn('Like failed',e)}}
+async function addGalleryComment(id){const sb=await getClient();const input=$('commentInput_'+id);const comment=(input&&input.value||'').trim();if(!sb||!comment)return;try{const row={post_id:id,comment:comment,commenter_name:galleryContext.residentName||'Resident',resident_id:galleryContext.residentId||null,resident_email:galleryContext.residentEmail||null,status:'visible'};const r=await sb.from('resident_gallery_comments').insert(row);if(r.error)throw r.error;input.value='';await loadGalleryComments([id]);await createGalleryInteractionNotification(id,'comment',(galleryContext.residentName||'A resident')+' commented on your gallery photo.')}catch(e){console.warn('Comment failed',e)}}
+
+
+async function signOutResidentExperience(){
+  const btn=document.querySelector('.signoutBtn');
+  try{ if(btn){ btn.disabled=true; btn.textContent='Signing out...'; } }catch(_e){}
+  try{
+    if(window.ZummeeResidentAuth && typeof window.ZummeeResidentAuth.signOutResident === 'function'){
+      await window.ZummeeResidentAuth.signOutResident();
+      return;
+    }
+  }catch(_e){}
+  try{
+    const sb=await getClient();
+    if(sb && sb.auth && typeof sb.auth.signOut === 'function') await sb.auth.signOut();
+  }catch(_e){}
+  ['resident_id','resident_name','resident_unit','resident_phone','resident_email','currentCommunityId','currentCommunityName','zummeeCurrentCommunityName','zummee_selected_community_id','activeCommunityId'].forEach(function(k){try{localStorage.removeItem(k);sessionStorage.removeItem(k);}catch(_e){}});
+  window.location.replace('login.html?resident_signed_out=1');
+}
+
+loadContext();
+</script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

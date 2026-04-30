@@ -1,0 +1,3582 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Zummee Manager Hub</title>
+  <script>
+window.__MH_VERSION = 'v2_stable';
+
+    (function(){
+      try{
+        var stored = localStorage.getItem('mh2-theme') || 'light';
+        var resolved = stored === 'auto' ? ((window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light') : stored;
+        document.documentElement.setAttribute('data-theme', resolved);
+      }catch(_e){
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+</script>
+
+  <script>
+    (function(){
+      try{
+        var activeId = String(localStorage.getItem('zummeeActiveCommunityId') || localStorage.getItem('activeCommunityId') || localStorage.getItem('currentCommunityId') || localStorage.getItem('zummee_selected_community_id') || '').trim();
+        var activeName = String(localStorage.getItem('currentCommunityName') || localStorage.getItem('zummeeCurrentCommunityName') || '').trim();
+        var zip = '';
+        if(activeId){
+          zip = String(localStorage.getItem('mh2-weather-zip:' + activeId) || '').trim();
+        }
+        if(!zip){
+          zip = String(localStorage.getItem('mh2-last-weather-zip') || '').trim();
+        }
+        window.__mh2BootWeather = { communityId:activeId, communityName:activeName, zip:zip };
+      }catch(_e){
+        window.__mh2BootWeather = { communityId:'', communityName:'', zip:'' };
+      }
+    })();
+  </script>
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="shared/zummee-design-system.css" />
+  <style>
+    :root{
+      --bg-top:#f7fbff;
+      --bg-bottom:#edf3f8;
+      --ink:#17324d;
+      --muted:#5e7389;
+      --line:rgba(23,50,77,.10);
+      --line-strong:rgba(23,50,77,.16);
+      --white:#ffffff;
+      --blue-top:rgba(255,255,255,.96);
+      --blue-bottom:rgba(244,249,254,.94);
+      --gold-top:rgba(255,248,227,.98);
+      --gold-bottom:rgba(246,232,170,.94);
+      --card-shadow:0 18px 40px rgba(18,42,67,.10);
+      --soft-shadow:0 10px 24px rgba(18,42,67,.06);
+      --radius-xl:30px;
+      --radius-lg:24px;
+      --radius-md:18px;
+    }
+
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0}
+    body{
+      min-height:100vh;
+      font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color:var(--ink);
+      background:linear-gradient(180deg,var(--bg-top) 0%, var(--bg-bottom) 100%);
+    }
+
+
+    #weatherZipInput,
+    #weatherLocationLabel{
+      opacity:0;
+      transition:opacity .18s ease;
+    }
+    #weatherZipInput.mh2-is-ready,
+    #weatherLocationLabel.mh2-is-ready{
+      opacity:1;
+    }
+    .mh2-page{
+      max-width:1320px;
+      margin:0 auto;
+      padding:18px 18px 40px;
+    }
+
+    .mh2-shell{
+      display:grid;
+      gap:18px;
+    }
+
+    .mh2-card,
+    .mh2-panel,
+    .mh2-tool-card{
+      position:relative;
+      border-radius:var(--radius-xl);
+      border:1px solid rgba(255,255,255,.82);
+      background:linear-gradient(180deg,var(--blue-top),var(--blue-bottom));
+      box-shadow:var(--card-shadow);
+      overflow:hidden;
+    }
+
+    .mh2-card--gold,
+    .mh2-tool-card--gold{
+      background:linear-gradient(180deg,var(--gold-top),var(--gold-bottom));
+      border-color:rgba(245,220,123,.68);
+    }
+
+    .mh2-hero{
+      padding:22px;
+      display:grid;
+      gap:18px;
+    }
+
+    .mh2-hero-top{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:18px;
+      flex-wrap:wrap;
+    }
+
+    .mh2-brand{
+      display:flex;
+      align-items:center;
+      gap:16px;
+      min-width:0;
+    }
+
+    .mh2-logo{
+      width:58px;
+      height:58px;
+      border-radius:18px;
+      object-fit:contain;
+      background:rgba(255,255,255,.78);
+      padding:8px;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.84), 0 8px 18px rgba(18,42,67,.08);
+      flex:0 0 auto;
+      opacity:0;
+      transition:opacity .18s ease;
+    }
+
+    .mh2-logo.is-visible{
+      opacity:1;
+    }
+
+    .mh2-logo.is-company{
+      width:420px;
+      max-width:min(42vw, 420px);
+      height:222px;
+      max-height:222px;
+      padding:14px 20px;
+      border-radius:24px;
+      background:rgba(255,255,255,.96);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.92), 0 14px 30px rgba(18,42,67,.10);
+      object-fit:contain;
+    }
+
+    .mh2-tool-card[data-role-scope="supervisor"]{display:none;}
+    .mh2-page.is-privileged .mh2-tool-card[data-role-scope="supervisor"]{display:flex;}
+    #employeeHubSection{display:none;}
+    .mh2-page.is-privileged #employeeHubSection{display:block;}
+    #employeeHubCards .mh2-tool-card[data-role-scope="supervisor"]{display:flex;}
+    #employeeHubCards .mh2-tool-controls{display:none;}
+    #employeeHubCards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px;}
+    #employeeHubCards .mh2-tool-card{min-height:96px;padding:16px;border-radius:22px;gap:8px;display:flex;flex-direction:column;justify-content:center;background:linear-gradient(180deg,#f5fbf7,#e8f6ee);border-color:#bfe2ca;box-shadow:var(--soft-shadow);}
+    #employeeHubCards .mh2-tool-top{align-items:center;gap:10px;}
+    #employeeHubCards .mh2-kicker,#employeeHubCards .mh2-tool-copy,#employeeHubCards .mh2-tool-meta{display:none;}
+    #employeeHubCards .mh2-tool-name{font-size:15px;line-height:1.15;font-weight:900;color:#166534;}
+    #employeeHubCards .mh2-tool-pill{min-height:28px;padding:0 10px;border-radius:999px;background:#fff;border:1px solid #b7dec5;color:#166534;font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;}
+    @media (max-width:760px){#employeeHubCards{grid-template-columns:1fr;}}
+
+
+    .mh2-eyebrow,
+    .mh2-chip,
+    .mh2-kicker,
+    .mh2-stat-label{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-size:11px;
+      font-weight:900;
+      line-height:1;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+    }
+
+    .mh2-eyebrow{
+      padding:8px 12px;
+      border-radius:999px;
+      background:rgba(47,91,143,.10);
+      color:#2f5b8f;
+      width:max-content;
+      margin-bottom:10px;
+    }
+
+    .mh2-title{
+      margin:0;
+      font-size:40px;
+      line-height:.96;
+      letter-spacing:-.045em;
+    }
+
+    @media (max-width: 980px){
+      .mh2-logo.is-company{
+        width:300px;
+        max-width:min(60vw, 300px);
+        height:160px;
+        max-height:160px;
+      }
+    }
+
+    @media (max-width: 640px){
+      .mh2-logo.is-company{
+        width:220px;
+        max-width:70vw;
+        height:120px;
+        max-height:120px;
+        padding:12px 16px;
+      }
+    }
+
+    .mh2-sub{
+      margin:10px 0 0;
+      max-width:720px;
+      color:var(--muted);
+      font-size:15px;
+      line-height:1.45;
+    }
+
+    .mh2-actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:flex-end;
+    }
+
+    .mh2-btn{
+      appearance:none;
+      border:none;
+      text-decoration:none;
+      cursor:pointer;
+      min-height:48px;
+      padding:0 18px;
+      border-radius:999px;
+      font-size:14px;
+      font-weight:900;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      transition:transform .16s ease, box-shadow .16s ease, opacity .16s ease;
+      white-space:nowrap;
+    }
+
+    .mh2-btn:hover{transform:translateY(-1px)}
+    .mh2-btn--primary{background:#2f5b8f;color:#fff;box-shadow:0 12px 24px rgba(47,91,143,.22)}
+    .mh2-btn--secondary{background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:var(--soft-shadow)}
+    .mh2-btn--ghost{background:rgba(47,91,143,.08);color:#2f5b8f;border:1px solid rgba(47,91,143,.10)}
+
+    .mh2-toolbar{
+      display:grid;
+      grid-template-columns:minmax(280px, 1.35fr) auto;
+      gap:14px;
+      align-items:end;
+    }
+
+    .mh2-field{
+      background:rgba(255,255,255,.78);
+      border:1px solid rgba(255,255,255,.86);
+      box-shadow:var(--soft-shadow);
+      border-radius:20px;
+      padding:12px;
+    }
+
+    .mh2-label{
+      display:block;
+      margin-bottom:8px;
+      color:#60758a;
+      font-size:11px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.12em;
+    }
+
+    select,
+    input{
+      width:100%;
+      height:50px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:#fff;
+      color:var(--ink);
+      padding:0 14px;
+      font-size:15px;
+      font-weight:800;
+    }
+
+    .mh2-stats{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0,1fr));
+      gap:12px;
+    }
+
+    .mh2-live-primary{
+      margin-top:18px;
+      padding:20px;
+      border-radius:28px;
+      background:linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.72));
+      border:1px solid rgba(255,255,255,.88);
+      box-shadow:var(--soft-shadow);
+    }
+
+    .mh2-live-primary #activityFeedList{
+      max-height:360px;
+      overflow:auto;
+      padding-right:4px;
+    }
+
+    .mh2-live-primary #activityFeedList::-webkit-scrollbar{width:8px}
+    .mh2-live-primary #activityFeedList::-webkit-scrollbar-thumb{background:rgba(47,91,143,.18);border-radius:999px}
+
+    .mh2-live-primary .mh2-status-pill{
+      min-width:60px;
+    }
+
+    .mh2-stat{
+      border-radius:22px;
+      background:rgba(255,255,255,.76);
+      border:1px solid rgba(255,255,255,.84);
+      box-shadow:var(--soft-shadow);
+      padding:16px;
+      min-height:104px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .mh2-stat-value{
+      font-size:32px;
+      font-weight:900;
+      line-height:1;
+      letter-spacing:-.04em;
+    }
+
+    .mh2-stat-note{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+    }
+
+    
+    #weatherHubCard{margin-top:18px}
+    #smartAlertStrip{margin-top:18px}
+
+    .mh2-main{
+      display:grid;
+      grid-template-columns:minmax(0, 1.3fr) minmax(320px, .78fr);
+      gap:18px;
+      align-items:start;
+    }
+
+    .mh2-stack{display:grid;gap:18px}
+
+    .mh2-section{
+      padding:22px;
+    }
+
+    .mh2-section-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:14px;
+      flex-wrap:wrap;
+    }
+
+
+    .mh2-weather-head{
+      align-items:center;
+      margin-bottom:12px;
+    }
+
+    .mh2-weather-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-left:auto;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .mh2-emergency-pill{
+      min-height:38px;
+      padding:0 14px;
+      border-radius:999px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      text-decoration:none;
+      font-weight:800;
+      font-size:13px;
+      letter-spacing:.02em;
+      white-space:nowrap;
+      color:#fff;
+      background:linear-gradient(135deg,#ff5d4d,#d61f1f);
+      border:1px solid rgba(255,255,255,.35);
+      box-shadow:0 10px 24px rgba(214,31,31,.24), inset 0 1px 0 rgba(255,255,255,.18);
+      transform-origin:center;
+    }
+
+    .mh2-emergency-pill::before{
+      content:"🚨";
+      font-size:14px;
+      line-height:1;
+    }
+
+    .mh2-emergency-pill.is-hidden{
+      display:none;
+    }
+
+    .mh2-emergency-pill.is-pulse{
+      animation:mh2EmergencyPulse 1.25s ease-in-out infinite;
+    }
+
+    @keyframes mh2EmergencyPulse{
+      0%,100%{
+        transform:scale(1);
+        box-shadow:0 10px 24px rgba(214,31,31,.24), inset 0 1px 0 rgba(255,255,255,.18), 0 0 0 0 rgba(214,31,31,.28);
+      }
+      45%{
+        transform:scale(1.065);
+        box-shadow:0 14px 28px rgba(214,31,31,.30), inset 0 1px 0 rgba(255,255,255,.18), 0 0 0 9px rgba(214,31,31,0);
+      }
+    }
+
+    .mh2-weather-title{
+      margin:0;
+      font-size:22px;
+      line-height:1;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+
+    .mh2-section-title{
+      margin:10px 0 0;
+      font-size:28px;
+      line-height:1.02;
+      letter-spacing:-.035em;
+    }
+
+    .mh2-section-sub{
+      margin:8px 0 0;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.45;
+      max-width:640px;
+    }
+
+    .mh2-status-pill{
+      min-height:38px;
+      min-width:38px;
+      padding:0 14px;
+      border-radius:999px;
+      background:#fff;
+      border:1px solid var(--line);
+      box-shadow:var(--soft-shadow);
+      font-size:14px;
+      font-weight:900;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .mh2-placeholder,
+    .mh2-list,
+    .mh2-feed,
+    .mh2-weather,
+    .mh2-smart-strip{
+      margin-top:16px;
+    }
+
+    .mh2-placeholder{
+      padding:18px;
+      border-radius:22px;
+      background:rgba(255,255,255,.72);
+      border:1px dashed rgba(23,50,77,.14);
+      color:var(--muted);
+      font-size:14px;
+      font-weight:700;
+      line-height:1.45;
+    }
+
+    .mh2-smart-strip{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0,1fr));
+      gap:12px;
+    }
+
+    .mh2-alert{
+      min-height:96px;
+      border-radius:22px;
+      padding:16px;
+      background:rgba(255,255,255,.74);
+      border:1px solid rgba(255,255,255,.84);
+      box-shadow:var(--soft-shadow);
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      justify-content:center;
+      text-decoration:none;
+      color:inherit;
+      transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+      cursor:pointer;
+    }
+    .mh2-alert:hover{transform:translateY(-1px)}
+    .mh2-alert.is-urgent{background:linear-gradient(180deg,#fff5f5,#ffe9e9);border-color:#f3c7c7}
+    .mh2-alert.is-attention{background:linear-gradient(180deg,#fffaf0,#fff1cf);border-color:#eed598}
+    .mh2-alert.is-good{background:linear-gradient(180deg,#f5fbf7,#e8f6ee);border-color:#bfe2ca}
+    .mh2-alert-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .mh2-alert-badge{min-height:28px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;display:inline-flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--line)}
+    .mh2-alert.is-urgent .mh2-alert-badge{color:#b42318;border-color:#efb5b2;background:#fff}
+    .mh2-alert.is-attention .mh2-alert-badge{color:#9a6700;border-color:#e9d28b;background:#fff}
+    .mh2-alert.is-good .mh2-alert-badge{color:#067647;border-color:#b7dec5;background:#fff}
+    .mh2-alert-title{font-size:15px;font-weight:900}
+    .mh2-alert-copy{font-size:13px;color:var(--muted);line-height:1.35}
+
+    .mh2-weather{
+      display:grid;
+      grid-template-columns:minmax(0, 1.2fr) minmax(240px, .8fr);
+      gap:14px;
+    }
+
+    .mh2-weather-hero,
+    .mh2-weather-side,
+    .mh2-list-item,
+    .mh2-tool-card{
+      border-radius:24px;
+      border:1px solid rgba(255,255,255,.82);
+      background:rgba(255,255,255,.74);
+      box-shadow:var(--soft-shadow);
+    }
+
+    
+    .mh2-weather-hero{
+      min-height:240px;
+      padding:18px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      position:relative;
+      overflow:hidden;
+      color:#fff;
+      border-radius:24px;
+      background:linear-gradient(180deg,#4aa1f2,#8bc7fb 56%,#d8eefc 100%);
+      transition:background .28s ease, color .28s ease, box-shadow .28s ease;
+    }
+    .mh2-weather-hero.wx-day{background:linear-gradient(180deg,#4aa1f2,#8bc7fb 56%,#d8eefc 100%) !important;}
+    .mh2-weather-hero.wx-night{background:linear-gradient(180deg,#112943 0%, #183657 55%, #22486f 100%) !important;}
+    .mh2-weather-hero.wx-empty{background:linear-gradient(180deg,#6d8eb1,#9ebad2 60%,#dae7f0 100%) !important;}
+    .mh2-weather-temp{font-size:62px;font-weight:900;line-height:.92;letter-spacing:-.06em}
+    .mh2-weather-meta{display:flex;gap:10px;flex-wrap:wrap}
+    .mh2-chip{
+      min-height:34px;
+      padding:0 12px;
+      border-radius:999px;
+      background:rgba(255,255,255,.16);
+      color:#fff;
+      border:1px solid rgba(255,255,255,.22);
+      backdrop-filter:blur(8px);
+      -webkit-backdrop-filter:blur(8px);
+    }
+    .mh2-weather-side{
+      padding:16px;
+      display:grid;
+      gap:12px;
+      align-content:start;
+    }
+    .mh2-side-row{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0,1fr));
+      gap:10px;
+    }
+    .mh2-mini{
+      min-height:88px;
+      border-radius:18px;
+      background:#fff;
+      border:1px solid var(--line);
+      padding:14px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      gap:8px;
+    }
+    .mh2-mini-label{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#60758a}
+    .mh2-mini-value{font-size:22px;font-weight:900;line-height:1;letter-spacing:-.03em}
+    .mh2-weather-scene{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      overflow:hidden;
+    }
+    .mh2-sun{
+      position:absolute;
+      right:34px;
+      top:22px;
+      width:86px;
+      height:86px;
+      border-radius:50%;
+      background:radial-gradient(circle at 35% 35%, rgba(255,255,255,.96), rgba(255,241,171,.95) 32%, rgba(255,206,96,.9) 65%, rgba(255,206,96,0) 72%);
+      box-shadow:0 0 0 16px rgba(255,222,130,.12), 0 0 36px 8px rgba(255,210,102,.22);
+      transition:all .28s ease;
+    }
+    .mh2-cloud, .mh2-cloud::before, .mh2-cloud::after{
+      background:rgba(255,255,255,.30);
+      position:absolute;
+      border-radius:999px
+    }
+    .mh2-cloud{
+      width:108px;
+      height:28px;
+      left:34px;
+      top:44px;
+      animation:mh2CloudDrift 20s linear infinite;
+      opacity:.5;
+      transition:opacity .28s ease, background .28s ease;
+    }
+    .mh2-cloud::before{content:"";width:42px;height:42px;left:12px;top:-18px}
+    .mh2-cloud::after{content:"";width:54px;height:54px;left:44px;top:-24px}
+    .mh2-cloud.cloud-2{
+      left:auto;
+      right:118px;
+      top:108px;
+      transform:scale(.82);
+      opacity:.42;
+      animation-duration:26s
+    }
+    @keyframes mh2CloudDrift{0%{transform:translateX(0)}50%{transform:translateX(12px)}100%{transform:translateX(0)}}
+    .mh2-weather-copy{max-width:72%;font-size:18px;font-weight:800;line-height:1.25;text-wrap:balance}
+    .mh2-daylight{display:grid;gap:8px;margin-top:10px}
+    .mh2-daylight-row{
+      position:relative;
+      width:100%;
+      height:10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.24);
+      overflow:hidden
+    }
+    .mh2-daylight-fill{
+      position:absolute;left:0;top:0;bottom:0;
+      width:65%;
+      border-radius:999px;
+      background:linear-gradient(90deg,#f5e6a0,#ffe38a)
+    }
+    .mh2-daylight-sun{
+      position:absolute;top:50%;left:65%;
+      width:18px;height:18px;border-radius:50%;
+      transform:translate(-50%,-50%);
+      background:#ffe58f;
+      box-shadow:0 0 0 6px rgba(255,229,143,.16)
+    }
+    .mh2-daylight-times{
+      display:flex;
+      justify-content:space-between;
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.03em;
+      color:rgba(255,255,255,.92)
+    }
+    .mh2-weather-hero.wx-cloudy .mh2-sun{opacity:.42}
+    .mh2-weather-hero.wx-cloudy .mh2-cloud{opacity:.82}
+    .mh2-weather-hero.wx-clear .mh2-cloud{opacity:.28}
+    .mh2-weather-hero.wx-empty .mh2-cloud{opacity:.18}
+    .mh2-weather-hero.wx-empty .mh2-sun{opacity:.18}
+    .mh2-weather-hero.wx-empty .mh2-weather-copy{max-width:82%}
+    .mh2-weather-hero.wx-night .mh2-sun{
+      width:68px;
+      height:68px;
+      right:48px;
+      top:28px;
+      background:radial-gradient(circle at 30% 30%, #f3f7ff 0%, #d8e2f2 68%, #b9c5d8 100%);
+      box-shadow:0 0 18px rgba(255,255,255,.05), inset -6px -6px 14px rgba(0,0,0,.35);
+      overflow:hidden;
+    }
+    .mh2-weather-hero.wx-night .mh2-sun::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      border-radius:50%;
+      background:radial-gradient(circle at 78% 50%, transparent 62%, #17324f 70%);
+    }
+    .mh2-weather-hero.wx-night .mh2-sun::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      border-radius:50%;
+      box-shadow:inset 2px 2px 6px rgba(255,255,255,.12);
+    }
+    .mh2-weather-hero.wx-night .mh2-cloud,
+    .mh2-weather-hero.wx-night .mh2-cloud::before,
+    .mh2-weather-hero.wx-night .mh2-cloud::after{
+      background:rgba(196,214,238,.18);
+    }
+    .mh2-weather-hero.wx-night::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      background-image:
+        radial-gradient(1.5px 1.5px at 18% 22%, rgba(255,255,255,.28) 50%, transparent 51%),
+        radial-gradient(1px 1px at 74% 18%, rgba(255,255,255,.22) 50%, transparent 51%),
+        radial-gradient(1px 1px at 58% 34%, rgba(255,255,255,.16) 50%, transparent 51%);
+      opacity:.28;
+    }
+    .mh2-weather-hero.wx-night .mh2-weather-temp,
+    .mh2-weather-hero.wx-night .mh2-weather-copy,
+    .mh2-weather-hero.wx-night .mh2-kicker,
+    .mh2-weather-hero.wx-night .mh2-chip,
+    .mh2-weather-hero.wx-night .mh2-daylight-times span{
+      color:#f6fbff !important;
+    }
+    .mh2-weather-hero.wx-night .mh2-chip{
+      background:rgba(255,255,255,.08);
+      border-color:rgba(255,255,255,.14);
+    }
+    .mh2-weather-hero.wx-rain{
+      background:linear-gradient(180deg,#617c97,#89a3bd 60%,#c7dae9 100%) !important;
+    }
+    .mh2-weather-hero.wx-rain .mh2-sun{opacity:.2}
+    .mh2-weather-hero.wx-rain .mh2-cloud{opacity:.76}
+    .mh2-weather-hero.wx-rain .mh2-weather-scene::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:repeating-linear-gradient(104deg, rgba(255,255,255,0) 0 18px, rgba(255,255,255,.18) 18px 20px, rgba(255,255,255,0) 20px 38px);
+      opacity:.28;
+    }
+
+
+    .mh2-status-pill.is-low{background:linear-gradient(180deg,#f5fbf7,#e8f6ee);color:#067647;border-color:#bfe2ca}
+    .mh2-status-pill.is-moderate{background:linear-gradient(180deg,#fff9eb,#fff1cd);color:#b54708;border-color:#f5d58b}
+    .mh2-status-pill.is-medium{background:linear-gradient(180deg,#fffaf0,#fff1cf);color:#9a6700;border-color:#eed598}
+    .mh2-status-pill.is-high{background:linear-gradient(180deg,#fff5f5,#ffe9e9);color:#b42318;border-color:#efb5b2}
+
+    .mh2-weather-hero{
+      position:relative;
+      isolation:isolate;
+    }
+    .mh2-weather-scene{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:inherit}
+    .mh2-sun{
+      position:absolute;right:28px;top:24px;width:96px;height:96px;border-radius:50%;
+      background:radial-gradient(circle at 35% 35%, rgba(255,255,255,.95), rgba(255,241,171,.95) 32%, rgba(255,206,96,.88) 65%, rgba(255,206,96,0) 72%);
+      box-shadow:0 0 0 18px rgba(255,222,130,.12), 0 0 48px 10px rgba(255,210,102,.28);
+      filter:saturate(1.08);
+    }
+    .mh2-cloud, .mh2-cloud::before, .mh2-cloud::after{background:rgba(255,255,255,.30);position:absolute;border-radius:999px}
+    .mh2-cloud{width:108px;height:28px;left:34px;top:44px;animation:mh2CloudDrift 20s linear infinite}
+    .mh2-cloud::before{content:"";width:42px;height:42px;left:12px;top:-18px}
+    .mh2-cloud::after{content:"";width:54px;height:54px;left:44px;top:-24px}
+    .mh2-cloud.cloud-2{left:auto;right:118px;top:108px;transform:scale(.82);opacity:.72;animation-duration:26s}
+    .mh2-cloud.cloud-2::before,.mh2-cloud.cloud-2::after,.mh2-cloud.cloud-2{background:rgba(255,255,255,.22)}
+    @keyframes mh2CloudDrift{0%{transform:translateX(0)}50%{transform:translateX(12px)}100%{transform:translateX(0)}}
+    .mh2-weather-copy{max-width:72%;font-size:18px;font-weight:800;line-height:1.2}
+    .mh2-daylight{
+      display:grid;gap:8px;margin-top:14px;color:#fff;
+    }
+    .mh2-daylight-row{position:relative;height:8px;border-radius:999px;background:rgba(255,255,255,.22);overflow:hidden}
+    .mh2-daylight-fill{position:absolute;inset:0 auto 0 0;width:68%;border-radius:inherit;background:linear-gradient(90deg, rgba(255,225,141,.42), rgba(255,245,193,.95), rgba(255,225,141,.42))}
+    .mh2-daylight-sun{position:absolute;left:68%;top:50%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#fff6c4;box-shadow:0 0 0 4px rgba(255,246,196,.18)}
+    .mh2-daylight-times{display:flex;justify-content:space-between;font-size:12px;font-weight:800;color:rgba(255,255,255,.88)}
+    .mh2-forecast-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    .mh2-forecast-chip{min-height:74px;border-radius:18px;background:#fff;border:1px solid var(--line);padding:12px;display:flex;flex-direction:column;justify-content:space-between;gap:8px}
+    .mh2-forecast-label {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  text-align: center;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+}
+    .mh2-forecast-value{font-size:22px;font-weight:900;line-height:1;letter-spacing:-.03em}
+    .mh2-forecast-sub{font-size:12px;font-weight:700;color:var(--muted)}
+
+    .mh2-grid-2{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0,1fr));
+      gap:18px;
+    }
+
+    .mh2-list{
+      display:grid;
+      gap:12px;
+    }
+
+    .mh2-list-item{
+      padding:16px;
+      display:flex;
+      justify-content:space-between;
+      gap:14px;
+      align-items:flex-start;
+    }
+
+    .mh2-item-title{font-size:16px;font-weight:900;line-height:1.2}
+    .mh2-item-copy{margin-top:6px;font-size:13px;color:var(--muted);line-height:1.4}
+    .mh2-item-tag{
+      min-height:32px;
+      padding:0 10px;
+      border-radius:999px;
+      background:rgba(47,91,143,.08);
+      color:#2f5b8f;
+      border:1px solid rgba(47,91,143,.12);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font-size:12px;
+      font-weight:900;
+      white-space:nowrap;
+    }
+
+    .mh2-feed{
+      display:grid;
+      gap:12px;
+    }
+
+    .mh2-feed-item{
+      display:grid;
+      grid-template-columns:auto 1fr auto;
+      gap:12px;
+      align-items:flex-start;
+      padding:15px 16px;
+      border-radius:20px;
+      background:rgba(255,255,255,.74);
+      border:1px solid rgba(255,255,255,.84);
+      box-shadow:var(--soft-shadow);
+    }
+
+    .mh2-dot{
+      width:12px;height:12px;border-radius:50%;margin-top:5px;background:#2f5b8f;box-shadow:0 0 0 4px rgba(47,91,143,.12)
+    }
+    .mh2-dot--gold{background:#c69410;box-shadow:0 0 0 4px rgba(198,148,16,.14)}
+    .mh2-dot--green{background:#1f9d55;box-shadow:0 0 0 4px rgba(31,157,85,.14)}
+
+    .mh2-tool-grid{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0,1fr));
+      gap:14px;
+      margin-top:16px;
+    }
+
+    .mh2-tool-card{
+      min-height:156px;
+      padding:18px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      gap:12px;
+      text-decoration:none;
+      color:inherit;
+    }
+
+    .mh2-tool-card:hover{transform:translateY(-1px)}
+
+    .mh2-tools-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom:14px;
+    }
+    .mh2-tools-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .mh2-tool-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .mh2-tool-card{
+      display:grid;
+      gap:14px;
+      padding:18px;
+      text-decoration:none;
+      color:inherit;
+      min-height:180px;
+    }
+    .mh2-tool-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+    .mh2-tool-top-left{min-width:0}
+    .mh2-tool-badges{display:flex;gap:8px;flex-wrap:wrap}
+    .mh2-tool-pill{
+      display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 12px;border-radius:999px;
+      background:rgba(47,91,143,.10);color:#2f5b8f;font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;
+    }
+    .mh2-tool-pill.is-urgent{background:rgba(182,41,55,.12);color:#9b2030}
+    .mh2-tool-pill.is-good{background:rgba(20,115,78,.10);color:#136848}
+    .mh2-tool-pill.is-gold{background:rgba(175,125,18,.14);color:#8e6510}
+    .mh2-tool-card--urgent .mh2-tool-metric{background:rgba(255,255,255,.82);border-color:rgba(235,161,161,.55)}
+    .mh2-tool-card--gold .mh2-tool-metric{border-color:rgba(231,201,113,.48)}
+    .mh2-tool-name{font-size:22px;font-weight:900;line-height:1.05;letter-spacing:-.03em}
+    .mh2-tool-copy{color:var(--muted);font-size:14px;line-height:1.45}
+    .mh2-tool-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .mh2-tool-metric{padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.75);border:1px solid rgba(255,255,255,.82)}
+    .mh2-tool-metric-label{font-size:10px;font-weight:900;letter-spacing:.11em;text-transform:uppercase;color:#6e8296;margin-bottom:6px}
+    .mh2-tool-metric-value{font-size:22px;font-weight:900;line-height:1}
+    .mh2-tool-controls{display:none;align-items:center;gap:8px;flex-wrap:wrap}
+    .mh2-page.is-customizing .mh2-tool-controls{display:flex}
+    .mh2-page.is-customizing .mh2-tool-card{outline:2px dashed rgba(47,91,143,.25);outline-offset:-8px}
+    .mh2-mini-btn{appearance:none;border:none;cursor:pointer;min-width:34px;height:34px;border-radius:12px;background:#fff;color:var(--ink);font-size:14px;font-weight:900;box-shadow:var(--soft-shadow)}
+    .mh2-mini-btn.is-favorite{background:rgba(250,221,111,.32)}
+    .mh2-favorites-note{font-size:12px;color:var(--muted);margin-top:4px}
+    .mh2-tool-name{font-size:20px;font-weight:900;letter-spacing:-.03em;line-height:1.05}
+    .mh2-tool-copy{font-size:13px;color:var(--muted);line-height:1.4}
+
+    .mh2-footnote{
+      margin-top:14px;
+      color:#60758a;
+      font-size:12px;
+      line-height:1.45;
+    }
+
+    .mh2-board-tag.is-overdue{
+      background:#fff1f1;
+      color:#b42318;
+      border-color:#f5c2c0;
+    }
+
+    .mh2-board-meta{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:6px;
+    }
+
+    .mh2-board-meta .mh2-chip{
+      background:#f4f7fb;
+      color:#5d7389;
+      border:1px solid var(--line);
+      font-size:11px;
+      padding:6px 10px;
+    }
+
+    @media (max-width: 1100px){
+      .mh2-stats{grid-template-columns:repeat(2, minmax(0,1fr));}
+      .mh2-main{grid-template-columns:1fr;}
+      .mh2-grid-2{grid-template-columns:1fr;}
+    }
+
+    @media (max-width: 760px){
+      .mh2-page{padding:12px 10px 28px}
+      .mh2-hero,
+      .mh2-section,
+      .mh2-live-primary{padding:16px}
+      .mh2-title{font-size:32px}
+      .mh2-toolbar{grid-template-columns:1fr}
+      .mh2-smart-strip,
+      .mh2-weather,
+      .mh2-tool-grid,
+      .mh2-side-row{grid-template-columns:1fr}
+      .mh2-actions{justify-content:flex-start}
+      .mh2-feed-item,
+      .mh2-list-item{grid-template-columns:auto 1fr}
+      .mh2-feed-item > :last-child,
+      .mh2-list-item > :last-child{grid-column:2}
+    }
+
+
+    .mh2-theme-toggle.is-dark::before{content:"☾ ";}
+    .mh2-theme-toggle.is-light::before{content:"☀︎ ";}
+
+    html[data-theme="dark"]{color-scheme:dark;}
+    html[data-theme="dark"] body{
+      background:radial-gradient(circle at top, #16283d 0%, #0d1725 45%, #09111b 100%);
+      color:#e7eef7;
+    }
+    html[data-theme="dark"] .mh2-card,
+    html[data-theme="dark"] .mh2-panel,
+    html[data-theme="dark"] .mh2-tool-card,
+    html[data-theme="dark"] .mh2-live-primary{
+      border:1px solid rgba(255,255,255,.08);
+      background:linear-gradient(180deg, rgba(18,31,47,.94), rgba(11,20,31,.96));
+      box-shadow:0 18px 40px rgba(0,0,0,.34);
+    }
+    html[data-theme="dark"] .mh2-card--gold,
+    html[data-theme="dark"] .mh2-tool-card--gold{
+      background:linear-gradient(180deg, rgba(79,61,18,.95), rgba(53,41,14,.98));
+      border-color:rgba(231,201,113,.28);
+    }
+    html[data-theme="dark"] .mh2-title,
+    html[data-theme="dark"] .mh2-section-title,
+    html[data-theme="dark"] .mh2-tool-title,
+    html[data-theme="dark"] .mh2-number,
+    html[data-theme="dark"] .mh2-status-pill,
+    html[data-theme="dark"] .mh2-feed-title,
+    html[data-theme="dark"] .mh2-list-title,
+    html[data-theme="dark"] .mh2-board-title,
+    html[data-theme="dark"] .mh2-smart-title,
+    html[data-theme="dark"] .mh2-weather-temp,
+    html[data-theme="dark"] .mh2-weather-label,
+    html[data-theme="dark"] .mh2-kicker,
+    html[data-theme="dark"] .mh2-label{
+      color:#f1f6fc;
+    }
+    html[data-theme="dark"] .mh2-sub,
+    html[data-theme="dark"] .mh2-section-sub,
+    html[data-theme="dark"] .mh2-tool-sub,
+    html[data-theme="dark"] .mh2-note,
+    html[data-theme="dark"] .mh2-board-meta,
+    html[data-theme="dark"] .mh2-list-sub,
+    html[data-theme="dark"] .mh2-feed-sub,
+    html[data-theme="dark"] .mh2-smart-copy,
+    html[data-theme="dark"] .mh2-weather-copy,
+    html[data-theme="dark"] .mh2-metric-label,
+    html[data-theme="dark"] .mh2-footer-note{
+      color:#aebccc;
+    }
+    html[data-theme="dark"] .mh2-btn--secondary{
+      background:rgba(255,255,255,.06);
+      color:#eef4fb;
+      border-color:rgba(255,255,255,.10);
+      box-shadow:none;
+    }
+    html[data-theme="dark"] .mh2-btn--ghost{
+      background:rgba(123,191,255,.12);
+      color:#cbe2ff;
+      border-color:rgba(123,191,255,.18);
+    }
+    html[data-theme="dark"] .mh2-btn--primary{
+      background:#3f79bd;
+      color:#fff;
+      box-shadow:0 12px 24px rgba(21,49,84,.42);
+    }
+    html[data-theme="dark"] .mh2-field,
+    html[data-theme="dark"] .mh2-feed-item,
+    html[data-theme="dark"] .mh2-list-item,
+    html[data-theme="dark"] .mh2-smart-card,
+    html[data-theme="dark"] .mh2-metric,
+    html[data-theme="dark"] .mh2-stat,
+    html[data-theme="dark"] .mh2-weather-mini,
+    html[data-theme="dark"] .mh2-board-item{
+      background:rgba(255,255,255,.04);
+      border-color:rgba(255,255,255,.08);
+      box-shadow:none;
+    }
+    html[data-theme="dark"] #zummeeCommunitySelect,
+    html[data-theme="dark"] #weatherZipInput{
+      background:rgba(255,255,255,.04);
+      color:#eef4fb;
+      border-color:rgba(255,255,255,.10);
+    }
+    html[data-theme="dark"] .mh2-chip,
+    html[data-theme="dark"] .mh2-status-pill{
+      background:rgba(255,255,255,.06);
+      color:#eef4fb;
+      border-color:rgba(255,255,255,.10);
+    }
+    html[data-theme="dark"] .mh2-weather{
+      background:linear-gradient(180deg, rgba(16,30,47,.98), rgba(7,16,28,.98));
+    }
+    html[data-theme="dark"] .mh2-weather-sky{
+      background:radial-gradient(circle at 22% 18%, rgba(110,160,255,.34) 0%, rgba(110,160,255,.08) 20%, transparent 32%), linear-gradient(180deg, #203654 0%, #101b2b 62%, #0a121c 100%);
+    }
+    html[data-theme="dark"] .mh2-cloud{opacity:.22;}
+    html[data-theme="dark"] .mh2-logo{background:rgba(255,255,255,.10);}
+    html[data-theme="dark"] .mh2-logo.is-company{background:rgba(255,255,255,.97);}
+    html[data-theme="dark"] .mh2-tool-card[data-tone="good"]{background:linear-gradient(180deg, rgba(18,52,38,.95), rgba(11,34,24,.98));border-color:rgba(31,157,85,.20);}
+    html[data-theme="dark"] .mh2-tool-card[data-tone="gold"]{background:linear-gradient(180deg, rgba(79,61,18,.95), rgba(53,41,14,.98));border-color:rgba(231,201,113,.28);}
+    html[data-theme="dark"] .mh2-tool-card[data-tone="urgent"]{background:linear-gradient(180deg, rgba(79,23,29,.96), rgba(53,14,19,.98));border-color:rgba(239,181,178,.28);}
+    html[data-theme="dark"] .mh2-smart-card[data-tone="good"]{background:linear-gradient(180deg, rgba(18,52,38,.78), rgba(11,34,24,.84)); border-color:rgba(31,157,85,.20);}
+    html[data-theme="dark"] .mh2-smart-card[data-tone="gold"]{background:linear-gradient(180deg, rgba(79,61,18,.78), rgba(53,41,14,.84)); border-color:rgba(231,201,113,.26);}
+    html[data-theme="dark"] .mh2-smart-card[data-tone="urgent"]{background:linear-gradient(180deg, rgba(79,23,29,.82), rgba(53,14,19,.86)); border-color:rgba(239,181,178,.28);}
+    html[data-theme="dark"] .mh2-theme-toggle{min-width:142px;}
+
+
+    /* Phase 8.1 light mode section definition */
+    html[data-theme="light"] .mh2-card,
+    html[data-theme="light"] .mh2-panel,
+    html[data-theme="light"] .mh2-tool-card,
+    html[data-theme="light"] .mh2-live-primary,
+    html[data-theme="light"] .mh2-field{
+      border:1px solid rgba(37,99,235,.42);
+      box-shadow:0 10px 24px rgba(18,42,67,.06), 0 0 0 1px rgba(96,165,250,.22), 0 8px 22px rgba(59,130,246,.12);
+    }
+
+    html[data-theme="light"] .mh2-section,
+    html[data-theme="light"] .mh2-hero,
+    html[data-theme="light"] .mh2-live-primary,
+    html[data-theme="light"] .mh2-field{
+      position:relative;
+    }
+
+    html[data-theme="light"] .mh2-section::before,
+    html[data-theme="light"] .mh2-hero::before,
+    html[data-theme="light"] .mh2-live-primary::before,
+    html[data-theme="light"] .mh2-field::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      border-radius:inherit;
+      pointer-events:none;
+      box-shadow:inset 0 0 0 1px rgba(147,197,253,.35);
+    }
+
+    html[data-theme="light"] .mh2-toolbar .mh2-field{
+      background:rgba(255,255,255,.92);
+      border:1px solid rgba(37,99,235,.48);
+      box-shadow:0 10px 24px rgba(18,42,67,.06), 0 0 0 1px rgba(96,165,250,.24), 0 8px 22px rgba(59,130,246,.14);
+    }
+
+  
+.signout-top{
+  position:absolute;
+  top:30px;
+  right:30px;
+}
+
+.smart-alert {
+  font-weight: 600;
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.smart-alert.green {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #ffffff;
+  border: 1px solid #15803d;
+  box-shadow: 0 6px 18px rgba(34, 197, 94, 0.25);
+}
+
+.smart-alert.red {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #ffffff;
+  border: 1px solid #b91c1c;
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.3);
+  animation: alertGlow 2s ease-in-out infinite;
+}
+
+@keyframes alertGlow {
+  0%, 100% {
+    box-shadow: 0 6px 18px rgba(239, 68, 68, 0.3);
+  }
+  50% {
+    box-shadow: 0 8px 26px rgba(239, 68, 68, 0.5);
+  }
+}
+
+
+50%{transform:scale(1.02); box-shadow:0 18px 42px rgba(220,38,38,.8) !important;}
+}
+
+
+/* Clean Smart Alerts: subtle fills, vivid outlines, pulse on urgent */
+.mh2-alert{
+  min-height:96px;
+  border-radius:22px;
+  padding:16px;
+  background:rgba(255,255,255,.78);
+  border:2px solid rgba(210,220,235,.9);
+  box-shadow:var(--soft-shadow);
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  justify-content:center;
+  text-decoration:none;
+  color:inherit;
+  transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+  cursor:pointer;
+}
+.mh2-alert.is-good{
+  background:linear-gradient(180deg,#f7fbf8,#eef8f1) !important;
+  border-color:#22c55e !important;
+  box-shadow:0 8px 24px rgba(34,197,94,.10) !important;
+}
+.mh2-alert.is-attention{
+  background:linear-gradient(180deg,#fffaf2,#fff4df) !important;
+  border-color:#f59e0b !important;
+  box-shadow:0 8px 24px rgba(245,158,11,.12) !important;
+}
+.mh2-alert.is-urgent{
+  background:linear-gradient(180deg,#fff7f7,#ffefef) !important;
+  border-color:#ef4444 !important;
+  box-shadow:0 8px 24px rgba(239,68,68,.14) !important;
+  animation:mh2AlertUrgentPulse 1.8s ease-in-out infinite;
+}
+.mh2-alert.is-good .mh2-alert-title,
+.mh2-alert.is-good .mh2-alert-copy,
+.mh2-alert.is-good .mh2-alert-badge{ color:#166534 !important; }
+.mh2-alert.is-attention .mh2-alert-title,
+.mh2-alert.is-attention .mh2-alert-copy,
+.mh2-alert.is-attention .mh2-alert-badge{ color:#b45309 !important; }
+.mh2-alert.is-urgent .mh2-alert-title,
+.mh2-alert.is-urgent .mh2-alert-copy,
+.mh2-alert.is-urgent .mh2-alert-badge{ color:#b91c1c !important; }
+.mh2-alert.is-good .mh2-alert-badge{
+  background:rgba(255,255,255,.8) !important;
+  border:1px solid rgba(34,197,94,.4) !important;
+}
+.mh2-alert.is-attention .mh2-alert-badge{
+  background:rgba(255,255,255,.84) !important;
+  border:1px solid rgba(245,158,11,.45) !important;
+}
+.mh2-alert.is-urgent .mh2-alert-badge{
+  background:rgba(255,255,255,.86) !important;
+  border:1px solid rgba(239,68,68,.45) !important;
+}
+@keyframes mh2AlertUrgentPulse{
+  0%,100%{
+    box-shadow:0 0 0 0 rgba(239,68,68,.28), 0 8px 24px rgba(239,68,68,.14);
+  }
+  50%{
+    box-shadow:0 0 0 7px rgba(239,68,68,0), 0 10px 28px rgba(239,68,68,.18);
+  }
+}
+
+
+/* Live Activity premium upgrade */
+.mh2-feed-item{
+  position:relative;
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:14px;
+  align-items:flex-start;
+  padding:16px 16px 16px 18px;
+  border-radius:20px;
+  background:rgba(255,255,255,.78);
+  border:1px solid rgba(255,255,255,.86);
+  box-shadow:0 4px 14px rgba(20,48,80,.06), inset 0 1px 0 rgba(255,255,255,.75);
+  backdrop-filter:blur(6px);
+  transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+  overflow:hidden;
+}
+.mh2-feed-item::before{
+  content:'';
+  position:absolute;
+  left:0;
+  top:12px;
+  bottom:12px;
+  width:4px;
+  border-radius:999px;
+  background:#2f5b8f;
+  opacity:.95;
+}
+.mh2-feed-item.is-attention::before{
+  background:#c69410;
+}
+.mh2-feed-item.is-urgent::before{
+  background:#ef4444;
+}
+.mh2-feed-item.is-active::before{
+  background:#1f9d55;
+}
+@media (hover:hover){
+  .mh2-feed-item:hover{
+    transform:translateY(-2px);
+    box-shadow:0 10px 24px rgba(20,48,80,.10), inset 0 1px 0 rgba(255,255,255,.82);
+    border-color:rgba(47,91,143,.18);
+  }
+}
+.mh2-feed-item:active{
+  transform:scale(.988);
+}
+.mh2-feed-item.is-urgent{
+  box-shadow:0 6px 18px rgba(239,68,68,.08), inset 0 1px 0 rgba(255,255,255,.78);
+}
+.mh2-feed-item.is-attention{
+  box-shadow:0 6px 18px rgba(198,148,16,.08), inset 0 1px 0 rgba(255,255,255,.78);
+}
+.mh2-feed-item.is-active{
+  box-shadow:0 6px 18px rgba(31,157,85,.08), inset 0 1px 0 rgba(255,255,255,.78);
+}
+.mh2-dot{
+  width:11px;
+  height:11px;
+  border-radius:50%;
+  margin-top:6px;
+  background:#2f5b8f;
+  box-shadow:0 0 0 5px rgba(47,91,143,.10);
+  transition:transform .16s ease, box-shadow .16s ease;
+}
+.mh2-dot--gold{background:#c69410;box-shadow:0 0 0 5px rgba(198,148,16,.12)}
+.mh2-dot--green{background:#1f9d55;box-shadow:0 0 0 5px rgba(31,157,85,.12)}
+.mh2-dot--urgent{background:#ef4444;box-shadow:0 0 0 5px rgba(239,68,68,.12)}
+.mh2-dot.is-recent{
+  animation:mh2DotPulse 1.9s ease-in-out infinite;
+}
+@keyframes mh2DotPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(47,91,143,.18)}
+  50%{box-shadow:0 0 0 8px rgba(47,91,143,0)}
+}
+.mh2-dot--gold.is-recent{
+  animation:mh2DotPulseGold 1.9s ease-in-out infinite;
+}
+@keyframes mh2DotPulseGold{
+  0%,100%{box-shadow:0 0 0 0 rgba(198,148,16,.20)}
+  50%{box-shadow:0 0 0 8px rgba(198,148,16,0)}
+}
+.mh2-dot--urgent.is-recent{
+  animation:mh2DotPulseUrgent 1.5s ease-in-out infinite;
+}
+@keyframes mh2DotPulseUrgent{
+  0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.22)}
+  50%{box-shadow:0 0 0 9px rgba(239,68,68,0)}
+}
+.mh2-item-title{
+  font-size:16px;
+  font-weight:900;
+  line-height:1.18;
+  letter-spacing:-.01em;
+}
+.mh2-item-copy{
+  margin-top:6px;
+  font-size:13px;
+  color:var(--muted);
+  line-height:1.35;
+}
+.mh2-item-tag{
+  min-height:32px;
+  padding:0 11px;
+  border-radius:999px;
+  background:rgba(47,91,143,.08);
+  color:#2f5b8f;
+  border:1px solid rgba(47,91,143,.12);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:12px;
+  font-weight:900;
+  white-space:nowrap;
+  align-self:center;
+}
+.mh2-item-tag.is-fresh{
+  background:rgba(47,91,143,.12);
+  color:#2f5b8f;
+  border-color:rgba(47,91,143,.18);
+}
+.mh2-item-tag.is-recent{
+  background:rgba(31,157,85,.10);
+  color:#177245;
+  border-color:rgba(31,157,85,.18);
+}
+.mh2-item-tag.is-stale{
+  opacity:.72;
+}
+
+
+
+/* Final header cleanup */
+.mh2-hero{
+  padding:18px 22px 14px !important;
+}
+.mh2-hero-top{
+  align-items:center !important;
+  justify-content:space-between !important;
+  gap:14px !important;
+  flex-wrap:nowrap !important;
+}
+.mh2-brand--header{
+  flex:1 1 auto !important;
+  min-width:0 !important;
+  align-items:center !important;
+}
+.mh2-logo--header,
+.mh2-brand--header .mh2-logo,
+.mh2-brand--header .mh2-logo.is-company{
+  width:240px !important;
+  max-width:min(34vw,240px) !important;
+  height:84px !important;
+  max-height:84px !important;
+  padding:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
+  object-fit:contain !important;
+  opacity:1 !important;
+}
+.mh2-actions--header{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:flex-end !important;
+  gap:10px !important;
+  flex:0 0 auto !important;
+  flex-wrap:nowrap !important;
+}
+.mh2-actions--header .mh2-btn{
+  min-height:46px !important;
+  padding:0 18px !important;
+}
+.signout-top{
+  margin-left:0 !important;
+}
+@media (max-width: 980px){
+  .mh2-logo--header,
+  .mh2-brand--header .mh2-logo,
+  .mh2-brand--header .mh2-logo.is-company{
+    width:200px !important;
+    max-width:42vw !important;
+    height:70px !important;
+    max-height:70px !important;
+  }
+  .mh2-actions--header .mh2-btn{
+    padding:0 16px !important;
+  }
+}
+@media (max-width: 640px){
+  .mh2-hero-top{
+    flex-wrap:wrap !important;
+  }
+  .mh2-brand--header{
+    width:100% !important;
+    justify-content:flex-start !important;
+  }
+  .mh2-actions--header{
+    width:100% !important;
+    justify-content:flex-start !important;
+    flex-wrap:wrap !important;
+  }
+}
+
+
+/* Header logo wiring */
+.mh2-header-logo,
+.mh2-logo--header{
+  opacity:0;
+  transition:opacity .18s ease;
+}
+.mh2-header-logo.is-visible,
+.mh2-logo--header.is-visible{
+  opacity:1;
+}
+
+
+.mh2-brand--header .mh2-logo,
+#mh2HeaderLogo{
+  border:none !important;
+  outline:none !important;
+}
+
+
+/* Header button cleanup */
+.mh2-actions--header{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:flex-end !important;
+  gap:10px !important;
+  flex-wrap:nowrap !important;
+}
+.mh2-actions--header .mh2-btn{
+  min-height:46px !important;
+  padding:0 18px !important;
+  border-radius:999px !important;
+  white-space:nowrap !important;
+}
+@media (max-width: 640px){
+  .mh2-actions--header{
+    flex-wrap:wrap !important;
+  }
+}
+
+
+/* Dark mode rewire */
+html[data-theme="dark"]{
+  --bg-top:#0f1824;
+  --bg-bottom:#172536;
+  --ink:#eef5ff;
+  --muted:#afbfd3;
+  --line:rgba(211,226,245,.14);
+  --line-strong:rgba(211,226,245,.24);
+  --white:#152232;
+  --blue-top:rgba(24,39,57,.96);
+  --blue-bottom:rgba(18,30,45,.94);
+  --gold-top:rgba(78,66,26,.92);
+  --gold-bottom:rgba(57,47,18,.92);
+  --card-shadow:0 18px 40px rgba(0,0,0,.30);
+  --soft-shadow:0 10px 24px rgba(0,0,0,.22);
+}
+html[data-theme="dark"] body{
+  background:linear-gradient(180deg,var(--bg-top) 0%, var(--bg-bottom) 100%);
+  color:var(--ink);
+}
+html[data-theme="dark"] .mh2-card,
+html[data-theme="dark"] .mh2-panel,
+html[data-theme="dark"] .mh2-tool-card,
+html[data-theme="dark"] .mh2-field,
+html[data-theme="dark"] .mh2-weather-side,
+html[data-theme="dark"] .mh2-mini,
+html[data-theme="dark"] .mh2-stat,
+html[data-theme="dark"] .mh2-list-item,
+html[data-theme="dark"] .mh2-feed-item{
+  background:linear-gradient(180deg, rgba(24,39,57,.96), rgba(18,30,45,.94)) !important;
+  border-color:rgba(211,226,245,.14) !important;
+  color:var(--ink) !important;
+}
+html[data-theme="dark"] .mh2-btn--secondary{
+  background:rgba(255,255,255,.06) !important;
+  color:var(--ink) !important;
+  border:1px solid rgba(211,226,245,.14) !important;
+}
+html[data-theme="dark"] .mh2-btn--ghost{
+  background:rgba(130,177,255,.10) !important;
+  color:#d7e7ff !important;
+  border:1px solid rgba(130,177,255,.14) !important;
+}
+html[data-theme="dark"] select,
+html[data-theme="dark"] input,
+html[data-theme="dark"] textarea{
+  background:#122031 !important;
+  color:var(--ink) !important;
+  border-color:rgba(211,226,245,.14) !important;
+}
+html[data-theme="dark"] .mh2-label,
+html[data-theme="dark"] .mh2-kicker,
+html[data-theme="dark"] .mh2-section-sub,
+html[data-theme="dark"] .mh2-footnote,
+html[data-theme="dark"] .mh2-tool-copy,
+html[data-theme="dark"] .mh2-item-copy,
+html[data-theme="dark"] .mh2-stat-label{
+  color:var(--muted) !important;
+}
+
+
+/* Remove header logo placeholder box without touching loader */
+.mh2-brand--header .mh2-logo,
+.mh2-logo--header{
+  background:transparent !important;
+  box-shadow:none !important;
+  border:0 !important;
+  border-radius:0 !important;
+  opacity:0 !important;
+}
+.mh2-brand--header .mh2-logo.is-visible,
+.mh2-logo--header.is-visible{
+  opacity:1 !important;
+}
+
+
+/* Weather Hub dark mode readability patch */
+html[data-theme="dark"] #weatherHeroCard .mh2-weather-copy{
+  color:#f4f8ff !important;
+  text-shadow:0 1px 2px rgba(0,0,0,.18);
+}
+
+html[data-theme="dark"] #weatherHeroCard .mh2-weather-temp,
+html[data-theme="dark"] #weatherHeroCard .mh2-kicker,
+html[data-theme="dark"] #weatherHeroCard .mh2-daylight-times{
+  color:#ffffff !important;
+}
+
+html[data-theme="dark"] #weatherHeroCard .mh2-chip,
+html[data-theme="dark"] #weatherHeroCard .mh2-weather-meta .mh2-chip{
+  background:rgba(12,22,36,.36) !important;
+  border:1px solid rgba(255,255,255,.16) !important;
+  color:#f7fbff !important;
+  box-shadow:none !important;
+}
+
+html[data-theme="dark"] .mh2-weather-side{
+  background:linear-gradient(180deg, rgba(11,24,39,.94), rgba(8,18,31,.96)) !important;
+  border-color:rgba(214,229,248,.12) !important;
+}
+
+html[data-theme="dark"] .mh2-weather-side .mh2-mini{
+  background:rgba(9,21,35,.88) !important;
+  border:1px solid rgba(214,229,248,.12) !important;
+  box-shadow:none !important;
+}
+
+html[data-theme="dark"] .mh2-weather-side .mh2-stat-label,
+html[data-theme="dark"] .mh2-weather-side .mh2-mini .mh2-kicker,
+html[data-theme="dark"] .mh2-weather-side .mh2-mini .mh2-label{
+  color:#adc0d7 !important;
+}
+
+html[data-theme="dark"] .mh2-weather-side .mh2-stat-value,
+html[data-theme="dark"] .mh2-weather-side .mh2-mini-value,
+html[data-theme="dark"] .mh2-weather-side .mh2-mini-temp,
+html[data-theme="dark"] .mh2-weather-side .mh2-mini-copy,
+html[data-theme="dark"] .mh2-weather-side .mh2-mini-condition{
+  color:#f4f8ff !important;
+}
+
+html[data-theme="dark"] .mh2-weather-side .mh2-mini small,
+html[data-theme="dark"] .mh2-weather-side .mh2-mini span{
+  color:inherit;
+}
+
+
+/* FIX: Forecast temperature contrast in dark mode */
+html[data-theme="dark"] .mh2-weather-side .mh2-mini {
+  background: #e9edf2 !important;
+}
+
+html[data-theme="dark"] .mh2-weather-side .mh2-mini-temp {
+  color: #0b1a2b !important;
+  font-weight: 700;
+}
+
+html[data-theme="dark"] .mh2-weather-side .mh2-mini-copy,
+html[data-theme="dark"] .mh2-weather-side .mh2-mini-condition {
+  color: #334a60 !important;
+}
+
+html[data-theme="dark"] .mh2-weather-side .mh2-mini .mh2-kicker {
+  color: #5b7288 !important;
+}
+
+
+/* FIX: actual forecast chip contrast in dark mode */
+html[data-theme="dark"] .mh2-forecast-chip{
+  background:#eef2f6 !important;
+  border:1px solid rgba(12,26,43,.08) !important;
+  box-shadow:none !important;
+}
+html[data-theme="dark"] .mh2-forecast-chip .mh2-forecast-value{
+  color:#0b1a2b !important;
+  font-weight:900 !important;
+}
+html[data-theme="dark"] .mh2-forecast-chip .mh2-forecast-sub{
+  color:#3d5368 !important;
+}
+html[data-theme="dark"] .mh2-forecast-chip .mh2-forecast-label{
+  color:#5b7288 !important;
+}
+html[data-theme="dark"] .mh2-weather-side .mh2-mini-value{
+  color:#f4f8ff !important;
+}
+html[data-theme="dark"] .mh2-weather-side .mh2-mini-label{
+  color:#adc0d7 !important;
+}
+
+
+/* FIX: Top stat boxes readable in dark mode */
+html[data-theme="dark"] .mh2-weather-side .mh2-mini {
+  background: #eef2f6 !important;
+  border: 1px solid rgba(12,26,43,.08) !important;
+}
+
+html[data-theme="dark"] .mh2-weather-side .mh2-mini-value {
+  color: #0b1a2b !important;
+  font-weight: 900;
+}
+
+html[data-theme="dark"] .mh2-weather-side .mh2-mini-label {
+  color: #5b7288 !important;
+}
+
+
+/* CLEAN: remove empty placeholder blocks */
+.mh2-placeholder:empty {
+  display: none !important;
+}
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+.mh2-forecast-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+    #weatherHeroCard,
+    #weatherSideCard{
+      opacity:0;
+      visibility:hidden;
+      transition:opacity .18s ease;
+    }
+    #weatherHeroCard.mh2-is-ready,
+    #weatherSideCard.mh2-is-ready{
+      opacity:1;
+      visibility:visible;
+    }
+
+
+.mh2-forecast-label,
+.mh2-forecast-value,
+.mh2-forecast-sub {
+  text-align: center;
+  width: 100%;
+}
+
+
+/* ============================= */
+/* LIVE ACTIVITY – GOLD STYLE   */
+/* ============================= */
+.mh2-feed-item,
+.mh2-activity-item {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 215, 120, 0.12),
+    rgba(255, 215, 120, 0.05)
+  );
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  box-shadow:
+    0 4px 12px rgba(0,0,0,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.4);
+  backdrop-filter: blur(6px);
+  transition: all 0.2s ease;
+  position: relative;
+  padding-left: 14px;
+}
+
+.mh2-feed-item:hover,
+.mh2-activity-item:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 18px rgba(0,0,0,0.08),
+    0 0 0 1px rgba(212,175,55,0.35);
+}
+
+.mh2-feed-item .mh2-title,
+.mh2-activity-item .mh2-title {
+  color: #1f2f3d;
+  font-weight: 600;
+}
+
+.mh2-feed-item.is-urgent,
+.mh2-feed-item.is-attention,
+.mh2-activity-item.is-urgent,
+.mh2-activity-item.is-attention {
+  animation: mh2Pulse 2.4s ease-in-out infinite;
+  border-color: rgba(212, 175, 55, 0.5);
+}
+
+.mh2-feed-item.is-urgent::before,
+.mh2-feed-item.is-attention::before,
+.mh2-activity-item.is-urgent::before,
+.mh2-activity-item.is-attention::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 4px;
+  border-radius: 4px;
+  background: linear-gradient(to bottom, #d4af37, #f5e6a5);
+}
+
+@keyframes mh2Pulse {
+  0% {
+    box-shadow:
+      0 0 0 0 rgba(212, 175, 55, 0.25),
+      0 4px 12px rgba(0,0,0,0.04);
+  }
+  50% {
+    box-shadow:
+      0 0 0 6px rgba(212, 175, 55, 0.08),
+      0 6px 16px rgba(0,0,0,0.06);
+  }
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(212, 175, 55, 0),
+      0 4px 12px rgba(0,0,0,0.04);
+  }
+}
+
+
+.mh2-actions .mh2-btn--ghost{display:none !important;}
+
+/* Manager actions drag + drop */
+.mh2-page.is-customizing #hubCards .mh2-tool-card[data-card-key]{
+  cursor: grab;
+  user-select: none;
+}
+.mh2-page.is-customizing #hubCards .mh2-tool-card[data-card-key]:active{
+  cursor: grabbing;
+}
+.mh2-page.is-customizing #hubCards .mh2-tool-card[data-card-key].is-dragging{
+  opacity: .62;
+  transform: scale(.985);
+}
+.mh2-page.is-customizing #hubCards .mh2-tool-card[data-card-key].is-drop-target{
+  outline: 3px solid rgba(212,175,55,.38);
+  outline-offset: -6px;
+}
+.mh2-drag-note{
+  display:none;
+  font-size:12px;
+  color:var(--muted);
+  margin-top:6px;
+}
+.mh2-page.is-customizing .mh2-drag-note{
+  display:block;
+}
+
+
+
+/* =========================
+   Manager Action Cards – Enhanced Pop
+========================= */
+
+#hubCards .mh2-tool-card {
+  position: relative;
+  background: linear-gradient(180deg, #f3f7ff 0%, #e3ecff 100%);
+  border: 1px solid rgba(80, 130, 255, 0.22);
+  border-radius: 18px;
+  box-shadow:
+    0 8px 20px rgba(60, 100, 200, 0.10),
+    inset 0 1px 0 rgba(255,255,255,0.6);
+  transition: all 0.25s ease;
+  overflow: hidden;
+}
+
+#hubCards .mh2-tool-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 5px;
+  border-radius: 5px;
+  background: linear-gradient(180deg, #5b8cff, #2f5fff);
+  opacity: 0.9;
+}
+
+#hubCards .mh2-tool-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    120deg,
+    rgba(255,255,255,0.35) 0%,
+    rgba(255,255,255,0.08) 35%,
+    rgba(255,255,255,0) 65%
+  );
+  pointer-events: none;
+}
+
+#hubCards .mh2-tool-card:hover {
+  background: linear-gradient(180deg, #eef4ff 0%, #dce7ff 100%);
+  border-color: rgba(80, 130, 255, 0.35);
+  box-shadow:
+    0 14px 30px rgba(60, 100, 200, 0.18),
+    inset 0 1px 0 rgba(255,255,255,0.7);
+  transform: translateY(-3px);
+}
+
+#hubCards .mh2-tool-card:active {
+  transform: scale(0.97);
+  box-shadow: 0 6px 14px rgba(60, 100, 200, 0.12);
+}
+
+#hubCards .mh2-tool-card h3 {
+  color: #162a5c;
+  font-weight: 600;
+}
+
+#hubCards .mh2-tool-card p {
+  color: #5a6c95;
+}
+
+#hubCards .mh2-tool-card .mh2-stat-label {
+  color: #6c7db0;
+}
+
+#hubCards .mh2-tool-card .mh2-stat-value {
+  color: #1c2f66;
+  font-weight: 600;
+}
+
+
+/* Sunrise / Sunset scene support */
+.mh2-weather-hero.wx-sunrise {
+  background:
+    linear-gradient(to top, #ffb86b 0%, #ffd9a8 25%, #e8f1ff 60%, #cfe0ff 100%);
+}
+.mh2-weather-hero.wx-sunset {
+  background:
+    linear-gradient(to top, #ff7a4f 0%, #ffb27a 30%, #6f8edc 70%, #3f5fa8 100%);
+}
+.mh2-weather-hero.wx-sunrise .mh2-sun {
+  bottom: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 1;
+}
+.mh2-weather-hero.wx-sunset .mh2-sun {
+  bottom: 5%;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: .85;
+}
+.mh2-weather-hero.wx-sunrise::after,
+.mh2-weather-hero.wx-sunset::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  border-radius: 999px;
+}
+.mh2-weather-hero.wx-sunrise::after {
+  bottom: -40px;
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle, rgba(255,180,90,.45) 0%, transparent 70%);
+  filter: blur(25px);
+}
+.mh2-weather-hero.wx-sunset::after {
+  bottom: -30px;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, rgba(255,120,80,.55) 0%, transparent 70%);
+  filter: blur(30px);
+}
+
+
+/* 🌥️ OVERCAST / CLOUDY */
+.mh2-weather-hero.wx-overcast {
+  background:
+    linear-gradient(to top, #cfd6e3 0%, #dbe2ec 30%, #e7edf5 60%, #f2f6fb 100%);
+}
+.mh2-weather-hero.wx-overcast::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 30% 40%, rgba(255,255,255,0.40) 0%, transparent 60%),
+    radial-gradient(circle at 70% 60%, rgba(255,255,255,0.35) 0%, transparent 65%);
+  opacity: 0.6;
+  pointer-events: none;
+}
+.mh2-weather-hero.wx-overcast .mh2-sun {
+  opacity: 0.15;
+  filter: blur(8px);
+}
+
+/* 🌧️ RAINY OVERCAST */
+.mh2-weather-hero.wx-rain-overcast {
+  background:
+    linear-gradient(to top, #94a3b8 0%, #a7b4c7 28%, #c8d2df 62%, #dfe7f0 100%);
+}
+.mh2-weather-hero.wx-rain-overcast::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 25% 35%, rgba(255,255,255,0.18) 0%, transparent 58%),
+    radial-gradient(circle at 72% 55%, rgba(255,255,255,0.14) 0%, transparent 62%);
+  opacity: .65;
+  pointer-events: none;
+}
+.mh2-weather-hero.wx-rain-overcast .mh2-sun {
+  opacity: 0.05;
+  filter: blur(12px);
+}
+.mh2-weather-hero .mh2-rain-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .35s ease;
+}
+.mh2-weather-hero.wx-rain-overcast .mh2-rain-layer {
+  opacity: .55;
+}
+.mh2-weather-hero .mh2-rain-layer::before {
+  content: "";
+  position: absolute;
+  inset: -20% -10%;
+  background-image:
+    repeating-linear-gradient(
+      -18deg,
+      rgba(255,255,255,.00) 0 10px,
+      rgba(255,255,255,.22) 10px 12px,
+      rgba(255,255,255,.00) 12px 24px
+    );
+  animation: mh2RainDrift 9s linear infinite;
+  filter: blur(.2px);
+}
+
+/* ☁️ subtle cloud drift on cloudy scenes */
+.mh2-weather-hero.wx-overcast .mh2-cloud,
+.mh2-weather-hero.wx-rain-overcast .mh2-cloud {
+  opacity: .78;
+  animation: mh2CloudDrift 22s linear infinite;
+}
+.mh2-weather-hero.wx-overcast .mh2-cloud.cloud-2,
+.mh2-weather-hero.wx-rain-overcast .mh2-cloud.cloud-2 {
+  animation-duration: 28s;
+  opacity: .62;
+}
+
+@keyframes mh2CloudDrift {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(12px); }
+  100% { transform: translateX(0); }
+}
+@keyframes mh2RainDrift {
+  0% { transform: translate3d(0,-10px,0); }
+  100% { transform: translate3d(-18px,18px,0); }
+}
+
+
+/* ⚡ THUNDERSTORM */
+.mh2-weather-hero.wx-thunder {
+  background: linear-gradient(
+    to top,
+    #2c3445 0%,
+    #3b4458 35%,
+    #56607a 70%,
+    #7a849c 100%
+  );
+}
+.mh2-weather-hero.wx-thunder .mh2-cloud {
+  opacity: 0.85;
+}
+.mh2-weather-hero .mh2-lightning-flash {
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.85);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .06s linear;
+}
+.mh2-weather-hero.wx-thunder.flash .mh2-lightning-flash {
+  opacity: 1;
+}
+
+
+/* ❄️ SNOW */
+.mh2-weather-hero.wx-snow {
+  background: linear-gradient(
+    to top,
+    #eaf2fb 0%,
+    #f4f8fd 40%,
+    #ffffff 100%
+  );
+}
+.mh2-weather-hero .mh2-snow-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .35s ease;
+}
+.mh2-weather-hero.wx-snow .mh2-snow-layer {
+  opacity: 0.8;
+}
+.mh2-weather-hero .mh2-snow-layer::before {
+  content: "";
+  position: absolute;
+  inset: -20% -10%;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.9) 1px, transparent 2px);
+  background-size: 12px 12px;
+  animation: mh2SnowFall 14s linear infinite;
+}
+.mh2-weather-hero .mh2-snow-layer::after {
+  content: "";
+  position: absolute;
+  inset: -20% -10%;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.6) 1px, transparent 2px);
+  background-size: 18px 18px;
+  animation: mh2SnowFallSlow 22s linear infinite;
+}
+@keyframes mh2SnowFall {
+  from { transform: translateY(-10px); }
+  to { transform: translateY(30px); }
+}
+@keyframes mh2SnowFallSlow {
+  from { transform: translateY(-5px); }
+  to { transform: translateY(20px); }
+}
+
+/* 🧊 ICE / FREEZING */
+.mh2-weather-hero.wx-ice {
+  background: linear-gradient(
+    to top,
+    #dfe7f2 0%,
+    #eef3f9 40%,
+    #f9fbfe 100%
+  );
+}
+.mh2-weather-hero.wx-ice::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(255,255,255,0.35) 0%, transparent 60%),
+    radial-gradient(circle at 80% 70%, rgba(255,255,255,0.25) 0%, transparent 60%);
+  opacity: 0.6;
+  pointer-events: none;
+}
+.mh2-weather-hero.wx-ice .mh2-cloud {
+  opacity: 0.4;
+  animation: none;
+}
+.mh2-weather-hero.wx-ice .mh2-sun {
+  opacity: 0.25;
+  filter: blur(6px);
+}
+
+
+/* Restore original Manager Hub dark mode button */
+.mh2-actions--header #mh2ThemeToggleBtn{
+  display:inline-flex !important;
+  visibility:visible !important;
+  opacity:1 !important;
+  min-height:46px !important;
+  min-width:120px !important;
+  padding:0 18px !important;
+  align-items:center !important;
+  justify-content:center !important;
+  white-space:nowrap !important;
+  flex:0 0 auto !important;
+}
+
+
+
+/* V102 Employee Hub pill collision fix: move supervisor badge out of title flow */
+#employeeHubCards .mh2-tool-card{
+  position:relative !important;
+  min-height:104px !important;
+  padding:16px 18px 42px 18px !important;
+  justify-content:center !important;
+}
+#employeeHubCards .mh2-tool-top{
+  display:block !important;
+  align-items:initial !important;
+  gap:0 !important;
+}
+#employeeHubCards .mh2-tool-top-left{
+  min-width:0 !important;
+  padding-right:0 !important;
+}
+#employeeHubCards .mh2-tool-name{
+  display:block !important;
+  max-width:100% !important;
+  padding-right:0 !important;
+  word-break:normal !important;
+  overflow-wrap:normal !important;
+}
+#employeeHubCards .mh2-tool-badges{
+  position:absolute !important;
+  right:14px !important;
+  bottom:12px !important;
+  top:auto !important;
+  display:flex !important;
+  justify-content:flex-end !important;
+  pointer-events:none !important;
+}
+#employeeHubCards .mh2-tool-pill{
+  min-height:22px !important;
+  padding:0 9px !important;
+  font-size:9px !important;
+  letter-spacing:.075em !important;
+  box-shadow:none !important;
+  opacity:.9 !important;
+}
+@media (max-width:900px){
+  #employeeHubCards .mh2-tool-card{min-height:108px !important;}
+}
+
+/* V103 FIXED Employee Hub navy card styling: scoped to the real Manager Hub card IDs/classes */
+#employeeHubSection #employeeHubCards .mh2-tool-card[data-role-scope="supervisor"]{
+  background:linear-gradient(135deg, rgba(28,52,84,.12), rgba(28,52,84,.22)) !important;
+  border:1px solid rgba(28,52,84,.30) !important;
+  box-shadow:0 12px 28px rgba(28,52,84,.12) !important;
+}
+#employeeHubSection #employeeHubCards .mh2-tool-card[data-role-scope="supervisor"]::before,
+#employeeHubSection #employeeHubCards .mh2-tool-card[data-role-scope="supervisor"]::after{display:none !important;}
+#employeeHubSection #employeeHubCards .mh2-tool-card[data-role-scope="supervisor"] .mh2-tool-name{color:#1c3454 !important;}
+#employeeHubSection #employeeHubCards .mh2-tool-card[data-role-scope="supervisor"] .mh2-kicker,
+#employeeHubSection #employeeHubCards .mh2-tool-card[data-role-scope="supervisor"] .mh2-tool-copy,
+#employeeHubSection #employeeHubCards .mh2-tool-card[data-role-scope="supervisor"] .mh2-tool-metric-label{color:rgba(28,52,84,.72) !important;}
+#employeeHubSection #employeeHubCards .mh2-tool-card[data-role-scope="supervisor"] .mh2-tool-metric{background:rgba(255,255,255,.58) !important;border-color:rgba(28,52,84,.16) !important;}
+#employeeHubSection #employeeHubCards .mh2-tool-card[data-role-scope="supervisor"] .mh2-tool-metric-value{color:#1c3454 !important;}
+#employeeHubSection #employeeHubCards .mh2-tool-card[data-role-scope="supervisor"] .mh2-tool-pill{background:rgba(28,52,84,.10) !important;border:1px solid rgba(28,52,84,.34) !important;color:#1c3454 !important;}
+
+</style>
+</head>
+<body class="manager-hub-page">
+  <main class="mh2-page">
+    <div class="mh2-shell">
+      <section class="mh2-card mh2-hero" aria-label="Manager Hub shell hero">
+        <div class="mh2-hero-top">
+          <div class="mh2-brand mh2-brand--header">
+            <img id="mh2BrandLogo" class="mh2-logo mh2-logo--header" src="" alt="" loading="eager" fetchpriority="high" decoding="async" />
+          </div>
+          <div class="mh2-actions mh2-actions--header">
+            <a class="mh2-btn mh2-btn--secondary" id="mh2ProfileBtn" href="profile.html">Profile</a>
+            <button class="mh2-btn mh2-btn--ghost" id="mh2ThemeToggleBtn" type="button" aria-pressed="false">Dark mode</button>
+            <button class="mh2-btn mh2-btn--secondary" id="mh2SignOutBtn" type="button">Sign out</button>
+          </div>
+        </div>
+
+        <div class="mh2-toolbar">
+          <div class="mh2-field">
+            <label class="mh2-label" for="zummeeCommunitySelect">Active community</label>
+            <select id="zummeeCommunitySelect">
+              <option>Biltmore Parc</option>
+              <option>City Side Lofts</option>
+              <option>The Mews</option>
+              <option>Emory Chase</option>
+            </select>
+          </div>
+          <div class="mh2-field">
+            <label class="mh2-label" for="weatherZipInput">Weather zip</label>
+            <input id="weatherZipInput" type="text" value="" inputmode="numeric" autocomplete="postal-code" />
+          </div>
+        </div>
+
+        
+
+      
+
+      
+
+      <section id="weatherHubCard" class="mh2-card mh2-section" aria-label="Weather hub shell">
+            <div class="mh2-section-head mh2-weather-head">
+              <h2 class="mh2-weather-title">Weather Hub</h2>
+              <div class="mh2-weather-actions">
+                <a id="weatherEmergencyTextPill" class="mh2-emergency-pill is-hidden" href="emergency_texting.html" aria-label="Open Emergency Texting">Emergency Text</a>
+                <div class="mh2-status-pill is-low" id="weatherRiskBadge">Low risk</div>
+              </div>
+            </div>
+            <div class="mh2-weather">
+              <div id="weatherHeroCard" class="mh2-weather-hero wx-empty">
+                <div class="mh2-weather-scene" aria-hidden="true">
+                  <div class="mh2-sun"></div>
+                  <div class="mh2-rain-layer"></div>
+                  <div class="mh2-lightning-flash"></div>
+                  <div class="mh2-snow-layer"></div>
+                  <div class="mh2-cloud"></div>
+                  <div class="mh2-cloud cloud-2"></div>
+                </div>
+                <div>
+                  <div class="mh2-kicker" id="weatherLocationLabel" style="color:rgba(255,255,255,.88)"></div>
+                  <div class="mh2-weather-temp" id="weatherTempValue">--</div>
+                  <div class="mh2-weather-copy" id="weatherSummaryText">Loading live weather…</div>
+                  <div class="mh2-daylight">
+                    <div class="mh2-daylight-row"><div class="mh2-daylight-fill"></div><div class="mh2-daylight-sun"></div></div>
+                    <div class="mh2-daylight-times"><span id="weatherSunriseText">Sunrise --</span><span id="weatherSunsetText">Sunset --</span></div>
+                  </div>
+                </div>
+                <div class="mh2-weather-meta">
+                  <div class="mh2-chip" id="weatherFeelsLikeChip">Feels like --</div>
+                  <div class="mh2-chip" id="weatherRainChip">Rain --</div>
+                  <div class="mh2-chip" id="weatherWindChip">Wind --</div>
+                </div>
+              </div>
+              <div id="weatherSideCard" class="mh2-weather-side">
+                <div class="mh2-side-row">
+                  <div class="mh2-mini"><div class="mh2-mini-label">Humidity</div><div class="mh2-mini-value" id="weatherHumidityValue">--</div></div>
+                  <div class="mh2-mini"><div class="mh2-mini-label">Visibility</div><div class="mh2-mini-value" id="weatherVisibilityValue">--</div></div>
+                </div>
+                <div class="mh2-side-row">
+                  <div class="mh2-mini"><div class="mh2-mini-label">Wind</div><div class="mh2-mini-value" id="weatherWindValue">--</div></div>
+                  <div class="mh2-mini"><div class="mh2-mini-label">Rain chance</div><div class="mh2-mini-value" id="weatherRainValue">--</div></div>
+                </div>
+                <div class="mh2-forecast-strip">
+                  <div class="mh2-forecast-chip" id="weatherForecastNow"><div class="mh2-forecast-label">Now</div><div class="mh2-forecast-value">--</div><div class="mh2-forecast-sub">Loading</div></div>
+                  <div class="mh2-forecast-chip" id="weatherForecastLater"><div class="mh2-forecast-label">Later</div><div class="mh2-forecast-value">--</div><div class="mh2-forecast-sub">Loading</div></div>
+                  <div class="mh2-forecast-chip" id="weatherForecastTonight"><div class="mh2-forecast-label">Tonight</div><div class="mh2-forecast-value">--</div><div class="mh2-forecast-sub">Loading</div></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+      <section id="smartAlertStrip" class="mh2-card mh2-section" aria-label="Smart alerts shell">
+        <div class="mh2-section-head">
+          <div>
+            <div class="mh2-kicker">Priority strip</div>
+            <h2 class="mh2-section-title">Smart alerts</h2>
+            <p class="mh2-section-sub">Top-priority items that need attention right now for the selected community.</p>
+          </div>
+        </div>
+        <div class="mh2-smart-strip">
+          <a id="mh2AlertBoard" class="mh2-alert is-good" href="board_member_hub.html">
+            <div class="mh2-alert-top"><div class="mh2-alert-title">Board review status</div><div class="mh2-alert-badge">Stable</div></div>
+            <div class="mh2-alert-copy">Board queue updates will surface here for the selected community.</div>
+          </a>
+          <a id="mh2AlertActivity" class="mh2-alert is-good" href="maintenance_updates.html">
+            <div class="mh2-alert-top"><div class="mh2-alert-title">Maintenance activity</div><div class="mh2-alert-badge">Quiet</div></div>
+            <div class="mh2-alert-copy">Maintenance and work-order signals will appear here after refresh.</div>
+          </a>
+          <a id="mh2AlertApprovals" class="mh2-alert is-good" href="annual_meeting_approvals.html">
+            <div class="mh2-alert-top"><div class="mh2-alert-title">Annual meeting approvals</div><div class="mh2-alert-badge">Clear</div></div>
+            <div class="mh2-alert-copy">Annual meeting approval signals will appear here from the live data.</div>
+          </a>
+        </div>
+      </section>
+
+      <section id="employeeHubSection" class="mh2-card mh2-section" aria-label="Employee Hub supervisor tools">
+        <div class="mh2-section-head">
+          <div>
+            <div class="mh2-kicker">Supervisor-only tools</div>
+            <h2 class="mh2-section-title">Employee Hub</h2>
+            <p class="mh2-section-sub">Supervisor-only tools for team oversight, assignments, onboarding, and company controls.</p>
+          </div>
+        </div>
+        <div id="employeeHubCards" class="mh2-tool-grid">
+              <a id="employeePerformanceCard" data-card-key="employee_performance" data-role-scope="supervisor" class="mh2-tool-card" href="employee_performance_report.html">
+                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Supervisor reporting</div><div class="mh2-tool-name">Employee Performance</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Supervisor</span></div></div>
+                <div class="mh2-tool-copy">Company and employee performance reporting across work orders, compliance, and meeting readiness.</div>
+                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Scope</div><div class="mh2-tool-metric-value" data-role="metric1">Team</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Mode</div><div class="mh2-tool-metric-value" data-role="metric2">Report</div></div></div>
+                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
+              </a>
+              <a id="annualMeetingApprovalsCard" data-card-key="annual_meeting_approvals" data-role-scope="supervisor" class="mh2-tool-card" href="annual_meeting_approvals.html">
+                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Approval queue</div><div class="mh2-tool-name">Annual Meeting Approvals</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Supervisor</span></div></div>
+                <div class="mh2-tool-copy">Supervisor review queue for annual meeting packets and approvals waiting for final action.</div>
+                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Queue</div><div class="mh2-tool-metric-value" data-role="metric1">0</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Status</div><div class="mh2-tool-metric-value" data-role="metric2">Review</div></div></div>
+                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
+              </a>
+              <a id="dailyTasksCard" data-card-key="daily_tasks" data-role-scope="supervisor" class="mh2-tool-card" href="supervisor_communications.html">
+                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Team directives</div><div class="mh2-tool-name">Supervisor Communications</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Supervisor</span></div></div>
+                <div class="mh2-tool-copy">Create supervisor directives and company/community communications for Daily Ops.</div>
+                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Status</div><div class="mh2-tool-metric-value" data-role="metric1">Ready</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Focus</div><div class="mh2-tool-metric-value" data-role="metric2">Comms</div></div></div>
+                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
+              </a>
+              <a id="communityAssignmentsCard" data-card-key="community_assignments" data-role-scope="supervisor" class="mh2-tool-card" href="community_assignments.html">
+                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Routing</div><div class="mh2-tool-name">Community Assignments</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Supervisor</span></div></div>
+                <div class="mh2-tool-copy">Assign communities, assistants, and routing ownership across your company.</div>
+                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Scope</div><div class="mh2-tool-metric-value" data-role="metric1">Company</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Mode</div><div class="mh2-tool-metric-value" data-role="metric2">Assignments</div></div></div>
+                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
+              </a>
+              <a id="employeeAccountActivationsCard" data-card-key="employee_account_activations" data-role-scope="supervisor" class="mh2-tool-card" href="employee_account_activations.html">
+                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">User onboarding</div><div class="mh2-tool-name">Employee Account Activations</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Supervisor</span></div></div>
+                <div class="mh2-tool-copy">Review and approve employee account requests for your company.</div>
+                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Queue</div><div class="mh2-tool-metric-value" data-role="metric1">0</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Status</div><div class="mh2-tool-metric-value" data-role="metric2">Review</div></div></div>
+                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
+              </a>
+              <a id="companyBrandingTextingCard" data-card-key="company_branding_texting" data-role-scope="supervisor" class="mh2-tool-card" href="company_branding_texting.html">
+                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Company branding</div><div class="mh2-tool-name">Company Branding &amp; Texting</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Supervisor</span></div></div>
+                <div class="mh2-tool-copy">Manage company logo, mailing block, and company-wide texting controls in one place.</div>
+                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Brand</div><div class="mh2-tool-metric-value" data-role="metric1">Company</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Mode</div><div class="mh2-tool-metric-value" data-role="metric2">Admin</div></div></div>
+                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
+              </a>
+        </div>
+      </section>
+
+      <section id="activityFeedCard" class="mh2-card mh2-live-primary" aria-label="Live activity shell">
+          <div id="activityFeedHeader" class="mh2-section-head">
+            <div id="liveActivityTitleWrapper">
+              <div>
+                <div class="mh2-kicker">Primary manager feed</div>
+                <h2 id="liveActivityTitle" class="mh2-section-title">Live Activity</h2>
+                <p class="mh2-section-sub">Recent work-order, maintenance, board, and annual meeting events for the selected community.</p>
+              </div>
+            </div>
+            <div class="mh2-actions">
+              <div class="mh2-status-pill" id="mh2LiveActivityCount">0</div>
+              <a class="mh2-btn mh2-btn--secondary" href="activity_history.html">View all</a>
+</div>
+          </div>
+          <div id="activityFeedSection" class="mh2-feed"><div id="activityFeedList" class="mh2-feed"></div></div>
+          <div id="activityFeedFooter" class="mh2-footnote">
+            <span id="mh2LiveActivityNote">Recent feed items for the selected community.</span>
+          </div>
+        </section>
+
+        <div class="mh2-stats">
+          <div class="mh2-stat">
+            <div class="mh2-stat-label">Board overdue</div>
+            <div class="mh2-stat-value" id="mh2BoardOverdueCount">0</div>
+            <div class="mh2-stat-note" id="mh2BoardOverdueNote">Past-due board items for the selected community.</div>
+          </div>
+          <div class="mh2-stat">
+            <div class="mh2-stat-label">Hub cards</div>
+            <div class="mh2-stat-value" id="mh2HubCardCount">19</div>
+            <div class="mh2-stat-note">Visible destinations for this account. Count updates by role.</div>
+          </div>
+        </div>
+      </section>
+
+      <div class="mh2-main">
+        <div class="mh2-stack">
+          
+
+          <section id="managerBoardItemsPanel" class="mh2-card mh2-section" aria-label="Board submitted items panel">
+            <div class="mh2-section-head">
+              <div>
+                <div class="mh2-kicker">Board action queue</div>
+                <h2 class="mh2-section-title">Submitted Board Items</h2>
+                <p class="mh2-section-sub">Board-submitted items for the selected community, with open and overdue status surfaced in the panel header.</p>
+              </div>
+              <div class="mh2-actions">
+                <div class="mh2-status-pill" id="mh2BoardItemsPill">0</div>
+                <div class="mh2-status-pill" id="mh2BoardStatusPill"></div>
+                <a class="mh2-btn mh2-btn--secondary" href="board_member_hub.html">Open hub</a>
+              </div>
+            </div>
+            <div id="managerBoardItemsBody" class="mh2-list">
+              <div class="mh2-placeholder"></div>
+            </div>
+            <div id="managerBoardItemsFooter" class="mh2-footnote">
+              <span id="mh2BoardItemNote">Open board-submitted items for the selected community.</span>
+            </div>
+          </section>
+
+          <section id="managerBoardHubStatusPanel" class="mh2-card mh2-card--gold mh2-section" aria-label="Board hub status shell">
+            <div class="mh2-section-head">
+              <div>
+                <div class="mh2-kicker">Board hub summary</div>
+                <h2 class="mh2-section-title">Board Status</h2>
+                <p class="mh2-section-sub">Open and overdue board status for the selected community.</p>
+              </div>
+            </div>
+            <div id="managerBoardHubStatusBody" class="mh2-placeholder"></div>
+          </section>
+        </div>
+
+        <aside class="mh2-stack">
+          <section class="mh2-card mh2-section" aria-label="Tool cards shell">
+            <div class="mh2-tools-head">
+              <div>
+                <div class="mh2-kicker">Core tools</div>
+                <h2 class="mh2-section-title">Manager actions</h2>
+                <p class="mh2-section-sub">Your main manager destinations, with saved favorites and saved order on this device.</p>
+                <div class="mh2-favorites-note">Favorites stay pinned at the top on this device.</div><div class="mh2-drag-note">Tip: while customizing, drag cards to reorder them.</div>
+              </div>
+              <div class="mh2-tools-actions">
+                <button id="mh2CustomizeCardsBtn" class="mh2-btn mh2-btn--secondary" type="button">Customize cards</button>
+                <button id="mh2ResetCardsBtn" class="mh2-btn mh2-btn--ghost" type="button">Reset layout</button>
+              </div>
+            </div>
+            <div id="hubCards" class="mh2-tool-grid">
+              <a id="dailyOpsCard" data-card-key="daily_ops" class="mh2-tool-card mh2-tool-card--gold" href="ops.html">
+                <div class="mh2-tool-top">
+                  <div class="mh2-tool-top-left">
+                    <div class="mh2-kicker">Daily workflow</div>
+                    <div class="mh2-tool-name">Daily Ops</div>
+                  </div>
+                  <div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Ready</span></div>
+                </div>
+                <div class="mh2-tool-copy">Primary daily command surface for reminders, access codes, important dates, insurance renewals, and community-level operating notes.</div>
+                <div class="mh2-tool-meta">
+                  <div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Board queue</div><div class="mh2-tool-metric-value" data-role="metric1">0</div></div>
+                  <div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Attention</div><div class="mh2-tool-metric-value" data-role="metric2">0</div></div>
+                </div>
+                <div class="mh2-tool-controls">
+                  <button class="mh2-mini-btn" data-action="up" type="button">↑</button>
+                  <button class="mh2-mini-btn" data-action="down" type="button">↓</button>
+                  <button class="mh2-mini-btn" data-action="favorite" type="button">★</button>
+                </div>
+              </a>
+              <a id="boardMemberHubCard" data-card-key="board_hub" class="mh2-tool-card mh2-tool-card--gold" href="board_member_hub.html">
+                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Board collaboration</div><div class="mh2-tool-name">Board Member Hub</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Board</span></div></div>
+                <div class="mh2-tool-copy">Board-submitted items, action requests, meeting workflow, and resident-facing board activity for the selected community.</div>
+                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Open items</div><div class="mh2-tool-metric-value" data-role="metric1">0</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Overdue</div><div class="mh2-tool-metric-value" data-role="metric2">0</div></div></div>
+                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
+              </a>
+              <a id="residentWorkOrdersCard" data-card-key="resident_work_orders" class="mh2-tool-card" href="resident_work_orders.html">
+                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Maintenance intake</div><div class="mh2-tool-name">Resident Work Orders</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Queue</span></div></div>
+                <div class="mh2-tool-copy">Resident and employee-submitted work orders, priority handling, vendor routing, and work-order status management.</div>
+                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Open work orders</div><div class="mh2-tool-metric-value" data-role="metric1">0</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Urgent</div><div class="mh2-tool-metric-value" data-role="metric2">0</div></div></div>
+                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
+              </a>
+              <a id="liveMaintenanceUpdatesCard" data-card-key="live_updates" class="mh2-tool-card" href="maintenance_updates.html">
+                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Maintenance stream</div><div class="mh2-tool-name">Live Maintenance Updates</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Live</span></div></div>
+                <div class="mh2-tool-copy">Real-time vendor, active-job, and completion visibility for the selected community’s maintenance activity stream.</div>
+                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Live events</div><div class="mh2-tool-metric-value" data-role="metric1">0</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Urgent activity</div><div class="mh2-tool-metric-value" data-role="metric2">0</div></div></div>
+                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
+              </a>
+              <a id="mileageCard" data-card-key="mileage" class="mh2-tool-card" href="mileage.html">
+                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Compliance</div><div class="mh2-tool-name">Mileage Tracker</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Monthly</span></div></div>
+                <div class="mh2-tool-copy">Mileage submission, employee compliance, monthly reporting, and reimbursement-ready record keeping.</div>
+                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Status</div><div class="mh2-tool-metric-value" data-role="metric1">Ready</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Reminder</div><div class="mh2-tool-metric-value" data-role="metric2">25th</div></div></div>
+                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
+              </a>
+              <a id="inspectionsCard" data-card-key="inspections" class="mh2-tool-card" href="inspections.html">
+                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Field work</div><div class="mh2-tool-name">Community Inspections</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Field</span></div></div>
+                <div class="mh2-tool-copy">Inspection logging, issue capture, reminder follow-up, and fast conversion from field findings into work orders.</div>
+                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Inspection WO</div><div class="mh2-tool-metric-value" data-role="metric1">0</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Follow-up</div><div class="mh2-tool-metric-value" data-role="metric2">Ready</div></div></div>
+                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
+              </a>
+              <a id="annualMeetingsCard" data-card-key="annual_meetings" class="mh2-tool-card" href="annual_meetings.html">
+                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Meeting workflow</div><div class="mh2-tool-name">Annual Meetings</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Packets</span></div></div>
+                <div class="mh2-tool-copy">Packet generation, approval flow, mailed records, and meeting presentation workflow for annual meeting readiness.</div>
+                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Open approvals</div><div class="mh2-tool-metric-value" data-role="metric1">0</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Status</div><div class="mh2-tool-metric-value" data-role="metric2">Ready</div></div></div>
+                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
+              </a>
+              <a id="preferredVendorsCard" data-card-key="preferred_vendors" class="mh2-tool-card" href="preferred_vendors.html">
+                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Vendor network</div><div class="mh2-tool-name">Preferred Vendors</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Directory</span></div></div>
+                <div class="mh2-tool-copy">Approved service partners, quick vendor lookups, and daily-ops vendor routing support for community work.</div>
+                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Access</div><div class="mh2-tool-metric-value" data-role="metric1">Ready</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Quick use</div><div class="mh2-tool-metric-value" data-role="metric2">On</div></div></div>
+                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
+              </a>
+              <a id="remindersCard" data-card-key="reminders" class="mh2-tool-card" href="inspections.html#reminders">
+                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Task follow-up</div><div class="mh2-tool-name">Reminders</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Schedule</span></div></div>
+                <div class="mh2-tool-copy">Reminder queue for due-soon and overdue follow-up items tied to inspections and daily operations.</div>
+                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Due soon</div><div class="mh2-tool-metric-value" data-role="metric1">0</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Overdue</div><div class="mh2-tool-metric-value" data-role="metric2">0</div></div></div>
+                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
+              </a>
+              <a id="communityTextingCard" data-card-key="community_texting" class="mh2-tool-card" href="emergency_texting.html">
+                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Resident communication</div><div class="mh2-tool-name">Community Texting</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Texting</span></div></div>
+                <div class="mh2-tool-copy">Compose and send community-wide alerts, schedule messages, and review prior emergency text activity.</div>
+                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Status</div><div class="mh2-tool-metric-value" data-role="metric1">Ready</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Mode</div><div class="mh2-tool-metric-value" data-role="metric2">Live</div></div></div>
+                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
+              </a>
+              <a id="companyDirectoryCard" data-card-key="company_directory" class="mh2-tool-card" href="company_directory.html">
+                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Contacts</div><div class="mh2-tool-name">Company Directory</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Directory</span></div></div>
+                <div class="mh2-tool-copy">Management-company contacts and internal directory access for quick lookups and communication.</div>
+                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Access</div><div class="mh2-tool-metric-value" data-role="metric1">Ready</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">View</div><div class="mh2-tool-metric-value" data-role="metric2">Company</div></div></div>
+                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
+              </a>
+              <a id="managerTrainingCard" data-card-key="training" class="mh2-tool-card" href="manager_info_training.html">
+                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Reference</div><div class="mh2-tool-name">Manager Info &amp; Training</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Guide</span></div></div>
+                <div class="mh2-tool-copy">Training materials, manager-facing guidance, and internal process references for daily Zummee use.</div>
+                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Status</div><div class="mh2-tool-metric-value" data-role="metric1">Ready</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Use</div><div class="mh2-tool-metric-value" data-role="metric2">Reference</div></div></div>
+                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
+              </a>
+              <a id="onlineVotingCard" data-card-key="online_voting" class="mh2-tool-card" href="online_voting.html">
+                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Resident participation</div><div class="mh2-tool-name">Online Voting</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Voting</span></div></div>
+                <div class="mh2-tool-copy">Election setup, ballot flow, nominations, proxy handling, and live results for community voting.</div>
+                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Status</div><div class="mh2-tool-metric-value" data-role="metric1">Ready</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Mode</div><div class="mh2-tool-metric-value" data-role="metric2">Live</div></div></div>
+                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
+              </a>
+              <a id="boardMeetingsCard" data-card-key="board_meetings" class="mh2-tool-card" href="board_meetings.html">
+                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Agenda workflow</div><div class="mh2-tool-name">Board Meetings</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Meetings</span></div></div>
+                <div class="mh2-tool-copy">Agenda building, meeting prep, minutes workflow, and board-meeting coordination for the selected community.</div>
+                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Status</div><div class="mh2-tool-metric-value" data-role="metric1">Ready</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Next</div><div class="mh2-tool-metric-value" data-role="metric2">Agenda</div></div></div>
+                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
+              </a>
+              <a id="residentPortalPreviewCard" data-card-key="resident_portal_preview" class="mh2-tool-card" href="resident_portal.html?preview=manager">
+                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Resident experience</div><div class="mh2-tool-name">Resident Portal</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Portal</span></div></div>
+                <div class="mh2-tool-copy">Preview the resident-facing portal experience and access the current community resident flow.</div>
+                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">View</div><div class="mh2-tool-metric-value" data-role="metric1">Preview</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Role</div><div class="mh2-tool-metric-value" data-role="metric2">Manager</div></div></div>
+                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
+              </a>
+              <a id="residentDirectoryCard" data-card-key="resident_directory" class="mh2-tool-card" href="resident_directory.html">
+                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Resident records</div><div class="mh2-tool-name">Resident Directory</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Directory</span></div></div>
+                <div class="mh2-tool-copy">Resident roster, contact details, invite flow, and resident-management tools for the selected community.</div>
+                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Access</div><div class="mh2-tool-metric-value" data-role="metric1">Ready</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Mode</div><div class="mh2-tool-metric-value" data-role="metric2">Directory</div></div></div>
+                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
+              </a>
+              <a id="annualPresentationHubCard" data-card-key="annual_presentation_builder" class="mh2-tool-card" href="annual_presentation.html">
+                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Presentation builder</div><div class="mh2-tool-name">Annual Presentation</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Slides</span></div></div>
+                <div class="mh2-tool-copy">Build the community annual presentation with company branding, agenda content, and board-ready visuals.</div>
+                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Status</div><div class="mh2-tool-metric-value" data-role="metric1">Ready</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Output</div><div class="mh2-tool-metric-value" data-role="metric2">Slides</div></div></div>
+                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
+              </a>
+              <a id="maintenanceControlCenterCard" data-card-key="maintenance_control_center" class="mh2-tool-card" href="maintenance_dashboard.html">
+                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Operations board</div><div class="mh2-tool-name">Maintenance Control Center</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Control</span></div></div>
+                <div class="mh2-tool-copy">Kanban-style maintenance control center for open, awaiting vendor, in-progress, and completed work order management.</div>
+                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Open work</div><div class="mh2-tool-metric-value" data-role="metric1">0</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Live</div><div class="mh2-tool-metric-value" data-role="metric2">Board</div></div></div>
+                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
+              </a>
+              <a id="poolOpsCard" data-card-key="pool_ops" class="mh2-tool-card" href="pool_ops.html">
+                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Seasonal operations</div><div class="mh2-tool-name">Pool Opening &amp; Closing</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Seasonal</span></div></div>
+                <div class="mh2-tool-copy">Pool season setup and closing workflow for communities that use seasonal operations checklists.</div>
+                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Status</div><div class="mh2-tool-metric-value" data-role="metric1">Ready</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Use</div><div class="mh2-tool-metric-value" data-role="metric2">Seasonal</div></div></div>
+                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
+              </a>
+
+
+            </div>
+          </section>
+
+          <section id="boardItemsStaticCard" class="mh2-card mh2-section" aria-label="Static board summary shell">
+            <div class="mh2-section-head">
+              <div>
+                <div class="mh2-kicker">Secondary summary</div>
+                <h2 id="boardItemsStaticTitle" class="mh2-section-title">Board Snapshot</h2>
+                <p class="mh2-section-sub">A reserved card for future summary counts or a simplified board overview without crowding the main feed.</p>
+              </div>
+            </div>
+            <div class="mh2-placeholder"></div>
+          </section>
+
+          <section id="annualApprovalPanel" class="mh2-card mh2-card--gold mh2-section" aria-label="Open approvals panel">
+            <div class="mh2-section-head">
+              <div>
+                <div class="mh2-kicker">Approvals layer</div>
+                <h2 class="mh2-section-title">Open Approvals</h2>
+                <p class="mh2-section-sub" id="mh2ApprovalNote">Current annual meeting approval items in progress.</p>
+              </div>
+              <div class="mh2-actions">
+                <div class="mh2-status-pill" id="mh2ApprovalPill">0</div>
+                <a class="mh2-btn mh2-btn--secondary" href="annual_meeting_approvals.html">Open queue</a>
+              </div>
+            </div>
+            <div id="annualApprovalBody" class="mh2-list">
+              <div class="mh2-placeholder"></div>
+            </div>
+            <div class="mh2-footnote">
+              <span id="mh2ApprovalFoot">Open annual approval items for the selected community.</span>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+
+  <script src="shared/supabase-client.js"></script>
+  <script>
+    (function(){
+      function $(id){ return document.getElementById(id); }
+
+      window.applyThemeMode = function applyThemeMode(theme){
+        var resolved = theme === 'dark' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', resolved);
+        try{ localStorage.setItem('mh2-theme', resolved); }catch(_e){}
+        var btn = $('mh2ThemeToggleBtn');
+        if(btn){
+          var isDark = resolved === 'dark';
+          btn.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+          btn.textContent = isDark ? 'Light mode' : 'Dark mode';
+        }
+      }
+
+      window.wireThemeToggle = function wireThemeToggle(){
+        var btn = $('mh2ThemeToggleBtn');
+        if(!btn || btn.dataset.themeWired === '1') return;
+        btn.dataset.themeWired = '1';
+        btn.addEventListener('click', function(){
+          var current = String(document.documentElement.getAttribute('data-theme') || 'light').toLowerCase();
+          applyThemeMode(current === 'dark' ? 'light' : 'dark');
+        });
+        var stored = 'light';
+        try{ stored = String(localStorage.getItem('mh2-theme') || document.documentElement.getAttribute('data-theme') || 'light'); }catch(_e){}
+        applyThemeMode(stored);
+      }
+
+      function esc(v){ return String(v == null ? '' : v).replace(/[&<>"']/g, function(ch){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch]; }); }
+      function ensureSb(){
+        try{
+          if(window.sb && typeof window.sb.from === 'function') return window.sb;
+          if(window.supabaseClient && typeof window.supabaseClient.from === 'function') return window.supabaseClient;
+          if(window.getSupabase && typeof window.getSupabase === 'function'){
+            var c = window.getSupabase();
+            if(c && typeof c.from === 'function') return c;
+          }
+        }catch(_e){}
+        return null;
+      }
+      async function requireSb(){
+        var existing = ensureSb();
+        if(existing) return existing;
+        var start = Date.now();
+        while(Date.now() - start < 5000){
+          await new Promise(function(r){ setTimeout(r, 80); });
+          existing = ensureSb();
+          if(existing) return existing;
+        }
+        throw new Error('Supabase client unavailable');
+      }
+      async function getUid(){
+        var sb = await requireSb();
+        try{
+          var res = await sb.auth.getUser();
+          return String(res && res.data && res.data.user && res.data.user.id || '').trim();
+        }catch(_e){ return ''; }
+      }
+      async function getMyCompany(){
+        var sb = await requireSb();
+        var uid = await getUid();
+        if(!uid) throw new Error('User not signed in');
+        var q = await sb.from('profiles').select('company,company_id,selected_community_id,role,disabled,deleted').eq('id', uid).maybeSingle();
+        if(q.error) throw q.error;
+        var d = q.data || {};
+        return { uid:uid, company:String(d.company||'').trim(), company_id:String(d.company_id||'').trim(), selected:String(d.selected_community_id||'').trim(), role:String(d.role||'').trim(), disabled:!!d.disabled, deleted:!!d.deleted };
+      }
+      async function loadCommunities(){
+        var sb = await requireSb();
+        var ctx = await getMyCompany();
+        var companyId = String(ctx.company_id || '').trim();
+        if(!companyId) return [];
+
+        // Production rule: employees only see communities explicitly assigned to them
+        // in community_assignments. Supervisors continue to see all company communities.
+        if(String(ctx.role || '').toLowerCase() === 'employee'){
+          var assignedRows = [];
+          try{
+            var aq = await sb
+              .from('community_assignments')
+              .select('community_id,community_name,company_id,employee_id,employee_name,assistant_name,assistant_email')
+              .eq('employee_id', ctx.uid)
+              .order('community_name',{ascending:true});
+            if(aq.error) throw aq.error;
+            assignedRows = Array.isArray(aq.data) ? aq.data : [];
+          }catch(assignErr){
+            console.warn('[MH2] assigned communities read failed', assignErr);
+            assignedRows = [];
+          }
+
+          // Strict scope: never fall back to all company communities for employees.
+          // Only assignment rows keyed to real PropertyCommunities are allowed.
+          var assignedIds = [];
+          var seenIds = {};
+          assignedRows.forEach(function(r){
+            var id = String(r && r.community_id || '').trim();
+            if(!id || seenIds[id]) return;
+            seenIds[id] = true;
+            assignedIds.push(id);
+          });
+          if(!assignedIds.length){
+            try{ console.info('[MH2] no assigned employee communities for user', ctx.uid); }catch(_e){}
+            return [];
+          }
+
+          var propertyRows = [];
+          try{
+            var pq = await sb
+              .from('PropertyCommunities')
+              .select('id,name,company_id,company,weather_zip,created_at')
+              .in('id', assignedIds)
+              .order('name',{ascending:true});
+            if(pq.error) throw pq.error;
+            propertyRows = Array.isArray(pq.data) ? pq.data : [];
+          }catch(propErr){
+            console.warn('[MH2] assigned PropertyCommunities read failed', propErr);
+            propertyRows = [];
+          }
+
+          // Build clean, unique dropdown rows from the master table, not from legacy
+          // community names. This prevents ghost/duplicate communities from old rows.
+          var seenNames = {};
+          var mapped = propertyRows.map(function(c){
+            var id = String(c.id || '').trim();
+            var name = String(c.name || '').replace(/\s+/g,' ').trim();
+            if(!id || !name) return null;
+            var nameKey = name.toLowerCase();
+            if(seenNames[nameKey]) return null;
+            seenNames[nameKey] = true;
+            return {
+              id: id,
+              name: name,
+              company_id: String(c.company_id || companyId || '').trim(),
+              company: String(c.company || ctx.company || '').trim(),
+              zip: String(c.weather_zip || '').trim(),
+              weather_zip: String(c.weather_zip || '').trim()
+            };
+          }).filter(Boolean);
+
+          try{ console.info('[MH2] assigned employee PropertyCommunities loaded count=', mapped.length, mapped); }catch(_e){}
+          return mapped;
+        }
+
+        var q = await sb
+          .from('PropertyCommunities')
+          .select('id,name,company_id,company,created_at')
+          .eq('company_id', companyId)
+          .order('name',{ascending:true});
+        if(q.error) throw q.error;
+        var rows = Array.isArray(q.data) ? q.data : [];
+        try{
+          console.info('[MH2] communities loaded for company_id', companyId, 'count=', rows.length);
+        }catch(_e){}
+        return rows;
+      }
+      console.info('[MH2] renderCommunities/global boot hooks exported');
+
+      async function ensureDefaultCommunityCloud(){
+        var sb = await requireSb();
+        var ctx = await getMyCompany();
+        var list = await loadCommunities();
+        if(!list.length) return { list:[], selected:'' };
+
+        var validIds = list.map(function(x){ return String(x.id || '').trim(); }).filter(Boolean);
+        var stored = String(getStoredCommunityToken() || '').trim();
+        var selected = String(ctx.selected || '').trim();
+
+        if(!selected || validIds.indexOf(selected) === -1){
+          selected = (stored && validIds.indexOf(stored) >= 0) ? stored : String(list[0].id || '').trim();
+          if(selected && selected !== String(ctx.selected || '').trim()){
+            var up = await sb.from('profiles').update({ selected_community_id:selected }).eq('id', ctx.uid);
+            if(up.error) throw up.error;
+          }
+        }
+
+        if(stored && validIds.indexOf(stored) === -1){
+          try{ localStorage.removeItem('zummee_selected_community_id'); }catch(_e){}
+          try{ localStorage.removeItem('activeCommunityId'); }catch(_e){}
+          try{ localStorage.removeItem('zummeeActiveCommunityId'); }catch(_e){}
+          try{ localStorage.removeItem('currentCommunityId'); }catch(_e){}
+        }
+
+        return { list:list, selected:selected };
+      }
+      var mh2CommunityListCache = [];
+      var ctxCache = { id:'', name:'', zip:'', raw:'' };
+      function syncCommunityGlobals(ctx){
+        ctx = ctx || { id:'', name:'', zip:'', raw:'' };
+        ctxCache = {
+          id: String(ctx.id || '').trim(),
+          name: String(ctx.name || '').trim(),
+          zip: String(ctx.zip || '').trim(),
+          raw: String(ctx.raw || '').trim()
+        };
+        try{ window.currentCommunityId = ctxCache.id; }catch(_e){}
+        try{ window.activeCommunityId = ctxCache.id; }catch(_e){}
+        try{ window.selectedCommunityId = ctxCache.id; }catch(_e){}
+        try{ window.currentCommunityName = ctxCache.name; }catch(_e){}
+        try{ window.getActiveCommunityId = function(){ return String(ctxCache.id || '').trim(); }; }catch(_e){}
+        try{ window.getSelectedCommunityName = function(){ return String(ctxCache.name || '').trim(); }; }catch(_e){}
+        return ctxCache;
+      }
+      function persistSelectedCommunity(v, name){
+        v = String(v || '').trim();
+        name = String(name || '').trim();
+        try{ localStorage.setItem('zummee_selected_community_id', v); }catch(_e){}
+        try{ localStorage.setItem('activeCommunityId', v); }catch(_e){}
+        try{ localStorage.setItem('zummeeActiveCommunityId', v); }catch(_e){}
+        try{ localStorage.setItem('currentCommunityId', v); }catch(_e){}
+        if(name){
+          try{ localStorage.setItem('currentCommunityName', name); }catch(_e){}
+          try{ localStorage.setItem('zummeeCurrentCommunityName', name); }catch(_e){}
+        }
+      }
+      function getStoredCommunityToken(){
+        try{
+          return String(localStorage.getItem('zummeeActiveCommunityId') || localStorage.getItem('activeCommunityId') || localStorage.getItem('currentCommunityId') || localStorage.getItem('zummee_selected_community_id') || '').trim();
+        }catch(_e){ return ''; }
+      }
+      function findCommunityInList(token){
+        token = String(token || '').trim();
+        if(!token) return null;
+        var normalized = token.toLowerCase();
+        for(var i=0;i<mh2CommunityListCache.length;i++){
+          var row = mh2CommunityListCache[i] || {};
+          var id = String(row.id || '').trim();
+          var name = String(row.name || '').trim();
+          if(id && id === token) return row;
+          if(name && name.toLowerCase() === normalized) return row;
+        }
+        return null;
+      }
+      function getActiveCommunityContext(){
+        var el = $('zummeeCommunitySelect');
+        var raw = '';
+        var selectedOption = null;
+        if(el){
+          raw = String(el.value || '').trim();
+          if(el.selectedIndex >= 0 && el.options[el.selectedIndex]) selectedOption = el.options[el.selectedIndex];
+          if(selectedOption && String(selectedOption.value || '').trim()){
+            var selectedId = String(selectedOption.value || '').trim();
+            var selectedName = String(selectedOption.textContent || '').trim();
+            var selectedZip = String(selectedOption.getAttribute('data-zip') || '').trim();
+            if(selectedId){
+              if(raw !== selectedId) el.value = selectedId;
+              persistSelectedCommunity(selectedId, selectedName);
+              return syncCommunityGlobals({ id:selectedId, name:selectedName, zip:selectedZip, raw:raw || selectedId });
+            }
+          }
+        }
+        var fallback = findCommunityInList(raw) || findCommunityInList(getStoredCommunityToken());
+        if(fallback){
+          var id = String(fallback.id || '').trim();
+          var name = String(fallback.name || '').trim();
+          var zip = String(fallback.zip || '').trim();
+          if(el && id){
+            if(el.value !== id) el.value = id;
+            var opt = null;
+            for(var oi=0; oi<el.options.length; oi++){ if(String(el.options[oi].value || '').trim() === id){ opt = el.options[oi]; break; } }
+            if(opt) selectedOption = opt;
+          }
+          if(id) persistSelectedCommunity(id, name);
+          return syncCommunityGlobals({ id:id, name:name, zip:zip, raw:raw || id || name });
+        }
+        return syncCommunityGlobals({ id:'', name:(selectedOption ? String(selectedOption.textContent || '').trim() : ''), zip:(selectedOption ? String(selectedOption.getAttribute('data-zip') || '').trim() : ''), raw:raw });
+      }
+      function getActiveCommunityId(){
+        var winVal = '';
+        try{ winVal = String(window.currentCommunityId || window.activeCommunityId || window.selectedCommunityId || '').trim(); }catch(_e){}
+        if(winVal) return winVal;
+        if(ctxCache && ctxCache.id) return String(ctxCache.id).trim();
+        return String((getActiveCommunityContext() || {}).id || '').trim();
+      }
+      function getSelectedCommunityName(){
+        var winVal = '';
+        try{ winVal = String(window.currentCommunityName || '').trim(); }catch(_e){}
+        if(winVal) return winVal;
+        if(ctxCache && ctxCache.name) return String(ctxCache.name).trim();
+        return String((getActiveCommunityContext() || {}).name || '').trim();
+      }
+      
+      function weatherZipStorageKey(id){
+        return 'mh2-weather-zip:' + String(id || '').trim();
+      }
+      function getPersistedWeatherZip(id, fallback){
+        fallback = String(fallback || '').trim();
+        try{
+          var key = weatherZipStorageKey(id);
+          var stored = localStorage.getItem(key);
+          if(stored !== null) return String(stored || '').trim();
+          return fallback;
+        }catch(_e){ return fallback; }
+      }
+      function persistWeatherZipForCommunity(id, zip){
+        id = String(id || '').trim();
+        zip = String(zip || '').replace(/\D+/g,'').slice(0,10);
+        if(!id) return;
+        try{ localStorage.setItem(weatherZipStorageKey(id), zip); }catch(_e){}
+        try{ localStorage.setItem('mh2-last-weather-zip', zip); }catch(_e){}
+      }
+      function preloadWeatherContextFromBoot(){
+        observeWeatherRiskBadge();
+        var boot = window.__mh2BootWeather || {};
+        var zipInput = $('weatherZipInput');
+        var label = $('weatherLocationLabel');
+        if(label && boot.communityName){
+          label.textContent = boot.communityName + ' · Atlanta area';
+          label.classList.add('mh2-is-ready');
+        }
+        if(zipInput){
+          zipInput.value = String(boot.zip || '').trim();
+          if(zipInput.value){
+            zipInput.classList.add('mh2-is-ready');
+          }else{
+            zipInput.classList.remove('mh2-is-ready');
+          }
+        }
+      }
+      function applyWeatherContext(ctx){
+        ctx = ctx || getActiveCommunityContext() || {};
+        var communityId = String(ctx.id || '').trim();
+        var communityName = String(ctx.name || '').trim();
+        var fallbackZip = String(ctx.zip || '').trim();
+        var zipInput = $('weatherZipInput');
+        var label = $('weatherLocationLabel');
+        if(label){
+          label.textContent = communityName ? (communityName + ' · Atlanta area') : 'Atlanta area';
+          label.classList.add('mh2-is-ready');
+        }
+        if(zipInput){
+          var currentValue = String(zipInput.value || '').trim();
+          var resolvedZip = getPersistedWeatherZip(communityId, fallbackZip || currentValue);
+          zipInput.value = resolvedZip;
+          if(resolvedZip){
+            zipInput.classList.add('mh2-is-ready');
+          }else{
+            zipInput.classList.remove('mh2-is-ready');
+          }
+        }
+        if(communityId){
+          try{
+            localStorage.setItem('currentCommunityName', communityName || '');
+            localStorage.setItem('zummeeCurrentCommunityName', communityName || '');
+          }catch(_e){}
+        }
+        try{
+          window.__mh2BootWeather = { communityId:communityId, communityName:communityName, zip:String((zipInput && zipInput.value) || '').trim() };
+        }catch(_e){}
+        var select = $('zummeeCommunitySelect');
+        syncWeatherEmergencyPill();
+        if(select && select.selectedIndex >= 0){
+          var opt = select.options[select.selectedIndex];
+          if(opt && zipInput){
+            var currentZip = String(zipInput.value || '').trim();
+            if(currentZip) opt.setAttribute('data-zip', currentZip);
+          }
+        }
+      }
+
+      window.renderCommunities = async function renderCommunities(){
+        var sb = await requireSb();
+        var select = $('zummeeCommunitySelect');
+        if(!select) return;
+        var zipInput = $('weatherZipInput');
+        preloadWeatherContextFromBoot();
+        var payload = await ensureDefaultCommunityCloud();
+        mh2CommunityListCache = Array.isArray(payload.list) ? payload.list.slice() : [];
+        try{
+          window.__mh2Communities = mh2CommunityListCache.slice();
+          window.__mh2CommunityCount = mh2CommunityListCache.length;
+          console.info('[MH2] renderCommunities loaded', mh2CommunityListCache.length, 'communities');
+        }catch(_e){}
+        select.innerHTML = '';
+        (payload.list || []).forEach(function(c){
+          var opt = document.createElement('option');
+          opt.value = String(c.id);
+          opt.setAttribute('data-community-id', String(c.id));
+          opt.textContent = c.name;
+          if(c.zip) opt.setAttribute('data-zip', String(c.zip));
+          select.appendChild(opt);
+        });
+
+        var validIds = (payload.list || []).map(function(c){ return String(c.id || '').trim(); }).filter(Boolean);
+        var preferredId = String(payload.selected || '').trim();
+        var storedId = String(getStoredCommunityToken() || '').trim();
+        var resolvedSelected = '';
+        if(preferredId && validIds.indexOf(preferredId) >= 0){
+          resolvedSelected = preferredId;
+        }else if(storedId && validIds.indexOf(storedId) >= 0){
+          resolvedSelected = storedId;
+        }else if(validIds.length){
+          resolvedSelected = validIds[0];
+        }
+
+        if(resolvedSelected){
+          select.value = resolvedSelected;
+        }else{
+          select.value = '';
+        }
+
+        select.disabled = !(payload.list && payload.list.length);
+        persistSelectedCommunity(String(select.value || '').trim(), String((select.options[select.selectedIndex] && select.options[select.selectedIndex].textContent) || '').trim());
+        syncCommunityGlobals({ id:String(select.value || '').trim(), name:String((select.options[select.selectedIndex] && select.options[select.selectedIndex].textContent) || '').trim(), zip:String((select.options[select.selectedIndex] && select.options[select.selectedIndex].getAttribute('data-zip')) || '').trim(), raw:String(select.value || '').trim() });
+        if(zipInput){
+          var opt = select.options[select.selectedIndex];
+          zipInput.value = getPersistedWeatherZip(String(select.value || '').trim(), String(opt && opt.getAttribute('data-zip') || '').trim());
+          zipInput.addEventListener('input', function(){
+            var digits = String(zipInput.value || '').replace(/\D+/g,'').slice(0,5);
+            if(zipInput.value !== digits) zipInput.value = digits;
+            if(digits){
+              zipInput.classList.add('mh2-is-ready');
+            }else{
+              zipInput.classList.remove('mh2-is-ready');
+            }
+          });
+          zipInput.addEventListener('change', function(){
+            var digits = String(zipInput.value || '').replace(/\D+/g,'').slice(0,5);
+            zipInput.value = digits;
+            persistWeatherZipForCommunity(String(select.value || '').trim(), digits);
+            applyWeatherContext(getActiveCommunityContext());
+            loadWeatherHub(true);
+          });
+          zipInput.addEventListener('blur', function(){
+            var digits = String(zipInput.value || '').replace(/\D+/g,'').slice(0,5);
+            zipInput.value = digits;
+            persistWeatherZipForCommunity(String(select.value || '').trim(), digits);
+            applyWeatherContext(getActiveCommunityContext());
+            loadWeatherHub(true);
+          });
+        }
+        applyWeatherContext(getActiveCommunityContext());
+        select.onchange = async function(){
+          try{
+            var v = String(select.value || '').trim();
+            if(!v) return;
+            persistSelectedCommunity(v, String((select.options[select.selectedIndex] && select.options[select.selectedIndex].textContent) || '').trim());
+            syncCommunityGlobals({ id:v, name:String((select.options[select.selectedIndex] && select.options[select.selectedIndex].textContent) || '').trim(), zip:String((select.options[select.selectedIndex] && select.options[select.selectedIndex].getAttribute('data-zip')) || '').trim(), raw:v });
+            var ctx = await getMyCompany();
+            var up = await sb.from('profiles').update({ selected_community_id:v }).eq('id', ctx.uid);
+            if(up.error) throw up.error;
+            var opt = select.options[select.selectedIndex];
+            if(zipInput) zipInput.value = getPersistedWeatherZip(v, String(opt && opt.getAttribute('data-zip') || '').trim());
+            applyWeatherContext(getActiveCommunityContext());
+            loadWeatherHub(true);
+            document.dispatchEvent(new CustomEvent('community:changed', { detail:{ community_id:v, community_name:getSelectedCommunityName() } }));
+            setTimeout(applySmartAlertStatesAndSort, 40);
+            window.dispatchEvent(new CustomEvent('community:changed', { detail:{ community_id:v, community_name:getSelectedCommunityName() } }));
+          }catch(e){
+            alert('Community select failed: ' + (e && e.message || e));
+          }
+        };
+      }
+      function normalizeStatus(s){ return String(s||'').trim().toLowerCase(); }
+      function isCompleteRow(r){
+        try{
+          if(r && r.completed_at) return true;
+          var st = normalizeStatus(r && r.status);
+          if(['complete','completed','closed','done','resolved'].indexOf(st) !== -1) return true;
+          return /__ZUMMEE_BM_STATUS__:\s*COMPLETE\|/i.test(String((r && r.details)||''));
+        }catch(_e){ return false; }
+      }
+      function hasConvertedMarker(r){
+        try{ return /__ZUMMEE_BM_CONVERTED__:\s*RWO\|/i.test(String((r && r.details)||'')); }catch(_e){ return false; }
+      }
+      function shouldCountAsOpenRow(r){ return !isCompleteRow(r) && !hasConvertedMarker(r); }
+      function isOverdueRow(r){
+        try{
+          if(!shouldCountAsOpenRow(r) || !r || !r.due_date) return false;
+          var due = new Date(String(r.due_date) + 'T00:00:00');
+          if(isNaN(due.getTime())) return false;
+          var now = new Date();
+          var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          return due < today;
+        }catch(_e){ return false; }
+      }
+      function stripMarkers(details){
+        var t = String(details || '');
+        t = t.replace(/\n\n__ZUMMEE_BM_STATUS__:[\s\S]*$/i,'');
+        t = t.replace(/\n\n__ZUMMEE_BM_PHOTO__:[^\n]+\s*/ig,'');
+        t = t.replace(/\n\n__ZUMMEE_BM_CONVERTED__:[^\n]+\s*/ig,'');
+        return t.trim();
+      }
+      
+      function setAlertCard(id, cfg){
+        var el = $(id);
+        if(!el) return;
+        cfg = cfg || {};
+        var tone = String(cfg.tone || 'good').toLowerCase();
+        el.classList.remove('is-urgent','is-attention','is-good');
+        el.classList.add(tone === 'urgent' ? 'is-urgent' : (tone === 'attention' ? 'is-attention' : 'is-good'));
+        if(cfg.href) el.setAttribute('href', cfg.href);
+        el.innerHTML = '<div class="mh2-alert-top"><div class="mh2-alert-title">' + esc(String(cfg.title || 'Alert')) + '</div><div class="mh2-alert-badge">' + esc(String(cfg.badge || 'Status')) + '</div></div>' +
+          '<div class="mh2-alert-copy">' + esc(String(cfg.copy || '')) + '</div>';
+      }
+      function daysUntil(dateStr){
+        if(!dateStr) return null;
+        var d = new Date(dateStr);
+        if(isNaN(d.getTime())) return null;
+        var now = new Date();
+        now.setHours(0,0,0,0);
+        d.setHours(0,0,0,0);
+        return Math.round((d.getTime()-now.getTime())/86400000);
+      }
+
+      function fmtAgo(iso){
+        try{
+          var d = new Date(iso);
+          if(isNaN(d.getTime())) return '';
+          var diff = Math.max(0, Date.now() - d.getTime());
+          var mins = Math.round(diff/60000);
+          if(mins < 1) return 'Now';
+          if(mins < 60) return mins + ' min';
+          var hrs = Math.round(mins/60);
+          if(hrs < 24) return hrs + ' hr';
+          var days = Math.round(hrs/24);
+          if(days < 7) return days + ' day';
+          return d.toLocaleDateString();
+        }catch(_e){ return ''; }
+      }
+      function setText(id, value){ var el=$(id); if(el) el.textContent = value; }
+      function setHtml(id, value){ var el=$(id); if(el) el.innerHTML = value; }
+      function updateBoardSummary(rows){
+        rows = Array.isArray(rows) ? rows : [];
+        var open = rows.filter(shouldCountAsOpenRow);
+        var overdue = open.filter(isOverdueRow);
+        setText('mh2BoardItemsPill', String(open.length));
+        setText('mh2BoardStatusPill', overdue.length ? 'Overdue ' + overdue.length : (open.length ? 'Open ' + open.length : 'Clear'));
+        setText('mh2BoardOverdueCount', String(overdue.length));
+        setText('mh2BoardOverdueNote', overdue.length ? ('Needs review in ' + (ctxCache && ctxCache.name ? ctxCache.name : 'selected community') + '.') : 'Past-due board items for the selected community.');
+        var statusBody = $('managerBoardHubStatusBody');
+        if(statusBody){
+          if(!open.length){
+            statusBody.innerHTML = '<div class="mh2-placeholder">No open board-submitted items for this community.</div>';
+          }else{
+            statusBody.innerHTML = '<div class="mh2-list">' +
+              '<article class="mh2-list-item"><div><div class="mh2-item-title">Open board items</div><div class="mh2-item-copy">Current submitted items waiting for manager review or conversion into work orders.</div></div><div class="mh2-item-tag">' + esc(String(open.length)) + '</div></article>' +
+              '<article class="mh2-list-item"><div><div class="mh2-item-title">Overdue board items</div><div class="mh2-item-copy">Items past the local due date for the selected community.</div></div><div class="mh2-item-tag">' + esc(String(overdue.length)) + '</div></article>' +
+              '</div>';
+          }
+        }
+        setAlertCard('mh2AlertBoard', {
+          tone: overdue.length ? 'urgent' : (open.length ? 'attention' : 'good'),
+          title: overdue.length ? 'Board review overdue' : 'Board review status',
+          badge: overdue.length ? 'URGENT' : (open.length ? 'OPEN' : 'STABLE'),
+          copy: open.length
+            ? (esc(String(open.length)) + ' open item' + (open.length===1?'':'s') + (overdue.length ? ', ' + esc(String(overdue.length)) + ' overdue.' : ' ready for review.'))
+            : 'No open board items for the selected community.',
+          href: 'board_member_hub.html'
+        });
+        var staticCard = $('boardItemsStaticCard');
+        if(staticCard){ staticCard.setAttribute('data-open-count', String(open.length)); }
+      }
+      async function loadBoardItemsPanel(){
+        var body = $('managerBoardItemsBody');
+        if(!body) return;
+        var ctx = await getActiveCommunityContext();
+        var communityId = ctx.id;
+        if(!communityId){
+          body.innerHTML = '<div class="mh2-placeholder">Select a community to see board-submitted items.</div>';
+          updateBoardSummary([]);
+          return;
+        }
+        body.innerHTML = '<div class="mh2-placeholder"></div>';
+        try{
+          var sb = await requireSb();
+          var q = await sb.from('BoardMemberActionItems').select('id,community_id,title,details,due_date,created_at,status,completed_at').eq('community_id', communityId).order('created_at',{ascending:false}).limit(50);
+          if(q.error) throw q.error;
+          var rows = Array.isArray(q.data) ? q.data : [];
+          var active = rows.filter(shouldCountAsOpenRow);
+          updateBoardSummary(rows);
+          setText('mh2BoardItemNote', active.length ? ('Last refresh for ' + (ctx.name || 'selected community')) : 'No open board-submitted items for this community.');
+          if(!active.length){
+            body.innerHTML = '<div class="mh2-placeholder">No new board-submitted items for this community.</div>';
+            return;
+          }
+          body.innerHTML = active.slice(0,5).map(function(row){
+            var meta = [];
+            if(row.created_at) meta.push('Submitted ' + fmtAgo(row.created_at));
+            if(row.due_date) meta.push('Due ' + esc(String(row.due_date)));
+            if(row.status) meta.push('Status ' + esc(String(row.status)));
+            var desc = esc(stripMarkers(row.details || '')).slice(0, 180);
+            if(desc.length >= 180) desc += '…';
+            var overdue = isOverdueRow(row);
+            return '<article class="mh2-list-item">' +
+              '<div><div class="mh2-item-title">' + esc(row.title || 'Untitled item') + '</div>' +
+              '<div class="mh2-board-meta">' + meta.map(function(item){ return '<span class="mh2-chip">' + item + '</span>'; }).join('') + '</div>' +
+              '<div class="mh2-item-copy">' + (desc || 'Open board-submitted item ready for review.') + '</div></div>' +
+              '<a class="mh2-item-tag mh2-board-tag' + (overdue ? ' is-overdue' : '') + '" href="board_member_hub.html">' + (overdue ? 'Overdue' : 'Open') + '</a>' +
+            '</article>';
+          }).join('');
+        }catch(err){
+          body.innerHTML = '<div class="mh2-placeholder">Unable to load board items.</div>';
+          setText('mh2BoardItemNote', 'Board feed unavailable right now.');
+          updateBoardSummary([]);
+        }
+      }
+      function mapNotificationHref(event){
+        var type = String((event && event.type) || '').toLowerCase();
+        var msg = String((event && event.message) || '').toLowerCase();
+        if(event && event.link_url) return String(event.link_url);
+        if((type === 'maintenance' || type === 'resident_work_order' || type === 'new_work_order' || type === 'work_order_sent_to_vendor' || type === 'vendor_accepted_job' || type === 'vendor_in_progress' || type === 'vendor_completed_job') && event.request_id) return 'resident_work_orders.html?open_work_order_id=' + encodeURIComponent(String(event.request_id));
+        if(type === 'maintenance' || type === 'resident_work_order') return 'resident_work_orders.html';
+        if(type === 'board_item' && event.board_item_id) return 'board_member_hub.html';
+        if(type === 'annual_meeting') return 'annual_meetings.html';
+        if(type === 'community_alert') return 'emergency_texting.html';
+        if(type === 'compliance_drive') return 'mileage.html';
+        if(msg.indexOf('board') !== -1) return 'board_member_hub.html';
+        if(msg.indexOf('work order') !== -1 || msg.indexOf('maintenance') !== -1) return 'resident_work_orders.html';
+        return null;
+      }
+      function eventPriority(event){
+        var t = String((event && event.type) || '').toLowerCase();
+        var p = String((event && event.priority) || '').toLowerCase();
+        var msg = String((event && event.message) || '').toLowerCase();
+        var isMaintenanceDomain = (t === 'maintenance' || t === 'resident_work_order');
+        if(isMaintenanceDomain && (p === 'urgent' || msg.indexOf('urgent') !== -1 || msg.indexOf('overdue') !== -1)) return 'urgent';
+        if(msg.indexOf('accepted') !== -1 || msg.indexOf('active') !== -1 || msg.indexOf('completed') !== -1 || msg.indexOf('scheduled') !== -1) return 'active';
+        if(isMaintenanceDomain || t === 'annual_meeting') return 'attention';
+        if(msg.indexOf('submitted') !== -1 || msg.indexOf('approval') !== -1 || msg.indexOf('awaiting') !== -1) return 'attention';
+        return 'neutral';
+      }
+      async function loadLiveActivity(){
+        var list = $('activityFeedList');
+        if(!list) return;
+        var ctx = await getActiveCommunityContext();
+        var communityId = ctx.id;
+        var communityName = ctx.name;
+        list.innerHTML = '<div class="mh2-placeholder"></div>';
+        setText('mh2LiveActivityNote', 'Refreshing live feed' + (communityName ? ' for ' + communityName : '') + '.');
+        try{
+          var sb = await requireSb();
+          var events = [];
+          function maybePush(time, message, extra){
+            if(!time || !message) return;
+            events.push(Object.assign({ time:time, message:message }, extra || {}));
+          }
+          try{
+            var notifQ = sb.from('notification_events').select('id,created_at,event_type,priority,title,message,link_url,community_id,source_table,source_id,metadata').order('created_at',{ascending:false}).limit(20);
+            if(communityId) notifQ = notifQ.eq('community_id', communityId);
+            var notif = await notifQ;
+            if(!notif.error && Array.isArray(notif.data)){
+              notif.data.forEach(function(row){
+                var md = row && row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+                var msg = String(row.message || row.title || 'Notification update').trim();
+                if(/board item|board member|board-submitted/i.test(msg)) return;
+                events.push({ time:row.created_at, message:msg, type:String(row.event_type||'').toLowerCase(), priority:String(row.priority||'').toLowerCase(), link_url:row.link_url || null, request_id:md.work_order_id || md.request_id || null, board_item_id:md.board_item_id || null, community_id:row.community_id || null });
+              });
+            }
+          }catch(_e){}
+          try{
+            var annual = await sb.from('annual_meeting_activity_events').select('*').order('created_at',{ascending:false}).limit(12);
+            if(!annual.error && Array.isArray(annual.data)){
+              annual.data.forEach(function(row){
+                if(communityId && String((row && row.community_id) || '') !== communityId) return;
+                maybePush(row.created_at, String(row.title || row.detail || row.event_type || 'Annual meeting update').trim(), { type:'annual_meeting', community_id:row.community_id || null });
+              });
+            }
+          }catch(_e2){}
+          try{
+            var rwo = await sb.from('resident_work_orders').select('id,community_id,submitted_at,created_at,priority,status,unit_number').order('submitted_at',{ascending:false}).limit(20);
+            if(!rwo.error && Array.isArray(rwo.data)){
+              rwo.data.forEach(function(row){
+                if(communityId && String((row && row.community_id) || '') !== communityId) return;
+                var priority = String(row.priority || '').toLowerCase();
+                var status = String(row.status || '').toLowerCase();
+                var unit = String(row.unit_number || '').trim().toLowerCase();
+                var label = unit === 'inspection' ? 'Inspection work order created' : 'Employee work order created';
+                if(priority === 'urgent') label = 'Urgent ' + label;
+                else if(['in_progress','assigned_to_vendor','active'].indexOf(status) !== -1) label = 'Employee work order in progress';
+                maybePush(row.submitted_at || row.created_at, label, { type:'resident_work_order', community_id:row.community_id || null, request_id:row.id });
+              });
+            }
+          }catch(_e3){}
+          try{
+            var maint = await sb.from('maintenance_request_events').select('*').order('created_at',{ascending:false}).limit(20);
+            if(!maint.error && Array.isArray(maint.data)){
+              maint.data.forEach(function(row){
+                if(communityId && String((row && row.community_id) || '') !== communityId) return;
+                var eventType = String(row.event_type || '').toLowerCase();
+                var label = 'Maintenance update';
+                if(eventType === 'created') label = 'Maintenance request created';
+                else if(eventType === 'updated') label = 'Maintenance request updated';
+                else if(eventType === 'completed') label = 'Maintenance request completed';
+                maybePush(row.created_at || row.submitted_at, label, { type:'maintenance', community_id:row.community_id || null, request_id:row.request_id || row.maintenance_request_id || null });
+              });
+            }
+          }catch(_e4){}
+          try{
+            var bm = await sb.from('BoardMemberActionItems').select('id,community_id,title,created_at,due_date,status,completed_at,details').order('created_at',{ascending:false}).limit(12);
+            if(!bm.error && Array.isArray(bm.data)){
+              bm.data.forEach(function(row){
+                if(communityId && String((row && row.community_id) || '') !== communityId) return;
+                if(!shouldCountAsOpenRow(row)) return;
+                maybePush(row.created_at, String(row.title || 'Board item submitted').trim(), { type:'board_item', community_id:row.community_id || null, board_item_id:row.id || null, priority:isOverdueRow(row) ? 'urgent' : 'attention' });
+              });
+            }
+          }catch(_e5){}
+          events.sort(function(a,b){ return new Date(b.time).getTime() - new Date(a.time).getTime(); });
+          events = events.slice(0,8);
+          setText('mh2LiveActivityCount', String(events.length));
+          var urgentEvents = events.filter(function(e){ return eventPriority(e) === 'urgent'; }).length;
+          /* legacy maintenance alert writer removed */
+          if(!events.length){
+            try{ window.__mh2LiveEvents = []; }catch(_e){}
+            list.innerHTML = '<div class="mh2-placeholder">No recent activity for this community.</div>';
+            setText('mh2LiveActivityNote', 'Connected, but no recent events were found' + (communityName ? ' for ' + communityName : '') + '.');
+            return;
+          }
+          try{ window.__mh2LiveEvents = events.slice(); }catch(_e){}
+          list.innerHTML = events.map(function(event){
+            var href = mapNotificationHref(event);
+            var priority = eventPriority(event);
+            var ageMs = Math.max(0, Date.now() - new Date(event.time).getTime());
+            var rowClass = priority === 'urgent' ? 'mh2-feed-item is-urgent' : (priority === 'attention' ? 'mh2-feed-item is-attention' : (priority === 'active' ? 'mh2-feed-item is-active' : 'mh2-feed-item'));
+            var dot = priority === 'urgent' ? 'mh2-dot mh2-dot--urgent' : (priority === 'attention' ? 'mh2-dot mh2-dot--gold' : (priority === 'active' ? 'mh2-dot mh2-dot--green' : 'mh2-dot'));
+            if(ageMs <= 60 * 60 * 1000) dot += ' is-recent';
+            var tagClass = ageMs <= 60 * 60 * 1000 ? 'mh2-item-tag is-recent' : (ageMs <= 24 * 60 * 60 * 1000 ? 'mh2-item-tag is-fresh' : 'mh2-item-tag is-stale');
+            var inner = '<article class="' + rowClass + '">' +
+              '<div class="' + dot + '"></div>' +
+              '<div><div class="mh2-item-title">' + esc(event.message || 'Activity update') + '</div><div class="mh2-item-copy">' + esc(communityName || getSelectedCommunityName() || 'Selected community') + '</div></div>' +
+              '<div class="' + tagClass + '">' + esc(fmtAgo(event.time)) + '</div>' +
+            '</article>';
+            return href ? '<a href="' + esc(href) + '" style="text-decoration:none;color:inherit;display:block">' + inner + '</a>' : inner;
+          }).join('');
+          setText('mh2LiveActivityNote', 'Showing the latest ' + String(events.length) + ' event' + (events.length===1?'':'s') + (communityName ? ' for ' + communityName : '') + '.');
+        }catch(err){
+          try{ window.__mh2LiveEvents = []; }catch(_e){}
+          list.innerHTML = '<div class="mh2-placeholder">Unable to load live activity.</div>';
+          setText('mh2LiveActivityCount', '0');
+          setText('mh2LiveActivityNote', 'Live feed unavailable right now.');
+        }
+      }
+      function approvalStatusLabel(status){
+        return String(status || 'pending').replace(/_/g,' ').replace(/\w/g, function(ch){ return ch.toUpperCase(); });
+      }
+      async function loadApprovalSummary(){
+        var body = $('annualApprovalBody');
+        var communityId = getActiveCommunityId();
+        if(!body) return;
+        try{
+          var sb = await requireSb();
+          var q = await sb.from('annual_meeting_packet_requests').select('id,community_id,community_name,status,submitted_at').in('status', ['approved_ready_to_send','sent_to_admin','mailed']).order('submitted_at',{ascending:false});
+          if(q.error) throw q.error;
+          var rows = (q.data || []).filter(function(item){ return !communityId || String((item && item.community_id) || '') === communityId; });
+          setText('mh2ApprovalPill', String(rows.length));
+          setText('mh2ApprovalNote', rows.length ? ('Current approval items for ' + (getSelectedCommunityName() || 'the selected community') + '.') : 'No approval items for this community.');
+          setText('mh2ApprovalFoot', rows.length ? ('Showing the latest ' + String(Math.min(rows.length, 4)) + ' approval item' + (rows.length===1?'':'s') + ' for ' + (getSelectedCommunityName() || 'the selected community') + '.') : 'Open annual approval items for the selected community.');
+          setAlertCard('mh2AlertApprovals', {
+            tone: rows.length ? 'attention' : 'good',
+            title: 'Annual meeting approvals',
+            badge: rows.length ? (String(rows.length) + ' open') : 'Clear',
+            copy: rows.length ? (String(rows.length) + ' approval item' + (rows.length===1?'':'s') + ' in progress for ' + (getSelectedCommunityName() || 'the selected community') + '.') : 'No active items',
+            href: 'annual_meeting_approvals.html'
+          });
+          if(!rows.length){
+            body.innerHTML = '<div class="mh2-placeholder">No annual approval items for this community.</div>';
+            return;
+          }
+          body.innerHTML = rows.slice(0,4).map(function(row){
+            var href = 'annual_meeting_approvals.html';
+            var community = row.community_name || getSelectedCommunityName() || 'Community';
+            var status = approvalStatusLabel(row.status);
+            var inner = '<article class="mh2-list-item">' +
+              '<div><div class="mh2-item-title">' + esc(community) + '</div><div class="mh2-item-copy">Approval status: ' + esc(status) + '</div></div>' +
+              '<div class="mh2-item-tag">' + esc(fmtAgo(row.submitted_at)) + '</div>' +
+            '</article>';
+            return '<a href="' + esc(href) + '" style="text-decoration:none;color:inherit">' + inner + '</a>';
+          }).join('');
+        }catch(_e){
+          setText('mh2ApprovalPill', '0');
+          setText('mh2ApprovalNote', 'Approval data unavailable right now.');
+          setText('mh2ApprovalFoot', 'Open annual approval items for the selected community.');
+          body.innerHTML = '<div class="mh2-placeholder">Unable to load annual approvals.</div>';
+        }
+      }
+      function setToolCardState(cardId, opts){
+        var card = $(cardId);
+        if(!card) return;
+        opts = opts || {};
+        var tone = String(opts.tone || '').trim();
+        var toneEl = card.querySelector('[data-role="tone"]');
+        var m1 = card.querySelector('[data-role="metric1"]');
+        var m2 = card.querySelector('[data-role="metric2"]');
+        if(toneEl){ toneEl.textContent = String(opts.badge || tone || 'Ready'); toneEl.className = 'mh2-tool-pill' + (tone === 'urgent' ? ' is-urgent' : tone === 'good' ? ' is-good' : tone === 'gold' ? ' is-gold' : ''); }
+        if(m1 && opts.metric1 != null) m1.textContent = String(opts.metric1);
+        if(m2 && opts.metric2 != null) m2.textContent = String(opts.metric2);
+        card.classList.remove('mh2-tool-card--gold','mh2-tool-card--urgent');
+        if(tone === 'urgent'){ card.classList.add('mh2-tool-card--urgent'); }
+        else if(tone === 'gold'){ card.classList.add('mh2-tool-card--gold'); }
+      }
+      function getHubCardStorage(){
+        try{ return JSON.parse(localStorage.getItem('zummee_manager_hub_v2_cards') || '{}') || {}; }catch(_e){ return {}; }
+      }
+      function saveHubCardStorage(v){
+        try{ localStorage.setItem('zummee_manager_hub_v2_cards', JSON.stringify(v || {})); }catch(_e){}
+      }
+      function normalizeZummeeRole(value){
+        var role = String(value || '').trim().toLowerCase();
+        if(!role) return '';
+        if(role.indexOf('admin') !== -1) return 'admin';
+        if(role.indexOf('supervisor') !== -1) return 'supervisor';
+        if(role.indexOf('manager') !== -1) return 'employee';
+        if(role.indexOf('employee') !== -1) return 'employee';
+        return role;
+      }
+      async function getMyProfile(){
+        var sb = null;
+        var uid = '';
+        var signals = [];
+        var add = function(source, value){
+          var role = normalizeZummeeRole(value);
+          if(role) signals.push({ source: source, raw: String(value || ''), role: role });
+        };
+        try{ sb = await requireSb(); }catch(_e){}
+        try{ uid = await getUid(); }catch(_e){}
+        try{
+          add('window.ZUMMEE_AUTH.role', window && window.ZUMMEE_AUTH && window.ZUMMEE_AUTH.role);
+          add('window.ZUMMEE_AUTH.department', window && window.ZUMMEE_AUTH && window.ZUMMEE_AUTH.department);
+        }catch(_e){}
+        try{
+          var sessionRes = sb && sb.auth && await sb.auth.getUser();
+          var user = sessionRes && sessionRes.data && sessionRes.data.user;
+          if(user){
+            uid = uid || user.id || '';
+            var meta = Object.assign({}, user.app_metadata || {}, user.user_metadata || {});
+            ['role','user_role','account_type','type','access_level','access','department','dept'].forEach(function(k){ add('session.' + k, meta[k]); });
+            if(meta.is_admin || meta.is_companyadmin) add('session.flag', 'admin');
+            if(meta.is_supervisor) add('session.flag', 'supervisor');
+          }
+        }catch(_e){}
+        try{
+          var p = JSON.parse(localStorage.getItem('zummee_profile_v1') || '{}') || {};
+          ['role','user_role','account_type','type','access_level','access','department','dept'].forEach(function(k){ add('localProfile.' + k, p[k]); });
+          if(p.is_admin || p.is_companyadmin) add('localProfile.flag', 'admin');
+          if(p.is_supervisor) add('localProfile.flag', 'supervisor');
+        }catch(_e){}
+        try{
+          ['zummee_role','zummee_user_role','userRole','role','activeRole','account_type','zummee_account_type'].forEach(function(k){ add('localStorage.' + k, localStorage.getItem(k)); });
+        }catch(_e){}
+        if(sb && uid){
+          var checks = [
+            {table:'userdirectory', column:'auth_user_id', select:'role,approved'},
+            {table:'userdirectory', column:'id', select:'role,approved'}
+          ];
+          for(var i=0;i<checks.length;i++){
+            var check = checks[i];
+            try{
+              var res = await sb.from(check.table).select(check.select).eq(check.column, uid).maybeSingle();
+              if(res && res.data){ add(check.table + '.' + check.column + '.role', res.data.role); }
+            }catch(_e){}
+          }
+        }
+        var finalRole = '';
+        if(signals.some(function(x){ return x.role === 'admin'; })) finalRole = 'admin';
+        else if(signals.some(function(x){ return x.role === 'supervisor'; })) finalRole = 'supervisor';
+        else if(signals.some(function(x){ return x.role === 'employee'; })) finalRole = 'employee';
+        else finalRole = signals[0] ? signals[0].role : '';
+        try{ window.managerHubRoleSignals = signals; }catch(_e){}
+        return { role: finalRole, signals: signals };
+      }
+      function isPrivilegedProfile(p){
+        var role = String((p && p.role) || '').toLowerCase().trim();
+        return /\b(companyadmin|admin|supervisor)\b/.test(role) || /(company\s*admin)/.test(role);
+      }
+      async function applyRoleVisibility(){
+        var page = document.querySelector('.mh2-page');
+        if(!page) return false;
+        var priv = false;
+        try{ priv = isPrivilegedProfile(await getMyProfile()); }catch(_e){ priv = false; }
+        page.classList.toggle('is-privileged', !!priv);
+        try{
+          sessionStorage.setItem('zummee_manager_hub_is_privileged', priv ? '1' : '0');
+          if(priv){ sessionStorage.setItem('zummee_manager_hub_role', 'supervisor'); }
+        }catch(_e){}
+        var employeeHubSection = document.getElementById('employeeHubSection');
+        if(employeeHubSection){ employeeHubSection.style.display = priv ? 'block' : 'none'; }
+        Array.prototype.forEach.call(document.querySelectorAll('.mh2-tool-card[data-role-scope]'), function(card){
+          var scope = String(card.getAttribute('data-role-scope') || '').trim();
+          card.style.display = (scope === 'supervisor' && !priv) ? 'none' : '';
+        });
+        try{ window.mh2IsPrivileged = !!priv; window.managerHubRoleDebug = { isPrivileged: !!priv, signals: window.managerHubRoleSignals || [] }; }catch(_e){}
+        return priv;
+      }
+      function restoreManagerHubRoleVisibilityFromCache(){
+        try{
+          var cachedPriv = sessionStorage.getItem('zummee_manager_hub_is_privileged') === '1';
+          if(!cachedPriv) return false;
+          var page = document.querySelector('.mh2-page');
+          if(page) page.classList.add('is-privileged');
+          var employeeHubSection = document.getElementById('employeeHubSection');
+          if(employeeHubSection) employeeHubSection.style.display = 'block';
+          Array.prototype.forEach.call(document.querySelectorAll('#employeeHubCards .mh2-tool-card[data-role-scope="supervisor"]'), function(card){
+            card.style.display = '';
+          });
+          window.mh2IsPrivileged = true;
+          return true;
+        }catch(_e){ return false; }
+      }
+      async function ensureManagerHubSupervisorSectionVisible(){
+        restoreManagerHubRoleVisibilityFromCache();
+        var priv = false;
+        try{ priv = await applyRoleVisibility(); }catch(_e){ priv = !!window.mh2IsPrivileged; }
+        if(priv){ restoreManagerHubRoleVisibilityFromCache(); }
+        return !!priv;
+      }
+      function updateVisibleHubCardCount(){
+        var count = Array.prototype.filter.call(document.querySelectorAll('#hubCards .mh2-tool-card[data-card-key]'), function(card){ return getComputedStyle(card).display !== 'none'; }).length;
+        setText('mh2HubCardCount', String(count));
+      }
+      window.testManagerHubSupervisorCards = async function(){
+        var priv = false;
+        try{ priv = await applyRoleVisibility(); }catch(_e){ priv = !!window.mh2IsPrivileged; }
+        var section = document.getElementById('employeeHubSection');
+        var cards = Array.prototype.slice.call(document.querySelectorAll('#employeeHubCards .mh2-tool-card[data-role-scope="supervisor"]'));
+        var visibleCards = cards.filter(function(card){ return getComputedStyle(card).display !== 'none'; }).map(function(card){ return card.id || card.getAttribute('data-card-key'); });
+        var result = { isPrivileged: !!priv, sectionExists: !!section, sectionDisplay: section ? getComputedStyle(section).display : '', supervisorCardCount: cards.length, visibleCards: visibleCards };
+        try{ console.table([result]); }catch(_e){}
+        return result;
+      };
+      function parseCompanyLogoRef(raw){
+        raw = String(raw || '').trim();
+        if(!raw) return null;
+        if(/^https?:\/\//i.test(raw)) return { url: raw };
+        return { bucket:'company_logos', path: raw };
+      }
+      function getBrandLogoCacheKey(companyId){
+        return 'mh2_brand_logo_v1_' + String(companyId || '').trim();
+      }
+      function readBrandLogoCache(companyId){
+        try{
+          var raw = sessionStorage.getItem(getBrandLogoCacheKey(companyId));
+          if(!raw) return null;
+          var parsed = JSON.parse(raw);
+          if(!parsed || !parsed.url) return null;
+          return parsed;
+        }catch(_e){ return null; }
+      }
+      function writeBrandLogoCache(companyId, payload){
+        try{
+          sessionStorage.setItem(getBrandLogoCacheKey(companyId), JSON.stringify({
+            url:String(payload && payload.url || '').trim(),
+            alt:String(payload && payload.alt || '').trim(),
+            isCompany:!!(payload && payload.isCompany)
+          }));
+        }catch(_e){}
+      }
+      function preloadImage(url){
+        return new Promise(function(resolve, reject){
+          var img = new Image();
+          img.decoding = 'async';
+          img.onload = function(){ resolve(url); };
+          img.onerror = function(err){ reject(err || new Error('Image preload failed')); };
+          img.src = url;
+        });
+      }
+      async function paintBrandLogo(payload){
+        var logo = $('mh2BrandLogo');
+        if(!logo) return;
+        var url = String(payload && payload.url || '').trim();
+        var alt = String(payload && payload.alt || '').trim() || 'Zummee logo';
+        var isCompany = !!(payload && payload.isCompany);
+        if(!url) url = 'Zummee.png';
+        try{ await preloadImage(url); }catch(_e){
+          url = 'Zummee.png';
+          alt = 'Zummee logo';
+          isCompany = false;
+          try{ await preloadImage(url); }catch(_e2){}
+        }
+        logo.classList.remove('is-visible');
+        logo.src = url;
+        logo.alt = alt;
+        logo.classList.toggle('is-company', isCompany);
+        requestAnimationFrame(function(){ logo.classList.add('is-visible'); });
+      }
+      async function resolveCompanyLogoPayload(companyId){
+        if(!companyId) return { url:'Zummee.png', alt:'Zummee

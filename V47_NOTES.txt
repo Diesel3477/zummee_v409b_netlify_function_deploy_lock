@@ -1,0 +1,12 @@
+v47 changes:
+- assign-vendor-email no longer hard-fails when vendor_name is blank
+- function now falls back to:
+  1. vendor_name
+  2. vendor
+  3. assigned_vendor_name
+  4. email local-part
+  5. 'Vendor'
+
+Why:
+The browser payload was reaching the function with a blank vendor_name even though the dropdown
+selection looked correct in the UI. This patch makes the email flow resilient.

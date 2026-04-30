@@ -1,0 +1,1093 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>window.ZUMMEE_BUILD="2026-03-27-1";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Emergency Texting</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="shared/supabase-client.js?v=2026-04-08-2"></script>
+  <script src="shared/resident-auth.js?v=2026-03-27-1"></script>
+  <script src="shared/header.js?v=2026-04-08-2"></script>
+  <link rel="stylesheet" href="shared/header.css?v=2026-03-27-1">
+  <link rel="stylesheet" href="shared/zummee-design-system.css?v=2026-03-27-1">
+
+  <div class="modalOverlay" id="confirmModal" aria-hidden="true">
+    <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+      <h2 class="modalTitle" id="confirmModalTitle">Review Emergency Alert</h2>
+      <div class="helper" style="margin-top:8px">Confirm the audience and message before sending this community-wide text.</div>
+      <div class="modalGrid">
+        <div class="stat"><div class="k">Community</div><div class="v" id="confirmCommunity" style="font-size:20px"></div></div>
+        <div class="stat"><div class="k">Residents</div><div class="v" id="confirmResidents"></div></div>
+        <div class="stat"><div class="k">Board Members</div><div class="v" id="confirmBoard"></div></div>
+      </div>
+      <div class="stat" style="margin-top:12px"><div class="k">Unique Text Numbers</div><div class="v" id="confirmUnique"></div></div>
+      <div class="previewBox" id="confirmMessage"></div>
+      <div class="confirmLine" id="confirmLine"></div>
+      <div class="btnRow" style="margin-top:18px;justify-content:flex-end">
+        <button class="btn" id="cancelConfirmBtn" type="button">Back</button>
+        <button class="btn primary" id="confirmSendBtn" type="button">Send Alert Now</button>
+      </div>
+    </div>
+  </div>
+
+
+  <script>
+    window.SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+    window.SUPABASE_ANON_KEY = 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
+  </script>
+  <script id="zummeeStaffGuard">
+  (async () => {
+    if (window.__zummeeStaffGuardRan) return;
+    window.__zummeeStaffGuardRan = true;
+    async function getClient(){
+      try{ if(typeof ensureSupabase === 'function'){ const c = await ensureSupabase(); if(c && c.auth && typeof c.auth.getSession === 'function') return c; } }catch(_e){}
+      try{ if(window.supabaseClient && window.supabaseClient.auth && typeof window.supabaseClient.auth.getSession === 'function') return window.supabaseClient; }catch(_e){}
+      try{ if(window.sb && window.sb.auth && typeof window.sb.auth.getSession === 'function') return window.sb; }catch(_e){}
+      return null;
+    }
+    const go = (target) => { try{ window.location.replace(target); }catch(_e){ window.location.href = target; } };
+    const sb = await getClient();
+    if(!sb){ go('login.html'); return; }
+    const sessionRes = await sb.auth.getSession();
+    const user = sessionRes && sessionRes.data && sessionRes.data.session ? sessionRes.data.session.user : null;
+    if(!user){ go('login.html'); return; }
+    const ud = await sb.from('userdirectory').select('role').eq('auth_user_id', user.id).single();
+    const role = String((ud && ud.data && ud.data.role) || '').trim();
+    if(role === 'Resident'){ go('resident_portal.html'); return; }
+    document.documentElement.setAttribute('data-staff-role', role || '');
+  })();
+  </script>
+  
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+    :root{--brand:#0f3554;--gold:#c19120;--bg:#f4f6fa;--card:#fff;--muted:#5d6b7a;--border:#d9e1ea;--ok:#d9f2e3;--danger:#fee2e2;--warn:#fff4d6}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:#17324c}
+    #zummeeHeaderMount{display:block}
+    main{max-width:1320px;margin:26px auto;padding:0 16px 46px}
+    .card{background:#fff;border:1px solid rgba(15,53,84,.12);border-radius:28px;padding:22px;box-shadow:0 18px 42px rgba(15,53,84,.08)}
+    .card.zummee-section-card{box-shadow:none}
+    .topRow{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap}
+    h1{margin:0;font-size:clamp(30px,5vw,42px);line-height:1.04;color:var(--brand)}
+    .sub{color:var(--muted);font-size:14px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:11px 18px;border-radius:999px;border:2px solid var(--brand);background:#fff;color:var(--brand);text-decoration:none;font-size:15px;font-weight:800;cursor:pointer}
+    .btn.primary{background:var(--brand);color:#fff}
+    .btn.gold{background:var(--gold);border-color:var(--gold);color:#fff}
+    .btn[disabled]{opacity:.55;cursor:not-allowed}
+    .btnRow{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+    .grid{display:grid;grid-template-columns:44% 56%;gap:22px;margin-top:18px}
+    .field label{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;font-weight:800}
+    .field input,.field select,.field textarea{width:100%;border:1.5px solid var(--border);border-radius:16px;padding:12px 14px;font-size:16px;background:#fff;color:#17324c}
+    .field textarea{min-height:200px;resize:vertical}
+    .helper{color:var(--muted);font-size:14px}
+    .message{margin-top:14px;font-weight:700}
+    .message.ok{color:#11653a}.message.err{color:#8c1d18}
+    .templateGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:14px}
+    .templateBtn{border:1.5px solid rgba(15,53,84,.16);background:#fff;color:#17324c;border-radius:18px;padding:14px 12px;font-weight:800;cursor:pointer;text-align:left;min-height:72px}
+    .templateBtn small{display:block;font-weight:600;color:#5f7183;margin-top:6px}
+    .templateBtn.active{border-color:var(--gold);background:#fff9ec;box-shadow:0 0 0 2px rgba(193,145,32,.18) inset}
+    .statWrap{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px}
+    .stat{border:1px solid rgba(15,53,84,.12);border-radius:18px;padding:14px;background:#fbfdff}
+    .stat .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:800}
+    .stat .v{font-size:24px;font-weight:900;color:#17324c;margin-top:6px}
+    .note{margin-top:14px;padding:14px 16px;border-radius:18px;background:#fff9ec;color:#7a5f14;border:1px solid rgba(193,145,32,.22);font-size:14px}
+    .logList{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+    .logItem{border:1px solid rgba(15,53,84,.1);border-radius:18px;padding:14px;background:#fff}
+    .pill{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:900;background:#f3f6fa;color:#476079}
+    .empty{padding:16px;border:1px dashed rgba(15,53,84,.18);border-radius:18px;color:var(--muted);background:#fbfdff}
+
+    .modalOverlay{position:fixed;inset:0;background:rgba(12,27,43,.5);display:none;align-items:center;justify-content:center;padding:18px;z-index:9999}
+    .modalOverlay.open{display:flex}
+    .modalCard{width:min(680px,100%);background:#fff;border-radius:28px;border:1px solid rgba(15,53,84,.12);box-shadow:0 24px 60px rgba(15,53,84,.22);padding:22px}
+    .modalTitle{margin:0;color:var(--brand);font-size:28px}
+    .modalGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}
+    .previewBox{margin-top:16px;border:1px solid rgba(15,53,84,.12);border-radius:18px;padding:16px;background:#fbfdff;white-space:pre-wrap;color:#17324c;max-height:220px;overflow:auto}
+    .confirmLine{margin-top:14px;color:#42576d;font-size:14px}
+    .scheduleCard{margin-top:16px;padding:14px 16px;border:1px solid rgba(15,53,84,.12);border-radius:18px;background:#fbfdff}
+    .scheduleGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+    .toggleRow{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    .toggleBtn{border:1px solid rgba(15,53,84,.15);background:#fff;border-radius:999px;padding:10px 14px;font-weight:800;cursor:pointer;color:#17324c}
+    .toggleBtn.active{background:#17324c;color:#fff;border-color:#17324c}
+    .scheduledList{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+    .scheduledItem{border:1px solid rgba(15,53,84,.1);border-radius:18px;padding:14px;background:#fff}
+    .scheduledItem .top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+    .scheduledItem .meta{margin-top:8px;color:#5f7183;font-size:13px}
+    .scheduledActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    @media (max-width:700px){.modalGrid{grid-template-columns:1fr}.scheduleGrid{grid-template-columns:1fr}}
+
+    @media (max-width:980px){ .grid{grid-template-columns:1fr}.statWrap{grid-template-columns:1fr} }
+
+
+    body#emergencyTextingPage header.zm-header .zm-communityRow{display:none !important}
+    body#emergencyTextingPage header.zm-header .zm-header__right{
+      min-width:auto !important;
+      flex:1 1 auto !important;
+      width:auto !important;
+      display:flex !important;
+      flex-direction:column !important;
+      align-items:flex-end !important;
+      justify-content:center !important;
+      gap:12px !important;
+      margin-left:auto !important;
+    }
+    body#emergencyTextingPage header.zm-header .zm-actionsRow{
+      width:100% !important;
+      display:flex !important;
+      justify-content:flex-end !important;
+      align-items:center !important;
+      margin-left:auto !important;
+    }
+    body#emergencyTextingPage header.zm-header #zummeeHdrHub{
+      margin-left:auto !important;
+    }
+    @media (max-width:640px){
+      body#emergencyTextingPage header.zm-header .zm-header__right{width:100% !important;align-items:center !important}
+      body#emergencyTextingPage header.zm-header .zm-actionsRow{width:100% !important;justify-content:center !important;margin-left:0 !important}
+      body#emergencyTextingPage header.zm-header #zummeeHdrHub{margin-left:0 !important}
+    }
+.weatherSuggestionBanner{margin-top:12px;padding:12px 14px;border-radius:16px;background:#eef6ff;border:1px solid rgba(52,111,196,.18);color:#17324c;font-weight:700;display:none}
+.weatherSuggestionBanner.show{display:block}
+
+    /* Emergency Texting — opt-in shared card system */
+    main{max-width:1440px}
+    .card.zummee-section-card{color:#17324c}
+    .card.zummee-section-card h1,.card.zummee-section-card h2,.card.zummee-section-card h3{color:#17324c !important}
+    .card.zummee-section-card .sub,.card.zummee-section-card .helper{color:#4d6580}
+    .card.zummee-section-card .btn{background:#fff;color:#17324c;border-color:rgba(23,50,77,.16)}
+    .card.zummee-section-card .btn.primary{background:#234f80;color:#fff;border-color:#234f80}
+    .card.zummee-section-card .btn.gold{background:#234f80;color:#fff;border-color:#234f80}
+    .card.zummee-section-card .field input,.card.zummee-section-card .field select,.card.zummee-section-card .field textarea{background:rgba(255,255,255,.84);border-color:rgba(255,255,255,.32)}
+    .card.zummee-section-card .templateBtn,.card.zummee-section-card .stat,.card.zummee-section-card .logItem,.card.zummee-section-card .empty,.card.zummee-section-card .scheduleCard,.card.zummee-section-card .scheduledItem{background:rgba(255,255,255,.28);border-color:rgba(255,255,255,.36)}
+    .card.zummee-section-card .templateBtn.active{background:rgba(255,249,236,.72)}
+    .card.zummee-section-card hr{border-top:1px solid rgba(255,255,255,.38) !important}
+
+    /* Emergency Texting layout alignment tune */
+    .grid{
+      width:100%;
+      max-width:1360px;
+      margin:18px auto 0;
+      grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+      align-items:start;
+    }
+    .grid > section{
+      width:100%;
+      max-width:100%;
+      margin:0;
+    }
+    @media (max-width:980px){
+      .grid{
+        max-width:100%;
+        grid-template-columns:1fr;
+      }
+    }
+
+  
+/* Community Texting - reduce Zummee logo by ~30% */
+body#emergencyTextingPage header.zm-header .zm-header__logo img,
+body#emergencyTextingPage header.zm-header img[src*="Zummee"],
+body#emergencyTextingPage header.zm-header img[src*="zummee"]{
+  height:50px !important;
+  min-height:50px !important;
+  max-height:50px !important;
+  width:auto !important;
+  max-width:none !important;
+}
+
+
+/* Compose Alert gold */
+#composeAlertCard{
+  background:linear-gradient(180deg, rgba(212,175,55,.30) 0%, rgba(242,213,126,.22) 100%), rgba(255,248,228,.82) !important;
+  border:1px solid rgba(193,145,32,.34) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55), 0 18px 42px rgba(15,53,84,.08) !important;
+  position:relative;
+  overflow:hidden;
+}
+#composeAlertCard::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(135deg, rgba(255,255,255,.30) 0%, rgba(255,255,255,.08) 32%, rgba(255,255,255,0) 62%);
+  pointer-events:none;
+}
+#composeAlertCard > *{ position:relative; z-index:1; }
+#composeAlertCard,
+#composeAlertCard h2,
+#composeAlertCard h3,
+#composeAlertCard label,
+#composeAlertCard .helper,
+#composeAlertCard .note,
+#composeAlertCard .message,
+#composeAlertCard .sub{
+  color:#0f2f4a !important;
+}
+#composeAlertCard .field input,
+#composeAlertCard .field select,
+#composeAlertCard .field textarea,
+#composeAlertCard .templateBtn,
+#composeAlertCard .scheduleCard,
+#composeAlertCard .note,
+#composeAlertCard .weatherSuggestionBanner{
+  background:rgba(255,255,255,.58) !important;
+  border-color:rgba(193,145,32,.18) !important;
+}
+#composeAlertCard .btn{
+  background:rgba(255,255,255,.58) !important;
+  border-color:rgba(15,47,74,.12) !important;
+  color:#234f80 !important;
+}
+#composeAlertCard .btn.primary,
+#composeAlertCard .btn.gold{
+  background:#234f80 !important;
+  border-color:#234f80 !important;
+  color:#fff !important;
+}
+
+
+#composeAlertCard {
+  background: linear-gradient(135deg, #c9a43b, #e6c76a) !important;
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+#composeAlertCard::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 200%;
+  height: 100%;
+  background: linear-gradient(
+    120deg,
+    rgba(255,255,255,0.18),
+    rgba(255,255,255,0.05),
+    rgba(255,255,255,0.18)
+  );
+  transition: all 0.6s ease;
+}
+
+#composeAlertCard:active::after {
+  left: 100%;
+}
+
+
+#composeAlertCard {
+  background: #d4af37 !important;
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+#composeAlertCard::after {
+  display: none !important;
+}
+
+/* Compose Alert top row */
+.composeAlertTopRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin:0 0 10px;
+}
+#composeAlertCard .composeHistoryBtn{
+  white-space:nowrap;
+}
+@media (max-width: 600px){
+  .composeAlertTopRow{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+}
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+
+.mh2-actions .mh2-btn--ghost{display:none !important;}
+</style>
+  <script src="community_state_stable.js"></script>
+<style>
+/* FORCE white text in Status & Details section */
+#boardSubmittedItemsSection,
+#boardSubmittedItemsSection *:not(button),
+#boardMemberHubStatus,
+#boardMemberHubStatus *:not(button),
+#annualMeetingApprovals,
+#annualMeetingApprovals *:not(button) {
+  color: #ffffff !important;
+}
+
+/* Secondary text (slightly dimmed white) */
+#boardSubmittedItemsSection .muted,
+#boardMemberHubStatus .muted,
+#annualMeetingApprovals .muted {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style>
+/* HARD OVERRIDE — force white text in dark section */
+.hub-zone:last-of-type,
+.hub-zone:last-of-type *:not(button):not(.badge):not(.pill) {
+  color: #ffffff !important;
+}
+
+/* Slightly softer for secondary text */
+.hub-zone:last-of-type .muted,
+.hub-zone:last-of-type p,
+.hub-zone:last-of-type span {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+
+<style id="emergencyTextingFinalManagerHubSkin">
+body#emergencyTextingPage{margin:0!important;background:#f5f7fb!important;color:#17324c!important;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important}
+body#emergencyTextingPage #zummeeHeaderMount,body#emergencyTextingPage header.zm-header{display:none!important}
+.emergencyHubHeader{width:min(1440px,calc(100% - 32px));margin:18px auto 0;min-height:86px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 20px;background:#fff;border:2px solid rgba(35,79,128,.28);border-radius:28px;box-shadow:0 16px 42px rgba(15,53,84,.08)}
+.emergencyLogoWrap{display:flex;align-items:center;min-height:54px}.emergencyCompanyLogo{display:block;width:auto;max-width:260px;max-height:58px;object-fit:contain;opacity:0;visibility:hidden;transition:opacity .22s ease}.emergencyCompanyLogo.is-visible,.emergencyCompanyLogo.is-company{opacity:1!important;visibility:visible!important}
+.emergencyBackBtn,.emergencyHistoryTop,body#emergencyTextingPage .btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:42px!important;padding:9px 16px!important;border-radius:999px!important;border:2px solid #234f80!important;background:#fff!important;color:#234f80!important;text-decoration:none!important;font-size:14px!important;font-weight:900!important;cursor:pointer!important;box-shadow:none!important}
+body#emergencyTextingPage .btn.primary,body#emergencyTextingPage .btn.gold,body#emergencyTextingPage #composeAlertCard .btn.primary,body#emergencyTextingPage #composeAlertCard .btn.gold{background:#234f80!important;border-color:#234f80!important;color:#fff!important}
+.emergencyPageShell{width:min(1440px,calc(100% - 32px));max-width:1440px!important;margin:16px auto 48px!important;padding:0!important}
+.emergencyTitleCard,body#emergencyTextingPage .card,body#emergencyTextingPage #composeAlertCard{background:#fff!important;border:2px solid rgba(35,79,128,.34)!important;border-radius:28px!important;box-shadow:0 16px 42px rgba(15,53,84,.08)!important;color:#17324c!important;position:relative!important;overflow:hidden!important}
+.emergencyTitleCard{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px 24px;margin-bottom:16px}.emergencyTitleCard h1{margin:4px 0 0!important;font-size:clamp(28px,4vw,42px)!important;line-height:1.04!important;letter-spacing:-.04em!important;color:#0f3554!important}.emergencyEyebrow{font-size:12px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#56708b}.emergencyPageMsg{margin:0 0 12px 0!important}
+body#emergencyTextingPage .grid,body#emergencyTextingPage .emergencyGrid{width:100%!important;max-width:100%!important;display:grid!important;grid-template-columns:minmax(0,1.03fr) minmax(360px,.97fr)!important;gap:18px!important;align-items:start!important;margin:0!important}
+body#emergencyTextingPage .card,body#emergencyTextingPage #composeAlertCard{padding:20px!important;margin:0!important}body#emergencyTextingPage #composeAlertCard::before,body#emergencyTextingPage #composeAlertCard::after{display:none!important;content:none!important}
+body#emergencyTextingPage .composeHistoryBtn{display:none!important}body#emergencyTextingPage h2,body#emergencyTextingPage h3,body#emergencyTextingPage #composeAlertCard h2,body#emergencyTextingPage #composeAlertCard h3{color:#0f3554!important;letter-spacing:-.025em!important}
+body#emergencyTextingPage .field label{color:#56708b!important;font-size:11px!important;font-weight:900!important;letter-spacing:.08em!important}
+body#emergencyTextingPage .field input,body#emergencyTextingPage .field select,body#emergencyTextingPage .field textarea,body#emergencyTextingPage #composeAlertCard .field input,body#emergencyTextingPage #composeAlertCard .field select,body#emergencyTextingPage #composeAlertCard .field textarea{background:#fff!important;color:#17324c!important;border:1.5px solid rgba(35,79,128,.22)!important;border-radius:16px!important;min-height:46px!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.8)!important}
+body#emergencyTextingPage .field textarea{min-height:178px!important}body#emergencyTextingPage .templateGrid{grid-template-columns:repeat(auto-fit,minmax(155px,1fr))!important}
+body#emergencyTextingPage .templateBtn,body#emergencyTextingPage #composeAlertCard .templateBtn,body#emergencyTextingPage .stat,body#emergencyTextingPage .logItem,body#emergencyTextingPage .scheduledItem,body#emergencyTextingPage .empty,body#emergencyTextingPage .scheduleCard,body#emergencyTextingPage #composeAlertCard .scheduleCard,body#emergencyTextingPage .note,body#emergencyTextingPage #composeAlertCard .note,body#emergencyTextingPage .weatherSuggestionBanner{background:#f9fbfe!important;border:1px solid rgba(35,79,128,.16)!important;color:#17324c!important;box-shadow:none!important}
+body#emergencyTextingPage .templateBtn.active,body#emergencyTextingPage #composeAlertCard .templateBtn.active{background:#eef6ff!important;border-color:#234f80!important;box-shadow:0 0 0 2px rgba(35,79,128,.08) inset!important}
+body#emergencyTextingPage .helper,body#emergencyTextingPage .sub,body#emergencyTextingPage #composeAlertCard .helper,body#emergencyTextingPage .stat .k{color:#5f7183!important}body#emergencyTextingPage .stat .v{color:#0f3554!important}body#emergencyTextingPage .pill{background:#eef4fb!important;color:#234f80!important;border:1px solid rgba(35,79,128,.12)!important}
+@media(max-width:980px){body#emergencyTextingPage .grid,body#emergencyTextingPage .emergencyGrid{grid-template-columns:1fr!important}.emergencyHubHeader,.emergencyPageShell{width:min(100% - 24px,1440px)!important}}
+@media(max-width:640px){.emergencyHubHeader{border-radius:22px;padding:14px 16px}.emergencyCompanyLogo{max-width:180px;max-height:48px}.emergencyTitleCard{align-items:flex-start;flex-direction:column;border-radius:22px;padding:18px}body#emergencyTextingPage .card,body#emergencyTextingPage #composeAlertCard{border-radius:22px!important;padding:16px!important}}
+html[data-theme="dark"] body#emergencyTextingPage,body#emergencyTextingPage.dark-mode{background:#0c1420!important}html[data-theme="dark"] .emergencyHubHeader,html[data-theme="dark"] .emergencyTitleCard,html[data-theme="dark"] body#emergencyTextingPage .card,html[data-theme="dark"] body#emergencyTextingPage #composeAlertCard{background:#111d2b!important;border-color:rgba(148,183,226,.28)!important;color:#f8fafc!important}html[data-theme="dark"] body#emergencyTextingPage h1,html[data-theme="dark"] body#emergencyTextingPage h2,html[data-theme="dark"] body#emergencyTextingPage h3{color:#f8fafc!important}
+</style>
+</head>
+<body id="emergencyTextingPage" data-header-mode="simple">
+  <div id="zummeeHeaderMount" aria-hidden="true"></div>
+
+  <header class="emergencyHubHeader" aria-label="Emergency Text header">
+    <div class="emergencyLogoWrap">
+      <img id="companyLogo" class="emergencyCompanyLogo company-logo" src="" alt="Company logo" loading="eager" decoding="async" />
+    </div>
+    <a class="emergencyBackBtn" href="manager_hub.html">Back to Hub</a>
+  </header>
+
+  <main class="emergencyPageShell">
+    <section class="emergencyTitleCard">
+      <div>
+        <div class="emergencyEyebrow">Community Communications</div>
+        <h1>Emergency Text Messaging</h1>
+      </div>
+      <a class="emergencyHistoryTop" href="emergency_text_history.html">View Alert History</a>
+    </section>
+
+    <div id="pageMsg" class="message emergencyPageMsg"></div>
+
+    <section class="grid emergencyGrid">
+      <section id="composeAlertCard" class="card zummee-section-card zummee-section-card--blue">
+        <div class="composeAlertTopRow">
+          <h2 style="margin:0;color:var(--brand)">Compose Emergency Text</h2>
+          <a class="btn composeHistoryBtn" href="emergency_text_history.html">View Alert History</a>
+        </div>
+        <div class="field" style="margin-top:12px">
+          <label for="communitySelect">Community</label>
+          <select id="communitySelect"></select>
+        </div>
+        <div class="field" style="margin-top:12px">
+          <label for="templateSelect">Template</label>
+          <select id="templateSelect"></select>
+        </div>
+        <div class="templateGrid" id="templateButtons"></div>
+        <div style="display:grid;grid-template-columns:1.2fr .8fr;gap:12px;margin-top:14px">
+          <div class="field">
+            <label for="templateTitleInput">Template Name</label>
+            <input id="templateTitleInput" type="text" placeholder="Ex: Pool Closure Notice" />
+          </div>
+          <div class="field">
+            <label for="templateCategoryInput">Category</label>
+            <input id="templateCategoryInput" type="text" placeholder="Ex: Weather" />
+          </div>
+        </div>
+        <div class="field" style="margin-top:16px">
+          <label for="messageBox">Text Message</label>
+          <textarea id="messageBox" placeholder="Type your emergency alert here..."></textarea>
+        </div>
+        <div class="helper" style="margin-top:8px"><span id="charCount">0</span> characters • Community name is inserted automatically when the selected template uses <strong>[Community Name]</strong>.</div>
+        <div class="weatherSuggestionBanner" id="weatherSuggestionBanner"></div>
+        <div class="btnRow">
+          <button class="btn gold" id="previewBtn" type="button">Refresh Recipient Count</button>
+          <button class="btn primary" id="sendBtn" type="button">Review & Send Alert</button>
+          <button class="btn" id="saveTemplateBtn" type="button">Save Template</button>
+          <button class="btn" id="newTemplateBtn" type="button">New Template</button>
+          <button class="btn" id="clearBtn" type="button">Clear</button>
+        </div>
+        <div class="scheduleCard">
+          <h3 style="margin:0;color:var(--brand)">Send Timing</h3>
+          <div class="helper" style="margin-top:6px">Schedule this alert for later if you do not want to send it immediately.</div>
+          <div class="toggleRow">
+            <button class="toggleBtn active" type="button" id="sendNowBtn">Send Now</button>
+            <button class="toggleBtn" type="button" id="scheduleLaterBtn">Schedule for Later</button>
+          </div>
+          <div class="scheduleGrid" id="scheduleFields" style="display:none">
+            <div class="field">
+              <label for="scheduleAtInput">Scheduled Send Time</label>
+              <input id="scheduleAtInput" type="datetime-local" />
+            </div>
+            <div class="field">
+              <label>&nbsp;</label>
+              <button class="btn primary" id="saveScheduledBtn" type="button" style="width:100%">Save Scheduled Alert</button>
+            </div>
+          </div>
+        </div>
+        <div class="note">This page is designed for urgent community-wide alerts such as inclement weather, water shutoffs, safety notices, or service interruptions. Twilio credentials are required in Supabase before live texts can be delivered.</div>
+      </section>
+
+      <section class="card zummee-section-card zummee-section-card--blue">
+        <h2 style="margin:0 0 8px;color:var(--brand)">Recipient Preview</h2>
+        <div class="helper">Preview counts update from Zummee before sending so employees can verify the audience.</div>
+        <div class="statWrap">
+          <div class="stat"><div class="k">Residents</div><div class="v" id="residentCount">0</div></div>
+          <div class="stat"><div class="k">Board Members</div><div class="v" id="boardCount">0</div></div>
+          <div class="stat"><div class="k">Unique Text Numbers</div><div class="v" id="uniqueCount">0</div></div>
+        </div>
+        <div class="helper" id="previewMeta" style="margin-top:12px">Choose a community to preview recipients.</div>
+        <hr style="margin:18px 0;border:none;border-top:1px solid #e3e8ef">
+        <h3 style="margin:0;color:var(--brand)">Recent Emergency Text Logs</h3>
+        <div class="logList" id="logList"><div class="empty">No emergency text logs yet.</div></div>
+        <hr style="margin:18px 0;border:none;border-top:1px solid #e3e8ef">
+        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center">
+          <h3 style="margin:0;color:var(--brand)">Scheduled Alerts</h3>
+          <div class="helper">Upcoming alerts waiting to send.</div>
+        </div>
+        <div class="scheduledList" id="scheduledList"><div class="empty">No scheduled alerts yet.</div></div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const FALLBACK_TEMPLATES = [
+      { title:'Inclement Weather Advisory', category:'Weather', message_body:'Zummee Alert for [Community Name]: Due to inclement weather, services may be delayed. Please use caution and watch for additional updates.' },
+      { title:'Water Shutoff Notice', category:'Water', message_body:'Zummee Alert for [Community Name]: Water service is temporarily unavailable while repairs are being made. We will share updates as soon as service is restored.' },
+      { title:'Boil Water Advisory', category:'Water', message_body:'Zummee Alert for [Community Name]: A boil water advisory is now in effect. Please boil water before drinking or cooking until further notice.' },
+      { title:'Emergency Maintenance Notice', category:'Maintenance', message_body:'Zummee Alert for [Community Name]: Emergency maintenance work is underway. Please use caution around the affected area until repairs are complete.' },
+      { title:'Power Outage Notice', category:'Utilities', message_body:'Zummee Alert for [Community Name]: A power outage has been reported. We are monitoring the situation and will send updates when available.' },
+      { title:'Gate / Access Issue', category:'Access', message_body:'Zummee Alert for [Community Name]: There is currently an issue affecting gate or property access. Please expect temporary delays while the issue is addressed.' },
+      { title:'Community Safety Alert', category:'Safety', message_body:'Zummee Alert for [Community Name]: Please remain alert and use caution. More information will be shared as it becomes available.' },
+      { title:'Custom Message', category:'Custom', message_body:'' },
+    ];
+    let sbClient = null;
+    let profileCtx = null;
+    let communityRows = [];
+    let templates = [];
+    let selectedTemplateIndex = 0;
+    var currentTemplateId = null;
+    window.currentTemplateId = null;
+    let previewState = { residents:0, board:0, unique:0, communityName:'' };
+    let sendMode = 'now';
+
+    function setMsg(text, ok){
+      const el = document.getElementById('pageMsg');
+      el.textContent = text || '';
+      el.className = 'message ' + (ok ? 'ok' : 'err');
+    }
+    function normPhone(v){
+      const d = String(v||'').replace(/[^\d]/g,'');
+      if(d.length===10) return '+1'+d;
+      if(d.length===11 && d.startsWith('1')) return '+'+d;
+      if(d.length>10 && String(v||'').trim().startsWith('+')) return '+'+d;
+      return '';
+    }
+    function getStoredCompanyId(){
+      return String(window.activeCompanyId || localStorage.getItem('activeCompanyId') || localStorage.getItem('zummee_active_company_id') || localStorage.getItem('zummee_company_id') || '').trim();
+    }
+    function getStoredCompanyName(){
+      return String(window.activeCompanyName || localStorage.getItem('activeCompanyName') || localStorage.getItem('zummee_active_company_name') || localStorage.getItem('companyName') || '').trim();
+    }
+    function getStoredCommunityId(){
+      return String(localStorage.getItem('activeCommunityId') || localStorage.getItem('zummee_community_id') || localStorage.getItem('zummee_selected_community_id') || '').trim();
+    }
+    async function getClient(){
+      if(sbClient) return sbClient;
+      try{ if(typeof ensureSupabase === 'function'){ sbClient = await ensureSupabase(); } }catch(_e){}
+      if(!sbClient && window.supabaseClient) sbClient = window.supabaseClient;
+      if(!sbClient && window.sb) sbClient = window.sb;
+      if(!sbClient){ sbClient = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY); }
+      return sbClient;
+    }
+    async function getAccessToken(){
+      try{
+        const sb = await getClient();
+        if(sb && sb.auth && typeof sb.auth.getSession === 'function'){
+          const r = await sb.auth.getSession();
+          return r?.data?.session?.access_token || null;
+        }
+      }catch(_e){}
+      const key = 'sb-slcwuuwyrgnmlmxpcaim-auth-token';
+      let raw = null;
+      try{ raw = localStorage.getItem(key); }catch(_e){}
+      if(!raw){ try{ raw = sessionStorage.getItem(key); }catch(_e){} }
+      if(raw){ try{ const p = JSON.parse(raw); return p?.access_token || p?.currentSession?.access_token || p?.session?.access_token || null; }catch(_e){} }
+      return null;
+    }
+    async function getProfileContext(){
+      if(profileCtx) return profileCtx;
+      const sb = await getClient();
+      const authRes = await sb.auth.getUser();
+      const uid = authRes?.data?.user?.id || '';
+      let profile = null;
+      if(uid){
+        const q = await sb.from('profiles').select('name,email,company,company_id,selected_community_id,role').eq('id', uid).maybeSingle();
+        if(!q.error && q.data) profile = q.data;
+      }
+      profileCtx = {
+        uid,
+        name: String(profile?.name || authRes?.data?.user?.user_metadata?.name || authRes?.data?.user?.email || 'Zummee Staff').trim(),
+        email: String(profile?.email || authRes?.data?.user?.email || '').trim(),
+        company: String(profile?.company || '').trim() || getStoredCompanyName(),
+        company_id: String(profile?.company_id || '').trim() || getStoredCompanyId(),
+        selected_community_id: String(profile?.selected_community_id || '').trim() || getStoredCommunityId(),
+        role: String(profile?.role || localStorage.getItem('role') || '').trim()
+      };
+      return profileCtx;
+    }
+    async function loadCommunities(){
+      const sb = await getClient();
+      const ctx = await getProfileContext();
+      let rows = [];
+      const selectedCommunityId = String(ctx.selected_community_id || getStoredCommunityId() || '').trim();
+      if(ctx.company_id){
+        let q = await sb.from('PropertyCommunities').select('id,name,company_id,company').eq('company_id', ctx.company_id).order('name', { ascending:true });
+        if(!q.error && Array.isArray(q.data) && q.data.length) rows = q.data;
+      }
+      if(!rows.length && ctx.company){
+        let q = await sb.from('PropertyCommunities').select('id,name,company_id,company').eq('company', ctx.company).order('name', { ascending:true });
+        if(!q.error && Array.isArray(q.data) && q.data.length) rows = q.data;
+      }
+      if(!rows.length && ctx.company){
+        let q = await sb.from('Communities').select('id,name,company').eq('company', ctx.company).order('name', { ascending:true });
+        if(!q.error && Array.isArray(q.data) && q.data.length) rows = q.data;
+      }
+      if((ctx.role === 'Employee' || ctx.role === 'Supervisor') && ctx.uid){
+        const a = await sb.from('CommunityAssignments').select('community_id').eq('user_id', ctx.uid);
+        const ids = (a.data||[]).map(r => String(r.community_id||'').trim()).filter(Boolean);
+        if(ids.length) rows = rows.filter(r => ids.includes(String(r.id||'')));
+      }
+      if(!rows.length && selectedCommunityId){
+        let q = await sb.from('PropertyCommunities').select('id,name,company_id,company').eq('id', selectedCommunityId).maybeSingle();
+        if(!q.error && q.data) rows = [q.data];
+      }
+      communityRows = Array.isArray(rows) ? rows : [];
+      const select = document.getElementById('communitySelect');
+      if(!communityRows.length){
+        select.innerHTML = '<option value="">No communities found</option>';
+        select.disabled = true;
+        return;
+      }
+      select.disabled = false;
+      select.innerHTML = communityRows.map(r => `<option value="${String(r.id||'')}">${String(r.name||'Unnamed Community')}</option>`).join('');
+      const desired = selectedCommunityId || String((communityRows[0]||{}).id || '');
+      select.value = communityRows.find(r => String(r.id) === desired) ? desired : String(communityRows[0].id||'');
+      try{ localStorage.setItem('activeCommunityId', select.value); }catch(_e){}
+      try{ localStorage.setItem('zummee_selected_community_id', select.value); }catch(_e){}
+    }
+    async function loadTemplates(){
+      const sb = await getClient();
+      const ctx = await getProfileContext();
+      let rows = [];
+      try{
+        let q = sb.from('EmergencyTextTemplates').select('*').eq('is_active', true).order('title', { ascending:true });
+        if(ctx.company_id) q = q.or(`company_id.is.null,company_id.eq.${ctx.company_id}`);
+        const res = await q;
+        if(!res.error && Array.isArray(res.data)) rows = res.data;
+      }catch(_e){}
+      const byTitle = new Map();
+      (rows || []).forEach(t => { if(t && t.title) byTitle.set(String(t.title).trim().toLowerCase(), { ...t }); });
+      FALLBACK_TEMPLATES.forEach(t => {
+        const key = String(t.title || '').trim().toLowerCase();
+        if(!byTitle.has(key)) byTitle.set(key, { ...t, __fallback:true });
+      });
+      templates = Array.from(byTitle.values()).sort((a,b) => String(a.title||'').localeCompare(String(b.title||'')));
+      selectedTemplateIndex = 0;
+      renderTemplateUI();
+      const select = document.getElementById('templateSelect');
+      select.addEventListener('change', () => {
+        selectedTemplateIndex = Number(select.value || 0);
+        document.querySelectorAll('#templateButtons .templateBtn').forEach(b => b.classList.toggle('active', Number(b.getAttribute('data-i') || 0) === selectedTemplateIndex));
+        applyTemplate();
+      });
+      applyTemplate();
+    }
+    function syncTemplateMeta(template){
+      currentTemplateId = template && template.id ? String(template.id) : null;
+      window.currentTemplateId = currentTemplateId;
+      document.getElementById('templateTitleInput').value = String(template?.title || '');
+      document.getElementById('templateCategoryInput').value = String(template?.category || '');
+    }
+    function renderTemplateUI(){
+      const select = document.getElementById('templateSelect');
+      select.innerHTML = templates.map((t,i) => `<option value="${i}">${t.title}</option>`).join('');
+      const wrap = document.getElementById('templateButtons');
+      wrap.innerHTML = templates.map((t,i) => `<button class="templateBtn${i===selectedTemplateIndex?' active':''}" type="button" data-i="${i}">${t.title}<small>${t.category || 'Template'}</small></button>`).join('');
+      wrap.querySelectorAll('.templateBtn').forEach(btn => btn.addEventListener('click', () => {
+        selectedTemplateIndex = Number(btn.getAttribute('data-i') || 0);
+        wrap.querySelectorAll('.templateBtn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        select.value = String(selectedTemplateIndex);
+        applyTemplate();
+      }));
+      select.value = String(Math.min(selectedTemplateIndex, Math.max(templates.length - 1, 0)));
+    }
+    function currentCommunityName(){
+      const select = document.getElementById('communitySelect');
+      const row = communityRows.find(r => String(r.id||'') === String(select.value||''));
+      return String((row && row.name) || 'your community');
+    }
+    function applyTemplate(){
+      const idx = Number(document.getElementById('templateSelect').value || 0);
+      selectedTemplateIndex = idx;
+      const template = templates[idx] || templates[0] || FALLBACK_TEMPLATES[0];
+      const msg = document.getElementById('messageBox');
+      syncTemplateMeta(template);
+      const base = String(template.message_body || '').replace(/\[Community Name\]/g, currentCommunityName());
+      if(!msg.dataset.edited || msg.value === '' || msg.dataset.lastTemplateApplied === '1'){
+        msg.value = base;
+      }
+      msg.dataset.edited = '0';
+      msg.dataset.lastTemplateApplied = '1';
+      updateCharCount();
+      msg.dataset.edited = '0';
+    }
+    function updateCharCount(){
+      const msg = document.getElementById('messageBox');
+      document.getElementById('charCount').textContent = String((msg.value || '').length);
+      msg.dataset.edited = '1';
+      msg.dataset.lastTemplateApplied = '0';
+    }
+    async function saveTemplate(){
+      const sb = await getClient();
+      const ctx = await getProfileContext();
+      const title = String(document.getElementById('templateTitleInput').value || '').trim();
+      const category = String(document.getElementById('templateCategoryInput').value || '').trim();
+      const messageBody = String(document.getElementById('messageBox').value || '').trim();
+      if(!title){ setMsg('Enter a template name before saving.', false); return; }
+      if(!messageBody){ setMsg('Enter template wording before saving.', false); return; }
+
+      const current = currentTemplateId ? (templates.find(t => String(t.id || '') === String(currentTemplateId)) || null) : null;
+      const duplicate = templates.find(t =>
+        String(t.title || '').trim().toLowerCase() === title.toLowerCase() &&
+        String(t.id || '') !== String(currentTemplateId || '')
+      );
+      if(duplicate){
+        setMsg('A template with this name already exists. Choose a different template name.', false);
+        return;
+      }
+
+      const payload = {
+        company_id: ctx.company_id || null,
+        created_by: ctx.uid || null,
+        title,
+        category: category || null,
+        message_body: messageBody,
+        is_active: true
+      };
+      const btn = document.getElementById('saveTemplateBtn');
+      const old = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Saving…';
+      try{
+        let res;
+        if(current && current.id){
+          res = await sb.from('EmergencyTextTemplates').update(payload).eq('id', current.id).select('*').single();
+        }else{
+          res = await sb.from('EmergencyTextTemplates').insert(payload).select('*').single();
+        }
+        if(res.error) throw res.error;
+        const saved = res.data;
+        currentTemplateId = saved && saved.id ? String(saved.id) : null;
+        window.currentTemplateId = currentTemplateId;
+
+        const existingIdx = templates.findIndex(t => String(t.id || '') === String(currentTemplateId || ''));
+        if(existingIdx >= 0){
+          templates[existingIdx] = { ...templates[existingIdx], ...saved };
+          selectedTemplateIndex = existingIdx;
+        }else{
+          const titleIdx = templates.findIndex(t => String(t.title || '').trim().toLowerCase() === String(saved.title || '').trim().toLowerCase());
+          if(titleIdx >= 0){
+            templates[titleIdx] = { ...templates[titleIdx], ...saved };
+            selectedTemplateIndex = titleIdx;
+          }else{
+            templates.unshift(saved);
+            selectedTemplateIndex = 0;
+          }
+        }
+
+        renderTemplateUI();
+        document.getElementById('templateSelect').value = String(selectedTemplateIndex);
+        syncTemplateMeta(saved);
+        setMsg(`Template saved: ${saved.title} ✓`, true);
+      }catch(err){
+        setMsg(err.message || 'Unable to save template.', false);
+      }finally{ btn.disabled = false; btn.textContent = old; }
+    }
+    function startNewTemplate(){
+      selectedTemplateIndex = templates.length;
+      currentTemplateId = null;
+      window.currentTemplateId = null;
+      document.querySelectorAll('#templateButtons .templateBtn').forEach(b => b.classList.remove('active'));
+      document.getElementById('templateSelect').value = templates.length ? '0' : '';
+      document.getElementById('templateTitleInput').value = '';
+      document.getElementById('templateCategoryInput').value = 'Custom';
+      document.getElementById('messageBox').value = '';
+      document.getElementById('messageBox').dataset.edited = '1';
+      document.getElementById('messageBox').dataset.lastTemplateApplied = '0';
+      updateCharCount();
+      setMsg('New template ready. Enter the message and click Save Template.', true);
+    }
+
+    function setSendMode(mode){
+      sendMode = mode === 'later' ? 'later' : 'now';
+      document.getElementById('sendNowBtn').classList.toggle('active', sendMode === 'now');
+      document.getElementById('scheduleLaterBtn').classList.toggle('active', sendMode === 'later');
+      document.getElementById('scheduleFields').style.display = sendMode === 'later' ? 'grid' : 'none';
+    }
+    function defaultScheduleIso(){
+      const d = new Date(Date.now() + 60*60*1000);
+      d.setMinutes(0,0,0);
+      const pad = n => String(n).padStart(2,'0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    async function saveScheduledAlert(){
+      const sb = await getClient();
+      const ctx = await getProfileContext();
+      const communityId = String(document.getElementById('communitySelect').value || '').trim();
+      const message = String(document.getElementById('messageBox').value || '').trim();
+      const when = String(document.getElementById('scheduleAtInput').value || '').trim();
+      const idx = Number(document.getElementById('templateSelect').value || 0);
+      const template = templates[idx] || templates[0] || null;
+      if(!communityId){ setMsg('Choose a community first.', false); return; }
+      if(!message){ setMsg('Enter a message before scheduling.', false); return; }
+      if(!when){ setMsg('Choose a scheduled send time.', false); return; }
+      await refreshPreview();
+      const payload = {
+        company_id: ctx.company_id || null,
+        community_id: communityId,
+        community_name: currentCommunityName(),
+        template_id: String(template && template.id || '') || null,
+        template_title: String(template && template.title || 'Custom Message'),
+        message_body: message,
+        resident_count: Number(previewState.residents||0),
+        board_count: Number(previewState.board||0),
+        recipient_count: Number(previewState.unique||0),
+        scheduled_for: new Date(when).toISOString(),
+        status: 'scheduled',
+        created_by: ctx.uid || null,
+        created_by_name: ctx.name || null
+      };
+      const btn = document.getElementById('saveScheduledBtn');
+      const old = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Saving…';
+      try{
+        const { error } = await sb.from('EmergencyScheduledAlerts').insert(payload);
+        if(error) throw error;
+        setMsg(`Scheduled alert saved for ${new Date(payload.scheduled_for).toLocaleString()}.`, true);
+        await loadScheduledAlerts();
+      }catch(err){
+        setMsg(err.message || 'Unable to save scheduled alert.', false);
+      }finally{ btn.disabled = false; btn.textContent = old; }
+    }
+    async function cancelScheduledAlert(id){
+      const sb = await getClient();
+      try{
+        const { error } = await sb.from('EmergencyScheduledAlerts').update({ status:'cancelled' }).eq('id', id);
+        if(error) throw error;
+        setMsg('Scheduled alert cancelled.', true);
+        await loadScheduledAlerts();
+      }catch(err){
+        setMsg(err.message || 'Unable to cancel scheduled alert.', false);
+      }
+    }
+    async function loadScheduledAlerts(){
+      const sb = await getClient();
+      const ctx = await getProfileContext();
+      const wrap = document.getElementById('scheduledList');
+      try{
+        let q = sb.from('EmergencyScheduledAlerts').select('*').in('status', ['scheduled','failed']).order('scheduled_for', { ascending:true }).limit(8);
+        if(ctx.company_id){
+          q = q.eq('company_id', ctx.company_id);
+        } else if(Array.isArray(communityRows) && communityRows.length){
+          const ids = communityRows.map(r => String(r.id || '')).filter(Boolean);
+          if(ids.length) q = q.in('community_id', ids);
+        }
+        const res = await q;
+        const rows = Array.isArray(res.data) ? res.data : [];
+        if(!rows.length){ wrap.innerHTML = '<div class="empty">No scheduled alerts yet.</div>'; return; }
+        wrap.innerHTML = rows.map(r => `<div class="scheduledItem"><div class="top"><strong>${String(r.community_name || 'Community')}</strong><span class="pill">${String(r.status || 'scheduled').replace(/_/g,' ')}</span></div><div class="meta">${new Date(r.scheduled_for || r.created_at || Date.now()).toLocaleString()} • ${String(r.template_title || 'Custom Message')}</div><div style="margin-top:8px;color:#17324c">${String(r.message_body || '').replace(/</g,'&lt;')}</div><div class="scheduledActions">${String(r.status||'')==='scheduled' ? `<button class="btn" type="button" data-cancel="${String(r.id||'')}">Cancel</button>` : ''}</div></div>`).join('');
+        wrap.querySelectorAll('[data-cancel]').forEach(btn => btn.addEventListener('click', () => cancelScheduledAlert(btn.getAttribute('data-cancel'))));
+      }catch(err){
+        wrap.innerHTML = '<div class="empty">Unable to load scheduled alerts yet.</div>';
+      }
+    }
+    async function callFunction(payload){
+      const token = await getAccessToken();
+      const headers = { 'Content-Type':'application/json', 'apikey': window.SUPABASE_ANON_KEY };
+      if(token) headers['Authorization'] = 'Bearer ' + token;
+      const res = await fetch(window.SUPABASE_URL + '/functions/v1/send-emergency-text', {
+        method:'POST',
+        headers,
+        body: JSON.stringify(payload)
+      });
+      const raw = await res.text();
+      let data = null;
+      try{ data = raw ? JSON.parse(raw) : null; }catch(_e){ data = raw; }
+      if(!res.ok) throw new Error((data && (data.error || data.message)) || 'Unable to process emergency texting request.');
+      return data || {};
+    }
+    async function refreshPreview(){
+      setMsg('', true);
+      const communityId = String(document.getElementById('communitySelect').value || '').trim();
+      if(!communityId){ setMsg('Choose a community first.', false); return; }
+      const message = String(document.getElementById('messageBox').value || '').trim();
+      try{
+        const data = await callFunction({ community_id: communityId, community_name: currentCommunityName(), message, preview_only: true });
+        previewState = { residents: Number(data.resident_count||0), board: Number(data.board_count||0), unique: Number(data.unique_recipient_count||0), communityName: currentCommunityName() };
+        document.getElementById('residentCount').textContent = String(previewState.residents);
+        document.getElementById('boardCount').textContent = String(previewState.board);
+        document.getElementById('uniqueCount').textContent = String(previewState.unique);
+        document.getElementById('previewMeta').textContent = previewState.unique ? `${previewState.unique} unique numbers are ready for ${previewState.communityName}.` : `No mobile numbers were found for ${previewState.communityName}.`;
+      }catch(err){
+        setMsg(err.message || 'Unable to load recipient count.', false);
+      }
+    }
+    async function loadLogs(){
+      const sb = await getClient();
+      const ctx = await getProfileContext();
+      const wrap = document.getElementById('logList');
+      try{
+        let q = sb.from('EmergencyTextLogs').select('*').order('sent_at', { ascending:false }).limit(8);
+        if(ctx.company_id){
+          q = q.eq('company_id', ctx.company_id);
+        }else if(Array.isArray(communityRows) && communityRows.length){
+          const ids = communityRows.map(r => String(r.id || '')).filter(Boolean);
+          if(ids.length) q = q.in('community_id', ids);
+        }
+        const res = await q;
+        const rows = Array.isArray(res.data) ? res.data : [];
+        if(!rows.length){ wrap.innerHTML = '<div class="empty">No emergency text logs yet.</div>'; return; }
+        wrap.innerHTML = rows.map(r => `<div class="logItem"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><strong>${String(r.community_name || r.community_id || 'Community')}</strong><span class="pill">${String(r.status || 'logged')}</span></div><div style="margin-top:6px;color:#42576d">${String(r.message_body || '').replace(/</g,'&lt;')}</div><div class="helper" style="margin-top:8px">Recipients: ${Number(r.recipient_count||0)} • ${new Date(r.sent_at || r.created_at || Date.now()).toLocaleString()}</div></div>`).join('');
+      }catch(_e){ wrap.innerHTML = '<div class="empty">Unable to load emergency text logs yet.</div>'; }
+    }
+
+    function openConfirmModal(){
+      document.getElementById('confirmModal').classList.add('open');
+      document.getElementById('confirmModal').setAttribute('aria-hidden', 'false');
+    }
+    function closeConfirmModal(){
+      document.getElementById('confirmModal').classList.remove('open');
+      document.getElementById('confirmModal').setAttribute('aria-hidden', 'true');
+    }
+    function fillConfirmModal(message){
+      document.getElementById('confirmCommunity').textContent = currentCommunityName();
+      document.getElementById('confirmResidents').textContent = String(Number(previewState.residents||0));
+      document.getElementById('confirmBoard').textContent = String(Number(previewState.board||0));
+      document.getElementById('confirmUnique').textContent = String(Number(previewState.unique||0));
+      document.getElementById('confirmMessage').textContent = message || '';
+      document.getElementById('confirmLine').textContent =
+        `${Number(previewState.unique||0)} unique phone number${Number(previewState.unique||0)===1?'':'s'} will receive this alert.`;
+    }
+    async function reviewBeforeSend(){
+      const communityId = String(document.getElementById('communitySelect').value || '').trim();
+      const message = String(document.getElementById('messageBox').value || '').trim();
+      if(!communityId){ setMsg('Choose a community first.', false); return; }
+      if(!message){ setMsg('Enter a message before sending.', false); return; }
+      await refreshPreview();
+      if(!Number(previewState.unique||0)){
+        setMsg('No mobile numbers were found for this community.', false);
+        return;
+      }
+      fillConfirmModal(message);
+      openConfirmModal();
+    }
+
+    async function sendAlert(){
+      const communityId = String(document.getElementById('communitySelect').value || '').trim();
+      const message = String(document.getElementById('messageBox').value || '').trim();
+      const idx = Number(document.getElementById('templateSelect').value || 0);
+      const template = templates[idx] || templates[0] || null;
+      if(!communityId){ setMsg('Choose a community first.', false); return; }
+      if(!message){ setMsg('Enter a message before sending.', false); return; }
+      const btn = document.getElementById('confirmSendBtn');
+      const old = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Sending…';
+      try{
+        const ctx = await getProfileContext();
+        const data = await callFunction({
+          community_id: communityId,
+          community_name: currentCommunityName(),
+          template_title: String(template && template.title || 'Custom Message'),
+          template_id: String(template && template.id || ''),
+          message,
+          sent_by_name: ctx.name,
+          sent_by_email: ctx.email,
+          company_id: ctx.company_id || null,
+          preview_only: false
+        });
+        closeConfirmModal();
+        setMsg(`Emergency text sent to ${Number(data.unique_recipient_count||0)} unique numbers for ${currentCommunityName()}.`, true);
+        document.getElementById('residentCount').textContent = String(Number(data.resident_count||0));
+        document.getElementById('boardCount').textContent = String(Number(data.board_count||0));
+        document.getElementById('uniqueCount').textContent = String(Number(data.unique_recipient_count||0));
+        document.getElementById('previewMeta').textContent = data.twilio_configured ? 'Live SMS delivery completed.' : 'Twilio is not configured yet. No live texts were delivered.';
+        await loadLogs();
+      await loadScheduledAlerts();
+      }catch(err){
+        setMsg(err.message || 'Unable to send emergency text.', false);
+      }finally{ btn.disabled = false; btn.textContent = old; }
+    }
+
+function applyWeatherSuggestionDraft(){
+  var raw = null;
+  try{ raw = localStorage.getItem('zummee_weather_alert_suggestion'); }catch(_e){}
+  if(!raw) return;
+  try{
+    var draft = JSON.parse(raw);
+    if(!draft || !draft.message) return;
+    currentTemplateId = null;
+    selectedTemplateIndex = templates.length;
+    document.getElementById('templateTitleInput').value = String(draft.title || 'Weather Alert');
+    document.getElementById('templateCategoryInput').value = String(draft.category || 'Weather');
+    document.getElementById('messageBox').value = String(draft.message || '').replace(/\[Community Name\]/g, currentCommunityName());
+    document.querySelectorAll('#templateButtons .templateBtn').forEach(function(b){ b.classList.remove('active'); });
+    var banner = document.getElementById('weatherSuggestionBanner');
+    if(banner){ banner.textContent = 'Weather risk is elevated. A suggested emergency text has been loaded for review.'; banner.classList.add('show'); }
+    updateCharCount();
+  }catch(_e){}
+  try{ localStorage.removeItem('zummee_weather_alert_suggestion'); }catch(_e){}
+}
+
+    function bind(){
+      document.getElementById('communitySelect').addEventListener('change', async (e) => {
+        try{ localStorage.setItem('activeCommunityId', e.target.value || ''); }catch(_e){}
+        try{ localStorage.setItem('zummee_selected_community_id', e.target.value || ''); }catch(_e){}
+        applyTemplate();
+        await refreshPreview();
+      });
+      document.getElementById('messageBox').addEventListener('input', updateCharCount);
+      document.getElementById('previewBtn').addEventListener('click', refreshPreview);
+      document.getElementById('sendNowBtn').addEventListener('click', () => setSendMode('now'));
+      document.getElementById('scheduleLaterBtn').addEventListener('click', () => setSendMode('later'));
+      document.getElementById('saveScheduledBtn').addEventListener('click', saveScheduledAlert);
+      document.getElementById('sendBtn').addEventListener('click', reviewBeforeSend);
+      document.getElementById('confirmSendBtn').addEventListener('click', sendAlert);
+      document.getElementById('cancelConfirmBtn').addEventListener('click', closeConfirmModal);
+      document.getElementById('confirmModal').addEventListener('click', (e) => { if(e.target && e.target.id === 'confirmModal') closeConfirmModal(); });
+      document.getElementById('templateSelect').addEventListener('change', applyTemplate);
+      document.getElementById('saveTemplateBtn').addEventListener('click', saveTemplate);
+      document.getElementById('newTemplateBtn').addEventListener('click', startNewTemplate);
+      document.getElementById('clearBtn').addEventListener('click', () => { document.getElementById('messageBox').value=''; updateCharCount(); setMsg('', true); });
+      document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeConfirmModal(); });
+    }
+    (async function init(){
+      if (window.__ZUMMEE_EMERGENCY_TEXTING_INIT_LOCK__) { console.warn('Emergency Texting duplicate init blocked'); return; }
+      window.__ZUMMEE_EMERGENCY_TEXTING_INIT_LOCK__ = true;
+      bind();
+      document.getElementById('scheduleAtInput').value = defaultScheduleIso();
+      setSendMode('now');
+      await loadCommunities();
+      await loadTemplates();
+      applyWeatherSuggestionDraft();
+      updateCharCount();
+      await refreshPreview();
+      await loadLogs();
+      await loadScheduledAlerts();
+    })();
+  </script>
+<script src="company_logo_sync.js"></script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

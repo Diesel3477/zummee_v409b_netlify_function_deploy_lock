@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Supervisor Communications</title>
+<link rel="icon" type="image/png" href="zummee_mark_32.png"/>
+
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+  :root{--bg:#f4f8ff;--ink:#12304b;--muted:#60748d;--line:#a9cdfb;--blue:#0f3c5f;--blue2:#6fa4e8;--glass:rgba(255,255,255,.84);--shadow:0 22px 55px rgba(36,91,150,.16);--r:28px}
+  *{box-sizing:border-box} body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:radial-gradient(circle at 20% 0%,#eaf4ff 0,#f7fbff 42%,#f4f8ff 100%);color:var(--ink)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid rgba(15,60,95,.16);background:#fff;color:#12304b;padding:12px 18px;border-radius:18px;text-decoration:none;font-weight:950;font-size:15px;box-shadow:0 8px 24px rgba(15,47,74,.08);cursor:pointer;white-space:nowrap}.btn.primary{background:#123f63;color:#fff;border-color:#123f63}.btn.soft{background:rgba(255,255,255,.74)}.btn.danger{background:#fff7f7;color:#a42828;border-color:#f6b9b9}.btn.good{background:#e6fbef;color:#17633a;border-color:#bfeccc}.btn:active{transform:translateY(1px)}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 28px 70px}.shell{border:2px solid var(--line);border-radius:34px;background:rgba(255,255,255,.72);box-shadow:var(--shadow);padding:34px}.header{display:block;margin-bottom:28px}.title-row{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:20px}.title-copy{min-width:0;flex:1}.kicker{font-size:13px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;color:#163a5c;margin-bottom:8px}h1{font-size:30px;line-height:1;margin:0;letter-spacing:-.04em}.header-logo{height:48px;max-width:210px;object-fit:contain;object-position:right center;flex:0 0 auto;opacity:0;transition:opacity .18s ease}.header-logo.is-visible{opacity:1}.sub{display:none!important}.context{display:grid;grid-template-columns:minmax(0,1fr) 160px;gap:14px;align-items:center;width:100%;margin-top:2px}.pill{display:none!important}.community-control{display:flex;align-items:center;gap:16px;min-height:58px;padding:0 22px;border-radius:24px;border:2px solid rgba(82,139,205,.32);background:rgba(255,255,255,.72);font-weight:950;color:#17324d;box-shadow:0 10px 26px rgba(36,91,150,.08)}.community-control span{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#60748d}.community-control select{appearance:auto;border:0;background:transparent;color:#12304b;font-weight:950;font-size:18px;min-width:0;max-width:none;outline:none;flex:1}.hub-link{min-height:58px;padding:0 28px;border-radius:24px;font-size:18px;border:2px solid var(--line)!important;background:rgba(255,255,255,.78)!important;color:#12304b!important}.context .btn{box-shadow:0 10px 26px rgba(36,91,150,.08)}
+  .grid{display:grid;grid-template-columns:minmax(320px,.9fr) minmax(360px,1.1fr);gap:22px;align-items:start}.panel{border:2px solid rgba(169,205,251,.9);border-radius:28px;background:var(--glass);box-shadow:0 12px 34px rgba(36,91,150,.10);padding:24px}.panel h2{font-size:26px;line-height:1.05;margin:0 0 8px}.panel-note{color:var(--muted);font-weight:700;line-height:1.4;margin-bottom:18px}.form{display:grid;gap:14px}.field label{display:block;font-size:12px;font-weight:950;letter-spacing:.12em;text-transform:uppercase;color:#60748d;margin:0 0 7px}.field input,.field select{width:100%;height:50px;border-radius:16px;border:1px solid rgba(18,48,75,.14);background:#fff;color:#12304b;padding:0 14px;font-weight:850;font-size:16px;outline:none}.field input:focus,.field select:focus{border-color:#6fa4e8;box-shadow:0 0 0 4px rgba(111,164,232,.18)}.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;min-width:0}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}.status{min-height:20px;font-size:13px;font-weight:850;color:#60748d}.records-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}.record-list{display:grid;gap:12px}.record{border:1px solid rgba(50,107,177,.2);border-radius:20px;background:linear-gradient(135deg,rgba(255,255,255,.95),rgba(238,246,255,.9));padding:16px;box-shadow:0 8px 22px rgba(36,91,150,.08)}.record-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.record-title{font-size:18px;font-weight:950;color:#12304b;line-height:1.2}.record-meta{color:#60748d;font-size:14px;font-weight:700;margin-top:6px;line-height:1.35}.record-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:12px}.tag{display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border-radius:999px;background:rgba(111,164,232,.12);border:1px solid rgba(111,164,232,.28);font-size:12px;font-weight:950;text-transform:uppercase;letter-spacing:.08em;color:#123f63}.empty{padding:20px;border:1px dashed rgba(82,139,205,.4);border-radius:20px;background:rgba(255,255,255,.66);color:#60748d;font-weight:800;text-align:center}.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#123f63;color:#fff;padding:12px 16px;border-radius:16px;box-shadow:0 14px 40px rgba(15,47,74,.2);display:none;z-index:10000;font-weight:900}.note-card{margin-top:18px;border-radius:22px;background:linear-gradient(135deg,rgba(18,63,99,.08),rgba(111,164,232,.14));border:1px solid rgba(111,164,232,.28);padding:16px;color:#12304b;font-weight:750;line-height:1.45}
+.archive-panel{margin-top:18px;border:1px solid rgba(50,107,177,.18);border-radius:24px;background:linear-gradient(135deg,rgba(255,255,255,.78),rgba(239,247,255,.68));padding:16px;box-shadow:0 10px 26px rgba(36,91,150,.07)}.archive-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.archive-title{font-size:20px;font-weight:950;color:#12304b;letter-spacing:-.02em}.archive-note{font-size:13px;color:#60748d;font-weight:800;margin-top:3px;line-height:1.35}.archive-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}.archive-mini{border:1px solid rgba(82,139,205,.24);background:rgba(255,255,255,.82);color:#12304b;border-radius:999px;min-height:32px;padding:0 12px;font-size:12px;font-weight:950;cursor:pointer;box-shadow:0 6px 14px rgba(36,91,150,.06)}.archive-months{display:grid;gap:10px}.archive-month{border:1px solid rgba(82,139,205,.24);border-radius:18px;background:rgba(255,255,255,.82);overflow:hidden}.archive-toggle{width:100%;border:0;background:transparent;color:#12304b;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:14px 16px;font-weight:950;font-size:15px;cursor:pointer;text-align:left}.archive-toggle:before{content:"›";font-size:24px;line-height:1;color:#6fa4e8;transform:rotate(0deg);transition:transform .16s ease}.archive-toggle span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.archive-toggle span:last-child{color:#60748d;font-size:13px;background:rgba(111,164,232,.10);border:1px solid rgba(111,164,232,.20);border-radius:999px;padding:5px 9px}.archive-body{display:none;padding:0 12px 12px}.archive-month.is-open .archive-body{display:grid;gap:10px}.archive-month.is-open .archive-toggle{background:rgba(111,164,232,.10)}.archive-month.is-open .archive-toggle:before{transform:rotate(90deg)}.archive-record{box-shadow:none;background:rgba(255,255,255,.94)}@media(max-width:640px){.archive-head{align-items:flex-start;flex-direction:column}.archive-actions{width:100%;justify-content:flex-start}.archive-mini{flex:1}}
+  @media(max-width:900px){.wrap{padding:24px 22px 60px}.shell{padding:26px}.title-row{align-items:center;gap:12px;margin-bottom:18px}.header-logo{height:42px;max-width:190px}.context{grid-template-columns:minmax(0,1fr) 150px;gap:12px}.community-control{width:100%;justify-content:space-between;min-height:52px}.community-control select{min-width:0;max-width:none;flex:1}.hub-link{min-height:52px}.grid{grid-template-columns:1fr}h1{font-size:26px}.form-row{grid-template-columns:1fr}}@media(max-width:640px){.title-row{align-items:center}.header-logo{height:34px;max-width:140px}h1{font-size:22px}.context{grid-template-columns:1fr}.hub-link{width:100%}}
+
+  /* V115: LMU-style Hub outline + iPad date input width lock */
+  .hub-link{border:2px solid var(--line)!important;background:rgba(255,255,255,.78)!important;color:#12304b!important;border-radius:24px!important}
+  .field,.form-row{min-width:0!important}
+  .field input[type="date"],#commDate{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;height:50px!important;box-sizing:border-box!important;-webkit-appearance:none!important;appearance:none!important;margin:0!important;padding:0 14px!important;border-radius:16px!important;line-height:50px!important;text-align:left!important;}
+  #commDate::-webkit-date-and-time-value{text-align:left!important;line-height:50px!important;min-height:50px!important;}
+</style>
+<script src="community_state_stable.js"></script>
+<script id="supervisor-page-access-guard-v182">
+(function(){
+  function localUid(){
+    var keys=['zummee_user_id_v1','zummee_user_id','user_id','activeUserId','currentUserId'];
+    for(var i=0;i<keys.length;i++){ try{ var v=String(localStorage.getItem(keys[i])||'').trim(); if(v) return v; }catch(_e){} }
+    return '';
+  }
+  function roleOK(role){
+    role=String(role||'').toLowerCase().replace(/[_-]+/g,' ').trim();
+    return role==='admin'||role==='company admin'||role==='companyadmin'||role==='supervisor';
+  }
+  async function getSupabase(){
+    if(window.supabaseClient) return window.supabaseClient;
+    if(window.ZummeeSupabaseClient) return window.ZummeeSupabaseClient;
+    if(window.supabase && window.SUPABASE_URL && window.SUPABASE_ANON_KEY){
+      window.supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+      return window.supabaseClient;
+    }
+    return null;
+  }
+  async function check(){
+    var sb=await getSupabase();
+    if(!sb) return false;
+    var uid=localUid();
+    try{ var u=await sb.auth.getUser(); if(u&&u.data&&u.data.user&&u.data.user.id) uid=u.data.user.id; }catch(_e){}
+    if(!uid) return false;
+    try{
+      var q=await sb.from('profiles').select('role,disabled,deleted').eq('id',uid).maybeSingle();
+      if(q.error) throw q.error;
+      var d=q.data||{};
+      return !d.disabled && !d.deleted && roleOK(d.role);
+    }catch(_e){ return false; }
+  }
+  function deny(){
+    document.body.innerHTML='<main style="font-family:Inter,system-ui,sans-serif;padding:32px;color:#12304f;"><h1>Supervisor access only</h1><p>This page contains sensitive supervisor information.</p><p><a href="manager_hub.html" style="color:#12304f;font-weight:800;">Return to Hub</a></p></main>';
+  }
+  async function run(){
+    var ok=await check();
+    if(!ok){ deny(); }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run,{once:true}); else run();
+})();
+</script>
+
+</head>
+<body>
+  <main class="wrap">
+    <section class="shell">
+      <div class="header">
+        <div class="title-copy">
+          <div class="title-row">
+            <div>
+              <div class="kicker">Supervisor-only tools</div>
+              <h1>Supervisor Communications</h1>
+            </div>
+            <img id="supervisorCommsLogo" class="header-logo" src="Zummee.png" alt="Company logo" loading="eager" decoding="async"/>
+          </div>
+        </div>
+        <div class="context"><label class="community-control community-control-clean" for="supervisorCommunitySelect"><select id="supervisorCommunitySelect" data-community-select aria-label="Select community"><option value="">Loading communities…</option></select></label><a class="btn hub-link" href="manager_hub.html">Hub</a></div>
+      </div>
+      <div class="grid">
+        <section class="panel">
+          <h2>Create Communication</h2><div class="panel-note">Post reminders, requirements, compliance items, or instructions. Community messages show on the selected community’s Daily Ops page.</div>
+          <div class="form" autocomplete="off" data-no-restore="true">
+            <div class="field"><label for="commTitle">Title</label><input id="commTitle" autocomplete="off" value="" placeholder="Monthly inspection, board packet, etc."/></div>
+            <div class="form-row"><div class="field"><label for="commType">Type</label><select id="commType"><option>Required Task</option><option>Reminder</option><option>Compliance Item</option><option>Announcement</option></select></div><div class="field"><label for="commScope">Scope</label><select id="commScope"><option>Community</option><option>Company-wide</option></select></div></div>
+            <div class="form-row"><div class="field"><label for="commRule">Due rule</label><select id="commRule"><option>Specific Date</option><option>Daily</option><option>Weekly</option><option>Monthly</option><option>Needs Review</option></select></div><div class="field"><label for="commDate">Due date</label><input id="commDate" type="date" autocomplete="off" value=""/></div></div>
+            <div class="field"><label for="commNotes">Notes</label><input id="commNotes" autocomplete="off" value="" placeholder="Optional instructions or requirement notes"/></div>
+            <div class="actions"><button class="btn primary" id="saveComm" type="button">Save Communication</button><button class="btn soft" id="clearForm" type="button">Clear</button></div>
+            <div class="status" id="saveStatus"></div>
+          </div>
+        </section>
+        <section class="panel">
+          <div class="records-head"><div><h2>Posted Communications</h2><div class="panel-note" style="margin:6px 0 0">Current month for the selected community plus company-wide messages.</div></div><span class="tag" id="countTag">0 records</span></div>
+          <div id="records" class="record-list"><div class="empty">Loading supervisor communications…</div></div>
+          <div class="archive-panel">
+            <div class="archive-head"><div><div class="archive-title">Monthly Archive</div><div class="archive-note">Previous-month communications are filed automatically by posting month.</div></div><div class="archive-actions"><button class="archive-mini" id="expandArchive" type="button">Expand All</button><button class="archive-mini" id="collapseArchive" type="button">Collapse All</button><span class="tag" id="archiveCountTag">0 archived</span></div></div>
+            <div id="archiveRecords" class="archive-months"><div class="empty">No archived communications yet.</div></div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+  <div class="toast" id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="shared/supabase-client.js"></script>
+<script>
+(function(){
+  const $=id=>document.getElementById(id); let editingId='';
+  function toast(msg){const el=$('toast'); if(!el) return; el.textContent=msg||''; el.style.display='block'; clearTimeout(toast._t); toast._t=setTimeout(()=>el.style.display='none',2200)}
+  function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+  function client(){return window.sb||window.supabaseClient||null}
+function readManagerHubLogoCache(){
+    try{
+      var cid = companyId();
+      var direct = cid ? sessionStorage.getItem('mh2_brand_logo_v1_' + String(cid).trim()) : '';
+      if(direct){ var p = JSON.parse(direct); if(p && p.url) return p; }
+      for(var i=0;i<sessionStorage.length;i++){
+        var k = sessionStorage.key(i) || '';
+        if(k.indexOf('mh2_brand_logo_v1_') === 0){ var v = JSON.parse(sessionStorage.getItem(k) || '{}'); if(v && v.url) return v; }
+      }
+    }catch(_e){}
+    return null;
+  }
+  function parseCompanyLogoRef(raw){
+    raw = String(raw || '').trim();
+    if(!raw) return null;
+    if(/^https?:\/\//i.test(raw)) return { url: raw };
+    return { bucket:'company_logos', path: raw };
+  }
+  async function applySupervisorCommsLogo(){
+    var img = $('supervisorCommsLogo');
+    if(!img) return;
+    var fallback = 'Zummee.png';
+    function paint(url, alt){
+      img.classList.remove('is-visible');
+      img.src = url || fallback;
+      img.alt = alt || 'Company logo';
+      requestAnimationFrame(function(){ img.classList.add('is-visible'); });
+    }
+    var cached = readManagerHubLogoCache();
+    if(cached && cached.url) paint(cached.url, cached.alt || 'Company logo');
+    try{
+      var sb = client();
+      var cid = companyId();
+      if(!sb || !cid) { if(!(cached && cached.url)) paint(fallback, 'Zummee logo'); return; }
+      var res = await sb.from('companies').select('logo_path,name').eq('id', String(cid)).maybeSingle();
+      if(res.error) throw res.error;
+      var row = res.data || {};
+      var ref = parseCompanyLogoRef(row.logo_path);
+      if(!ref) throw new Error('No company logo');
+      var url = ref.url || '';
+      if(!url && ref.bucket && ref.path && sb.storage && sb.storage.from){
+        var pub = sb.storage.from(ref.bucket).getPublicUrl(ref.path);
+        url = String(pub && pub.data && pub.data.publicUrl || '').trim();
+      }
+      if(!url) throw new Error('No logo URL');
+      try{ sessionStorage.setItem('mh2_brand_logo_v1_' + String(cid).trim(), JSON.stringify({url:url, alt:String(row.name || 'Company logo'), isCompany:true})); }catch(_e){}
+      paint(url, String(row.name || 'Company logo'));
+    }catch(_e){
+      if(!(cached && cached.url)) paint(fallback, 'Zummee logo');
+    }
+  }
+    function companyName(){return window.activeCompanyName||localStorage.getItem('activeCompanyName')||localStorage.getItem('companyName')||''}
+  function companyId(){return window.activeCompanyId||localStorage.getItem('activeCompanyId')||localStorage.getItem('companyId')||''}
+  function companyKey(){return (companyId()||companyName()||'company').toString().trim().toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'')||'company'}
+  function selectedCommunityOption(){ var sel=$('supervisorCommunitySelect'); return sel && sel.options && sel.selectedIndex>=0 ? sel.options[sel.selectedIndex] : null; }
+  function selectedCommunityValue(){ var sel=$('supervisorCommunitySelect'); return sel ? String(sel.value||'').trim() : ''; }
+  function communityId(){return selectedCommunityValue()||window.activeCommunityId||localStorage.getItem('activeCommunityId')||localStorage.getItem('currentCommunityId')||localStorage.getItem('zummee_community_id')||localStorage.getItem('zummee_selected_community_id')||''}
+  function communityName(){ var opt=selectedCommunityOption(); return (opt && String(opt.textContent||'').trim())||window.activeCommunityName||localStorage.getItem('activeCommunityName')||localStorage.getItem('currentCommunityName')||localStorage.getItem('zummee_community_name')||''}
+  function persistCommunity(id, name){ id=String(id||'').trim(); name=String(name||'').trim(); if(!id) return; try{ window.activeCommunityId=id; window.currentCommunityId=id; window.selectedCommunityId=id; }catch(_e){} ['zummee_selected_community_id','activeCommunityId','zummeeActiveCommunityId','currentCommunityId','zummee_community_id'].forEach(function(k){try{localStorage.setItem(k,id)}catch(_e){}}); if(name){ try{ window.activeCommunityName=name; window.currentCommunityName=name; }catch(_e){} ['activeCommunityName','currentCommunityName','zummee_community_name','zummeeCurrentCommunityName'].forEach(function(k){try{localStorage.setItem(k,name)}catch(_e){}}); } try{ if(window.setActiveCommunityId) window.setActiveCommunityId(id); }catch(_e){} }
+  async function populateCommunityDropdown(){ var sel=$('supervisorCommunitySelect'); if(!sel) return; var sb=client(); if(!sb){ sel.innerHTML='<option value="">Supabase unavailable</option>'; return; } try{ var user=await getUser(); var profile=null; if(user && user.id){ var pr=await sb.from('profiles').select('company,company_id,selected_community_id').eq('id',user.id).maybeSingle(); if(pr && !pr.error) profile=pr.data||null; } if(profile){ if(profile.company) try{localStorage.setItem('activeCompanyName',String(profile.company||'')); localStorage.setItem('companyName',String(profile.company||''));}catch(_e){} if(profile.company_id) try{localStorage.setItem('activeCompanyId',String(profile.company_id||'')); localStorage.setItem('companyId',String(profile.company_id||''));}catch(_e){} } var cid=String((profile&&profile.company_id)||companyId()||'').trim(); var rows=[]; if(cid){ var q=await sb.from('PropertyCommunities').select('id,name,company_id,company').eq('company_id',cid).order('name',{ascending:true}); if(q.error) throw q.error; rows=Array.isArray(q.data)?q.data:[]; } if(!rows.length){ sel.innerHTML='<option value="">No communities found</option>'; updateContext(); return; } var stored=String(communityId()||(profile&&profile.selected_community_id)||'').trim(); var selected=rows.find(function(r){return String(r.id||'')===stored;})||rows[0]; sel.innerHTML=rows.map(function(r){ var id=esc(r.id||''); var name=esc(r.name||'Unnamed community'); return '<option value="'+id+'">'+name+'</option>'; }).join(''); sel.value=String(selected.id||''); persistCommunity(selected.id, selected.name); updateContext(); }catch(e){ console.error(e); sel.innerHTML='<option value="">Could not load communities</option>'; } }
+  function setStatus(msg,tone){const el=$('saveStatus'); if(el){el.textContent=msg||''; el.style.color=tone||'#60748d'}}
+  function updateContext(){ applySupervisorCommsLogo(); }
+  async function getUser(){const sb=client(); if(!sb||!sb.auth) return null; try{const r=await sb.auth.getSession(); return r&&r.data&&r.data.session&&r.data.session.user||null}catch(e){return null}}
+  function baseCols(){return 'id, community_id, scope, company_key, message, type, rule, notes, due_date, created_by, created_at, updated_at'}
+  async function selectRows(){const sb=client(); if(!sb) throw new Error('Supabase is not ready.'); const cid=communityId(); const ck=companyKey(); let rows=[];
+    if(cid){let r=await sb.from('supervisor_messages').select(baseCols()).eq('scope','Community').eq('community_id',cid).order('created_at',{ascending:false}).limit(500); if(r.error) throw r.error; rows=rows.concat(r.data||[])}
+    let c=await sb.from('supervisor_messages').select(baseCols()).eq('scope','Company-wide').eq('company_key',ck).order('created_at',{ascending:false}).limit(500); if(c.error) throw c.error; rows=rows.concat(c.data||[]);
+    rows.sort((a,b)=>String(b.created_at||b.updated_at||'').localeCompare(String(a.created_at||a.updated_at||''))); return rows; }
+  function monthKey(value){const d=value?new Date(value):new Date(); if(!isFinite(d.getTime())) return ''; return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+  function monthLabel(key){const parts=String(key||'').split('-'); if(parts.length!==2) return 'Undated'; const d=new Date(Number(parts[0]),Number(parts[1])-1,1); return isFinite(d.getTime()) ? d.toLocaleDateString(undefined,{month:'long',year:'numeric'}) : 'Undated';}
+  function recordHtml(r, archiveClass){const parts=[r.type||'Message',r.rule||'Needs Review']; if(r.due_date) parts.push('Due '+r.due_date); if(r.notes) parts.push(r.notes); const posted=r.created_at?new Date(r.created_at).toLocaleString():''; if(posted) parts.push('Posted '+posted); return `<article class="record ${archiveClass||''}"><div class="record-top"><div><div class="record-title">${esc(r.message||'Supervisor communication')}</div><div class="record-meta">${esc(parts.join(' · '))}</div></div><span class="tag">${esc(r.scope||'Community')}</span></div><div class="record-actions"><button class="btn soft edit" data-id="${esc(r.id)}">Edit</button><button class="btn danger del" data-id="${esc(r.id)}">Delete</button></div></article>`;}
+  function bindRecordActions(container, rows){ if(!container) return; container.querySelectorAll('.del').forEach(b=>b.onclick=()=>deleteRow(b.dataset.id)); container.querySelectorAll('.edit').forEach(b=>b.onclick=()=>editRow(b.dataset.id, rows)); }
+  function wireArchiveButtons(){const root=$('archiveRecords'); const expand=$('expandArchive'); const collapse=$('collapseArchive'); if(expand&&root) expand.onclick=function(){root.querySelectorAll('.archive-month').forEach(m=>{m.classList.add('is-open'); const b=m.querySelector('.archive-toggle'); if(b) b.setAttribute('aria-expanded','true');});}; if(collapse&&root) collapse.onclick=function(){root.querySelectorAll('.archive-month').forEach(m=>{m.classList.remove('is-open'); const b=m.querySelector('.archive-toggle'); if(b) b.setAttribute('aria-expanded','false');});};}
+
+  function renderArchive(rows){const archiveRoot=$('archiveRecords'); const tag=$('archiveCountTag'); if(!archiveRoot) return; rows=Array.isArray(rows)?rows:[]; if(tag) tag.textContent=rows.length+' archived'; if(!rows.length){archiveRoot.innerHTML='<div class="empty">No archived communications yet. At the start of each new month, prior-month communications will file here automatically.</div>'; wireArchiveButtons(); return;} const groups={}; rows.forEach(r=>{const key=monthKey(r.created_at||r.updated_at)||'Undated'; (groups[key]||(groups[key]=[])).push(r);}); const keys=Object.keys(groups).sort().reverse(); archiveRoot.innerHTML=keys.map((key)=>`<section class="archive-month" data-archive-month="${esc(key)}"><button class="archive-toggle" type="button" data-month="${esc(key)}" aria-expanded="false"><span>${esc(monthLabel(key))}</span><span>${groups[key].length} record${groups[key].length===1?'':'s'}</span></button><div class="archive-body">${groups[key].map(r=>recordHtml(r,'archive-record')).join('')}</div></section>`).join(''); archiveRoot.querySelectorAll('.archive-toggle').forEach(btn=>btn.onclick=()=>{const box=btn.closest('.archive-month'); if(box){box.classList.toggle('is-open'); btn.setAttribute('aria-expanded', box.classList.contains('is-open')?'true':'false');}}); bindRecordActions(archiveRoot, rows); wireArchiveButtons(); }
+  function render(rows){rows=Array.isArray(rows)?rows:[]; const currentKey=monthKey(new Date().toISOString()); const currentRows=rows.filter(r=>monthKey(r.created_at||r.updated_at)===currentKey); const archivedRows=rows.filter(r=>monthKey(r.created_at||r.updated_at)!==currentKey); $('countTag').textContent=currentRows.length+' current'; const root=$('records'); if(!currentRows.length){root.innerHTML='<div class="empty">No current-month supervisor communications. Older records are filed in the monthly archive below.</div>';} else {root.innerHTML=currentRows.map(r=>recordHtml(r,'')).join(''); bindRecordActions(root, rows);} renderArchive(archivedRows); }
+  async function load(){updateContext(); try{render(await selectRows()); setStatus('')}catch(e){console.error(e); $('records').innerHTML='<div class="empty">Could not load communications. '+esc(e.message||e)+'</div>';}}
+  function clear(){editingId=''; ['commTitle','commNotes','commDate'].forEach(id=>$(id).value=''); $('commType').value='Required Task'; $('commScope').value='Community'; $('commRule').value='Specific Date'; $('saveComm').textContent='Save Communication'; setStatus('')}
+  function resetFormOnLoad(){
+    clear();
+    ['commTitle','commNotes','commDate'].forEach(function(id){
+      var el=$(id);
+      if(el){
+        el.value='';
+        el.defaultValue='';
+        el.setAttribute('autocomplete','off');
+        el.setAttribute('data-lpignore','true');
+        el.setAttribute('data-form-type','other');
+      }
+    });
+    ['commType','commScope','commRule'].forEach(function(id){
+      var el=$(id);
+      if(el){
+        if(id==='commType') el.value='Required Task';
+        if(id==='commScope') el.value='Community';
+        if(id==='commRule') el.value='Specific Date';
+        el.setAttribute('autocomplete','off');
+      }
+    });
+    editingId='';
+    var saveBtn=$('saveComm'); if(saveBtn) saveBtn.textContent='Save Communication';
+  }
+  function resetFormAfterBrowserRestore(){
+    resetFormOnLoad();
+    [0,150,450,900].forEach(function(ms){ setTimeout(resetFormOnLoad, ms); });
+  }
+  function editRow(id, rows){const r=(rows||[]).find(x=>String(x.id)===String(id)); if(!r) return; editingId=r.id; $('commTitle').value=r.message||''; $('commType').value=r.type||'Required Task'; $('commScope').value=r.scope||'Community'; $('commRule').value=r.rule||'Specific Date'; $('commNotes').value=r.notes||''; $('commDate').value=r.due_date||''; $('saveComm').textContent='Update Communication'; window.scrollTo({top:0,behavior:'smooth'});}
+  async function save(){const sb=client(); if(!sb){setStatus('Supabase is not ready.','#9a3412');return} const title=$('commTitle').value.trim(); if(!title){setStatus('Enter a title first.','#9a3412');return} const scope=$('commScope').value; const user=await getUser(); const payload={scope,company_key:scope==='Company-wide'?companyKey():null,community_id:scope==='Community'?communityId():null,message:title,type:$('commType').value,rule:$('commRule').value,notes:$('commNotes').value.trim(),due_date:$('commDate').value||null,updated_at:new Date().toISOString()}; if(user&&user.id&&!editingId) payload.created_by=user.id; if(scope==='Community'&&!payload.community_id){setStatus('Choose an active community before saving a community communication.','#9a3412');return} try{setStatus('Saving…'); let res; if(editingId){res=await sb.from('supervisor_messages').update(payload).eq('id',editingId).select('id')} else {res=await sb.from('supervisor_messages').insert([payload]).select('id')} if(res.error) throw res.error; clear(); setStatus('Saved to Supabase.','#17633a'); toast('Supervisor communication saved.'); await load(); try{window.dispatchEvent(new Event('storage'))}catch(e){} }catch(e){console.error(e); setStatus('Save failed: '+(e.message||e),'#9a3412')}}
+  async function deleteRow(id){if(!id) return; if(!confirm('Delete this supervisor communication?')) return; const sb=client(); if(!sb) return; try{const r=await sb.from('supervisor_messages').delete().eq('id',id).select('id'); if(r.error) throw r.error; toast('Deleted.'); await load();}catch(e){console.error(e); toast('Delete failed.')}}
+  $('saveComm').onclick=save; $('clearForm').onclick=clear; if($('supervisorCommunitySelect')) $('supervisorCommunitySelect').addEventListener('change',function(){ var opt=selectedCommunityOption(); persistCommunity(this.value, opt ? opt.textContent : ''); updateContext(); load(); });
+  window.addEventListener('pageshow',function(){ resetFormAfterBrowserRestore(); populateCommunityDropdown().then(function(){ return load(); }).then(resetFormAfterBrowserRestore).catch(function(){ load().then(resetFormAfterBrowserRestore).catch(resetFormAfterBrowserRestore); }); });
+  window.addEventListener('load', resetFormAfterBrowserRestore);
+  window.addEventListener('focus',load); document.addEventListener('visibilitychange',()=>{if(!document.hidden) load()}); async function init(){ resetFormAfterBrowserRestore(); await populateCommunityDropdown(); updateContext(); await load(); resetFormAfterBrowserRestore(); } init();
+})();
+</script>
+<script src="company_logo_sync.js"></script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

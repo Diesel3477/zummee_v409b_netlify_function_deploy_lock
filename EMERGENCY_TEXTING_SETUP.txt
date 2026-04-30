@@ -1,0 +1,51 @@
+Run this SQL in Supabase SQL Editor before testing Emergency Texting.
+
+create extension if not exists pgcrypto;
+
+create table if not exists public."EmergencyTextTemplates" (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid null,
+  title text not null,
+  category text null,
+  message_body text not null,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public."EmergencyTextLogs" (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid null,
+  community_id uuid null,
+  community_name text null,
+  template_id uuid null,
+  template_title text null,
+  message_body text not null,
+  recipient_count integer not null default 0,
+  resident_count integer not null default 0,
+  board_count integer not null default 0,
+  unique_numbers jsonb null default '[]'::jsonb,
+  sent_by_name text null,
+  sent_by_email text null,
+  status text not null default 'sent',
+  sent_at timestamptz not null default now(),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists emergency_text_templates_company_idx on public."EmergencyTextTemplates" (company_id, is_active, title);
+create index if not exists emergency_text_logs_community_idx on public."EmergencyTextLogs" (community_id, sent_at desc);
+
+insert into public."EmergencyTextTemplates" (company_id, title, category, message_body)
+select null, t.title, t.category, t.message_body
+from (
+  values
+    ('Inclement Weather Advisory','Weather','Zummee Alert for [Community Name]: Due to inclement weather, services may be delayed. Please use caution and watch for additional updates.'),
+    ('Water Shutoff Notice','Water','Zummee Alert for [Community Name]: Water service is temporarily unavailable while repairs are being made. We will share updates as soon as service is restored.'),
+    ('Boil Water Advisory','Water','Zummee Alert for [Community Name]: A boil water advisory is now in effect. Please boil water before drinking or cooking until further notice.'),
+    ('Emergency Maintenance Notice','Maintenance','Zummee Alert for [Community Name]: Emergency maintenance work is underway. Please use caution around the affected area until repairs are complete.'),
+    ('Power Outage Notice','Utilities','Zummee Alert for [Community Name]: A power outage has been reported. We are monitoring the situation and will send updates when available.'),
+    ('Gate / Access Issue','Access','Zummee Alert for [Community Name]: There is currently an issue affecting gate or property access. Please expect temporary delays while the issue is addressed.'),
+    ('Community Safety Alert','Safety','Zummee Alert for [Community Name]: Please remain alert and use caution. More information will be shared as it becomes available.')
+) as t(title, category, message_body)
+where not exists (
+  select 1 from public."EmergencyTextTemplates" e where e.company_id is null and e.title = t.title
+);

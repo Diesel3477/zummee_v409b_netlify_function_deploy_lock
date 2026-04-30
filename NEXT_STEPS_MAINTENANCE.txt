@@ -1,0 +1,21 @@
+Zummee Maintenance Workflow – Next Steps
+
+This build fixes the maintenance_requests insert error caused by sending a company_id
+column that does not exist in your current maintenance_requests table.
+
+What changed:
+- resident_work_orders.html no longer includes company_id when creating maintenance_requests
+- assign-vendor-email edge function no longer includes company_id in its best-effort event log
+
+Result:
+- vendor assignment save
+- maintenance_requests creation
+- vendor email send
+
+should now work together without the previous company_id schema mismatch.
+
+Recommended next feature after this build:
+1. Resident notification email when vendor assigned
+2. Resident notification email when status changes to active
+3. Resident notification email when work is completed
+4. Optional 24-hour vendor follow-up reminder

@@ -1,0 +1,30 @@
+Resident Directory Import + Invite Tool v89
+
+What changed:
+- added resident_directory_setup.sql
+- added Resident Directory page:
+  resident_directory.html
+- added Edge Function:
+  import-resident-directory
+- added Edge Function:
+  send-resident-invites
+- added Resident Directory card to Manager Hub
+
+Recommended invite flow:
+- import residents by community
+- select residents with email addresses
+- send Supabase invite emails
+- residents create their password from the invite
+- residents should later be limited to their own data and work orders
+
+Deploy / setup:
+1. Run resident_directory_setup.sql in Supabase SQL editor
+2. Deploy functions:
+   cd ~/Downloads/zummee_v89_resident_directory_import_invites
+   supabase functions deploy import-resident-directory --project-ref slcwuuwyrgnmlmxpcaim --no-verify-jwt
+   supabase functions deploy send-resident-invites --project-ref slcwuuwyrgnmlmxpcaim --no-verify-jwt
+3. Optional, recommended:
+   supabase secrets set RESIDENT_REDIRECT_URL=https://zummee.net/login.html
+
+CSV columns:
+resident_name,unit_number,street_address,city,state,zip_code,email,phone,lease_status,building,notes,move_in_date,move_out_date

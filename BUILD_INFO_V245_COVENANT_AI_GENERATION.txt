@@ -1,0 +1,14 @@
+V245 Covenant AI Generation
+- Added Netlify function /.netlify/functions/covenant-generate-draft
+- Function searches community_ai_document_chunks by community_id and scores relevant chunks
+- Calls OpenAI when OPENAI_API_KEY is configured
+- Falls back to a safe manager-review draft if OpenAI key is missing
+- Updates covenant_questions with draft_answer, citations, ai_confidence, status=draft_ready
+- Manager page Draft Answer button now calls the server function
+- Added SQL migration COVENANT_AI_GENERATION_V245_SETUP.sql
+Required Netlify env vars:
+SUPABASE_URL
+SUPABASE_SERVICE_ROLE_KEY
+OPENAI_API_KEY
+Optional:
+OPENAI_MODEL

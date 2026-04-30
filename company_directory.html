@@ -1,0 +1,3424 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script>window.ZUMMEE_BUILD="2026-03-27-1";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+
+
+
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+  /* Company Directory: hide community picker in header */
+  #zummeeCommunitySelect,
+  #zummeeCommunitySwatch,
+  #zummeeCommunityAdd,
+  #zummeeCommunityRename,
+  #zummeeCommunityRemove,
+  #zummeeCommunityLabel,
+  #zummeeCommunityPicker,
+  #zummeeCommunityWrap,
+  #zummeeCommunityDot { display:none !important; }
+
+/* === Zummee Brand Header Override (v1211) === */
+.zummee-header{
+  background:#0f2f4a !important;
+  color:#ffffff !important;
+  border-bottom:1px solid rgba(255,255,255,0.10) !important;
+}
+.zummee-header a, .zummee-header a:visited{ color:#ffffff !important; }
+.zummee-header button, .zummee-header select, .zummee-header label, .zummee-header span, .zummee-header div{ color:inherit; }
+.zummee-header button{
+  background:rgba(255,255,255,0.14) !important;
+  border:1px solid rgba(255,255,255,0.18) !important;
+}
+.zummee-header button:hover{ border-color: rgba(123,224,0,0.55) !important; }
+.zummee-header__logo img{ height:120px !important; width:auto !important; }
+
+/* === Modern Community Selector (match Manager Hub) === */
+.zummee-communityPicker{ position:relative; display:inline-block; min-width:260px; }
+.zummee-communityBtn{
+  width:100%;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(15,47,74,0.22);
+  background:#ffffff;
+  color:#0f2f4a;
+  font-weight:700;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.10);
+}
+.zummee-communityBtn:focus{ outline:2px solid rgba(145, 255, 78, 0.55); outline-offset:2px; }
+.zummee-communityChevron{ width:10px; height:10px; border-right:2px solid rgba(15,47,74,0.55); border-bottom:2px solid rgba(15,47,74,0.55); transform:rotate(45deg); margin-top:-2px; }
+.zummee-communityMenu{
+  position:absolute;
+  right:0;
+  top:calc(100% + 10px);
+  width:340px;
+  max-width:84vw;
+  background:#ffffff;
+  border:1px solid rgba(15,47,74,0.18);
+  border-radius:16px;
+  box-shadow:0 18px 60px rgba(0,0,0,0.22);
+  padding:10px;
+  z-index:9999;
+  opacity:0;
+  transform: translateY(-6px) scale(0.99);
+  pointer-events:none;
+  visibility:hidden;
+  transition: opacity 140ms ease, transform 160ms ease, visibility 0s linear 160ms;
+}
+.zummee-communityMenu.open{
+  opacity:1;
+  transform: translateY(0) scale(1);
+  pointer-events:auto;
+  visibility:visible;
+  transition: opacity 140ms ease, transform 160ms ease;
+}
+.zummee-communitySearch{
+  width:100%;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(15,47,74,0.18);
+  background:#f7fafc;
+  color:#000000;
+  font-weight:600;
+  margin-bottom:8px;
+}
+.zummee-communitySearch::placeholder{ color:rgba(0,0,0,0.55); }
+.zummee-communityList{ max-height:280px; overflow:auto; padding:4px 2px; }
+.zummee-communityItem{
+  width:100%;
+  text-align:left;
+  border:0;
+  background:transparent;
+  padding:10px 10px;
+  border-radius:12px;
+  cursor:pointer;
+  font-weight:650;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  color:#000000;
+  position:relative;
+}
+.zummee-communityItem + .zummee-communityItem{ border-top:1px solid rgba(15,47,74,0.08); }
+.zummee-communityItem:hover{ background:rgba(15,47,74,0.06); }
+.zummee-communityItem[aria-selected="true"]{
+  background:rgba(145,255,78,0.16);
+  box-shadow: inset 0 0 0 1px rgba(145,255,78,0.30);
+}
+.zummee-communityCheck{
+  width:18px;height:18px;border-radius:999px;
+  display:inline-flex;align-items:center;justify-content:center;
+  flex:0 0 auto;color:#0f2f4a;opacity:0;transform: scale(0.9);
+  transition: opacity 120ms ease, transform 140ms ease;
+}
+.zummee-communityItem[aria-selected="true"] .zummee-communityCheck{ opacity:1; transform: scale(1); }
+.zummee-communityCheck::before{ content:"✓"; font-weight:900; font-size:13px; line-height:1; }
+
+/* Ensure native <select> readable in edge cases */
+#zummeeCommunitySelect, #zummeeCommunitySelect option{ color:#0f2f4a !important; background:#ffffff !important; }
+
+/* Hub button readable */
+.zummee-header__action--hub{ color:#173a56 !important; }
+
+/* Force Hub action pill styling (match other header actions) */
+.zummee-header a.zummee-header__action--hub{
+  background:#ffffff !important;
+  color:#0f2f4a !important;
+  border:1px solid rgba(15,47,74,0.22) !important;
+  box-shadow:0 6px 18px rgba(0,0,0,0.10) !important;
+  height:44px !important;
+  min-width:120px !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  text-decoration:none !important;
+}
+.zummee-header a.zummee-header__action--hub:hover{
+  background:rgba(255,255,255,0.92) !important;
+}
+
+/* Ensure community dropdown text is dark and readable */
+#zummeeCommunitySelect{
+  color:#0f2f4a !important;
+  font-weight:700 !important;
+}
+.zummee-modern-picker__button,
+.zummee-modern-picker__item{
+  color:#0f2f4a !important;
+}
+
+/* Force subpage dropdown to match Manager Hub */
+#zummeeCommunitySelect{
+  background:#ffffff !important;
+  color:#000000 !important;
+  font-weight:700 !important;
+}
+
+.zummee-modern-picker__button{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+.zummee-modern-picker__menu{
+  background:#ffffff !important;
+}
+
+.zummee-modern-picker__item{
+  color:#000000 !important;
+}
+
+/* Match Manager Hub community picker styling (white dropdown, black text) */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communityBtn span{
+  color:#000000 !important;
+}
+.zummee-communityMenu{
+  background:#ffffff !important;
+  border:1px solid rgba(15,47,74,0.18) !important;
+}
+.zummee-communitySearch{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communitySearch::placeholder{
+  color: rgba(0,0,0,0.55) !important;
+}
+.zummee-communityItem{
+  color:#000000 !important;
+}
+
+/* Force dropdown button background to white */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Override header generic button styling for community picker */
+.zummee-header .zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Remove bullet points from modern community dropdown */
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+  padding-left:0 !important;
+  margin-left:0 !important;
+}
+
+.zummee-communityItem::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* FORCE remove bullets everywhere inside community dropdown */
+.zummee-communityMenu,
+.zummee-communityMenu *{
+  list-style-type:none !important;
+  list-style:none !important;
+}
+
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+}
+
+.zummee-communityMenu li::marker{
+  content:"" !important;
+}
+
+.zummee-communityMenu li::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* Subpage Hub button — match Manager Hub */
+.zummee-header .zummee-hubBtn {
+  background: #ffffff !important;
+  color: #0f2f4a !important;
+  border-radius: 28px !important;
+  padding: 10px 22px !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  border: 1px solid rgba(15,47,74,0.15) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+  transition: all .2s ease;
+  text-decoration:none !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+.zummee-header .zummee-hubBtn:hover {
+  background: #f4f6f8 !important;
+}
+
+/* Fix Hub button text color + alignment under dropdown */
+.zummee-header .zummee-hubBtn {
+  color: #000000 !important;
+  display: block !important;
+  margin-left: auto !important;
+  margin-top: 10px !important;
+}
+
+.zummee-header .community-header-right {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+}
+
+/* Correct Hub button sizing and force black text */
+.zummee-header .zummee-hubBtn {
+  background:#ffffff !important;
+  color:#000000 !important;
+  border-radius:28px !important;
+  padding:8px 18px !important;
+  font-weight:700 !important;
+  font-size:15px !important;
+  border:1px solid rgba(15,47,74,0.15) !important;
+  box-shadow:0 4px 10px rgba(0,0,0,0.08) !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:auto !important;
+  min-width:auto !important;
+  margin-top:8px !important;
+  align-self:flex-end !important;
+}
+
+/* Ensure container stacks properly */
+.zummee-header .community-header-right {
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:flex-end !important;
+}
+
+/* Subpage header: stack hub under dropdown aligned right */
+.zummee-header__controls{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+}
+.zummee-header__communityRow{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  justify-content:flex-end;
+}
+.zummee-header__communityActions{
+  width:100%;
+  display:flex;
+  justify-content:flex-end;
+  margin-top:10px;
+}
+
+/* Force Hub button text to true black */
+.zummee-header .zummee-hubBtn,
+.zummee-header .zummee-hubBtn:visited,
+.zummee-header .zummee-hubBtn span {
+  color:#000000 !important;
+}
+
+/* Align page titles (like Daily Ops) to the left */
+.page-title,
+h1.page-title,
+.ops-title,
+h1 {
+  text-align:left !important;
+  margin-left:0 !important;
+}
+
+/* Precisely align page titles with main card container */
+.main-content h1,
+.content-wrapper h1,
+.page-container h1 {
+  text-align:left !important;
+  margin-left:40px !important;  /* matches card container padding */
+  margin-right:0 !important;
+}
+
+/* Prevent centering from parent flex containers */
+.page-header,
+.title-row {
+  justify-content:flex-start !important;
+  text-align:left !important;
+}
+
+/* Precisely match left edge of main section container */
+#opsHeaderRow {
+  padding-left: 60px !important; /* match section container padding */
+  justify-content: flex-start !important;
+}
+
+#opsHeaderRow h1 {
+  margin: 0 !important;
+}
+
+/* Match subpage logo size to Manager Hub */
+.zummee-header .zummee-logo {
+  font-size: 42px !important;
+  line-height: 1 !important;
+}
+
+.zummee-header .zummee-subtitle {
+  font-size: 16px !important;
+  letter-spacing: 2px !important;
+}
+
+.zummee-header svg {
+  height: 28px !important;
+}
+
+/* === Zummee Standard Header (shared across pages) === */
+.zummee-header{
+  background-color: rgb(15, 47, 74);
+}
+.zummee-header__divider{
+  display:none;
+}
+@media (min-width: 701px){
+  .zummee-header__divider{
+    display:block;
+    width:1px;
+    height:36px;
+    background: rgba(255,255,255,0.28);
+  }
+}
+@media (max-width: 700px){
+  .zummee-header{
+    padding: 10px 12px;
+  }
+  .zummee-header__inner{
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .zummee-header__brand{
+    justify-content: center;
+  }
+  .zummee-header__controls{
+    width: 100%;
+    display:flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .zummee-header__community{
+    width: 100%;
+    max-width: 420px;
+    justify-content: center;
+    gap: 10px;
+  }
+  .zummee-header__community-label{
+    min-width: auto;
+  }
+  #zummeeCommunitySelect{
+    width: 100%;
+  }
+  .zummee-header__hub{
+    width: 100%;
+    max-width: 420px;
+    justify-content: center;
+  }
+  .zummee-header__hubbtn{
+    width: 100%;
+  }
+}
+/* === End Zummee Standard Header === */
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+
+.mh2-actions .mh2-btn--ghost{display:none !important;}
+</style>
+
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Company Directory</title>
+<link rel="icon" href="favicon.ico"/>
+
+<style>
+  :root{--bg:#f6f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--shadow:0 10px 30px rgba(0,0,0,.08);--r:14px}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
+  .wrap{max-width:1060px;margin:0 auto;padding:18px 14px 60px}
+  h1{margin:0 0 6px;font-size:30px;letter-spacing:-.02em}
+  .sub{color:var(--muted);font-size:14px;margin:6px 0 18px;line-height:1.4}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-top:12px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:#fff;color:var(--text);
+    padding:10px 12px;border-radius:12px;text-decoration:none;font-weight:900;font-size:13px;cursor:pointer;
+    box-shadow:0 1px 0 rgba(0,0,0,.02)}
+  .btn:hover{border-color:#d1d5db;box-shadow:0 8px 20px rgba(0,0,0,.06)}
+  .btn.primary{border-color:rgba(37,99,235,.35);background:rgba(37,99,235,.08)}
+  .btn.small{padding:7px 10px;border-radius:10px;font-size:12px}
+  input,select{border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14px;background:#fff;outline:none}
+  input:focus,select:focus{border-color:rgba(37,99,235,.55);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;font-size:13px;vertical-align:top}
+  th{color:#374151;font-weight:950;background:#f9fafb}
+  .muted{color:var(--muted)}
+  .pill{display:inline-block;padding:4px 10px;border-radius:999px;background:#f3f4f6;color:#374151;font-weight:950;font-size:12px}
+  .linkish{color:#1d4ed8;text-decoration:none;font-weight:900}
+  .linkish:hover{text-decoration:underline}
+  .right{text-align:right}
+
+  /* Header (match v10) */
+  .zummee-header{
+    position:sticky;top:0;z-index:9999;display:flex;align-items:center;gap:20px;
+    padding:18px 28px;border-bottom:1px solid #6faedc;background:#9fc9ec;box-shadow:0 1px 6px rgba(0,0,0,0.08)
+  }
+  .zummee-header__logo{display:inline-flex;align-items:center;text-decoration:none  margin-right:auto;
+  }
+
+  .zummee-header__logo img{height:72px;width:auto;display:block}
+  .zummee-header__titles{display:flex;flex-direction:column;line-height:1.1}
+  .zummee-header__title{margin:0;font-size:1.6rem;font-weight:800;color:#0f2f4a}
+  .zummee-header__subtitle{margin-top:6px;font-size:1rem;font-weight:600;color:#0f2f4a;opacity:.9}
+  @media (max-width: 640px){
+    .zummee-header{padding:12px 16px;gap:12px}
+    .zummee-header__title{font-size:1.1rem}
+    .zummee-header__subtitle{font-size:.9rem}
+  }
+
+/* GLOBAL ZUMMEE SECTION EDGING */
+.wrap .card,
+.wrap .section,
+.pageBox {
+  border: 2px solid #0f2f4a !important;
+  border-radius: 18px !important;
+  background: rgba(255,255,255,0.96) !important;
+  box-shadow: 0 10px 28px rgba(15,47,74,0.12) !important;
+}
+
+/* Ensure community dropdown text is dark and readable */
+#zummeeCommunitySelect{
+  color:#0f2f4a !important;
+  font-weight:700 !important;
+}
+.zummee-modern-picker__button,
+.zummee-modern-picker__item{
+  color:#0f2f4a !important;
+}
+
+/* Force subpage dropdown to match Manager Hub */
+#zummeeCommunitySelect{
+  background:#ffffff !important;
+  color:#000000 !important;
+  font-weight:700 !important;
+}
+
+.zummee-modern-picker__button{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+.zummee-modern-picker__menu{
+  background:#ffffff !important;
+}
+
+.zummee-modern-picker__item{
+  color:#000000 !important;
+}
+
+/* Match Manager Hub community picker styling (white dropdown, black text) */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communityBtn span{
+  color:#000000 !important;
+}
+.zummee-communityMenu{
+  background:#ffffff !important;
+  border:1px solid rgba(15,47,74,0.18) !important;
+}
+.zummee-communitySearch{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communitySearch::placeholder{
+  color: rgba(0,0,0,0.55) !important;
+}
+.zummee-communityItem{
+  color:#000000 !important;
+}
+
+/* Force dropdown button background to white */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Override header generic button styling for community picker */
+.zummee-header .zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Remove bullet points from modern community dropdown */
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+  padding-left:0 !important;
+  margin-left:0 !important;
+}
+
+.zummee-communityItem::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* FORCE remove bullets everywhere inside community dropdown */
+.zummee-communityMenu,
+.zummee-communityMenu *{
+  list-style-type:none !important;
+  list-style:none !important;
+}
+
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+}
+
+.zummee-communityMenu li::marker{
+  content:"" !important;
+}
+
+.zummee-communityMenu li::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* Subpage Hub button — match Manager Hub */
+.zummee-header .zummee-hubBtn {
+  background: #ffffff !important;
+  color: #0f2f4a !important;
+  border-radius: 28px !important;
+  padding: 10px 22px !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  border: 1px solid rgba(15,47,74,0.15) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+  transition: all .2s ease;
+  text-decoration:none !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+.zummee-header .zummee-hubBtn:hover {
+  background: #f4f6f8 !important;
+}
+
+/* Fix Hub button text color + alignment under dropdown */
+.zummee-header .zummee-hubBtn {
+  color: #000000 !important;
+  display: block !important;
+  margin-left: auto !important;
+  margin-top: 10px !important;
+}
+
+.zummee-header .community-header-right {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+}
+
+/* Correct Hub button sizing and force black text */
+.zummee-header .zummee-hubBtn {
+  background:#ffffff !important;
+  color:#000000 !important;
+  border-radius:28px !important;
+  padding:8px 18px !important;
+  font-weight:700 !important;
+  font-size:15px !important;
+  border:1px solid rgba(15,47,74,0.15) !important;
+  box-shadow:0 4px 10px rgba(0,0,0,0.08) !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:auto !important;
+  min-width:auto !important;
+  margin-top:8px !important;
+  align-self:flex-end !important;
+}
+
+/* Ensure container stacks properly */
+.zummee-header .community-header-right {
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:flex-end !important;
+}
+
+/* Force Hub button text to true black */
+.zummee-header .zummee-hubBtn,
+.zummee-header .zummee-hubBtn:visited,
+.zummee-header .zummee-hubBtn span {
+  color:#000000 !important;
+}
+
+/* Align page titles (like Daily Ops) to the left */
+.page-title,
+h1.page-title,
+.ops-title,
+h1 {
+  text-align:left !important;
+  margin-left:0 !important;
+}
+
+/* Precisely align page titles with main card container */
+.main-content h1,
+.content-wrapper h1,
+.page-container h1 {
+  text-align:left !important;
+  margin-left:40px !important;  /* matches card container padding */
+  margin-right:0 !important;
+}
+
+/* Prevent centering from parent flex containers */
+.page-header,
+.title-row {
+  justify-content:flex-start !important;
+  text-align:left !important;
+}
+
+/* Precisely match left edge of main section container */
+#opsHeaderRow {
+  padding-left: 60px !important; /* match section container padding */
+  justify-content: flex-start !important;
+}
+
+#opsHeaderRow h1 {
+  margin: 0 !important;
+}
+
+/* Match subpage logo size to Manager Hub */
+.zummee-header .zummee-logo {
+  font-size: 42px !important;
+  line-height: 1 !important;
+}
+
+.zummee-header .zummee-subtitle {
+  font-size: 16px !important;
+  letter-spacing: 2px !important;
+}
+
+.zummee-header svg {
+  height: 28px !important;
+}
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="shared/supabase-client.js?v=2026-04-08-2"></script>
+<script>
+
+// Phone formatting + inline validation (global)
+(function(){
+  function phoneDigits(v){
+    v = String(v||"");
+    // keep digits only
+    var d = v.replace(/\D/g,"");
+    // allow leading 1
+    if(d.length===11 && d.charAt(0)==="1") d = d.slice(1);
+    return d;
+  }
+  function formatPhoneUS(v){
+    var d = phoneDigits(v);
+    if(d.length!==10) return String(v||"").trim();
+    return "(" + d.slice(0,3) + ") " + d.slice(3,6) + "-" + d.slice(6);
+  }
+  function ensureErrorEl(input){
+    if(!input || input.__zummeeErrEl) return input.__zummeeErrEl;
+    var el = document.createElement("div");
+    el.className = "zummee-inline-error";
+    el.style.display = "none";
+    el.textContent = "";
+    // insert after input
+    if(input.parentNode){
+      if(input.nextSibling){
+        input.parentNode.insertBefore(el, input.nextSibling);
+      }else{
+        input.parentNode.appendChild(el);
+      }
+    }
+    input.__zummeeErrEl = el;
+    return el;
+  }
+  function setError(input, msg){
+    var el = ensureErrorEl(input);
+    if(!el) return;
+    if(msg){
+      el.textContent = msg;
+      el.style.display = "block";
+      input.classList.add("zummee-has-error");
+    }else{
+      el.textContent = "";
+      el.style.display = "none";
+      input.classList.remove("zummee-has-error");
+    }
+  }
+  function validatePhoneInput(input){
+    if(!input) return true;
+    var raw = (input.value||"").trim();
+    if(!raw){ setError(input,""); return true; }
+    var d = phoneDigits(raw);
+    if(d.length===10){ setError(input,""); return true; }
+    // allow user typing; show message if not complete
+    setError(input,"Enter a 10-digit phone number.");
+    return false;
+  }
+  function bindOne(input){
+    if(!input || input.__zummeePhoneBound) return;
+    input.__zummeePhoneBound = true;
+    input.addEventListener("input", function(){ validatePhoneInput(input); });
+    input.addEventListener("blur", function(){
+      var ok = validatePhoneInput(input);
+      if(ok){
+        var formatted = formatPhoneUS(input.value);
+        // only replace if it becomes a standard format
+        var d = phoneDigits(input.value);
+        if(d.length===10) input.value = formatted;
+      }
+    });
+  }
+  function attach(root){
+    root = root || document;
+    var inputs = root.querySelectorAll('input[type="tel"], input[id*="phone" i], input[name*="phone" i], input[placeholder*="phone" i]');
+    for(var i=0;i<inputs.length;i++) bindOne(inputs[i]);
+  }
+  // expose
+  window.ZUMMEE_phoneDigits = phoneDigits;
+  window.ZUMMEE_formatPhoneUS = formatPhoneUS;
+  window.ZUMMEE_validatePhoneInput = validatePhoneInput;
+  window.ZUMMEE_attachPhoneFormatting = attach;
+  document.addEventListener("DOMContentLoaded", function(){ attach(document);
+    try{
+      var mo = new MutationObserver(function(muts){
+        for(var i=0;i<muts.length;i++){
+          if(muts[i].addedNodes && muts[i].addedNodes.length){
+            for(var j=0;j<muts[i].addedNodes.length;j++){
+              var n = muts[i].addedNodes[j];
+              if(!n) continue;
+              if(n.nodeType===1){ attach(n); }
+            }
+          }
+        }
+      });
+      mo.observe(document.body, {childList:true, subtree:true});
+    }catch(e){}
+  });
+})();
+
+// US phone formatter for display: (123) 456-7890
+function formatPhoneUS(raw){
+  var s = String(raw||"").replace(/\D/g,"").slice(0,10);
+  if(!s) return "";
+  if(s.length < 4) return "(" + s;
+  if(s.length < 7) return "(" + s.slice(0,3) + ") " + s.slice(3);
+  return "(" + s.slice(0,3) + ") " + s.slice(3,6) + "-" + s.slice(6);
+}
+
+(function(){
+  var SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
+  var SUPABASE_KEY = "sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864";
+  window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { storageKey:'sb-zummee-auth', storage: window.localStorage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true  }
+  });
+
+  async function requireAuth(){
+    var s = await window.sb.auth.getSession();
+    if(!s || !s.data || !s.data.session || !s.data.session.user){
+      window.location.replace("login.html");
+      return null;
+    }
+    return s.data.session.user;
+  }
+
+  async function ensureProfile(user){
+    // Pull existing profile; create if missing using auth metadata
+    var userId = user.id;
+    var meta = user.user_metadata || {};
+    var name = meta.name || "";
+    var phone = meta.phone || "";
+    var company = meta.company || "";
+    var email = user.email || meta.email || "";
+
+    // Try load
+    var q = await window.sb.from("profiles").select("*").eq("id", userId).maybeSingle();
+    if(q && q.error) {
+      console.warn("Profile load error:", q.error.message);
+    }
+    var row = (q && q.data) ? q.data : null;
+
+    if(!row){
+      // Try insert with email; fallback without
+      var ins = await window.sb.from("profiles").insert([{ id:userId, name:name, phone:phone, company:company, email:email }]);
+      if(ins && ins.error){
+        await window.sb.from("profiles").insert([{ id:userId, name:name, phone:phone, company:company }]);
+      }
+      row = { id:userId, name:name, phone:phone, company:company };
+    } else {
+      // If blank fields, attempt to upsert from metadata (non-destructive)
+      var patch = {};
+      if(!row.name && name) patch.name = name;
+      if(!row.phone && phone) patch.phone = phone;
+      if(!row.company && company) patch.company = company;
+      if(Object.keys(patch).length){
+        patch.id = userId;
+        try{
+          var up = await window.sb.from("profiles").upsert([Object.assign({}, patch, { email: email })], { onConflict:"id" });
+          if(up && up.error){
+            await window.sb.from("profiles").upsert([patch], { onConflict:"id" });
+          }
+        }catch(e){}
+        row = Object.assign({}, row, patch);
+      }
+    }
+
+    // Store email for UI even if table doesn't have it
+    row._email = email;
+    return row;
+  }
+
+  
+// Directory cache (speeds up first paint). We render cached rows immediately and refresh in background.
+function __dirCacheKey(companyId){ return "zummee_dir_cache_" + String(companyId||"").trim(); }
+function __dirCacheGet(companyId){
+  try{
+    var raw = localStorage.getItem(__dirCacheKey(companyId));
+    if(!raw) return null;
+    var obj = JSON.parse(raw);
+    if(!obj || !obj.t || !Array.isArray(obj.rows)) return null;
+    // TTL 10 minutes
+    if((Date.now() - obj.t) > 10*60*1000) return null;
+    return obj.rows;
+  }catch(e){ return null; }
+}
+function __dirCacheSet(companyId, rows){
+  try{
+    localStorage.setItem(__dirCacheKey(companyId), JSON.stringify({t:Date.now(), rows: rows||[]}));
+  }catch(e){}
+}
+
+async function loadCompanyRoster(companyName){
+    // New: Prefer userdirectory so newly-approved employees appear immediately
+    // (profiles rows are only created when the user logs in).
+    // We LEFT-JOIN to profiles for phone/department if available.
+    // NOTE: companyName is kept for backward-compat, but we now filter by company_id.
+    // This function will be called with a companyId string.
+    var companyId = String(companyName||"").trim();
+    if(!companyId) return [];
+
+    // IMPORTANT:
+    // Do NOT rely on PostgREST embedded joins (userdirectory -> profiles), because
+    // many projects do not have an FK relationship configured between these tables.
+    // Instead, fetch userdirectory rows first, then hydrate optional profile fields
+    // with a second query and merge client-side.
+
+    // userdirectory columns are stable in this build:
+    // auth_user_id, company_id, role, approved, profile_name, profile_email, profile_phone
+    var q = await window.sb
+      .from("userdirectory")
+      .select("auth_user_id,role,approved,company_id,profile_name,profile_email,profile_phone")
+      .eq("company_id", companyId)
+      .eq("approved", true)
+      .limit(2000);
+
+    if(q && q.error) throw q.error;
+
+    var udRows = (q && q.data) ? q.data : [];
+    var ids = udRows.map(function(r){ return r && r.auth_user_id; }).filter(Boolean);
+
+    // Optional enrichment from profiles (phone/department/etc). If no profile rows exist,
+    // we still show the directory using userdirectory fields.
+    var profById = {};
+    if(ids.length){
+      
+  // PostgREST "in" has limits on URL length; chunk to be safe.
+  var chunkSize = 150;
+  var chunks = [];
+  for(var i=0;i<ids.length;i+=chunkSize){
+    chunks.push(ids.slice(i,i+chunkSize));
+  }
+  // Fetch profile chunks in parallel to reduce total latency.
+  var results = await Promise.all(chunks.map(function(chunk){
+    return window.sb
+      .from("profiles")
+      .select("id,name,phone,department,email")
+      .in("id", chunk);
+  }));
+  results.forEach(function(pq){
+    if(!pq || pq.error) return; // non-fatal
+    (pq.data||[]).forEach(function(p){
+      if(p && p.id) profById[p.id] = p;
+    });
+  });
+}
+
+    var rows = udRows.map(function(r){
+      var p = profById[r.auth_user_id] || {};
+      return {
+        id: r.auth_user_id,
+        name: r.profile_name || p.name || "",
+        // NOTE: supervisors typically cannot read other users' profiles due to RLS.
+        // Phone is therefore sourced from userdirectory.profile_phone (kept in sync by DB trigger)
+        // and only falls back to profiles.phone when available.
+        phone: r.profile_phone || p.phone || "",
+        email: r.profile_email || p.email || "",
+        company: "",
+        department: p.department || "",
+        role: r.role || ""
+      };
+    });
+
+    // Alphabetical sort (case-insensitive)
+    rows.sort(function(a,b){
+      var an = String(a.name||"").toLowerCase();
+      var bn = String(b.name||"").toLowerCase();
+      if(an<bn) return -1;
+      if(an>bn) return 1;
+      return 0;
+    });
+
+    return rows;
+  }
+function deptClass(dept){
+    var d = String(dept||"").trim().toLowerCase();
+    if(d === "community manager") return "dept-community-manager";
+    if(d === "community admin") return "dept-community-admin";
+    if(d === "accounting") return "dept-accounting";
+    return "";
+  }
+
+  function esc(s){ return String(s||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
+
+  function render(rows){
+    var tbody = document.getElementById("dirTbody");
+    var pill = document.getElementById("countPill");
+    pill.textContent = rows.length + " employee" + (rows.length===1?"":"s");
+
+    if(!rows.length){
+      tbody.innerHTML = '<tr><td colspan="3" class="muted">No employees found for this company.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = rows.map(function(r){
+      var name = r.name || "";
+      var email = r.email || "";
+      var phoneRaw = r.phone || "";
+      var phoneDigits = String(phoneRaw).replace(/\D/g,"");
+      var phoneDisp = formatPhoneUS(phoneRaw);
+      var phoneCell = phoneDigits ? ('<a class="linkish" href="tel:' + phoneDigits + '">' + esc(phoneDisp || phoneRaw) + '</a>') : '<span class="muted">—</span>';
+      var emailCell = email ? ('<a class="linkish" href="mailto:' + encodeURIComponent(email) + '">' + esc(email) + '</a>') : '<span class="muted">—</span>';
+
+      return '<tr>' +
+        '<td><div style="font-weight:950">' + esc(name) + '</div></td>' + 
+        '<td>' + (phoneDigits ? ('<a class="linkish" href="tel:' + phoneDigits + '">' + esc(phoneDisp||phone) + '</a>') : '<span class="muted">—</span>') + '</td>' +
+        '<td>' + emailCell + '</td>' +
+      '</tr>';
+    }).join("");
+  }
+
+  function applyFilter(allRows){
+    var q = (document.getElementById("q").value || "").trim().toLowerCase();
+    if(!q) return allRows;
+    return allRows.filter(function(r){
+      var hay = [r.name, r.phone, r.email, r.title].map(function(x){return String(x||"").toLowerCase();}).join(" | ");
+      return hay.indexOf(q) !== -1;
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", async function(){
+    try{
+      // One-time notice redirected from login when company is missing
+      try{
+        var n = localStorage.getItem("zummee_profile_required_notice");
+        if(n){
+          var box = document.getElementById("profileNotice");
+          var t = document.getElementById("profileNoticeText");
+          if(t) t.textContent = n;
+          if(box) box.style.display = "block";
+          localStorage.removeItem("zummee_profile_required_notice");
+        }
+      }catch(_e){}
+
+      var user = await requireAuth();
+      if(!user) return;
+
+      var profile = await ensureProfile(user);
+      document.getElementById("myEmail").textContent = profile._email || (user.email||"");
+      document.getElementById("myName").textContent = profile.name || "—";
+
+      // Determine company from userdirectory (source of truth). Fallback to profile.company.
+      var ud = await window.sb.from("userdirectory").select("company_id,company_name").eq("auth_user_id", user.id).maybeSingle();
+      var companyId = (ud && ud.data && ud.data.company_id) ? String(ud.data.company_id) : "";
+      var companyName = (ud && ud.data && ud.data.company_name) ? String(ud.data.company_name) : ((profile && profile.company) ? String(profile.company).trim() : "");
+      document.getElementById("myCompany").textContent = companyName || "—";
+
+      if(!companyId){
+        document.getElementById("status").textContent = "Your account is not linked to a management company yet. Please ask a supervisor/admin to approve you or set your company.";
+        document.getElementById("goProfile").style.display = "inline-flex";
+        render([]);
+        return;
+      }
+
+      document.getElementById("status").textContent = "Loading employees…";
+
+// Fast paint: render cached directory immediately while we refresh in background.
+var cachedRows = __dirCacheGet(companyId);
+if(cachedRows && cachedRows.length){
+  try{
+    document.getElementById("status").textContent = "Loading employees… (showing cached)";
+    window.__allCompanyRows = (cachedRows||[]).slice().sort(function(a,b){
+      var na = String((a&&a.name)||"").toLowerCase();
+      var nb = String((b&&b.name)||"").toLowerCase();
+      return na.localeCompare(nb);
+    });
+    render(applyFilter(window.__allCompanyRows));
+  }catch(e){}
+}
+      var allRows = await loadCompanyRoster(companyId);
+
+      // ensure current user's email shows
+      allRows = allRows.map(function(r){
+        if(!r.email && r.id === user.id) r.email = profile._email || (user.email||"");
+        return r;
+      });
+
+      document.getElementById("status").textContent = "";
+      // Alphabetical order by name (requested)
+      allRows = (allRows||[]).slice().sort(function(a,b){
+        var na = String((a&&a.name)||"").toLowerCase();
+        var nb = String((b&&b.name)||"").toLowerCase();
+        return na.localeCompare(nb);
+      });
+
+      __dirCacheSet(companyId, allRows);
+      window.__allCompanyRows = allRows;
+      render(applyFilter(allRows));
+
+      document.getElementById("q").addEventListener("input", function(){
+        render(applyFilter(window.__allCompanyRows || []));
+      });
+
+      document.getElementById("refreshBtn").addEventListener("click", async function(){
+        document.getElementById("status").textContent = "Refreshing…";
+        var fresh = await loadCompanyRoster(companyId);
+        fresh = fresh.map(function(r){ if(!r.email && r.id===user.id) r.email = profile._email || (user.email||""); return r; });
+        fresh = (fresh||[]).slice().sort(function(a,b){
+          var na = String((a&&a.name)||"").toLowerCase();
+          var nb = String((b&&b.name)||"").toLowerCase();
+          return na.localeCompare(nb);
+        });
+        window.__allCompanyRows = fresh;
+        render(applyFilter(fresh));
+        document.getElementById("status").textContent = "";
+      });
+
+      var signOutBtn = document.getElementById("signOutBtn");
+      if(signOutBtn){
+        signOutBtn.addEventListener("click", async function(){
+          try{
+            if(window.ZummeeAuth && typeof window.ZummeeAuth.signOut === "function"){
+              const r = window.ZummeeAuth.signOut();
+              if(r && typeof r.then === "function") await r;
+              return;
+            }
+          }catch(_e0){}
+          try{ await window.sb.auth.signOut(); }catch(_e1){}
+          try{
+            [localStorage, sessionStorage].forEach(function(store){
+              try{
+                for(var i=store.length-1;i>=0;i--){
+                  var k = store.key(i);
+                  if(!k) continue;
+                  if(k === 'sb-zummee-auth' || /^sb-.*-auth-token$/.test(k) || /^sb-zummee-auth/.test(k)){
+                    try{ store.removeItem(k); }catch(_e2){}
+                  }
+                }
+              }catch(_e3){}
+            });
+          }catch(_e4){}
+          window.location.replace("login.html");
+        });
+      }
+
+    }catch(e){
+      console.error(e);
+      document.getElementById("status").textContent = "Could not load company directory." + (e && e.message ? e.message : String(e));
+    }
+  });
+})();
+</script>
+
+<style>
+/* Department color-coding */
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-weight:800;font-size:12px;line-height:1;border:1px solid rgba(0,0,0,.06)}
+.pill.dept-community-manager{ background:#dbeafe; color:#1e3a8a; }
+.pill.dept-community-admin{ background:#dcfce7; color:#14532d; }
+.pill.dept-accounting{ background:#fef9c3; color:#713f12; }
+
+/* Ensure community dropdown text is dark and readable */
+#zummeeCommunitySelect{
+  color:#0f2f4a !important;
+  font-weight:700 !important;
+}
+.zummee-modern-picker__button,
+.zummee-modern-picker__item{
+  color:#0f2f4a !important;
+}
+
+/* Force subpage dropdown to match Manager Hub */
+#zummeeCommunitySelect{
+  background:#ffffff !important;
+  color:#000000 !important;
+  font-weight:700 !important;
+}
+
+.zummee-modern-picker__button{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+.zummee-modern-picker__menu{
+  background:#ffffff !important;
+}
+
+.zummee-modern-picker__item{
+  color:#000000 !important;
+}
+
+/* Match Manager Hub community picker styling (white dropdown, black text) */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communityBtn span{
+  color:#000000 !important;
+}
+.zummee-communityMenu{
+  background:#ffffff !important;
+  border:1px solid rgba(15,47,74,0.18) !important;
+}
+.zummee-communitySearch{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communitySearch::placeholder{
+  color: rgba(0,0,0,0.55) !important;
+}
+.zummee-communityItem{
+  color:#000000 !important;
+}
+
+/* Force dropdown button background to white */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Override header generic button styling for community picker */
+.zummee-header .zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Remove bullet points from modern community dropdown */
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+  padding-left:0 !important;
+  margin-left:0 !important;
+}
+
+.zummee-communityItem::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* FORCE remove bullets everywhere inside community dropdown */
+.zummee-communityMenu,
+.zummee-communityMenu *{
+  list-style-type:none !important;
+  list-style:none !important;
+}
+
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+}
+
+.zummee-communityMenu li::marker{
+  content:"" !important;
+}
+
+.zummee-communityMenu li::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* Subpage Hub button — match Manager Hub */
+.zummee-header .zummee-hubBtn {
+  background: #ffffff !important;
+  color: #0f2f4a !important;
+  border-radius: 28px !important;
+  padding: 10px 22px !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  border: 1px solid rgba(15,47,74,0.15) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+  transition: all .2s ease;
+  text-decoration:none !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+.zummee-header .zummee-hubBtn:hover {
+  background: #f4f6f8 !important;
+}
+
+/* Fix Hub button text color + alignment under dropdown */
+.zummee-header .zummee-hubBtn {
+  color: #000000 !important;
+  display: block !important;
+  margin-left: auto !important;
+  margin-top: 10px !important;
+}
+
+.zummee-header .community-header-right {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+}
+
+/* Correct Hub button sizing and force black text */
+.zummee-header .zummee-hubBtn {
+  background:#ffffff !important;
+  color:#000000 !important;
+  border-radius:28px !important;
+  padding:8px 18px !important;
+  font-weight:700 !important;
+  font-size:15px !important;
+  border:1px solid rgba(15,47,74,0.15) !important;
+  box-shadow:0 4px 10px rgba(0,0,0,0.08) !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:auto !important;
+  min-width:auto !important;
+  margin-top:8px !important;
+  align-self:flex-end !important;
+}
+
+/* Ensure container stacks properly */
+.zummee-header .community-header-right {
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:flex-end !important;
+}
+
+/* Force Hub button text to true black */
+.zummee-header .zummee-hubBtn,
+.zummee-header .zummee-hubBtn:visited,
+.zummee-header .zummee-hubBtn span {
+  color:#000000 !important;
+}
+
+/* Align page titles (like Daily Ops) to the left */
+.page-title,
+h1.page-title,
+.ops-title,
+h1 {
+  text-align:left !important;
+  margin-left:0 !important;
+}
+
+/* Precisely align page titles with main card container */
+.main-content h1,
+.content-wrapper h1,
+.page-container h1 {
+  text-align:left !important;
+  margin-left:40px !important;  /* matches card container padding */
+  margin-right:0 !important;
+}
+
+/* Prevent centering from parent flex containers */
+.page-header,
+.title-row {
+  justify-content:flex-start !important;
+  text-align:left !important;
+}
+
+/* Precisely match left edge of main section container */
+#opsHeaderRow {
+  padding-left: 60px !important; /* match section container padding */
+  justify-content: flex-start !important;
+}
+
+#opsHeaderRow h1 {
+  margin: 0 !important;
+}
+
+/* Match subpage logo size to Manager Hub */
+.zummee-header .zummee-logo {
+  font-size: 42px !important;
+  line-height: 1 !important;
+}
+
+.zummee-header .zummee-subtitle {
+  font-size: 16px !important;
+  letter-spacing: 2px !important;
+}
+
+.zummee-header svg {
+  height: 28px !important;
+}
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+
+  <link rel="stylesheet" href="shared/header.css?v=2026-03-27-1">
+
+  <script id="zummeeStaffGuard">
+  (async () => {
+    if (window.__zummeeStaffGuardRan) return;
+    window.__zummeeStaffGuardRan = true;
+
+    async function getClient(){
+      try{ if(typeof ensureSupabase === 'function'){ const c = await ensureSupabase(); if(c && c.auth && typeof c.auth.getSession === 'function') return c; } }catch(_e){}
+      try{ if(window.supabaseClient && window.supabaseClient.auth && typeof window.supabaseClient.auth.getSession === 'function') return window.supabaseClient; }catch(_e){}
+      try{ if(window.sb && window.sb.auth && typeof window.sb.auth.getSession === 'function') return window.sb; }catch(_e){}
+      return null;
+    }
+
+    const go = (target) => {
+      try{ window.location.replace(target); }catch(_e){ window.location.href = target; }
+    };
+
+    const sb = await getClient();
+    if(!sb){ go('login.html'); return; }
+
+    const sessionRes = await sb.auth.getSession();
+    const user = sessionRes && sessionRes.data && sessionRes.data.session ? sessionRes.data.session.user : null;
+    if(!user){ go('login.html'); return; }
+
+    const ud = await sb
+      .from('userdirectory')
+      .select('role')
+      .eq('auth_user_id', user.id)
+      .single();
+
+    const role = String((ud && ud.data && ud.data.role) || '').trim();
+    if(role === 'Resident'){ go('resident_portal.html'); return; }
+
+    document.documentElement.setAttribute('data-staff-role', role || '');
+  })();
+  </script>
+  <script src="community_state_stable.js"></script>
+<style>
+/* FORCE white text in Status & Details section */
+#boardSubmittedItemsSection,
+#boardSubmittedItemsSection *:not(button),
+#boardMemberHubStatus,
+#boardMemberHubStatus *:not(button),
+#annualMeetingApprovals,
+#annualMeetingApprovals *:not(button) {
+  color: #ffffff !important;
+}
+
+/* Secondary text (slightly dimmed white) */
+#boardSubmittedItemsSection .muted,
+#boardMemberHubStatus .muted,
+#annualMeetingApprovals .muted {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style>
+/* HARD OVERRIDE — force white text in dark section */
+.hub-zone:last-of-type,
+.hub-zone:last-of-type *:not(button):not(.badge):not(.pill) {
+  color: #ffffff !important;
+}
+
+/* Slightly softer for secondary text */
+.hub-zone:last-of-type .muted,
+.hub-zone:last-of-type p,
+.hub-zone:last-of-type span {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+</head>
+<body data-header-mode="simple" class="zummee-unified-layout">
+<div id="zummeeHeaderMount"></div>
+<script src="shared/header.js?v=2026-04-08-2"></script>
+<style id="zummeeSubpageHeaderForce">
+  /* Force readable community dropdown text on all subpages */
+  #zummeeCommunitySelect, #zummeeCommunitySelect *{ color:#0f2f4a !important; }
+  #zummeeCommunitySelect option{ color:#0f2f4a !important; background:#ffffff !important; }
+
+/* Ensure community dropdown text is dark and readable */
+#zummeeCommunitySelect{
+  color:#0f2f4a !important;
+  font-weight:700 !important;
+}
+.zummee-modern-picker__button,
+.zummee-modern-picker__item{
+  color:#0f2f4a !important;
+}
+
+/* Force subpage dropdown to match Manager Hub */
+#zummeeCommunitySelect{
+  background:#ffffff !important;
+  color:#000000 !important;
+  font-weight:700 !important;
+}
+
+.zummee-modern-picker__button{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+.zummee-modern-picker__menu{
+  background:#ffffff !important;
+}
+
+.zummee-modern-picker__item{
+  color:#000000 !important;
+}
+
+/* Match Manager Hub community picker styling (white dropdown, black text) */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communityBtn span{
+  color:#000000 !important;
+}
+.zummee-communityMenu{
+  background:#ffffff !important;
+  border:1px solid rgba(15,47,74,0.18) !important;
+}
+.zummee-communitySearch{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communitySearch::placeholder{
+  color: rgba(0,0,0,0.55) !important;
+}
+.zummee-communityItem{
+  color:#000000 !important;
+}
+
+/* Force dropdown button background to white */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Override header generic button styling for community picker */
+.zummee-header .zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Remove bullet points from modern community dropdown */
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+  padding-left:0 !important;
+  margin-left:0 !important;
+}
+
+.zummee-communityItem::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* FORCE remove bullets everywhere inside community dropdown */
+.zummee-communityMenu,
+.zummee-communityMenu *{
+  list-style-type:none !important;
+  list-style:none !important;
+}
+
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+}
+
+.zummee-communityMenu li::marker{
+  content:"" !important;
+}
+
+.zummee-communityMenu li::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* Subpage Hub button — match Manager Hub */
+.zummee-header .zummee-hubBtn {
+  background: #ffffff !important;
+  color: #0f2f4a !important;
+  border-radius: 28px !important;
+  padding: 10px 22px !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  border: 1px solid rgba(15,47,74,0.15) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+  transition: all .2s ease;
+  text-decoration:none !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+.zummee-header .zummee-hubBtn:hover {
+  background: #f4f6f8 !important;
+}
+
+/* Fix Hub button text color + alignment under dropdown */
+.zummee-header .zummee-hubBtn {
+  color: #000000 !important;
+  display: block !important;
+  margin-left: auto !important;
+  margin-top: 10px !important;
+}
+
+.zummee-header .community-header-right {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+}
+
+/* Correct Hub button sizing and force black text */
+.zummee-header .zummee-hubBtn {
+  background:#ffffff !important;
+  color:#000000 !important;
+  border-radius:28px !important;
+  padding:8px 18px !important;
+  font-weight:700 !important;
+  font-size:15px !important;
+  border:1px solid rgba(15,47,74,0.15) !important;
+  box-shadow:0 4px 10px rgba(0,0,0,0.08) !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:auto !important;
+  min-width:auto !important;
+  margin-top:8px !important;
+  align-self:flex-end !important;
+}
+
+/* Ensure container stacks properly */
+.zummee-header .community-header-right {
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:flex-end !important;
+}
+
+/* Force Hub button text to true black */
+.zummee-header .zummee-hubBtn,
+.zummee-header .zummee-hubBtn:visited,
+.zummee-header .zummee-hubBtn span {
+  color:#000000 !important;
+}
+
+/* Align page titles (like Daily Ops) to the left */
+.page-title,
+h1.page-title,
+.ops-title,
+h1 {
+  text-align:left !important;
+  margin-left:0 !important;
+}
+
+/* Precisely align page titles with main card container */
+.main-content h1,
+.content-wrapper h1,
+.page-container h1 {
+  text-align:left !important;
+  margin-left:40px !important;  /* matches card container padding */
+  margin-right:0 !important;
+}
+
+/* Prevent centering from parent flex containers */
+.page-header,
+.title-row {
+  justify-content:flex-start !important;
+  text-align:left !important;
+}
+
+/* Precisely match left edge of main section container */
+#opsHeaderRow {
+  padding-left: 60px !important; /* match section container padding */
+  justify-content: flex-start !important;
+}
+
+#opsHeaderRow h1 {
+  margin: 0 !important;
+}
+
+/* Match subpage logo size to Manager Hub */
+.zummee-header .zummee-logo {
+  font-size: 42px !important;
+  line-height: 1 !important;
+}
+
+.zummee-header .zummee-subtitle {
+  font-size: 16px !important;
+  letter-spacing: 2px !important;
+}
+
+.zummee-header svg {
+  height: 28px !important;
+}
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style id="zummeeSubpageHeaderLayoutV1217">
+  /* Subpage header polish (v1217): add brand mark left, controls stacked right, crisp swatch, readable Hub */
+  header.{
+    background:#173a56 !important;
+    padding:16px 22px !important;
+    border-bottom: 1.2px solid rgba(255,255,255,0.14) !important;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.14) !important;
+  }
+  header. .{
+    width:100% !important;
+    display:flex !important;
+    align-items:flex-start !important;
+    justify-content:space-between !important;
+    gap:18px !important;
+  }
+  header. .zummee-header__brand{
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    width:54px !important;
+    height:54px !important;
+    border-radius:16px !important;
+    text-decoration:none !important;
+    flex:0 0 auto !important;
+  }
+  header. .zummee-header__brand img{
+    height:54px !important;
+    width:auto !important;
+    max-width:320px !important;
+    display:block !important;
+  }
+
+  header. .zummee-header__controls{
+    display:flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+  }
+  header. .zummee-header__communityRow{ justify-content:flex-end !important; }
+
+  /* Crisp color dot (no blob) */
+  #zummeeCommunitySwatch{
+    display:inline-block !important;
+    width:12px !important;
+    height:12px !important;
+    border-radius:999px !important;
+    border:2px solid rgba(255,255,255,0.70) !important;
+    background: rgba(255,255,255,0.15) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18) !important;
+  }
+
+  /* Hub button readability */
+  header. .zummee-header__action--hub{
+    align-self:flex-end !important;
+    background:#e9ecef !important;
+    color:#173a56 !important;
+    border:1px solid rgba(15,47,74,0.22) !important;
+    box-shadow:0 6px 18px rgba(0,0,0,0.10) !important;
+  }
+  header. .zummee-header__action--hub:hover{
+    background:#dfe3e6 !important;
+  }
+
+/* Ensure community dropdown text is dark and readable */
+#zummeeCommunitySelect{
+  color:#0f2f4a !important;
+  font-weight:700 !important;
+}
+.zummee-modern-picker__button,
+.zummee-modern-picker__item{
+  color:#0f2f4a !important;
+}
+
+/* Force subpage dropdown to match Manager Hub */
+#zummeeCommunitySelect{
+  background:#ffffff !important;
+  color:#000000 !important;
+  font-weight:700 !important;
+}
+
+.zummee-modern-picker__button{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+.zummee-modern-picker__menu{
+  background:#ffffff !important;
+}
+
+.zummee-modern-picker__item{
+  color:#000000 !important;
+}
+
+/* Match Manager Hub community picker styling (white dropdown, black text) */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communityBtn span{
+  color:#000000 !important;
+}
+.zummee-communityMenu{
+  background:#ffffff !important;
+  border:1px solid rgba(15,47,74,0.18) !important;
+}
+.zummee-communitySearch{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communitySearch::placeholder{
+  color: rgba(0,0,0,0.55) !important;
+}
+.zummee-communityItem{
+  color:#000000 !important;
+}
+
+/* Force dropdown button background to white */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Override header generic button styling for community picker */
+.zummee-header .zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Remove bullet points from modern community dropdown */
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+  padding-left:0 !important;
+  margin-left:0 !important;
+}
+
+.zummee-communityItem::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* FORCE remove bullets everywhere inside community dropdown */
+.zummee-communityMenu,
+.zummee-communityMenu *{
+  list-style-type:none !important;
+  list-style:none !important;
+}
+
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+}
+
+.zummee-communityMenu li::marker{
+  content:"" !important;
+}
+
+.zummee-communityMenu li::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* Subpage Hub button — match Manager Hub */
+.zummee-header .zummee-hubBtn {
+  background: #ffffff !important;
+  color: #0f2f4a !important;
+  border-radius: 28px !important;
+  padding: 10px 22px !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  border: 1px solid rgba(15,47,74,0.15) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+  transition: all .2s ease;
+  text-decoration:none !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+.zummee-header .zummee-hubBtn:hover {
+  background: #f4f6f8 !important;
+}
+
+/* Fix Hub button text color + alignment under dropdown */
+.zummee-header .zummee-hubBtn {
+  color: #000000 !important;
+  display: block !important;
+  margin-left: auto !important;
+  margin-top: 10px !important;
+}
+
+.zummee-header .community-header-right {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+}
+
+/* Correct Hub button sizing and force black text */
+.zummee-header .zummee-hubBtn {
+  background:#ffffff !important;
+  color:#000000 !important;
+  border-radius:28px !important;
+  padding:8px 18px !important;
+  font-weight:700 !important;
+  font-size:15px !important;
+  border:1px solid rgba(15,47,74,0.15) !important;
+  box-shadow:0 4px 10px rgba(0,0,0,0.08) !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:auto !important;
+  min-width:auto !important;
+  margin-top:8px !important;
+  align-self:flex-end !important;
+}
+
+/* Ensure container stacks properly */
+.zummee-header .community-header-right {
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:flex-end !important;
+}
+
+/* Force Hub button text to true black */
+.zummee-header .zummee-hubBtn,
+.zummee-header .zummee-hubBtn:visited,
+.zummee-header .zummee-hubBtn span {
+  color:#000000 !important;
+}
+
+/* Align page titles (like Daily Ops) to the left */
+.page-title,
+h1.page-title,
+.ops-title,
+h1 {
+  text-align:left !important;
+  margin-left:0 !important;
+}
+
+/* Precisely align page titles with main card container */
+.main-content h1,
+.content-wrapper h1,
+.page-container h1 {
+  text-align:left !important;
+  margin-left:40px !important;  /* matches card container padding */
+  margin-right:0 !important;
+}
+
+/* Prevent centering from parent flex containers */
+.page-header,
+.title-row {
+  justify-content:flex-start !important;
+  text-align:left !important;
+}
+
+/* Precisely match left edge of main section container */
+#opsHeaderRow {
+  padding-left: 60px !important; /* match section container padding */
+  justify-content: flex-start !important;
+}
+
+#opsHeaderRow h1 {
+  margin: 0 !important;
+}
+
+/* Match subpage logo size to Manager Hub */
+.zummee-header .zummee-logo {
+  font-size: 42px !important;
+  line-height: 1 !important;
+}
+
+.zummee-header .zummee-subtitle {
+  font-size: 16px !important;
+  letter-spacing: 2px !important;
+}
+
+.zummee-header svg {
+  height: 28px !important;
+}
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+
+<script>
+  // --- Cloud Communities (company-wide) ---
+  (function(){
+    const SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864";
+
+    async function ensureSupabase() {
+      if(window.sb) return window.sb;
+      if(!window.supabase) throw new Error("Supabase library not loaded");
+      window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        auth: { storageKey:'sb-zummee-auth', storage: window.localStorage, persistSession:true, autoRefreshToken:true, detectSessionInUrl:true  }
+      });
+      return window.sb;
+    }
+
+    async function getSessionSafe(sb, ms){
+      ms = ms || 5000;
+      return await Promise.race([
+        sb.auth.getSession(),
+        new Promise((resolve) => {
+          let done = false;
+          const sub = sb.auth.onAuthStateChange((event, session) => {
+            if(done) return;
+            if(event === 'INITIAL_SESSION' || session){
+              done = true;
+              try{ sub.data.subscription.unsubscribe(); }catch(_e){}
+              resolve({ data: { session } });
+            }
+          });
+          setTimeout(() => {
+            if(done) return;
+            done = true;
+            try{ sub.data.subscription.unsubscribe(); }catch(_e){}
+            resolve({ data: { session: null }, error: new Error('session timeout') });
+          }, ms);
+        })
+      ]);
+    }
+
+    function safeLocalSet(k,v){ try{ localStorage.setItem(k,v); }catch(_e){} }
+    function safeLocalGet(k){ try{ return localStorage.getItem(k)||""; }catch(_e){ return ""; } }
+
+    async function requireUid() {
+      const sb = await ensureSupabase();
+      const s = await getSessionSafe(sb, 5000);
+      const uid = s.data?.session?.user?.id;
+      if(!uid) throw new Error("Not signed in");
+      return uid;
+    }
+
+    async function getProfile() {
+      const sb = await ensureSupabase();
+      const uid = await requireUid();
+
+      // selected community is stored on profiles (user preference)
+      let profRow = null;
+      let selected = "";
+      try{
+        const qp = await sb.from("profiles").select("selected_community_id,company,company_id,role").eq("id", uid).maybeSingle();
+        if(!qp.error && qp.data){
+          profRow = qp.data;
+          selected = String(qp.data.selected_community_id||"").trim();
+        }
+      }catch(_e){}
+
+      // role + company_id are authoritative on userdirectory in this build
+      let ud = null;
+      try{
+        const qu = await sb.from("userdirectory").select("company_id,role,approved,profile_name,profile_email").eq("auth_user_id", uid).maybeSingle();
+        if(!qu.error) ud = qu.data;
+      }catch(_e){}
+
+      const company_id = String(ud?.company_id || profRow?.company_id || "").trim();
+      let company = String(profRow?.company || "").trim();
+      const role = String(ud?.role || profRow?.role || "").trim();
+
+      if(!company && company_id){
+        try{
+          const qc = await sb.from("Companies").select("name,code").eq("id", company_id).maybeSingle();
+          if(!qc.error && qc.data){
+            company = String(qc.data.name || qc.data.code || "").trim();
+          }
+        }catch(_e){}
+      }
+
+      return { uid, company, company_id, role, selected };
+    }
+
+    function els() {
+      return {
+        select: document.getElementById("zummeeCommunitySelect"),
+        swatch: document.getElementById("zummeeCommunitySwatch"),
+        btnAdd: document.getElementById("zummeeCommunityAdd"),
+        btnRename: document.getElementById("zummeeCommunityRename"),
+        btnRemove: document.getElementById("zummeeCommunityRemove"),
+      };
+    }
+
+    function setSwatch(company){
+      const e = els().swatch;
+      if(!e) return;
+      let h=0; for(let i=0;i<company.length;i++) h=(h*31 + company.charCodeAt(i))>>>0;
+      const hue = h % 360;
+      e.style.background = `hsl(${hue} 70% 45%)`;
+      e.title = company || "No company";
+    }
+
+    function rebindButton(btn, handler){
+      if(!btn || !btn.parentNode) return btn;
+      const clone = btn.cloneNode(true);
+      btn.parentNode.replaceChild(clone, btn);
+      clone.onclick = handler;
+      return clone;
+    }
+
+    function hardBind(btn, handler){
+      if(!btn) return btn;
+      // remove inline onclick if any
+      try{ btn.onclick = null; btn.removeAttribute("onclick"); }catch(_e){}
+      // Remove any previously attached listeners by replacing node (inline attrs will be re-applied below if present in HTML, so also remove onclick)
+      const clone = btn.cloneNode(true);
+      try{ clone.onclick = null; clone.removeAttribute("onclick"); }catch(_e){}
+      btn.parentNode && btn.parentNode.replaceChild(clone, btn);
+      // Capture-phase handler to prevent any other handlers from firing (old + new)
+      clone.addEventListener("click", function(ev){
+        try{ ev.preventDefault(); }catch(_e){}
+        try{ ev.stopImmediatePropagation(); }catch(_e){}
+        return handler();
+      }, true);
+      return clone;
+    }
+
+    function bindSelect(select) {
+      if(!select) return;
+      select.onchange = async ()=>{
+        const val = String(select.value||"").trim();
+        // Write to all known selected-community keys (incl. user-scoped) so all pages stay in sync.
+        safeLocalSet("zummee_selected_community_id", val);
+        safeLocalSet("zummee_selected_community_v1", val);
+        try{ safeLocalSet((window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.SELECTED_COMMUNITY_KEY) || SELECTED_COMMUNITY_KEY || "zummee_selected_community_v1", val); }catch(_e){}
+        try{
+          const sb = await ensureSupabase();
+          const uid = await requireUid();
+          await sb.from("profiles").update({ selected_community_id: val || null }).eq("id", uid);
+        }catch(_e){}
+        document.dispatchEvent(new CustomEvent("community:changed", { detail: { community_id: val } }));
+      };
+    }
+
+    function getLocalCommunitiesKey(profile){
+      // Uses user-scoped key if available (set by ZUMMEE_applyUserScope).
+      const k = (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.COMMUNITIES_KEY) || window.COMMUNITIES_KEY || "zummee_communities_v1";
+      return k;
+    }
+
+    function readLocalCommunities(profile){
+      try{
+        const raw = localStorage.getItem(getLocalCommunitiesKey(profile)) || "[]";
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr : [];
+      }catch(_e){
+        return [];
+      }
+    }
+
+    function writeLocalCommunities(profile, list){
+      try{ localStorage.setItem(getLocalCommunitiesKey(profile), JSON.stringify(list||[])); }catch(_e){}
+    }
+
+    // Company lookup helper (Daily Ops)
+    // Some shared builds expose window.getCompanyRow; ensure it exists here so
+    // community assignment filtering can resolve company_id when needed.
+    async function getCompanyRow(companyNameOrId){
+      try{
+        const sb = await ensureSupabase();
+        const v = String(companyNameOrId||"").trim();
+        if(!v) return null;
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
+        if(isUuid){
+          const q = await sb.from('Companies').select('id,name,code,active').eq('id', v).maybeSingle();
+          return q && !q.error ? (q.data||null) : null;
+        }
+        // Prefer exact-ish name match, then code match.
+        let q = await sb.from('Companies').select('id,name,code,active').ilike('name', v).limit(1);
+        if(q && !q.error && Array.isArray(q.data) && q.data.length) return q.data[0];
+        q = await sb.from('Companies').select('id,name,code,active').ilike('code', v).limit(1);
+        if(q && !q.error && Array.isArray(q.data) && q.data.length) return q.data[0];
+      }catch(_e){}
+      return null;
+    }
+    try{ window.getCompanyRow = window.getCompanyRow || getCompanyRow; }catch(_e){}
+
+    async function listCommunities(profile) {
+      // Cloud-first: Daily Ops dropdown.
+      // Admin/Supervisor: all company communities.
+      // Employee: ONLY assigned communities.
+      profile = profile || {};
+      const company = String(profile.company||"").trim();
+      if(!company) return [];
+
+      const role = String(profile.role||"").trim().toLowerCase();
+      const dept = String(profile.department||profile.dept||"").trim().toLowerCase();
+      const isPriv = role.includes("admin") || role.includes("supervisor") || role.includes("companyadmin") ||
+                     dept.includes("admin") || dept.includes("supervisor") || dept.includes("companyadmin");
+
+      try{
+        if(window.sb){
+          try{ if(typeof mergeLocalCommunitiesToCloudSilent==='function') await mergeLocalCommunitiesToCloudSilent({company}); }catch(_e){}
+
+          // Employee: fetch assigned ids first
+          let assignedIds = [];
+          if(!isPriv){
+            const uid = String(profile.uid || profile.id || profile.user_id || "").trim();
+            if(!uid) return [];
+            try{
+              // Resolve company_id and community ids, then fetch assignments for this user within that company
+              let companyId = String(profile.company_id||"").trim();
+              if(!companyId){
+                const crow = await (window.getCompanyRow ? window.getCompanyRow(company) : getCompanyRow(company));
+                companyId = crow && crow.id ? String(crow.id).trim() : "";
+              }
+              let ids = [];
+              if(companyId){
+                const qc = await window.sb.from('PropertyCommunities').select('id').eq('company_id', companyId);
+                if(!qc.error && Array.isArray(qc.data)) ids = qc.data.map(r=>r.id).filter(Boolean);
+              }
+              let qa = { data: [] };
+              if(ids.length){
+                qa = await window.sb
+                  .from('CommunityAssignments')
+                  .select('community_id')
+                  .eq('user_id', uid)
+                  .in('community_id', ids);
+              }
+              if(qa.error) throw qa.error;
+              assignedIds = (qa.data||[]).map(r=>String(r.community_id||"").trim()).filter(Boolean);
+            }catch(e){
+              console.warn("Daily Ops: CommunityAssignments read failed:", e);
+              assignedIds = [];
+            }
+            if(!assignedIds.length) return [];
+          }
+
+          let qb = window.sb
+            .from('PropertyCommunities')
+            .select('id,name,created_at');
+
+          if(!isPriv){
+            qb = qb.in('id', assignedIds);
+          }
+
+          // Always filter by company_id (source of truth). If missing, resolve from company name.
+          let cid = String(profile.company_id||"").trim();
+          if(!cid){
+            const crow = await (window.getCompanyRow ? window.getCompanyRow(company) : getCompanyRow(company));
+            cid = crow && crow.id ? String(crow.id).trim() : "";
+          }
+          if(cid) qb = qb.eq('company_id', cid);
+
+          const q = await qb.order('name', { ascending: true });
+          if(!q.error){
+            const cloudList = (q.data||[])
+              .filter(c=>c && c.id && c.name)
+              .map(c=>({ id:String(c.id), name:String(c.name) }));
+            // Update local cache so other pages stay consistent offline.
+            writeLocalCommunities(profile, cloudList);
+            return cloudList;
+          }else{
+            console.warn("Daily Ops: PropertyCommunities read failed:", q.error);
+          }
+        }
+      }catch(_e){ /* fall back */ }
+
+      // Offline fallback: user-scoped local list
+      const list = readLocalCommunities(profile);
+      return list
+        .filter(c=>c && c.id && c.name)
+        .map(c=>({ id:String(c.id), name:String(c.name) }))
+        .sort((a,b)=>a.name.localeCompare(b.name));
+    }
+
+    function renderSelect(select, list, selectedId) {
+      if(!select) return;
+      const desired = String(selectedId||"").trim() || safeLocalGet("zummee_selected_community_id");
+      // Overwrite local cache with cloud list so all pages stay consistent
+    select.innerHTML = "";
+      const o0 = document.createElement("option");
+      o0.value = "";
+      o0.textContent = list.length ? "Select a community" : "No communities yet";
+      select.appendChild(o0);
+
+      list.forEach(c=>{
+        const o=document.createElement("option");
+        o.value = String(c.id);
+        o.textContent = c.name;
+        select.appendChild(o);
+      });
+
+      // Support legacy selections where selected_community_id stored the COMMUNITY NAME.
+      // If desired isn't an id in the list, try matching by name and migrate to id.
+      let resolvedId = "";
+      if(desired && list.some(c=>String(c.id)===String(desired))) {
+        resolvedId = String(desired);
+      } else if(desired) {
+        const byName = list.find(c => String(c.name||"").trim().toLowerCase() === String(desired).trim().toLowerCase());
+        if(byName) resolvedId = String(byName.id);
+      }
+
+      if(resolvedId) {
+        select.value = String(resolvedId);
+        // IMPORTANT: keep localStorage in sync with the visible selection.
+        // Some pages (like Daily Ops) scope data by localStorage selected-community id.
+        // If we only set the <select> value from the Profile, the UI looks correct
+        // but other modules think no community is selected.
+        safeLocalSet("zummee_selected_community_id", String(resolvedId));
+        safeLocalSet("zummee_selected_community_v1", String(resolvedId));
+        try{ safeLocalSet((window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.SELECTED_COMMUNITY_KEY) || SELECTED_COMMUNITY_KEY || "zummee_selected_community_v1", String(resolvedId)); }catch(_e){}
+        // Nudge dependent modules to re-evaluate gated content.
+        try{ document.dispatchEvent(new CustomEvent("community:changed", { detail: { community_id: String(resolvedId) } })); }catch(_e){}
+
+        // If we matched by name, migrate the profile-selected value to the UUID id.
+        if(String(resolvedId) !== String(desired)){
+          (async () => {
+            try{
+              const uid = await requireUid();
+              await window.sb.from("profiles").update({ selected_community_id: resolvedId }).eq("id", uid);
+            }catch(_e){ /* non-fatal */ }
+          })();
+        }
+      } else {
+        select.value = "";
+        safeLocalSet("zummee_selected_community_id","");
+      }
+      select.disabled = false;
+      bindSelect(select);
+    }
+
+    async function refreshUI() {
+      const {select} = els();
+      if(!select) return;
+      try{
+        const profile = await getProfile();
+        setSwatch(profile.company);
+        if(!profile.company){
+          renderSelect(select, [], "");
+          // Daily Ops content is gated by community selection.
+          // If the dropdown is populated programmatically, the browser won't fire a "change" event.
+          // Force a visibility recalculation so the boxes show/hide correctly.
+          try{ if(typeof applyCommunityVisibility === "function") applyCommunityVisibility(); }catch(_e){}
+          return;
+        }
+        const list = await listCommunities(profile);
+        renderSelect(select, list, profile.selected);
+        // Same as above: ensure the gated content reflects the dropdown value.
+        try{ if(typeof applyCommunityVisibility === "function") applyCommunityVisibility(); }catch(_e){}
+      }catch(e){
+        console.error(e);
+        renderSelect(select, [], "");
+        try{ if(typeof applyCommunityVisibility === "function") applyCommunityVisibility(); }catch(_e){}
+      }
+    }
+
+    async function addCommunity(){
+      const profile = await getProfile();
+      if(!profile.company) return alert("Set your Management Company in Profile first.");
+      const name = prompt("Community name:");
+      if(!name) return;
+      const clean = name.trim();
+      if(!clean) return;
+
+      const list = readLocalCommunities(profile);
+      const exists = list.some(c=>String(c.name||"").trim().toLowerCase() === clean.toLowerCase());
+      if(exists) return alert("That community already exists in your list.");
+
+      const id = String(Date.now()) + "_" + Math.random().toString(16).slice(2);
+      list.push({ id, name: clean });
+      writeLocalCommunities(profile, list);
+
+      document.dispatchEvent(new CustomEvent("communities:changed"));
+      await refreshUI();
+      const {select} = els();
+      if(select){ select.value = String(id); select.dispatchEvent(new Event("change")); }
+    }
+
+    async function renameCommunity(){
+      const e = els();
+      const profile = await getProfile();
+      const id = String(e.select?.value||"").trim();
+      if(!id) return alert("Select a community first.");
+      const cur = e.select.options[e.select.selectedIndex]?.textContent || "";
+      const name = prompt("New community name:", cur);
+      if(!name) return;
+      const clean = name.trim();
+      if(!clean) return;
+
+      const list = readLocalCommunities(profile);
+      const idx = list.findIndex(c=>String(c.id)===String(id));
+      if(idx === -1) return;
+      list[idx].name = clean;
+      writeLocalCommunities(profile, list);
+
+      document.dispatchEvent(new CustomEvent("communities:changed"));
+      await refreshUI();
+      if(e.select) e.select.value = id;
+    }
+
+    async function removeCommunity(){
+      const e = els();
+      const profile = await getProfile();
+      const id = String(e.select?.value||"").trim();
+      if(!id) return alert("Select a community first.");
+      if(!confirm("Remove this community from your list?")) return;
+
+      const list = readLocalCommunities(profile).filter(c=>String(c.id)!==String(id));
+      writeLocalCommunities(profile, list);
+
+      // Clear selected if it was removed
+      try{
+        const sb = await ensureSupabase();
+        await sb.from("profiles").update({ selected_community_id: null }).eq("id", profile.uid);
+      }catch(_e){}
+      safeLocalSet("zummee_selected_community_id","");
+
+      document.dispatchEvent(new CustomEvent("communities:changed"));
+      await refreshUI();
+      document.dispatchEvent(new CustomEvent("community:changed", { detail: { community_id: "" } }));
+    }
+
+    document.addEventListener("DOMContentLoaded", ()=>{
+      const e = els();
+      bindSelect(e.select);
+      if(e.btnAdd) e.btnAdd = rebindButton(e.btnAdd, addCommunity);
+      if(e.btnRename) e.btnRename = rebindButton(e.btnRename, renameCommunity);
+      if(e.btnRemove) e.btnRemove = rebindButton(e.btnRemove, removeCommunity);
+      refreshUI();
+      // Mark v2 community management as active so legacy wiring blocks don't double-bind.
+      try{ window.__zummeeCommunityMgmtV2Bound = true; }catch(_e){}
+    });
+
+    document.addEventListener("communities:changed", ()=>refreshUI());
+  })();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // Supabase init (shared)
+  var SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
+  var SUPABASE_KEY = "sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864";
+  window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { storageKey:'sb-zummee-auth', storage: window.localStorage, persistSession:true, autoRefreshToken:true, detectSessionInUrl:true  }
+  });
+
+  // --- Cloud Communities (Hub) ---
+  async function requireUid(){
+    const u = await window.sb.auth.getUser();
+    const uid = u.data?.user?.id;
+    if(!uid) throw new Error("Not signed in");
+    return uid;
+  }
+
+  async function getMyCompany(){
+    const uid = await requireUid();
+
+    // Fast-path: use cached userdirectory/company context if present
+    try{
+      const cachedRaw = localStorage.getItem("zummee_cache_userdirectory_ctx") || "";
+      if(cachedRaw){
+        const cached = JSON.parse(cachedRaw);
+        // 10 minute TTL
+        if(cached && cached.uid===uid && cached.ts && (Date.now()-cached.ts) < 10*60*1000){
+          return {
+            uid,
+            company_id: cached.company_id || null,
+            company_name: (cached.company_name||"").trim(),
+            selected: String(localStorage.getItem("activeCommunityId") || localStorage.getItem("currentCommunityId") || cached.selected || "").trim(),
+            role: String(cached.role||"").trim(),
+            approved: !!cached.approved
+          };
+        }
+      }
+    }catch(_e){}
+
+    // Source of truth: userdirectory (company_id + role)
+    const ud = await window.sb.from("userdirectory")
+      .select("company_id, company_name, role, approved, auth_user_id")
+      .eq("auth_user_id", uid)
+      .maybeSingle();
+    if(ud.error) throw ud.error;
+
+    const company_id = (ud.data?.company_id || null);
+    const company_name = (ud.data?.company_name || "").trim();
+    const role = String(ud.data?.role || "").trim();
+    const approved = !!ud.data?.approved;
+
+    // Selected community: use client-side storage first (fast). Only read profiles if missing.
+    let selected = String(localStorage.getItem("activeCommunityId") || localStorage.getItem("currentCommunityId") || "").trim();
+    if(!selected){
+      try{
+        const p = await window.sb.from("profiles").select("selected_community_id").eq("id", uid).maybeSingle();
+        if(!p.error) selected = String(p.data?.selected_community_id || "").trim();
+      }catch(_e){}
+    }
+
+    // Cache context for faster subsequent loads
+    try{
+      localStorage.setItem("zummee_cache_userdirectory_ctx", JSON.stringify({
+        ts: Date.now(),
+        uid,
+        company_id,
+        company_name,
+        role,
+        approved,
+        selected
+      }));
+    }catch(_e){}
+
+    return { uid, company_id, company_name, selected, role, approved };
+  }
+
+  function readLocalCommunitiesFallback(){
+    const k = (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.COMMUNITIES_KEY) || window.COMMUNITIES_KEY || "zummee_communities_v1";
+    try{
+      const raw = localStorage.getItem(k) || "[]";
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [];
+    }catch(_e){
+      return [];
+    }
+
+  }
+
+  function writeLocalCommunitiesFallback(list){
+    const k = (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.COMMUNITIES_KEY) || window.COMMUNITIES_KEY || "zummee_communities_v1";
+    try{ localStorage.setItem(k, JSON.stringify(list||[])); }catch(_e){}
+  }
+
+  // Merge any locally stored communities into PropertyCommunities (silent, no UI recursion)
+  async function mergeLocalCommunitiesToCloudSilent(ctx){
+    try{
+      if(!(window.sb && window.sb.from)) return { inserted: 0 };
+      if(typeof navigator!=="undefined" && !navigator.onLine) return { inserted: 0 };
+      if(!String(ctx?.company_id || "").trim()) return { inserted: 0 };
+
+      const local = readLocalCommunitiesFallback()
+        .map(x => ({ name: (typeof x==='string' ? x : String(x?.name||'')) .trim() }))
+        .filter(x => x.name)
+        .filter((x,i,arr)=> arr.findIndex(y=>y.name.toLowerCase()===x.name.toLowerCase())===i);
+
+      if(!local.length) return { inserted: 0 };
+
+      const cloudQ = await window.sb.from("PropertyCommunities").select("id,name").ilike("company", (ctx.company_name||""));
+      if(cloudQ.error) return { inserted: 0 };
+      const cloudNames = new Set((cloudQ.data||[]).map(c => String(c.name||"").trim().toLowerCase()).filter(Boolean));
+
+      const toInsert = local
+        .filter(c => !cloudNames.has(c.name.toLowerCase()))
+        .map(c => ({ company_id: String(ctx.company_id || "").trim(), company: String(ctx.company_name||"").trim(), name: c.name }))
+        .filter(c => c.company_id);
+
+      if(!toInsert.length) return { inserted: 0 };
+
+      const ins = await window.sb.from("PropertyCommunities").insert(toInsert).select("id");
+      if(ins.error) return { inserted: 0 };
+      return { inserted: (ins.data||[]).length };
+    }catch(_e){
+      return { inserted: 0 };
+    }
+  }
+
+  async function syncLocalCommunitiesToCloud(){
+    const ctx = await getMyCompany();
+    if(!String(ctx.company_id || "").trim()) return { inserted: 0 };
+    if(!ctx.company_name) throw new Error("Set your Management Company in Profile first.");
+
+    const local = readLocalCommunitiesFallback()
+      .map(x => ({ name: (typeof x==='string' ? x : String(x?.name||'')) .trim() }))
+      .filter(x => x.name)
+      .filter((x,i,arr)=> arr.findIndex(y=>y.name.toLowerCase()===x.name.toLowerCase())===i);
+
+    // company is stored as TEXT; use case-insensitive match to avoid mismatches across pages
+    const cloudQ = await window.sb.from("PropertyCommunities").select("id,name").ilike("company", (ctx.company_name||""));
+    if(cloudQ.error) throw cloudQ.error;
+    const cloudNames = new Set((cloudQ.data||[]).map(c => String(c.name||"").trim().toLowerCase()).filter(Boolean));
+
+    const toInsert = local
+      .filter(c => !cloudNames.has(c.name.toLowerCase()))
+      .map(c => ({ company_id: String(ctx.company_id || "").trim(), company: String(ctx.company_name||"").trim(), name: c.name }))
+        .filter(c => c.company_id);
+
+    let inserted = 0;
+    if(toInsert.length){
+      const ins = await window.sb.from("PropertyCommunities").insert(toInsert).select("id");
+      if(ins.error) throw ins.error;
+      inserted = (ins.data||[]).length;
+    }
+
+    await renderCommunities();
+    return { inserted };
+  }
+
+  async function loadCommunities(){
+    const ctx = await getMyCompany();
+    const companyId = String(ctx.company_id || "").trim();
+    const uid = String(ctx.uid || "").trim();
+    const role = String(ctx.role || "").toLowerCase();
+    const isPriv = role.includes("admin") || role.includes("supervisor");
+
+    if(!companyId) return [];
+
+    // Fast-path cache (5 minute TTL). This avoids repeated profile/company/community calls.
+    const cacheKey = "zummee_cache_pc_list::" + companyId + (isPriv ? "::priv" : "::emp::" + uid);
+    try{
+      const raw = localStorage.getItem(cacheKey) || "";
+      if(raw){
+        const cached = JSON.parse(raw);
+        if(cached && cached.ts && (Date.now()-cached.ts) 
+
+<script>(()=>{ if(window.ZummeeAuth) window.ZummeeAuth.requireAuth(); })();</script>
+
+<style>
+  /* Daily Ops layout aligned to Supervisor orientation */
+  body{ background:#f5f7fb; }
+  .wrap{max-width:1200px;margin:0 auto;padding:20px 14px 60px}
+  .pageBox{
+    border:2px solid rgba(15,47,74,0.35);
+    border-radius:22px;
+    padding:18px;
+    background:rgba(255,255,255,0.92);
+    box-shadow:0 10px 28px rgba(15,47,74,0.08);
+    margin-top:14px;
+  }
+  @media(max-width:640px){
+    .pageBox{padding:14px;border-radius:18px;}
+  }
+
+  /* --- Supervisor-style header (Daily Ops) --- */
+  #opsHeaderRow{padding:6px 2px 8px 2px; margin-bottom:10px;}
+  #opsHeaderRow h1{font-size:42px; font-weight:900; letter-spacing:-0.02em; color:#0f2f4a;}
+  @media(max-width:640px){ #opsHeaderRow h1{font-size:32px;} }
+
+  /* Hide community dropdown on Company Directory */
+  #hdrCommunityPicker, #hdrCommunityWrap, #hdrCommunity, #headerCommunityPicker, #communityPickerWrap, #hdrCommunityDot { display:none !important; }
+
+/* Ensure community dropdown text is dark and readable */
+#zummeeCommunitySelect{
+  color:#0f2f4a !important;
+  font-weight:700 !important;
+}
+.zummee-modern-picker__button,
+.zummee-modern-picker__item{
+  color:#0f2f4a !important;
+}
+
+/* Force subpage dropdown to match Manager Hub */
+#zummeeCommunitySelect{
+  background:#ffffff !important;
+  color:#000000 !important;
+  font-weight:700 !important;
+}
+
+.zummee-modern-picker__button{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+.zummee-modern-picker__menu{
+  background:#ffffff !important;
+}
+
+.zummee-modern-picker__item{
+  color:#000000 !important;
+}
+
+/* Match Manager Hub community picker styling (white dropdown, black text) */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communityBtn span{
+  color:#000000 !important;
+}
+.zummee-communityMenu{
+  background:#ffffff !important;
+  border:1px solid rgba(15,47,74,0.18) !important;
+}
+.zummee-communitySearch{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communitySearch::placeholder{
+  color: rgba(0,0,0,0.55) !important;
+}
+.zummee-communityItem{
+  color:#000000 !important;
+}
+
+/* Force dropdown button background to white */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Override header generic button styling for community picker */
+.zummee-header .zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Remove bullet points from modern community dropdown */
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+  padding-left:0 !important;
+  margin-left:0 !important;
+}
+
+.zummee-communityItem::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* FORCE remove bullets everywhere inside community dropdown */
+.zummee-communityMenu,
+.zummee-communityMenu *{
+  list-style-type:none !important;
+  list-style:none !important;
+}
+
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+}
+
+.zummee-communityMenu li::marker{
+  content:"" !important;
+}
+
+.zummee-communityMenu li::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* Subpage Hub button — match Manager Hub */
+.zummee-header .zummee-hubBtn {
+  background: #ffffff !important;
+  color: #0f2f4a !important;
+  border-radius: 28px !important;
+  padding: 10px 22px !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  border: 1px solid rgba(15,47,74,0.15) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+  transition: all .2s ease;
+  text-decoration:none !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+.zummee-header .zummee-hubBtn:hover {
+  background: #f4f6f8 !important;
+}
+
+/* Fix Hub button text color + alignment under dropdown */
+.zummee-header .zummee-hubBtn {
+  color: #000000 !important;
+  display: block !important;
+  margin-left: auto !important;
+  margin-top: 10px !important;
+}
+
+.zummee-header .community-header-right {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+}
+
+/* Correct Hub button sizing and force black text */
+.zummee-header .zummee-hubBtn {
+  background:#ffffff !important;
+  color:#000000 !important;
+  border-radius:28px !important;
+  padding:8px 18px !important;
+  font-weight:700 !important;
+  font-size:15px !important;
+  border:1px solid rgba(15,47,74,0.15) !important;
+  box-shadow:0 4px 10px rgba(0,0,0,0.08) !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:auto !important;
+  min-width:auto !important;
+  margin-top:8px !important;
+  align-self:flex-end !important;
+}
+
+/* Ensure container stacks properly */
+.zummee-header .community-header-right {
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:flex-end !important;
+}
+
+/* Force Hub button text to true black */
+.zummee-header .zummee-hubBtn,
+.zummee-header .zummee-hubBtn:visited,
+.zummee-header .zummee-hubBtn span {
+  color:#000000 !important;
+}
+
+/* Align page titles (like Daily Ops) to the left */
+.page-title,
+h1.page-title,
+.ops-title,
+h1 {
+  text-align:left !important;
+  margin-left:0 !important;
+}
+
+/* Precisely align page titles with main card container */
+.main-content h1,
+.content-wrapper h1,
+.page-container h1 {
+  text-align:left !important;
+  margin-left:40px !important;  /* matches card container padding */
+  margin-right:0 !important;
+}
+
+/* Prevent centering from parent flex containers */
+.page-header,
+.title-row {
+  justify-content:flex-start !important;
+  text-align:left !important;
+}
+
+/* Precisely match left edge of main section container */
+#opsHeaderRow {
+  padding-left: 60px !important; /* match section container padding */
+  justify-content: flex-start !important;
+}
+
+#opsHeaderRow h1 {
+  margin: 0 !important;
+}
+
+/* Match subpage logo size to Manager Hub */
+.zummee-header .zummee-logo {
+  font-size: 42px !important;
+  line-height: 1 !important;
+}
+
+.zummee-header .zummee-subtitle {
+  font-size: 16px !important;
+  letter-spacing: 2px !important;
+}
+
+.zummee-header svg {
+  height: 28px !important;
+}
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+
+<div class="wrap zummee-unified-layout">
+  <div id="profileNotice" class="card" style="display:none;border-left:6px solid rgba(37,99,235,.6);background:rgba(37,99,235,.06)">
+    <div style="font-weight:950;margin-bottom:6px">Profile setup required</div>
+    <div id="profileNoticeText" class="sub" style="margin:0">Please complete your profile.</div>
+  </div>
+  <h1>Company Directory</h1>
+  <div class="sub">Shows all employees in <b id="myCompany">—</b>. Your info is pulled from your Profile.</div>
+
+  <div class="card zummee-section-card company-directory-top-card">
+    <div class="zummee-section-header company-directory-header">
+      <div class="company-directory-user zummee-user-meta">
+        <div class="zummee-user-meta__title">You</div>
+        <div class="muted zummee-user-meta__sub" style="font-size:13px;margin-top:4px">
+          <span id="myName">—</span> <span id="myEmail">—</span>
+        </div>
+      </div>
+      <div class="zummee-section-tools company-directory-controls">
+        <input id="q" type="text" placeholder="Search employees…" style="min-width:260px;flex:1"/>
+        <button class="btn" id="refreshBtn" type="button">Refresh</button>
+        <a class="btn primary" id="goProfile" href="profile.html" style="display:none">Open Profile</a>
+      </div>
+    </div>
+    <div id="status" class="muted company-directory-status" style="margin-top:10px;"></div>
+  </div>
+
+  <div class="card zummee-section-card" style="overflow:auto">
+    <div class="zummee-section-header company-directory-list-header">
+      <div style="font-weight:950">Employees</div>
+      <span class="pill" id="countPill">0 employees</span>
+    </div>
+
+    <table style="margin-top:12px">
+      <thead>
+        <tr>
+          <th style="width:36%">Name</th>
+          <th style="width:24%">Phone</th>
+          <th style="width:40%">Email</th>
+        </tr>
+      </thead>
+      <tbody id="dirTbody">
+        <tr><td colspan="3" class="muted">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  // Ensure modern (searchable) community picker is initialized on every page
+  document.addEventListener("DOMContentLoaded", function(){
+    try{
+      var sel = document.getElementById("zummeeCommunitySelect");
+      if(sel && typeof initModernCommunityPicker === "function"){
+        initModernCommunityPicker(sel);
+      }
+    }catch(e){}
+  });
+</script>
+
+<script id="zummeeCommunityController_v1">
+/* Unified Community Controller — single source of truth for all pages (v2092) */
+(function(){
+  const KEY="activeCommunityId";
+
+  function getSelect(){
+    return document.getElementById("zummeeCommunitySelect");
+  }
+
+  function isPlaceholder(opt){
+    const v = (opt?.value || "").trim();
+    const t = (opt?.textContent || "").trim().toLowerCase();
+    if(!v) return true;
+    return (t === "select" || t === "select..." || t === "— select —" || t === "-- select --");
+  }
+
+  function firstRealValue(sel){
+    const opts = Array.from(sel?.options || []);
+    for(const o of opts){
+      if(!isPlaceholder(o)) return o.value;
+    }
+    return "";
+  }
+
+  function syncLabel(){
+    const sel=getSelect();
+    if(!sel) return;
+    const txt=sel.selectedOptions?.[0]?.textContent?.trim();
+    if(!txt) return;
+    [
+      document.getElementById("mzCommunityPickerLabel"),
+      document.getElementById("zummeeCommunityLabel"),
+      document.querySelector(".communityPickerLabel"),
+      document.querySelector("[data-community-label]"),
+      // Hub header uses this label class
+      document.querySelector(".zummee-header__communityLabelValue")
+    ].filter(Boolean).forEach(el=>{ try{ el.textContent=txt; }catch(_e){} });
+  }
+
+  function applySaved(){
+    const sel=getSelect();
+    if(!sel) return;
+
+    const saved=(localStorage.getItem(KEY)||"").trim();
+
+    // If saved exists and option exists, apply it.
+    if(saved){
+      const opt=sel.querySelector('option[value="'+CSS.escape(saved)+'"]');
+      if(opt){
+        sel.value=saved;
+      }
+    }
+
+    // If still placeholder/empty, choose first real option.
+    const currentOpt = sel.selectedOptions?.[0];
+    if(!sel.value || isPlaceholder(currentOpt)){
+      const first = firstRealValue(sel);
+      if(first){
+        sel.value = first;
+      }
+    }
+
+    if(sel.value){
+      localStorage.setItem(KEY, sel.value);
+    }
+
+    syncLabel();
+  }
+
+  function wire(){
+    const sel=getSelect();
+    if(!sel) return;
+
+    if(!sel.__zummeeBound){
+      sel.__zummeeBound=true;
+      sel.addEventListener("change", ()=>{
+        const opt = sel.selectedOptions?.[0];
+        if(sel.value && !isPlaceholder(opt)){
+          localStorage.setItem(KEY, sel.value);
+        }
+        syncLabel();
+      });
+    }
+
+    applySaved();
+  }
+
+  function start(){
+    wire();
+
+    // Observe for header rebuild / option repopulation (Hub does this)
+    const obs = new MutationObserver(()=>{ if(getSelect()) wire(); });
+    obs.observe(document.body,{childList:true,subtree:true});
+
+    // Retry window during load
+    let tries=0;
+    const t=setInterval(()=>{
+      wire();
+      tries++;
+      if(tries>120) clearInterval(t);
+    },100);
+  }
+
+  document.addEventListener("DOMContentLoaded", start);
+  start();
+})();
+</script>
+
+
+<style id="companyDirectoryBlueSectionsOverride">
+/* Company Directory sections -> match Mileage Tracker blue cards */
+html,body{background:#f3f7fc !important;}
+.pageBox,
+.wrap .pageBox{
+  background:transparent !important;
+  border:none !important;
+  box-shadow:none !important;
+  padding:0 !important;
+}
+.wrap{max-width:1200px !important;}
+.company-directory-top-card,
+.card.zummee-section-card,
+.wrap > .card.zummee-section-card{
+  position:relative !important;
+  overflow:hidden !important;
+  background:linear-gradient(180deg, rgba(126,183,238,.94) 0%, rgba(95,150,217,.94) 100%) !important;
+  border:1px solid rgba(255,255,255,.28) !important;
+  border-radius:28px !important;
+  box-shadow:0 24px 52px rgba(22,42,74,.18), inset 0 1px 0 rgba(255,255,255,.28) !important;
+  backdrop-filter:blur(18px) saturate(130%) !important;
+  -webkit-backdrop-filter:blur(18px) saturate(130%) !important;
+}
+.company-directory-top-card::before,
+.card.zummee-section-card::before,
+.wrap > .card.zummee-section-card::before{
+  content:"";
+  position:absolute;
+  top:0; bottom:0; left:-45%;
+  width:32%;
+  background:linear-gradient(115deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.10) 35%, rgba(255,255,255,.24) 50%, rgba(255,255,255,.10) 65%, rgba(255,255,255,0) 100%) !important;
+  transform:skewX(-16deg) !important;
+  pointer-events:none !important;
+  z-index:0 !important;
+  opacity:0 !important;
+}
+.card.zummee-section-card:hover::before{animation:companyDirectoryCardShine .95s ease-out 1 !important;}
+.card.zummee-section-card:hover{
+  transform:translateY(-2px) !important;
+  box-shadow:0 28px 58px rgba(22,42,74,.22), inset 0 1px 0 rgba(255,255,255,.34) !important;
+  border-color:rgba(255,255,255,.38) !important;
+}
+@keyframes companyDirectoryCardShine{
+  0%{left:-45%;opacity:0;}
+  8%{opacity:.55;}
+  100%{left:125%;opacity:0;}
+}
+.card.zummee-section-card > *{position:relative;z-index:1;}
+.card.zummee-section-card h2,.card.zummee-section-card h3,.card.zummee-section-card strong,.card.zummee-section-card .sectionTitle,.card.zummee-section-card .title,
+.card.zummee-section-card .zummee-user-meta__title,
+.card.zummee-section-card .company-directory-list-header > div{color:#17324d !important;}
+.card.zummee-section-card .muted,.card.zummee-section-card .note,.card.zummee-section-card label,.card.zummee-section-card th,.card.zummee-section-card td,.card.zummee-section-card .sub, .card.zummee-section-card p, .card.zummee-section-card span{color:rgba(23,50,77,0.82) !important;}
+.card.zummee-section-card table{width:100% !important; border-collapse:separate !important; border-spacing:0 !important; background:rgba(255,255,255,0.18) !important; border-radius:20px !important; overflow:hidden !important;}
+.card.zummee-section-card thead th{background:rgba(255,255,255,0.18) !important; border-bottom:1px solid rgba(255,255,255,0.28) !important;}
+.card.zummee-section-card tbody td{border-bottom:1px solid rgba(255,255,255,0.22) !important;}
+.card.zummee-section-card input,.card.zummee-section-card select,.card.zummee-section-card textarea{
+  background:rgba(255,255,255,0.82) !important;
+  border:1px solid rgba(255,255,255,0.58) !important;
+  border-radius:14px !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.35) !important;
+}
+.card.zummee-section-card button,
+.card.zummee-section-card .btn{
+  background:#ffffff !important;
+  color:#17324d !important;
+  border:1px solid rgba(255,255,255,0.65) !important;
+  border-radius:999px !important;
+  box-shadow:0 6px 14px rgba(15,47,74,0.12) !important;
+}
+.card.zummee-section-card a{color:#2457d6 !important;}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+
+
+<style id="companyDirectoryUnifiedLayoutPolish">
+/* Unified section layout helpers (shared, low-risk global opt-in) */
+body.zummee-unified-layout .zummee-section-card{
+  padding:22px 26px !important;
+}
+body.zummee-unified-layout .zummee-section-header{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  gap:20px !important;
+  flex-wrap:wrap !important;
+}
+body.zummee-unified-layout .zummee-section-tools{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:flex-end !important;
+  gap:12px !important;
+  flex-wrap:wrap !important;
+  margin-left:auto !important;
+}
+body.zummee-unified-layout .zummee-user-meta{
+  text-align:left !important;
+  margin-right:auto !important;
+  min-width:220px !important;
+}
+body.zummee-unified-layout .zummee-user-meta__title{
+  font-weight:950 !important;
+  color:#0f2238 !important;
+  line-height:1.15 !important;
+}
+body.zummee-unified-layout .zummee-user-meta__sub{
+  text-align:left !important;
+}
+body.zummee-unified-layout .company-directory-top-card{
+  padding-top:26px !important;
+  padding-bottom:26px !important;
+}
+body.zummee-unified-layout .company-directory-header{
+  justify-content:flex-start !important;
+}
+body.zummee-unified-layout .company-directory-controls{
+  min-width:min(100%, 440px) !important;
+}
+body.zummee-unified-layout .company-directory-controls #q{
+  min-width:280px !important;
+  flex:1 1 280px !important;
+}
+body.zummee-unified-layout .company-directory-status{
+  margin-top:12px !important;
+}
+body.zummee-unified-layout .company-directory-list-header{
+  margin-bottom:12px !important;
+}
+@media (max-width: 860px){
+  body.zummee-unified-layout .zummee-section-header,
+  body.zummee-unified-layout .zummee-section-tools{
+    align-items:flex-start !important;
+  }
+  body.zummee-unified-layout .company-directory-controls{
+    width:100% !important;
+    min-width:0 !important;
+    justify-content:flex-start !important;
+  }
+  body.zummee-unified-layout .company-directory-controls #q{
+    width:100% !important;
+    min-width:0 !important;
+  }
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+
+<script src="company_logo_sync.js"></script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

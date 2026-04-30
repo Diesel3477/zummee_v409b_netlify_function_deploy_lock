@@ -1,0 +1,36 @@
+Vendor Email Setup
+
+This build adds vendor email notification through a Supabase Edge Function.
+
+Files added:
+- supabase/functions/assign-vendor-email/index.ts
+
+What the page now does:
+1. Saves vendor assignment on the resident work order.
+2. Creates/updates the linked maintenance request as before.
+3. Calls the Edge Function `assign-vendor-email`.
+4. Sends the vendor an email through Resend.
+5. Shows either:
+   - "Vendor assignment saved and vendor notified by email."
+   - or a partial-success message if the email function is not configured.
+
+Required Supabase Edge Function environment variables:
+- SUPABASE_URL
+- SUPABASE_SERVICE_ROLE_KEY
+- RESEND_API_KEY
+- VENDOR_FROM_EMAIL
+
+Recommended VENDOR_FROM_EMAIL example:
+- maintenance@yourdomain.com
+
+Deploy example:
+supabase functions deploy assign-vendor-email
+
+Set secrets example:
+supabase secrets set RESEND_API_KEY=...
+supabase secrets set VENDOR_FROM_EMAIL=maintenance@yourdomain.com
+
+Notes:
+- The function uses Resend's API directly.
+- The page expects the function name to be exactly: assign-vendor-email
+- If you want, change the button text on the page from "Assign & Notify Vendor" to anything you prefer.

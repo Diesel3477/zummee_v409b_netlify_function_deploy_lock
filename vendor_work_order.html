@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>window.ZUMMEE_BUILD="2026-03-27-1";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vendor Work Order | Zummee</title>
+  
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+    :root{--brand:#0f3554;--bg:#f4f6fa;--card:#fff;--muted:#617181;--border:#d9e1ea}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:#17324c}
+    .wrap{max-width:860px;margin:40px auto;padding:0 16px}
+    .card{background:var(--card);border:1px solid rgba(15,53,84,.12);border-radius:28px;padding:28px;box-shadow:0 18px 42px rgba(15,53,84,.08)}
+    h1{margin:0 0 10px;font-size:42px;line-height:1}
+    .sub{color:var(--muted);font-size:17px;margin-bottom:22px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .info{padding:14px;border:1px solid var(--border);border-radius:18px;background:#f8fbff}
+    .label{font-size:13px;font-weight:800;letter-spacing:.06em;color:#6b7788;text-transform:uppercase;margin-bottom:8px}
+    .value{font-size:18px;font-weight:700;color:#17324c}
+    .box{padding:14px;border:1px solid var(--border);border-radius:18px;background:#fff;margin-top:14px}
+    .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}
+    .btn{display:inline-block;background:var(--brand);color:#fff;text-decoration:none;padding:13px 18px;border-radius:999px;font-weight:700}
+    .btn.secondary{background:#fff;color:var(--brand);border:2px solid var(--brand)}
+    .msg{margin-top:16px;padding:14px;border-radius:18px;display:none}
+    .msg.ok{display:block;background:#d9f2e3;color:#1f6b44}
+    .msg.err{display:block;background:#fde8e8;color:#991b1b}
+    @media (max-width:720px){.grid{grid-template-columns:1fr} h1{font-size:34px}}
+  
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+
+.mh2-actions .mh2-btn--ghost{display:none !important;}
+</style>
+  <script src="community_state_stable.js"></script>
+<style>
+/* FORCE white text in Status & Details section */
+#boardSubmittedItemsSection,
+#boardSubmittedItemsSection *:not(button),
+#boardMemberHubStatus,
+#boardMemberHubStatus *:not(button),
+#annualMeetingApprovals,
+#annualMeetingApprovals *:not(button) {
+  color: #ffffff !important;
+}
+
+/* Secondary text (slightly dimmed white) */
+#boardSubmittedItemsSection .muted,
+#boardMemberHubStatus .muted,
+#annualMeetingApprovals .muted {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style>
+/* HARD OVERRIDE — force white text in dark section */
+.hub-zone:last-of-type,
+.hub-zone:last-of-type *:not(button):not(.badge):not(.pill) {
+  color: #ffffff !important;
+}
+
+/* Slightly softer for secondary text */
+.hub-zone:last-of-type .muted,
+.hub-zone:last-of-type p,
+.hub-zone:last-of-type span {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Vendor Work Order</h1>
+      <div class="sub">Full request details for the assigned maintenance request.</div>
+      <div id="msg" class="msg"></div>
+      <div class="grid">
+        <div class="info"><div class="label">Community</div><div class="value" id="communityName">Loading...</div></div>
+        <div class="info"><div class="label">Unit</div><div class="value" id="unitNumber">Loading...</div></div>
+        <div class="info"><div class="label">Issue</div><div class="value" id="subject">Loading...</div></div>
+        <div class="info"><div class="label">Priority</div><div class="value" id="priority">Loading...</div></div>
+        <div class="info"><div class="label">Resident</div><div class="value" id="residentName">Loading...</div></div>
+        <div class="info"><div class="label">Resident Phone</div><div class="value" id="residentPhone">Loading...</div></div>
+        <div class="info"><div class="label">Resident Email</div><div class="value" id="residentEmail">Loading...</div></div>
+        <div class="info"><div class="label">Status</div><div class="value" id="status">Loading...</div></div>
+      </div>
+      <div class="box" style="background:#fff8ea">
+        <div class="label">Note to Vendor</div>
+        <div id="vendorNote">Loading...</div>
+      </div>
+
+      <div class="actions">
+        <button id="acceptBtn" class="btn" type="button">Accept Job</button>
+        <a id="managerContactBtn" class="btn secondary" href="#">Manager Contact</a>
+        <a id="completeBtn" class="btn secondary" href="#">Mark Job Complete</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const workOrderId = params.get('work_order_id') || '';
+    const vendorEmail = (params.get('vendor_email') || '').trim();
+    const token = (params.get('token') || '').trim();
+    const managerName = params.get('manager_name') || 'Manager';
+    const managerPhone = params.get('manager_phone') || '';
+    const companyName = params.get('company_name') || 'Property Management';
+    const digits = String(managerPhone).replace(/[^0-9]/g,'');
+
+    function setText(id, value){
+      const el = document.getElementById(id);
+      if(el) el.textContent = value || 'Not provided';
+    }
+    function setResidentPhone(value){
+      const el = document.getElementById('residentPhone');
+      if(!el) return;
+      const phone = String(value || '').trim();
+      if(!phone){
+        el.textContent = 'Not provided';
+        return;
+      }
+      const digits = phone.replace(/[^0-9]/g,'');
+      if(!digits){
+        el.textContent = phone;
+        return;
+      }
+      el.innerHTML = `<a href="tel:${digits}" style="color:#0f3554;text-decoration:none;font-weight:700">${phone}</a>`;
+    }
+    function setMsg(text, ok){
+      const el = document.getElementById('msg');
+      el.textContent = text;
+      el.className = 'msg ' + (ok ? 'ok' : 'err');
+    }
+
+    async function loadWorkOrder(){
+      if(!workOrderId || !vendorEmail || !token){
+        setMsg('Missing secure work order link details.', false);
+        return;
+      }
+      try{
+        const res = await fetch('https://slcwuuwyrgnmlmxpcaim.supabase.co/functions/v1/get-vendor-work-order', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864'
+          },
+          body: JSON.stringify({
+            work_order_id: workOrderId,
+            vendor_email: vendorEmail,
+            token
+          })
+        });
+        const raw = await res.text();
+        let payload = null;
+        try{ payload = raw ? JSON.parse(raw) : null; }catch(_e){ payload = raw; }
+        if(!res.ok){
+          throw new Error((payload && (payload.error || payload.message)) || 'Unable to load work order details.');
+        }
+        const data = payload && payload.work_order ? payload.work_order : null;
+        if(!data){
+          throw new Error('Work order details were not returned.');
+        }
+
+        setText('communityName', data.community_name || companyName);
+        setText('unitNumber', data.unit_number);
+        setText('subject', data.subject);
+        setText('priority', data.priority);
+        setText('residentName', data.resident_name);
+        setResidentPhone(data.resident_phone);
+        setText('residentEmail', data.resident_email);
+        setText('status', data.status);
+        const noteText = (data.assigned_vendor_note || '').trim() || 'Please review the issue and contact management if additional information is needed.';
+        setText('vendorNote', noteText);
+      }catch(err){
+        setMsg(err && err.message ? err.message : 'Unable to load work order details.', false);
+      }
+    }
+
+    const acceptBtn = document.getElementById('acceptBtn');
+    const managerBtn = document.getElementById('managerContactBtn');
+    const completeBtn = document.getElementById('completeBtn');
+
+    if(digits){
+      managerBtn.href = 'vendor_contact.html?manager_name=' + encodeURIComponent(managerName) +
+        '&manager_phone=' + encodeURIComponent(managerPhone) +
+        '&company_name=' + encodeURIComponent(companyName) +
+        '&work_order_id=' + encodeURIComponent(workOrderId) +
+        '&vendor_email=' + encodeURIComponent(vendorEmail) +
+        '&token=' + encodeURIComponent(token);
+    } else {
+      managerBtn.removeAttribute('href');
+      managerBtn.style.opacity = '0.5';
+    }
+
+    completeBtn.href = 'vendor_complete.html?work_order_id=' + encodeURIComponent(workOrderId) +
+      '&vendor_email=' + encodeURIComponent(vendorEmail) +
+      '&token=' + encodeURIComponent(token);
+
+
+    async function acceptJob(){
+      if(!workOrderId || !vendorEmail || !token){
+        setMsg('This job link is missing required information.', false);
+        return;
+      }
+      try{
+        acceptBtn.disabled = true;
+        acceptBtn.textContent = 'Accepting...';
+        const res = await fetch('https://slcwuuwyrgnmlmxpcaim.supabase.co/functions/v1/accept-vendor-job', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': (window.SUPABASE_ANON_KEY || 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864'),
+            'Authorization': 'Bearer ' + (window.SUPABASE_ANON_KEY || 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864')
+          },
+          body: JSON.stringify({
+            work_order_id: workOrderId,
+            vendor_email: vendorEmail,
+            token
+          })
+        });
+        const raw = await res.text();
+        let data = null;
+        try{ data = raw ? JSON.parse(raw) : null; }catch(_e){ data = raw; }
+        if(!res.ok){
+          const details = data && typeof data.details === 'object' ? JSON.stringify(data.details) : (data && data.details ? String(data.details) : '');
+          throw new Error((data && (data.error || data.message)) || details || raw || 'Unable to accept this job.');
+        }
+        setText('status', 'active');
+        setMsg((data && data.message) || 'Job accepted and marked active.', true);
+        acceptBtn.textContent = 'Job Accepted';
+        acceptBtn.disabled = true;
+      }catch(err){
+        acceptBtn.disabled = false;
+        acceptBtn.textContent = 'Accept Job';
+        setMsg(err && err.message ? err.message : 'Unable to accept this job.', false);
+      }
+    }
+    acceptBtn.addEventListener('click', acceptJob);
+
+    loadWorkOrder();
+  </script>
+<script src="company_logo_sync.js"></script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

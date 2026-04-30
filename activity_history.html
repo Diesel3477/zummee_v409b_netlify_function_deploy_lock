@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>window.ZUMMEE_BUILD="2026-03-27-1";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Activity History</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="shared/supabase-client.js?v=2026-04-08-2"></script>
+  <script src="shared/resident-auth.js?v=2026-03-27-1"></script>
+  <script src="shared/header.js?v=2026-04-08-2"></script>
+  <link rel="stylesheet" href="shared/header.css?v=2026-03-27-1">
+  <script>
+    window.SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+    window.SUPABASE_ANON_KEY = 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
+  </script>
+  
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+    :root{--brand:#103654;--bg:#edf3fb;--card:rgba(255,255,255,.42);--line:rgba(255,255,255,.5);--text:#17324c;--muted:#5b6c7f}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;color:var(--text);background:
+      radial-gradient(circle at 15% 20%, rgba(112,170,255,.18), transparent 30%),
+      radial-gradient(circle at 85% 10%, rgba(163,199,255,.14), transparent 26%),
+      linear-gradient(180deg,#edf4fb 0%,#e8eef7 100%)}
+    main{max-width:1200px;margin:26px auto;padding:0 16px 48px}
+    .glass{background:var(--card);border:1px solid var(--line);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 18px 44px rgba(17,49,81,.09);border-radius:28px}
+    .hero{padding:24px 24px 20px}
+    .top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+    h1{margin:0;font-size:clamp(30px,5vw,44px);line-height:1.02}
+    .sub{margin-top:6px;color:var(--muted);font-size:14px}
+    .btnRow{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 16px;border-radius:999px;border:1.5px solid rgba(16,54,84,.18);background:rgba(255,255,255,.55);color:var(--brand);text-decoration:none;font-size:14px;font-weight:800;cursor:pointer}
+    .btn.primary{background:#163a5b;color:#fff;border-color:#163a5b}
+    .layout{display:grid;grid-template-columns:300px 1fr;gap:18px;margin-top:18px}
+    .panel{padding:18px}
+    .field{margin-top:12px}
+    .field label{display:block;margin-bottom:6px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800}
+    .field select{width:100%;border:1px solid rgba(16,54,84,.12);border-radius:16px;padding:12px 14px;background:rgba(255,255,255,.7);color:var(--text);font-size:15px}
+    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}
+    .stat{padding:14px;border-radius:18px;background:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.46)}
+    .k{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800}
+    .v{font-size:28px;font-weight:900;margin-top:6px}
+    .day{margin-top:16px}
+    .dayTitle{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:900;margin:0 0 10px 4px}
+    .list{display:flex;flex-direction:column;gap:10px}
+    .item{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.52);border:1px solid rgba(255,255,255,.52)}
+    .left{display:flex;align-items:flex-start;gap:12px;min-width:0}
+    .icon{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:rgba(255,255,255,.7);font-size:18px;flex:0 0 auto}
+    .msg{font-weight:700;line-height:1.35}
+    .meta{margin-top:4px;color:var(--muted);font-size:13px}
+    .time{font-size:12px;color:var(--muted);white-space:nowrap;font-weight:700}
+    .empty{padding:18px;border-radius:18px;border:1px dashed rgba(16,54,84,.15);color:var(--muted);background:rgba(255,255,255,.36)}
+    .helper{color:var(--muted);font-size:13px;margin-top:12px}
+    @media (max-width:960px){.layout{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+
+.mh2-actions .mh2-btn--ghost{display:none !important;}
+</style>
+  <script src="community_state_stable.js"></script>
+<style>
+/* FORCE white text in Status & Details section */
+#boardSubmittedItemsSection,
+#boardSubmittedItemsSection *:not(button),
+#boardMemberHubStatus,
+#boardMemberHubStatus *:not(button),
+#annualMeetingApprovals,
+#annualMeetingApprovals *:not(button) {
+  color: #ffffff !important;
+}
+
+/* Secondary text (slightly dimmed white) */
+#boardSubmittedItemsSection .muted,
+#boardMemberHubStatus .muted,
+#annualMeetingApprovals .muted {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style>
+/* HARD OVERRIDE — force white text in dark section */
+.hub-zone:last-of-type,
+.hub-zone:last-of-type *:not(button):not(.badge):not(.pill) {
+  color: #ffffff !important;
+}
+
+/* Slightly softer for secondary text */
+.hub-zone:last-of-type .muted,
+.hub-zone:last-of-type p,
+.hub-zone:last-of-type span {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+</head>
+<body>
+  <div id="zummeeHeaderMount"></div>
+  <main>
+    <section class="glass hero">
+      <div class="top">
+        <div>
+          <h1>Activity History</h1>
+          <div class="sub">A unified timeline of community texts, board-minute actions, and resident work orders.</div>
+        </div>
+        <div class="btnRow">
+          <a class="btn" href="manager_hub.html">Back to Manager Hub</a>
+          <button class="btn primary" id="refreshBtn" type="button">Refresh</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="layout">
+      <section class="glass panel">
+        <h2 style="margin:0;color:var(--brand)">Filters</h2>
+        <div class="field">
+          <label for="communityFilter">Community</label>
+          <select id="communityFilter"><option value="">All communities</option></select>
+        </div>
+        <div class="field">
+          <label for="typeFilter">Activity Type</label>
+          <select id="typeFilter">
+            <option value="">All activity</option>
+            <option value="text">Community Texting</option>
+            <option value="minutes">Board Minutes</option>
+            <option value="workorder">Resident Work Orders</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="daysFilter">Time Window</label>
+          <select id="daysFilter">
+            <option value="1">Last 24 hours</option>
+            <option value="7" selected>Last 7 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option>
+            <option value="0">All time</option>
+          </select>
+        </div>
+        <div class="helper">The timeline updates on refresh and is filtered to your active company and community when available.</div>
+      </section>
+      <section class="glass panel">
+        <h2 style="margin:0;color:var(--brand)">Timeline</h2>
+        <div class="stats">
+          <div class="stat"><div class="k">Events Found</div><div class="v" id="eventsCount">0</div></div>
+          <div class="stat"><div class="k">Texts</div><div class="v" id="textsCount">0</div></div>
+          <div class="stat"><div class="k">Minutes</div><div class="v" id="minutesCount">0</div></div>
+          <div class="stat"><div class="k">Work Orders</div><div class="v" id="workordersCount">0</div></div>
+        </div>
+        <div id="activityList" style="margin-top:14px"><div class="empty">Loading activity…</div></div>
+      </section>
+    </section>
+  </main>
+  <script>
+    let sbClient=null, communities=[];
+    async function getClient(){
+      if(sbClient) return sbClient;
+      try{ if(typeof ensureSupabase === 'function'){ sbClient = await ensureSupabase(); } }catch(_e){}
+      if(!sbClient && window.supabaseClient) sbClient = window.supabaseClient;
+      if(!sbClient && window.sb) sbClient = window.sb;
+      if(!sbClient){ sbClient = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY); }
+      return sbClient;
+    }
+    function escapeHtml(v){ return String(v==null?'':v).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+    function fmtTime(v){ try{return new Date(v).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});}catch(_e){return '';} }
+    function dayKey(v){ try{return new Date(v).toDateString();}catch(_e){return 'Unknown';} }
+    function fmtDay(v){ const d=new Date(v); const today=new Date(); const yesterday=new Date(); yesterday.setDate(today.getDate()-1); if(d.toDateString()===today.toDateString()) return 'Today'; if(d.toDateString()===yesterday.toDateString()) return 'Yesterday'; return d.toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'}); }
+    async function loadCommunities(){
+      const sb = await getClient();
+      const companyId = String(localStorage.getItem('activeCompanyId') || localStorage.getItem('zummee_active_company_id') || '').trim();
+      let rows=[];
+      if(companyId){
+        const q = await sb.from('PropertyCommunities').select('id,name').eq('company_id', companyId).order('name', {ascending:true});
+        if(!q.error && Array.isArray(q.data)) rows=q.data;
+      }
+      if(!rows.length){
+        const q = await sb.from('PropertyCommunities').select('id,name').order('name', {ascending:true}).limit(50);
+        if(!q.error && Array.isArray(q.data)) rows=q.data;
+      }
+      communities=rows||[];
+      const select=document.getElementById('communityFilter');
+      select.innerHTML='<option value="">All communities</option>'+communities.map(r=>`<option value="${escapeHtml(r.id)}">${escapeHtml(r.name||'Unnamed Community')}</option>`).join('');
+      const savedCommunity=String(localStorage.getItem('activityHistoryCommunityId') || '').trim();
+      const fallbackCommunity=String(localStorage.getItem('zummeeActiveCommunityId') || localStorage.getItem('activeCommunityId') || '').trim();
+      const desiredCommunity=savedCommunity || fallbackCommunity;
+      if(desiredCommunity) select.value=desiredCommunity;
+    }
+    function pushEvent(arr,obj){ if(obj&&obj.time) arr.push(obj); }
+    async function loadTimeline(){
+      const sb = await getClient();
+      const communityId = String(document.getElementById('communityFilter').value || '').trim();
+      const typeFilter = String(document.getElementById('typeFilter').value || '').trim();
+      const days = Number(document.getElementById('daysFilter').value || 0);
+      const cutoff = days>0 ? new Date(Date.now()-days*86400000).toISOString() : null;
+      const events=[];
+      if(!typeFilter || typeFilter==='text'){
+        try{
+          let q = sb.from('EmergencyTextLogs').select('community_id,community_name,template_title,status,recipient_count,sent_at,created_at').order('sent_at', {ascending:false}).limit(40);
+          if(communityId) q=q.eq('community_id', communityId);
+          if(cutoff) q=q.gte('sent_at', cutoff);
+          const res=await q;
+          (res.data||[]).forEach(r=>{
+            const status=String(r.status||'').toLowerCase();
+            let msg='Community alert sent';
+            if(status==='twilio_not_configured') msg='Community alert prepared';
+            else if(status==='partial_success') msg='Community alert partially sent';
+            else if(status==='scheduled') msg='Community alert scheduled';
+            pushEvent(events,{type:'text', icon:'📢', time:r.sent_at||r.created_at, message:msg+' — '+(r.community_name||'Community'), meta:(r.template_title?('Template: '+r.template_title+' · '):'')+'Recipients: '+Number(r.recipient_count||0)});
+          });
+        }catch(_e){}
+      }
+      if(!typeFilter || typeFilter==='minutes'){
+        try{
+          let q = sb.from('BoardMeetingMinutesApprovals').select('community_id,community_name,approval_status,approved_by_name,rejected_by_name,approved_at,rejected_at,created_at').order('created_at',{ascending:false}).limit(40);
+          if(communityId) q=q.eq('community_id', communityId);
+          if(cutoff) q=q.gte('created_at', cutoff);
+          const res=await q;
+          (res.data||[]).forEach(r=>{
+            const s=String(r.approval_status||'').toLowerCase();
+            if(s==='approved') pushEvent(events,{type:'minutes', icon:'✅', time:r.approved_at||r.created_at, message:'Minutes approved — '+(r.community_name||'Community'), meta:r.approved_by_name?('Approved by '+r.approved_by_name):'Board approval'});
+            else if(s==='rejected') pushEvent(events,{type:'minutes', icon:'📝', time:r.rejected_at||r.created_at, message:'Minutes rejected — '+(r.community_name||'Community'), meta:r.rejected_by_name?('Rejected by '+r.rejected_by_name):'Board action'});
+            else if(s==='pending_board_approval') pushEvent(events,{type:'minutes', icon:'📄', time:r.created_at, message:'Minutes sent for approval — '+(r.community_name||'Community'), meta:'Awaiting board action'});
+          });
+        }catch(_e){}
+      }
+      if(!typeFilter || typeFilter==='workorder'){
+        try{
+          const communityMap = Object.fromEntries((communities||[]).map(c=>[String(c.id), c.name||'Community']));
+          let q = sb.from('resident_work_orders').select('community_id,created_at,status,priority,unit_number').order('created_at',{ascending:false}).limit(80);
+          if(communityId) q=q.eq('community_id', communityId);
+          if(cutoff) q=q.gte('created_at', cutoff);
+          const res=await q;
+          (res.data||[]).forEach(r=>{
+            const extra=[];
+            if(communityMap[String(r.community_id||'')]) extra.push(communityMap[String(r.community_id)]);
+            if(r.unit_number) extra.push('Unit '+r.unit_number);
+            pushEvent(events,{type:'workorder',icon:'🧾',time:r.created_at,message:'Resident work order',meta:extra.join(' · ')});
+          });
+
+          let bq = sb.from('BoardMemberActionItems').select('id,title,created_at,community_id').order('created_at',{ascending:false}).limit(80);
+          if(communityId) bq=bq.eq('community_id', communityId);
+          if(cutoff) bq=bq.gte('created_at', cutoff);
+          const bres=await bq;
+          (bres.data||[]).forEach(r=>{
+            const extra=[];
+            if(communityMap[String(r.community_id||'')]) extra.push(communityMap[String(r.community_id)]);
+            extra.push('Open work order');
+            pushEvent(events,{
+              type:'workorder',
+              icon:'📝',
+              time:r.created_at,
+              message:'Board item submitted — '+(r.title||'New item'),
+              meta:extra.join(' · ')
+            });
+          });
+
+        }catch(_e){}
+      }
+events.sort((a,b)=>new Date(b.time)-new Date(a.time));
+      document.getElementById('eventsCount').textContent = String(events.length);
+      document.getElementById('textsCount').textContent = String(events.filter(e=>e.type==='text').length);
+      document.getElementById('minutesCount').textContent = String(events.filter(e=>e.type==='minutes').length);
+      document.getElementById('workordersCount').textContent = String(events.filter(e=>e.type==='workorder').length);
+      const list=document.getElementById('activityList');
+      if(!events.length){ list.innerHTML='<div class="empty">No activity found for the selected filters.</div>'; return; }
+      const groups={};
+      events.forEach(e=>{ const k=dayKey(e.time); (groups[k]||(groups[k]=[])).push(e); });
+      const ordered=Object.keys(groups).sort((a,b)=>new Date(b)-new Date(a));
+      list.innerHTML = ordered.map(k=>{
+        const items=groups[k].map(e=>`<div class="item"><div class="left"><div class="icon">${escapeHtml(e.icon)}</div><div><div class="msg">${escapeHtml(e.message)}</div><div class="meta">${escapeHtml(e.meta||'')}</div></div></div><div class="time">${escapeHtml(fmtTime(e.time))}</div></div>`).join('');
+        return `<section class="day"><div class="dayTitle">${escapeHtml(fmtDay(groups[k][0].time))}</div><div class="list">${items}</div></section>`;
+      }).join('');
+    }
+    async function init(){
+      const savedDays = String(localStorage.getItem('activityHistoryDays') || '').trim();
+      if(savedDays){
+        document.getElementById('daysFilter').value = savedDays;
+      }
+      document.getElementById('typeFilter').value = '';
+      await loadCommunities();
+      await loadTimeline();
+    }
+    document.getElementById('refreshBtn').addEventListener('click', loadTimeline);
+    document.getElementById('communityFilter').addEventListener('change', function(){
+      try{ localStorage.setItem('activityHistoryCommunityId', String(this.value || '').trim()); }catch(_e){}
+      loadTimeline();
+    });
+    document.getElementById('typeFilter').addEventListener('change', function(){
+      loadTimeline();
+    });
+    document.getElementById('daysFilter').addEventListener('change', function(){
+      try{ localStorage.setItem('activityHistoryDays', String(this.value || '').trim()); }catch(_e){}
+      loadTimeline();
+    });
+    init();
+  </script>
+<script src="company_logo_sync.js"></script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

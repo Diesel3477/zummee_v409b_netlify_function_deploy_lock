@@ -1,0 +1,16 @@
+Zummee v409 - Server Board Photo Upload
+
+Long-term upload architecture:
+- Board Hub photo uploads now go through /.netlify/functions/upload-board-photo.
+- The function validates the Zummee local user id against community_assignments before uploading.
+- Supabase Storage upload uses SUPABASE_SERVICE_ROLE_KEY server-side only.
+- Frontend no longer depends on Supabase Auth Storage RLS for board item photos.
+
+Required Netlify environment variables:
+- SUPABASE_URL
+- SUPABASE_SERVICE_ROLE_KEY
+
+Stable foundations preserved:
+- notification_events remains board item authority.
+- URL community_id remains context authority.
+- Assigned communities remain community_assignments only.

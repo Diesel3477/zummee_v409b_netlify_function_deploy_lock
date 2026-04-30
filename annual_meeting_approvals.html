@@ -1,0 +1,632 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Annual Meeting Approvals</title>
+  <script>window.ZUMMEE_BUILD="2026-04-05-v94";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+  <link rel="stylesheet" href="shared/header.css?v=2026-03-27-1">
+  <link rel="stylesheet" href="shared/zummee-design-system.css?v=2026-03-27-1">
+  
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+    :root{--navy:#0f2f4a;--blue:#6eaee9;--bg1:#dff0ff;--bg2:#89c4ff;--ink:#17324d;--muted:#61788f;--line:rgba(23,50,77,.12)}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--ink);background:linear-gradient(180deg,var(--bg1),var(--bg2));min-height:100vh}
+    #zummeeHeaderMount{position:sticky;top:0;z-index:30}
+    .page{max-width:1240px;margin:0 auto;padding:18px 16px 36px}
+    .hero{margin-top:8px;border-radius:28px;padding:20px 22px;background:linear-gradient(135deg, rgba(15,47,74,.96), rgba(70,124,182,.92));color:#fff;box-shadow:0 18px 40px rgba(15,47,74,.18);border:1px solid rgba(255,255,255,.16)}
+    .eyebrow{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.16);font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+    .heroTop{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-top:14px}
+    .hero h1{margin:0;font-size:42px;line-height:1.02;letter-spacing:-.04em}
+    .hero p{margin:12px 0 0;color:rgba(255,255,255,.86);font-size:16px;max-width:760px;line-height:1.5}
+    .heroActions{display:flex;gap:10px;flex-wrap:wrap}
+    .btnx{appearance:none;border:none;border-radius:14px;min-height:46px;padding:0 18px;font-size:15px;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+    .btnPrimary{background:#fff;color:var(--navy)}
+    .btnGhost{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.22)}
+    .shell{margin-top:18px;border-radius:28px;padding:18px;background:rgba(255,255,255,.24);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.34);box-shadow:0 18px 44px rgba(15,47,74,.12)}
+    .sectionHead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;padding:8px 8px 18px}
+    .sectionHead h2{margin:0;font-size:34px;line-height:1.05;letter-spacing:-.03em;color:var(--ink)}
+    .sectionHead p{margin:8px 0 0;color:var(--muted);font-size:15px;max-width:760px}
+    .countPill{display:inline-flex;align-items:center;justify-content:center;min-width:56px;min-height:48px;padding:0 18px;border-radius:999px;background:#e2e8f0;color:var(--ink);font-size:18px;font-weight:900;box-shadow:0 8px 20px rgba(15,47,74,.08)}
+    .list{display:grid;gap:18px}
+    .empty{padding:28px;border-radius:22px;background:rgba(255,255,255,.84);border:1px solid var(--line);color:var(--muted);font-size:16px;text-align:center}
+    .approvalCard{padding:22px;border:1px solid rgba(185,28,28,.18);border-radius:24px;background:linear-gradient(180deg,rgba(255,255,255,.99),rgba(254,242,242,.96));box-shadow:0 14px 30px rgba(15,47,74,.06), inset 0 1px 0 rgba(255,255,255,.75), inset 4px 0 0 rgba(185,28,28,.72)}
+    .statusTag{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:rgba(185,28,28,.08);color:#991b1b;font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase}
+    .approvalTop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:start;margin-top:12px}
+    .approvalTitle{font-size:28px;font-weight:900;color:var(--ink);line-height:1.08;letter-spacing:-.03em}
+    .approvalDesc{margin-top:8px;color:#5d7287;font-size:14px;line-height:1.5}
+    .metaRow{display:flex;flex-wrap:wrap;gap:10px 12px;margin-top:12px}
+    .meta{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:#f7fafc;border:1px solid rgba(15,47,74,.08);color:#35516e;font-size:13px;font-weight:800}
+    .meta strong{color:var(--ink)}
+    .awaiting{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:#fee2e2;color:#991b1b;font-size:13px;font-weight:900;border:1px solid #fecaca;min-width:160px;box-shadow:0 4px 14px rgba(153,27,27,.08)}
+    .approvalBody{margin-top:14px;color:var(--ink);font-size:15px;line-height:1.58;max-width:980px}
+    .actions{display:flex;gap:14px;flex-wrap:wrap;margin-top:18px}
+    .btnDark{background:#17324d;color:#fff}
+    .btnSlate{background:#2f4f6f;color:#fff}
+    .btnWhite{background:#fff;color:var(--navy);border:1px solid rgba(15,47,74,.16)}
+    .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#17324d;color:#fff;padding:12px 16px;border-radius:14px;box-shadow:0 18px 40px rgba(15,47,74,.22);z-index:1000;opacity:0;pointer-events:none;transition:opacity .18s ease, transform .18s ease}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+    @media (max-width: 820px){.hero h1{font-size:34px}.approvalTop{grid-template-columns:1fr}.awaiting{min-width:0}.sectionHead h2{font-size:30px}}
+  
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+
+.mh2-actions .mh2-btn--ghost{display:none !important;}
+
+/* v30 Annual Meeting Approvals redesign — clean white card layout */
+body.annual-approvals-redesign{background:#f5f8fc !important;color:#17324c !important;}
+body.annual-approvals-redesign #zummeeHeaderMount{display:none !important;}
+body.annual-approvals-redesign .page{max-width:1180px;margin:0 auto;padding:28px 16px 46px !important;}
+body.annual-approvals-redesign .hero{display:none !important;}
+body.annual-approvals-redesign .shell{margin-top:0 !important;border-radius:28px !important;padding:30px 34px 34px !important;background:rgba(255,255,255,.92) !important;border:2px solid rgba(147,197,253,.85) !important;box-shadow:0 16px 34px rgba(15,53,84,.08) !important;backdrop-filter:none !important;}
+.approvals-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:24px;}
+.approvals-title-left h1{margin:0 0 4px;font-size:36px;line-height:1.08;letter-spacing:-.035em;color:#17324c;font-weight:950;text-align:left;}
+.approvals-title-left h2{margin:0;font-size:20px;line-height:1.2;color:#526b86;font-weight:850;text-align:left;}
+.approvals-company-logo{height:58px;max-width:190px;object-fit:contain;display:none;}
+.approvals-company-logo.logo-ready{display:block;}
+.approvals-top-controls{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:24px;}
+.approvals-hub-btn{min-height:48px;padding:0 28px;border-radius:20px;border:2px solid rgba(147,197,253,.85);background:#f8fbff;color:#17324c;font-weight:950;font-size:17px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;box-shadow:none;}
+body.annual-approvals-redesign .sectionHead{padding:0 0 18px !important;align-items:center !important;}
+body.annual-approvals-redesign .sectionHead h2{font-size:30px !important;color:#17324c !important;letter-spacing:-.025em !important;}
+body.annual-approvals-redesign .sectionHead p{display:none !important;}
+body.annual-approvals-redesign .countPill{min-width:52px;min-height:48px;background:#eef6ff !important;border:1px solid rgba(147,197,253,.7);color:#17324c !important;box-shadow:none !important;}
+body.annual-approvals-redesign #refreshAnnualApprovals{display:none !important;}
+body.annual-approvals-redesign .empty{padding:30px !important;border-radius:22px !important;background:#f8fbff !important;border:1.5px solid rgba(147,197,253,.55) !important;color:#60758d !important;font-size:18px !important;}
+body.annual-approvals-redesign .list{gap:16px !important;}
+body.annual-approvals-redesign .approvalCard{border-radius:24px !important;background:linear-gradient(135deg,rgba(255,247,204,.96),rgba(255,255,255,.98)) !important;border:1.5px solid rgba(231,181,43,.7) !important;box-shadow:0 14px 26px rgba(15,53,84,.08) !important;inset:initial !important;padding:20px !important;}
+body.annual-approvals-redesign .statusTag{background:rgba(250,204,21,.18) !important;color:#7a5600 !important;border:1px solid rgba(231,181,43,.35);}
+body.annual-approvals-redesign .approvalTitle{font-size:24px !important;color:#17324c !important;}
+body.annual-approvals-redesign .approvalDesc,body.annual-approvals-redesign .approvalBody{color:#526b86 !important;}
+body.annual-approvals-redesign .awaiting{background:#fff7cc !important;color:#7a5600 !important;border-color:rgba(231,181,43,.55) !important;box-shadow:none !important;}
+body.annual-approvals-redesign .meta{background:rgba(255,255,255,.78) !important;border-color:rgba(147,197,253,.45) !important;color:#48637f !important;}
+body.annual-approvals-redesign .btnx{border-radius:18px !important;}
+body.annual-approvals-redesign .btnDark,body.annual-approvals-redesign .btnSlate{background:#24598e !important;color:#fff !important;}
+body.annual-approvals-redesign .btnWhite{background:#fff !important;color:#a11a1a !important;border:1.5px solid rgba(220,38,38,.22) !important;}
+@media(max-width:860px){body.annual-approvals-redesign .page{padding:18px 12px 40px !important;}body.annual-approvals-redesign .shell{padding:26px 28px 30px !important;border-radius:26px !important;}.approvals-title-row{align-items:flex-start;}.approvals-title-left h1{font-size:32px;}.approvals-title-left h2{font-size:19px;}.approvals-company-logo{height:48px;max-width:176px;}.approvalTop{grid-template-columns:1fr !important;}.actions .btnx{flex:1;min-width:180px;}}
+@media(max-width:620px){.approvals-title-row{gap:12px;}.approvals-title-left h1{font-size:26px;}.approvals-title-left h2{font-size:17px;}.approvals-company-logo{height:40px;max-width:140px;}.approvals-hub-btn{width:100%;}.approvals-top-controls{display:block;}body.annual-approvals-redesign .sectionHead{align-items:flex-start !important;}body.annual-approvals-redesign .sectionHead h2{font-size:25px !important;}}
+
+</style>
+  <script src="community_state_stable.js"></script>
+<style>
+/* FORCE white text in Status & Details section */
+#boardSubmittedItemsSection,
+#boardSubmittedItemsSection *:not(button),
+#boardMemberHubStatus,
+#boardMemberHubStatus *:not(button),
+#annualMeetingApprovals,
+#annualMeetingApprovals *:not(button) {
+  color: #ffffff !important;
+}
+
+/* Secondary text (slightly dimmed white) */
+#boardSubmittedItemsSection .muted,
+#boardMemberHubStatus .muted,
+#annualMeetingApprovals .muted {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style>
+/* HARD OVERRIDE — force white text in dark section */
+.hub-zone:last-of-type,
+.hub-zone:last-of-type *:not(button):not(.badge):not(.pill) {
+  color: #ffffff !important;
+}
+
+/* Slightly softer for secondary text */
+.hub-zone:last-of-type .muted,
+.hub-zone:last-of-type p,
+.hub-zone:last-of-type span {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<script id="supervisor-page-access-guard-v182">
+(function(){
+  function localUid(){
+    var keys=['zummee_user_id_v1','zummee_user_id','user_id','activeUserId','currentUserId'];
+    for(var i=0;i<keys.length;i++){ try{ var v=String(localStorage.getItem(keys[i])||'').trim(); if(v) return v; }catch(_e){} }
+    return '';
+  }
+  function roleOK(role){
+    role=String(role||'').toLowerCase().replace(/[_-]+/g,' ').trim();
+    return role==='admin'||role==='company admin'||role==='companyadmin'||role==='supervisor';
+  }
+  async function getSupabase(){
+    if(window.supabaseClient) return window.supabaseClient;
+    if(window.ZummeeSupabaseClient) return window.ZummeeSupabaseClient;
+    if(window.supabase && window.SUPABASE_URL && window.SUPABASE_ANON_KEY){
+      window.supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+      return window.supabaseClient;
+    }
+    return null;
+  }
+  async function check(){
+    var sb=await getSupabase();
+    if(!sb) return false;
+    var uid=localUid();
+    try{ var u=await sb.auth.getUser(); if(u&&u.data&&u.data.user&&u.data.user.id) uid=u.data.user.id; }catch(_e){}
+    if(!uid) return false;
+    try{
+      var q=await sb.from('profiles').select('role,disabled,deleted').eq('id',uid).maybeSingle();
+      if(q.error) throw q.error;
+      var d=q.data||{};
+      return !d.disabled && !d.deleted && roleOK(d.role);
+    }catch(_e){ return false; }
+  }
+  function deny(){
+    document.body.innerHTML='<main style="font-family:Inter,system-ui,sans-serif;padding:32px;color:#12304f;"><h1>Supervisor access only</h1><p>This page contains sensitive supervisor information.</p><p><a href="manager_hub.html" style="color:#12304f;font-weight:800;">Return to Hub</a></p></main>';
+  }
+  async function run(){
+    var ok=await check();
+    if(!ok){ deny(); }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run,{once:true}); else run();
+})();
+</script>
+
+</head>
+<body data-page-title="Annual Meeting Approvals" data-header-mode="simple" class="annual-approvals-redesign">
+  <div id="zummeeHeaderMount"></div>
+  <script src="shared/header.js?v=2026-04-08-2"></script>
+
+    <main class="page">
+    <section class="shell approvals-shell">
+      <div class="approvals-title-row">
+        <div class="approvals-title-left">
+          <h1>Annual Meeting Approvals</h1>
+          <h2>Supervisor Review</h2>
+        </div>
+        <img id="annualApprovalsCompanyLogo" class="approvals-company-logo" alt="Management company logo" loading="eager" decoding="async" hidden>
+      </div>
+
+      <div class="approvals-top-controls">
+        <a class="approvals-hub-btn" href="/">Hub</a>
+      </div>
+
+      <div class="sectionHead">
+        <div>
+          <h2>Awaiting Supervisor Approval</h2>
+          <p>Only board-approved packets assigned to the signed-in supervisor appear here.</p>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <div id="annualApprovalCount" class="countPill">0</div>
+          <button class="btnx btnWhite" id="refreshAnnualApprovals" type="button">Refresh</button>
+        </div>
+      </div>
+      <div id="annualApprovalList" class="list">
+        <div class="empty">Loading approvals…</div>
+      </div>
+    </section>
+  </main>
+
+
+  <div id="zumToast" class="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="shared/supabase-client.js?v=2026-04-08-2"></script>
+  <script>
+    function esc(v){return String(v==null?'':v).replace(/[&<>\"']/g, function(m){return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'})[m];});}
+    function toast(msg){
+      var el=document.getElementById('zumToast');
+      if(!el) return;
+      el.textContent=String(msg||'');
+      el.classList.add('show');
+      clearTimeout(window.__zumToastT);
+      window.__zumToastT=setTimeout(function(){el.classList.remove('show');},2200);
+    }
+    async function ensureSupabase(){
+      if(typeof window.ensureSupabaseSync==='function'){
+        const sync = window.ensureSupabaseSync();
+        if(sync) return sync;
+      }
+      var start=Date.now();
+      return await new Promise(function(resolve){
+        var t=setInterval(function(){
+          try{
+            if(typeof window.ensureSupabaseSync==='function'){
+              var c=window.ensureSupabaseSync();
+              if(c){clearInterval(t); resolve(c); return;}
+            }
+          }catch(_e){}
+          if(Date.now()-start>5000){clearInterval(t); resolve(null);}
+        },50);
+      });
+    }
+    async function getSupervisorSessionIdentity(){
+      try{
+        const sb = await ensureSupabase();
+        let id='', email='';
+        if(sb && sb.auth && typeof sb.auth.getUser==='function'){
+          const authRes = await sb.auth.getUser();
+          const user = authRes && authRes.data && authRes.data.user;
+          if(user){ id=String(user.id||'').trim(); email=String(user.email||'').trim(); }
+        }
+        if(!id){
+          try{
+            const raw = localStorage.getItem('zummee_session_v1') || '';
+            if(raw){
+              const sess = JSON.parse(raw);
+              id = String((sess && (sess.userId || sess.auth_user_id || sess.id || (sess.user && sess.user.id))) || '').trim() || id;
+              email = String((sess && (sess.email || (sess.user && sess.user.email))) || '').trim() || email;
+            }
+          }catch(_e){}
+        }
+        return { id:id, email:email, name:String(window.__zummeeUserName || email || 'Supervisor').trim() };
+      }catch(_e){ return { id:'', email:'', name:'Supervisor' }; }
+    }
+    function pickAnnualMeetingCommunityName(row){
+      try{
+        var payload = row && row.packet_payload ? row.packet_payload : {};
+        if(typeof payload === 'string'){ try{ payload = JSON.parse(payload); }catch(_e){ payload = {}; } }
+        function clean(v){ v = String(v||'').trim(); return v && v.toLowerCase() !== 'community association' ? v : ''; }
+        return clean(row && row.community_name) || clean(row && row.communityName) || clean(payload && payload.communityName) || clean(payload && payload.community_name) || clean(payload && payload.associationLegalName) || clean(payload && payload.association_legal_name) || 'Community Association';
+      }catch(_e){ return 'Community Association'; }
+    }
+    async function publishAnnualMeetingAnnouncement(req){
+      try{
+        var sb = await ensureSupabase(); if(!sb) return false;
+        var payload = req && req.packet_payload ? req.packet_payload : {};
+        if(typeof payload === 'string'){ try{ payload = JSON.parse(payload); }catch(_e){ payload = {}; } }
+        var record = {
+          type:'annual_meeting_notice', community_id:req.community_id||null, title:'Annual Meeting Notice',
+          body:'The Annual Meeting has been approved and posted. Residents can view the notice details and join the meeting from the portal.',
+          meeting_link:String(payload.meetingLink||'').trim()||null,
+          meeting_date:String(payload.nextAnnualMeetingDate||'').trim()||null,
+          meeting_time:String(payload.meetingTime||'').trim()||null,
+          nomination_deadline:String(payload.nominationDeadline||'').trim()||null,
+          proxy_return_deadline:String(payload.proxyReturnDeadline||'').trim()||null,
+          association_legal_name:String(payload.associationLegalName || payload.communityName || '').trim()||null,
+          community_name:String(payload.communityName||'').trim()||null,
+          meeting_format:String(payload.meetingFormat||'').trim()||null,
+          meeting_location:String(payload.meetingLocation||'').trim()||null,
+          expires_at:String(payload.nextAnnualMeetingDate||'').trim()||null
+        };
+        try{ await sb.from('community_announcements').delete().eq('community_id', req.community_id).eq('type','annual_meeting_notice'); }catch(_e){}
+        var ins = await sb.from('community_announcements').insert([record]);
+        if(ins && ins.error) throw ins.error;
+        return true;
+      }catch(_e){ return false; }
+    }
+    async function companyAssistantEmailForRow(sb,row){
+      try{
+        if(!row) return '';
+
+        function clean(v){ return String(v || '').trim(); }
+
+        var direct = clean(row.assistant_email);
+        var companyId = clean(row.company_id);
+        var communityId = clean(row.community_id);
+        var companyName = clean(row.company_name || row.company);
+        var communityName = clean(row.community_name);
+
+        async function tryAssignmentBy(filters){
+          try{
+            var q = sb.from('community_assignments').select('assistant_email, updated_at').limit(1);
+            Object.keys(filters || {}).forEach(function(key){
+              var val = clean(filters[key]);
+              if(val) q = q.eq(key, val);
+            });
+            q = q.order('updated_at', { ascending:false });
+            var res = await q.maybeSingle();
+            return clean(res && res.data && res.data.assistant_email);
+          }catch(_e){
+            return '';
+          }
+        }
+
+        var fromAssignments = '';
+        if(companyId && communityId) fromAssignments = await tryAssignmentBy({ company_id: companyId, community_id: communityId });
+        if(!fromAssignments && companyName && communityName) fromAssignments = await tryAssignmentBy({ company_name: companyName, community_name: communityName });
+        if(!fromAssignments && communityId) fromAssignments = await tryAssignmentBy({ community_id: communityId });
+        if(!fromAssignments && companyId && communityName) fromAssignments = await tryAssignmentBy({ company_id: companyId, community_name: communityName });
+        if(fromAssignments) return fromAssignments;
+
+        if(direct) return direct;
+
+        var employeeUserId = clean(row.employee_user_id);
+        if(!employeeUserId) return '';
+        var q = await sb.from('userdirectory').select('assistant_email').eq('auth_user_id', employeeUserId).maybeSingle();
+        return clean(q && q.data && q.data.assistant_email);
+      }catch(_e){ return ''; }
+    }
+    async function sendAnnualMailingEmail(sb,row,assistantEmail){
+      try{
+        if(!(sb&&sb.from) || !row) return {ok:false, reason:'missing_context'};
+        assistantEmail = String(assistantEmail || row.assistant_email || '').trim();
+        if(!assistantEmail) return {ok:false, reason:'missing_assistant_email'};
+        var token='';
+        try{ const s=await sb.auth.getSession(); token=String(s && s.data && s.data.session && s.data.session.access_token || '').trim(); }catch(_e){}
+        var anon='';
+        try{ anon=String(window.SUPABASE_ANON_KEY || localStorage.getItem('SUPABASE_ANON_KEY') || localStorage.getItem('supabase.anon.key') || '').trim(); }catch(_e){}
+        var confirmToken = String(Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)).trim() || String(Date.now());
+        var base='';
+        try{ base=String(window.SUPABASE_URL || localStorage.getItem('SUPABASE_URL') || '').trim(); }catch(_e){}
+        try{ if(!base && window.sb && window.sb.supabaseUrl) base=String(window.sb.supabaseUrl||'').trim(); }catch(_e){}
+        if(!base) return {ok:false, reason:'missing_supabase_url'};
+        var origin='';
+        try{ origin=String(window.location && window.location.origin || '').trim().replace(/\/$/, ''); }catch(_e){}
+        if(!origin){ try{ origin=String(base||'').replace(/\/rest\/?$/, '').replace(/\/$/, ''); }catch(_e){} }
+        var confirmUrl = origin ? (origin + '/annual_mailing_confirm.html?request_id=' + encodeURIComponent(String(row.id||'')) + '&token=' + encodeURIComponent(confirmToken)) : '';
+        try{ const upd = await sb.from('annual_meeting_packet_requests').update({ mailing_confirm_token: confirmToken }).eq('id', row.id); if(upd && upd.error) throw upd.error; }catch(e){ return {ok:false, reason:String((e && e.message) || 'Could not save mailing confirmation token')}; }
+        var payload = { request_id:row.id, assistant_email:assistantEmail, community_name:row.community_name || row.communityName || '', resident_count:Number(row.resident_count || 0), preview_html:String(row.preview_html || ''), packet_payload:row.packet_payload || {}, confirm_url:confirmUrl, confirm_token:confirmToken, attachments:(row.packet_payload && row.packet_payload.pdf_attachment) ? [row.packet_payload.pdf_attachment] : [] };
+        var headers = {'Content-Type':'application/json'}; if(anon) headers.apikey = anon; if(token) headers.Authorization = 'Bearer ' + token;
+        var res = await fetch(base + '/functions/v1/send-annual-mailing-email', { method:'POST', headers:headers, body:JSON.stringify(payload) });
+        var raw=''; try{ raw = await res.text(); }catch(_e){}
+        var data=null; try{ data=raw ? JSON.parse(raw) : null; }catch(_e){ data=raw; }
+        if(!res.ok){
+          var reason=''; try{ reason = String((data && (data.message || data.error || data.details)) || raw || ('HTTP ' + res.status)).trim(); }catch(_e){ reason='HTTP ' + res.status; }
+          return {ok:false, reason:reason || ('HTTP ' + res.status)};
+        }
+        try{ await sb.from('annual_meeting_packet_requests').update({ mailing_email_sent_at:new Date().toISOString() }).eq('id', row.id); }catch(_e){}
+        return {ok:true, data:data};
+      }catch(e){ return {ok:false, reason:String((e && e.message) || e || 'send_failed')}; }
+    }
+    async function openAnnualApprovalPreview(id){
+      try{
+        if(!id) return;
+        var sb = await ensureSupabase();
+        if(!sb || !sb.from){
+          alert('Preview unavailable for this approval.');
+          return;
+        }
+
+        var q = await sb
+          .from('annual_meeting_packet_requests')
+          .select('*')
+          .eq('id', id)
+          .limit(1)
+          .maybeSingle();
+
+        var row = q && q.data ? q.data : null;
+        if(!row){
+          alert('Preview unavailable for this approval.');
+          return;
+        }
+
+        var payload = row.packet_payload || {};
+        if(typeof payload === 'string'){
+          try { payload = JSON.parse(payload); } catch(_e) { payload = {}; }
+        }
+
+        var attachment = payload && payload.pdf_attachment ? payload.pdf_attachment : null;
+        var mime = String((attachment && attachment.type) || 'application/pdf');
+        var b64 = String((attachment && attachment.content) || '').replace(/\s+/g, '').trim();
+
+        if(b64){
+          var binary = atob(b64);
+          var len = binary.length;
+          var bytes = new Uint8Array(len);
+          for(var i = 0; i < len; i++){
+            bytes[i] = binary.charCodeAt(i);
+          }
+          var blob = new Blob([bytes], { type: mime });
+          var url = URL.createObjectURL(blob);
+          var win = window.open(url, '_blank');
+          if(!win){
+            window.location.href = url;
+          }
+          setTimeout(function(){ try{ URL.revokeObjectURL(url); }catch(_e){} }, 60000);
+          return;
+        }
+
+        var html = String(row.preview_html || '').trim();
+        if(html){
+          var win2 = window.open('', '_blank');
+          if(!win2) return;
+          win2.document.open();
+          win2.document.write(html);
+          win2.document.close();
+          return;
+        }
+
+        alert('Preview unavailable for this approval.');
+      }catch(err){
+        console.error('Annual approval preview failed', err);
+        alert('Preview unavailable for this approval.');
+      }
+    }
+    async function updateAnnualApproval(id,status){
+      try{
+        if(!id || !status) return {ok:false};
+        var sb = await ensureSupabase(); if(!sb) return {ok:false};
+        var identity = await getSupervisorSessionIdentity();
+        var supervisorId = String((identity && identity.id) || '').trim();
+        var req = await sb.from('annual_meeting_packet_requests').select('*').eq('id', id).limit(1).maybeSingle();
+        if(req && req.error) throw req.error;
+        var row = req && req.data ? req.data : null; if(!row) throw new Error('Approval request not found');
+        var approvedAt = new Date().toISOString();
+        var upd = await sb.from('annual_meeting_packet_requests').update({ status: status === 'approved' ? 'approved_ready_to_send' : status, approved_at: status === 'approved' ? approvedAt : null, approved_by: status === 'approved' ? (supervisorId || null) : null, rejection_reason: status === 'rejected' ? 'Rejected by supervisor' : null }).eq('id', id);
+        if(upd && upd.error) throw upd.error;
+        var emailResult = null;
+        if(status === 'approved'){
+          try{ await publishAnnualMeetingAnnouncement(row); }catch(_e){}
+          var assistantEmail = await companyAssistantEmailForRow(sb,row);
+          emailResult = await sendAnnualMailingEmail(sb,row,assistantEmail);
+          try{ await sb.from('annual_meeting_activity_events').insert([{ event_type: emailResult && emailResult.ok ? 'annual_packet_emailed_for_mailing' : 'annual_packet_approved', title: emailResult && emailResult.ok ? 'Annual Meeting packet emailed for mailing' : 'Annual Meeting Documents approved', detail: emailResult && emailResult.ok ? ((row.community_name || 'Community') + ' packet emailed to assistant for printing and mailing.') : ((row.community_name || 'Community') + ' documents approved.'), company_id: row.company_id || null, community_id: row.community_id || null, community_name: row.community_name || null, actor_user_id: supervisorId || null, actor_name: (identity && identity.name) || 'Supervisor', target_user_id: row.employee_user_id || null, created_at: approvedAt }]); }catch(_e){}
+        }else if(status === 'rejected'){
+          try{ await sb.from('annual_meeting_activity_events').insert([{ event_type:'annual_packet_rejected', title:'Annual Meeting Documents rejected', detail:(row.community_name || 'Community') + ' documents were rejected by supervisor.', company_id:row.company_id || null, community_id:row.community_id || null, community_name:row.community_name || null, actor_user_id:supervisorId || null, actor_name:(identity && identity.name) || 'Supervisor', target_user_id:row.employee_user_id || null, created_at:new Date().toISOString() }]); }catch(_e){}
+        }
+        return {ok:true, emailResult:emailResult};
+      }catch(e){ console.warn('annual approval update failed',e); return {ok:false}; }
+    }
+    function parseAnnualCompanyLogoRef(raw){
+      raw = String(raw || '').trim();
+      if(!raw) return null;
+      if(/^https?:\/\//i.test(raw)) return { url: raw };
+      return { bucket:'company_logos', path: raw };
+    }
+    function setAnnualApprovalsCompanyLogo(url, alt){
+      var logo = document.getElementById('annualApprovalsCompanyLogo');
+      if(!logo) return;
+      var finalUrl = String(url || '').trim();
+      logo.classList.remove('logo-ready');
+      logo.hidden = true;
+      logo.removeAttribute('src');
+      if(!finalUrl) return;
+      logo.onload = function(){ logo.hidden = false; logo.classList.add('logo-ready'); };
+      logo.onerror = function(){ logo.hidden = true; logo.classList.remove('logo-ready'); logo.removeAttribute('src'); };
+      logo.alt = String(alt || '').trim() || 'Management company logo';
+      logo.src = finalUrl;
+    }
+    async function loadAnnualApprovalsCompanyLogo(){
+      try{
+        var sb = await ensureSupabase();
+        if(!sb || !sb.auth) throw new Error('Supabase unavailable');
+        var authRes = await sb.auth.getUser();
+        var user = authRes && authRes.data && authRes.data.user;
+        if(!user || !user.id) throw new Error('No user');
+        var prof = await sb.from('userdirectory').select('company_id, company_name').eq('auth_user_id', user.id).limit(1).maybeSingle();
+        var profile = prof && prof.data ? prof.data : {};
+        var companyId = String(profile.company_id || '').trim();
+        var row = null;
+        if(companyId){
+          var res = await sb.from('companies').select('logo_path,name').eq('id', companyId).maybeSingle();
+          if(res && !res.error && res.data) row = res.data;
+        }
+        if(!row && profile.company_name){
+          var res2 = await sb.from('companies').select('logo_path,name').eq('name', String(profile.company_name).trim()).maybeSingle();
+          if(res2 && !res2.error && res2.data) row = res2.data;
+        }
+        if(!row) throw new Error('No company row');
+        var ref = parseAnnualCompanyLogoRef(row.logo_path);
+        if(!ref) throw new Error('No logo ref');
+        var url = String(ref.url || '').trim();
+        if(!url && ref.bucket && ref.path && sb.storage && sb.storage.from){
+          var pub = sb.storage.from(ref.bucket).getPublicUrl(ref.path);
+          url = String(pub && pub.data && pub.data.publicUrl || '').trim();
+        }
+        if(!url) throw new Error('No logo url');
+        setAnnualApprovalsCompanyLogo(url, String(row.name || 'Management company logo'));
+      }catch(_e){
+        setAnnualApprovalsCompanyLogo('', 'Management company logo');
+      }
+    }
+
+    async function renderAnnualApprovalInbox(){
+      var wrap=document.getElementById('annualApprovalList');
+      var countEl=document.getElementById('annualApprovalCount');
+      if(!wrap) return;
+      wrap.innerHTML='<div class="empty">Loading approvals…</div>';
+      try{
+        var sb=await ensureSupabase(); if(!sb){ wrap.innerHTML='<div class="empty">Supabase client not ready.</div>'; if(countEl) countEl.textContent='0'; return; }
+        var identity=await getSupervisorSessionIdentity();
+        var supervisorId='';
+        try{ var authRes=await sb.auth.getUser(); supervisorId=String(authRes && authRes.data && authRes.data.user && authRes.data.user.id || '').trim(); }catch(_e){}
+        if(!supervisorId) supervisorId=String((identity && identity.id)||'').trim();
+        if(!supervisorId){ wrap.innerHTML='<div class="empty">Supervisor session not detected yet. Refresh and try again.</div>'; if(countEl) countEl.textContent='0'; return; }
+        var q = await sb.from('annual_meeting_packet_requests').select('*').eq('supervisor_user_id', supervisorId).eq('status','pending_supervisor_approval').order('submitted_at',{ascending:false});
+        if(q && q.error){ wrap.innerHTML='<div class="empty">Approval queue unavailable (' + esc(q.error.message || 'error') + ').</div>'; if(countEl) countEl.textContent='0'; return; }
+        var rows=(q && q.data) ? q.data : [];
+        if(!rows.length){
+          try{ var qAll=await sb.from('annual_meeting_packet_requests').select('*').eq('status','pending_supervisor_approval').order('submitted_at',{ascending:false}); if(qAll && !qAll.error && Array.isArray(qAll.data)){ rows=qAll.data.filter(function(r){ return String((r && r.supervisor_user_id) || '').trim() === supervisorId; }); } }catch(_e){}
+        }
+        if(countEl) countEl.textContent=String(rows.length || 0);
+        if(!rows.length){ wrap.innerHTML='<div class="empty">No board-approved annual meeting notices are awaiting supervisor approval.</div>'; return; }
+        wrap.innerHTML = rows.map(function(r){
+          var when = r.submitted_at ? new Date(r.submitted_at).toLocaleString() : '—';
+          var employee = r.employee_name || r.employee_email || 'Employee';
+          var residents = Number(r.resident_count || 0);
+          var titleText = pickAnnualMeetingCommunityName(r);
+          return '<article class="approvalCard" data-approval-id="' + esc(r.id || '') + '">'
+            + '<div class="statusTag">Board Approved • Awaiting Supervisor Approval</div>'
+            + '<div class="approvalTop"><div><div class="approvalTitle">' + esc(titleText) + '</div><div class="approvalDesc">The board has approved this notice. Review the packet and decide whether it is ready for resident distribution.</div><div class="metaRow"><div class="meta"><strong>Prepared by</strong> ' + esc(employee) + '</div><div class="meta"><strong>Submitted</strong> ' + esc(when) + '</div><div class="meta"><strong>Residents</strong> ' + esc(String(residents)) + '</div></div></div><div class="awaiting">Awaiting Approval</div></div>'
+            + '<div class="approvalBody">Preview the annual meeting notice draft, then approve to post the resident announcement and continue the workflow for this community.</div>'
+            + '<div class="actions"><button class="btnx btnSlate" type="button" data-approval-preview="' + esc(r.id || '') + '">Preview Notice</button><button class="btnx btnDark" type="button" data-approval-approve="' + esc(r.id || '') + '">Approve Notice</button><button class="btnx btnWhite" type="button" data-approval-reject="' + esc(r.id || '') + '">Reject</button></div>'
+            + '</article>';
+        }).join('');
+      }catch(e){ console.warn('annual approval inbox failed', e); wrap.innerHTML='<div class="empty">Could not load annual meeting approvals.</div>'; if(countEl) countEl.textContent='0'; }
+    }
+    document.addEventListener('click', async function(e){
+      var previewBtn=e.target.closest('[data-approval-preview]');
+      if(previewBtn){ e.preventDefault(); await openAnnualApprovalPreview(previewBtn.getAttribute('data-approval-preview')); return; }
+      var approveBtn=e.target.closest('[data-approval-approve]');
+      if(approveBtn){ e.preventDefault(); var res=await updateAnnualApproval(approveBtn.getAttribute('data-approval-approve'),'approved'); if(res && res.ok){ if(res.emailResult && res.emailResult.ok){ toast('Annual meeting notice approved and emailed for mailing.'); } else { var why=(res && res.emailResult && res.emailResult.reason) ? String(res.emailResult.reason) : 'Assistant email did not send.'; toast('Annual meeting notice approved. ' + why); } renderAnnualApprovalInbox(); } else { toast('Could not approve notice'); } return; }
+      var rejectBtn=e.target.closest('[data-approval-reject]');
+      if(rejectBtn){ e.preventDefault(); var ok2=await updateAnnualApproval(rejectBtn.getAttribute('data-approval-reject'),'rejected'); toast(ok2 && ok2.ok ? 'Annual meeting notice rejected' : 'Could not reject notice'); if(ok2 && ok2.ok) renderAnnualApprovalInbox(); }
+    });
+    document.getElementById('refreshAnnualApprovals').addEventListener('click', renderAnnualApprovalInbox);
+    window.addEventListener('load', function(){ loadAnnualApprovalsCompanyLogo(); setTimeout(renderAnnualApprovalInbox, 250); });
+  </script>
+<script src="company_logo_sync.js"></script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

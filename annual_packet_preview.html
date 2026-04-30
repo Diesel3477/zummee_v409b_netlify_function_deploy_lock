@@ -1,0 +1,426 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Annual Meeting Packet Preview</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="favicon.png">
+  
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+    :root{
+      --bg:#eaf1f7;
+      --ink:#17324d;
+      --muted:#5f7387;
+      --line:rgba(23,50,77,.12);
+      --card:#ffffff;
+      --gold1:#f6d97d;
+      --gold2:#d8a93d;
+      --gold3:#fff2c8;
+      --shadow:0 24px 60px rgba(15,47,74,.14);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;background:radial-gradient(circle at top,#f9fbfd 0%,var(--bg) 52%,#e2ebf3 100%);font-family:Inter,Arial,Helvetica,sans-serif;color:var(--ink)}
+    body.loading .appShell{opacity:.001;pointer-events:none}
+    body.previewReady .appShell{animation:previewFade .32s ease both}
+    .topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 20px;background:rgba(234,241,247,.84);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
+    .brandWrap{display:flex;align-items:center;gap:14px;min-width:0}
+    .brandMark{width:44px;height:44px;border-radius:14px;background:linear-gradient(180deg,#fff 0%,#f4f8fb 100%);display:grid;place-items:center;box-shadow:0 10px 24px rgba(15,47,74,.12), inset 0 1px 0 rgba(255,255,255,.95);border:1px solid rgba(255,255,255,.95)}
+    .brandMark img{width:28px;height:28px;object-fit:contain}
+    .brandText{min-width:0}
+    .eyebrow{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+    .title{font-size:clamp(20px,3vw,30px);font-weight:900;letter-spacing:-.03em;line-height:1.03}
+    .sub{margin-top:4px;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px}
+    .btn{appearance:none;border:none;border-radius:999px;padding:12px 18px;font-weight:800;font-size:15px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .16s ease, box-shadow .16s ease, opacity .16s ease}
+    .btn:hover{transform:translateY(-1px)}
+    .btnPrimary{background:linear-gradient(180deg,var(--gold1) 0%,var(--gold2) 100%);color:#17324d;box-shadow:0 16px 28px rgba(216,169,61,.26)}
+    .btnSecondary{background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:0 10px 24px rgba(15,47,74,.08)}
+    .btnGhost{background:rgba(255,255,255,.68);color:var(--ink);border:1px solid var(--line)}
+    .appShell{padding:20px;transition:opacity .2s ease}
+    .heroCard{max-width:1440px;margin:0 auto 18px;background:linear-gradient(135deg,rgba(255,255,255,.96) 0%,rgba(250,252,254,.98) 42%,rgba(255,247,220,.95) 100%);border:1px solid rgba(255,255,255,.95);border-radius:30px;padding:20px 22px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+    .heroCard:before{content:'';position:absolute;inset:0;background:radial-gradient(circle at top right,rgba(246,217,125,.28),transparent 34%),linear-gradient(120deg,transparent 20%,rgba(255,255,255,.42) 45%,transparent 70%);pointer-events:none}
+    .heroGrid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(320px,.9fr);gap:18px;align-items:start;position:relative;z-index:1}
+    .heroLead h2{margin:0;font-size:clamp(28px,4vw,40px);line-height:1.02;letter-spacing:-.04em}
+    .heroLead p{margin:10px 0 0;font-size:15px;line-height:1.6;color:var(--muted);font-weight:700;max-width:760px}
+    .statusPills{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+    .statusPill{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.82);border:1px solid rgba(23,50,77,.08);font-size:13px;font-weight:900;color:var(--ink);box-shadow:0 10px 24px rgba(15,47,74,.06)}
+    .statusDot{width:10px;height:10px;border-radius:999px;background:linear-gradient(180deg,var(--gold1) 0%,var(--gold2) 100%);box-shadow:0 0 0 4px rgba(246,217,125,.25)}
+    .heroSide{display:grid;gap:12px}
+    .heroPanel{background:rgba(255,255,255,.82);border:1px solid rgba(23,50,77,.08);border-radius:22px;padding:16px 16px 14px;box-shadow:0 12px 28px rgba(15,47,74,.08)}
+    .heroPanelLabel{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+    .heroPanelValue{font-size:18px;font-weight:900;letter-spacing:-.02em}
+    .heroPanelSub{margin-top:5px;font-size:13px;line-height:1.5;color:var(--muted);font-weight:700}
+    .heroMeta{display:flex;flex-wrap:wrap;gap:12px 14px;color:var(--muted);font-weight:800;font-size:13px}
+    .heroMeta span{display:inline-flex;align-items:center;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.78);border:1px solid rgba(23,50,77,.08);color:var(--ink);box-shadow:0 10px 20px rgba(15,47,74,.05)}
+    .viewerCard{max-width:1440px;margin:0 auto;background:linear-gradient(180deg,#ffffff 0%,#f7fafc 100%);border-radius:34px;box-shadow:var(--shadow);border:1px solid rgba(255,255,255,.95);overflow:hidden}
+    .viewerInset{padding:18px}
+    #viewerMount{width:100%;min-height:calc(100vh - 245px);background:#fff;border-radius:24px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(15,47,74,.06)}
+    #viewerMount iframe,#viewerMount embed{width:100%;height:calc(100vh - 245px);border:none;display:block;background:#fff}
+    .loadingScreen{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(180deg,rgba(233,240,246,.97) 0%,rgba(244,248,251,.99) 100%)}
+    .loadingCard{width:min(760px,100%);background:linear-gradient(180deg,#ffffff 0%,#f6fafc 100%);border-radius:34px;border:1px solid rgba(255,255,255,.95);box-shadow:0 28px 70px rgba(15,47,74,.16);padding:30px 28px 26px;text-align:center}
+    .loadingBadge{display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;border-radius:999px;background:rgba(23,50,77,.08);font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+    .loadingTitle{margin:16px 0 8px;font-size:clamp(30px,5vw,46px);line-height:1.02;font-weight:900;letter-spacing:-.04em;color:var(--ink)}
+    .loadingText{margin:0 auto;max-width:520px;font-size:16px;line-height:1.55;color:var(--muted);font-weight:700}
+    .loaderRow{margin:24px auto 0;display:flex;justify-content:center;gap:10px}
+    .loaderDot{width:12px;height:12px;border-radius:999px;background:linear-gradient(180deg,var(--gold1) 0%,var(--gold2) 100%);animation:floatPulse 1.1s infinite ease-in-out}
+    .loaderDot:nth-child(2){animation-delay:.13s}.loaderDot:nth-child(3){animation-delay:.26s}
+    @keyframes floatPulse{0%,80%,100%{transform:translateY(0);opacity:.45}40%{transform:translateY(-8px);opacity:1}}
+    .emptyState{padding:42px 24px;text-align:center;color:var(--ink)}
+    @keyframes previewFade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    .emptyState h2{margin:0 0 10px;font-size:32px;letter-spacing:-.03em}
+    .emptyState p{max-width:560px;margin:0 auto;color:var(--muted);font-size:16px;line-height:1.55;font-weight:700}
+    .mobileOpenWrap{padding:18px;text-align:center}
+    .mobileNote{padding:18px 18px 6px;text-align:center;color:var(--ink);font-weight:800}
+    @media (max-width: 860px){
+      .topbar{align-items:flex-start;flex-direction:column}
+      .actions{justify-content:flex-start}
+      .heroGrid{grid-template-columns:1fr}
+      .viewerInset{padding:12px}
+      #viewerMount, #viewerMount iframe, #viewerMount embed{min-height:calc(100vh - 290px);height:calc(100vh - 290px)}
+    }
+    @media print{
+      .topbar,.heroCard{display:none!important}
+      .appShell{padding:0}
+      .viewerCard,#viewerMount{border-radius:0;box-shadow:none;border:none}
+      #viewerMount, #viewerMount iframe, #viewerMount embed{height:100vh!important;min-height:auto!important}
+    }
+  
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+
+.mh2-actions .mh2-btn--ghost{display:none !important;}
+</style>
+<style>
+/* FORCE white text in Status & Details section */
+#boardSubmittedItemsSection,
+#boardSubmittedItemsSection *:not(button),
+#boardMemberHubStatus,
+#boardMemberHubStatus *:not(button),
+#annualMeetingApprovals,
+#annualMeetingApprovals *:not(button) {
+  color: #ffffff !important;
+}
+
+/* Secondary text (slightly dimmed white) */
+#boardSubmittedItemsSection .muted,
+#boardMemberHubStatus .muted,
+#annualMeetingApprovals .muted {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style>
+/* HARD OVERRIDE — force white text in dark section */
+.hub-zone:last-of-type,
+.hub-zone:last-of-type *:not(button):not(.badge):not(.pill) {
+  color: #ffffff !important;
+}
+
+/* Slightly softer for secondary text */
+.hub-zone:last-of-type .muted,
+.hub-zone:last-of-type p,
+.hub-zone:last-of-type span {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+</head>
+<body class="loading" data-header-mode="subpage">
+  <div id="loadingScreen" class="loadingScreen">
+    <div class="loadingCard">
+      <div class="loadingBadge">Zummee Annual Meetings</div>
+      <div class="loadingTitle">Preparing Your Packet Preview</div>
+      <p class="loadingText" id="loadingMessage">Building a polished preview of the annual meeting packet so it opens cleanly on iPad and desktop.</p>
+      <div class="loaderRow"><div class="loaderDot"></div><div class="loaderDot"></div><div class="loaderDot"></div></div>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <div class="brandWrap">
+      <div class="brandMark"><img src="zummee_mark_64.png" alt="Zummee"></div>
+      <div class="brandText">
+        <div class="eyebrow">Annual Meetings</div>
+        <div class="title">Premium Packet Preview</div>
+        <div class="sub" id="previewSubline">Loading your final annual meeting documents…</div>
+      </div>
+    </div>
+    <div class="actions">
+      <a class="btn btnGhost" href="daily_ops_rebuild.html">Back to Daily Ops</a>
+      <button class="btn btnSecondary" id="openPdfBtn" type="button">Open Full PDF</button>
+      <button class="btn btnPrimary" id="printBtn" type="button">Print / Save PDF</button>
+    </div>
+  </header>
+
+  <main class="appShell">
+    <section class="heroCard">
+      <div class="heroGrid">
+        <div class="heroLead">
+          <div class="eyebrow">Prepared by Zummee</div>
+          <h2 id="heroHeadline">Premium packet preview, ready to share.</h2>
+          <p id="heroDescription">Review the final annual meeting packet with a clean, print-ready preview built for iPad and desktop.</p>
+          <div class="statusPills">
+            <div class="statusPill"><span class="statusDot"></span>Print-ready layout</div>
+            <div class="statusPill"><span class="statusDot"></span>Smooth iPad preview</div>
+            <div class="statusPill"><span class="statusDot"></span>Prepared by Zummee</div>
+          </div>
+        </div>
+        <div class="heroSide">
+          <div class="heroPanel">
+            <div class="heroPanelLabel">Packet Overview</div>
+            <div class="heroPanelValue" id="overviewTitle">Annual Meeting Packet</div>
+            <div class="heroPanelSub" id="overviewSub">Final notice, proxy, and nomination documents are ready to review and print.</div>
+          </div>
+          <div class="heroMeta" id="heroMeta"></div>
+        </div>
+      </div>
+    </section>
+    <section class="viewerCard">
+      <div class="viewerInset">
+        <div id="viewerMount" aria-label="Annual Meeting Packet Preview"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function(){
+      var STORE_KEY = 'zummee_annual_packet_preview_page_v1';
+      var pdfUrl = '';
+      var currentPayload = null;
+
+      function qs(id){ return document.getElementById(id); }
+      function setLoadingMessage(msg){ var el = qs('loadingMessage'); if(el) el.textContent = String(msg || ''); }
+      function hideLoading(){ document.body.classList.remove('loading'); document.body.classList.add('previewReady'); var el = qs('loadingScreen'); if(el) el.style.display = 'none'; }
+      function showEmpty(message){
+        var mount = qs('viewerMount');
+        if(mount){
+          mount.innerHTML = '<div class="emptyState"><h2>No packet preview available</h2><p>' + String(message || 'Generate the annual meeting packet from Daily Ops to view it here.') + '</p></div>';
+        }
+        hideLoading();
+      }
+      function safeReadPayload(){
+        try{
+          var raw = localStorage.getItem(STORE_KEY);
+          if(!raw) return null;
+          return JSON.parse(raw);
+        }catch(_e){ return null; }
+      }
+      function buildBlobFromAttachment(att){
+        if(!att || !att.content) return null;
+        var binary = atob(String(att.content || ''));
+        var len = binary.length;
+        var bytes = new Uint8Array(len);
+        for(var i=0;i<len;i++) bytes[i] = binary.charCodeAt(i);
+        return new Blob([bytes], { type: String(att.type || 'application/pdf') });
+      }
+      function isAppleMobile(){
+        try{
+          var ua = String(navigator.userAgent || '');
+          var platform = String(navigator.platform || '');
+          var touchMac = platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+          return /iPad|iPhone|iPod/i.test(ua) || touchMac;
+        }catch(_e){ return false; }
+      }
+      function formatPrettyDate(v){
+        if(!v) return '';
+        try{ return new Date(v).toLocaleString([], { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' }); }catch(_e){ return String(v); }
+      }
+      function renderMeta(payload){
+        var meta = qs('heroMeta');
+        if(!meta) return;
+        var data = payload && payload.data ? payload.data : {};
+        var communityName = data.communityName || data.community_name || '';
+        var meetingDate = data.meetingDate || '';
+        var chips = [];
+        if(communityName) chips.push('Community: ' + String(communityName));
+        if(meetingDate) chips.push('Meeting Date: ' + String(meetingDate));
+        if(payload && payload.residentCount) chips.push('Owners Included: ' + String(payload.residentCount));
+        if(payload && payload.createdAt) chips.push('Built: ' + formatPrettyDate(payload.createdAt));
+        if(!chips.length) chips.push('Final packet preview ready to review, print, or save.');
+        meta.innerHTML = chips.map(function(c){ return '<span>' + c + '</span>'; }).join('');
+        var sub = qs('previewSubline');
+        if(sub){
+          sub.textContent = communityName
+            ? ('Final annual meeting packet for ' + String(communityName))
+            : 'Final annual meeting packet preview';
+        }
+        var heroHeadline = qs('heroHeadline');
+        if(heroHeadline){
+          heroHeadline.textContent = communityName
+            ? ('Annual meeting packet for ' + String(communityName))
+            : 'Premium packet preview, ready to share.';
+        }
+        var heroDescription = qs('heroDescription');
+        if(heroDescription){
+          heroDescription.textContent = meetingDate
+            ? ('Review the final annual meeting packet for ' + String(meetingDate) + ' with a polished, print-ready preview built for iPad and desktop.')
+            : 'Review the final annual meeting packet with a clean, print-ready preview built for iPad and desktop.';
+        }
+        var overviewTitle = qs('overviewTitle');
+        if(overviewTitle){
+          overviewTitle.textContent = communityName || 'Annual Meeting Packet';
+        }
+        var overviewSub = qs('overviewSub');
+        if(overviewSub){
+          var parts = [];
+          if(meetingDate) parts.push('Meeting date: ' + String(meetingDate));
+          if(payload && payload.residentCount) parts.push('Owners included: ' + String(payload.residentCount));
+          parts.push('Final notice, proxy, and nomination documents are ready to review and print.');
+          overviewSub.textContent = parts.join(' • ');
+        }
+      }
+      function renderPreview(url){
+        var mount = qs('viewerMount');
+        if(!mount) return;
+        mount.innerHTML = '';
+        if(isAppleMobile()){
+          var note = document.createElement('div');
+          note.className = 'mobileNote';
+          note.textContent = 'Your packet is ready. You can review it below or open the full PDF.';
+          var wrap = document.createElement('div');
+          wrap.className = 'mobileOpenWrap';
+          var openBtn = document.createElement('a');
+          openBtn.className = 'btn btnPrimary';
+          openBtn.href = url;
+          openBtn.target = '_self';
+          openBtn.rel = 'noopener';
+          openBtn.textContent = 'Open Full PDF Preview';
+          wrap.appendChild(openBtn);
+          var embed = document.createElement('embed');
+          embed.src = url;
+          embed.type = 'application/pdf';
+          mount.appendChild(note);
+          mount.appendChild(wrap);
+          mount.appendChild(embed);
+        } else {
+          var frame = document.createElement('iframe');
+          frame.src = url;
+          frame.title = 'Annual Meeting Packet PDF Preview';
+          mount.appendChild(frame);
+        }
+        hideLoading();
+      }
+      function wireActions(){
+        var printBtn = qs('printBtn');
+        if(printBtn){
+          printBtn.addEventListener('click', function(){
+            if(pdfUrl && isAppleMobile()){
+              window.location.href = pdfUrl;
+              return;
+            }
+            window.print();
+          });
+        }
+        var openPdfBtn = qs('openPdfBtn');
+        if(openPdfBtn){
+          openPdfBtn.addEventListener('click', function(){
+            if(!pdfUrl) return;
+            window.location.href = pdfUrl;
+          });
+        }
+      }
+      function boot(){
+        wireActions();
+        setLoadingMessage('Loading the final packet preview…');
+        currentPayload = safeReadPayload();
+        if(!currentPayload || !currentPayload.packetMeta || !currentPayload.packetMeta.pdf_attachment){
+          showEmpty('Please generate the packet again from Daily Ops.');
+          return;
+        }
+        renderMeta(currentPayload);
+        setLoadingMessage('Finalizing your premium preview…');
+        try{
+          var blob = buildBlobFromAttachment(currentPayload.packetMeta.pdf_attachment);
+          if(!blob) throw new Error('Preview PDF could not be generated.');
+          pdfUrl = URL.createObjectURL(blob);
+          requestAnimationFrame(function(){
+            setTimeout(function(){ renderPreview(pdfUrl); }, 60);
+          });
+        }catch(err){
+          showEmpty('We could not open this preview. Please return to Daily Ops and generate the packet again.');
+        }
+      }
+      window.addEventListener('beforeunload', function(){ try{ if(pdfUrl) URL.revokeObjectURL(pdfUrl); }catch(_e){} });
+      boot();
+    })();
+  </script>
+<script src="company_logo_sync.js"></script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

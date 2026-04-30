@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Annual Meeting & Voting</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="shared/supabase-client.js?v=2026-04-27-212"></script>
+<script src="shared/resident-auth.js?v=2026-04-27-212"></script>
+<script src="company_logo_sync.js?v=2026-04-27-212"></script>
+
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+:root{--blue:#12324d;--blue2:#1f5b8f;--line:#9bc9ff;--muted:#60758b;--bg:#eef5fb;--green:#166534;--red:#991b1b;--gold:#9a6a05;--soft:#f7fbff}*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:var(--blue);background:linear-gradient(180deg,#f1f7ff 0%,#edf5fd 55%,#f8fbff 100%)}.shell{max-width:1180px;margin:0 auto;padding:24px 22px 54px}.hero,.section{background:rgba(255,255,255,.94);border:2px solid var(--line);border-radius:34px;box-shadow:0 18px 46px rgba(18,50,77,.08)}.hero{padding:24px 28px;display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center}.kicker{font-size:13px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;color:#6c7f94}.hero h1{margin:4px 0 0;font-size:34px;line-height:1.02;letter-spacing:-.04em}.heroRight{display:flex;align-items:center;gap:12px}.logo{height:56px;max-width:210px;object-fit:contain;display:none}.logo.is-visible{display:block}.btn{border:2px solid var(--line);background:#fff;color:var(--blue);border-radius:18px;padding:13px 17px;font-weight:950;font-size:15px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}.btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}.btn.primary:disabled{opacity:.55;cursor:not-allowed}.section{margin-top:22px;padding:24px}.section h2{margin:0;font-size:28px;letter-spacing:-.04em}.sub{margin:7px 0 0;color:var(--muted);font-size:16px;line-height:1.35}.statusStrip{margin-top:18px;border-radius:22px;padding:16px 18px;font-weight:950;border:1px solid rgba(18,50,77,.1);background:#eef6ff;color:#1d4ed8}.statusStrip.open{background:#ecfdf3;color:var(--green)}.statusStrip.closed{background:#f3f4f6;color:#4b5563}.electionCard{margin-top:18px;border:1px solid rgba(18,50,77,.12);background:#fbfdff;border-radius:28px;padding:18px}.electionHead{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}.electionTitle{font-size:23px;font-weight:950;letter-spacing:-.035em}.electionDesc{margin-top:6px;color:var(--muted);line-height:1.35}.pill{border-radius:999px;padding:7px 11px;background:#eef6ff;border:1px solid rgba(59,130,246,.18);font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.08em;color:#1d4ed8;white-space:nowrap}.pill.open{background:#eaf8ef;color:var(--green)}.pill.closed{background:#f3f4f6;color:#4b5563}.candidateList{display:grid;grid-template-columns:1fr;gap:12px;margin-top:16px}.candidate{position:relative;border:1px solid rgba(18,50,77,.13);border-radius:22px;background:#fff;padding:16px;display:grid;grid-template-columns:auto 1fr;gap:13px;align-items:flex-start;cursor:pointer;transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease}.candidate:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(18,50,77,.08);border-color:var(--line)}.candidate input{margin-top:2px;width:22px;height:22px;accent-color:var(--blue)}.candidateName{font-size:17px;font-weight:950}.candidateBio{margin-top:4px;font-size:14px;color:var(--muted);line-height:1.35}.voteActions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px}.msg{font-weight:850;color:var(--muted);line-height:1.35}.msg.ok{color:var(--green)}.msg.bad{color:var(--red)}.alreadyVoted{margin-top:15px;border-radius:20px;padding:14px 16px;background:#ecfdf3;color:var(--green);font-weight:950;border:1px solid rgba(22,101,52,.18)}.empty{margin-top:16px;border:1px solid rgba(18,50,77,.1);border-radius:22px;background:#fff;padding:18px;color:var(--muted);font-weight:850}.results{margin-top:16px;border:1px solid rgba(18,50,77,.10);border-radius:22px;background:#fff;padding:16px}.resultRow{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:11px 0;border-top:1px solid rgba(18,50,77,.08)}.resultRow:first-child{border-top:0}.resultName{font-weight:950}.resultVotes{font-weight:950;color:var(--blue)}.resultMeta{font-size:12px;color:var(--muted);margin-top:4px}.resultBar{grid-column:1/-1;height:9px;border-radius:999px;background:#eaf3ff;overflow:hidden}.resultBarFill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--blue2),#7ab4ee)}.winnerBadge{display:inline-flex;margin-left:8px;border-radius:999px;background:#fff7df;color:var(--gold);border:1px solid rgba(154,106,5,.22);padding:3px 7px;font-size:10px;font-weight:950;letter-spacing:.08em;text-transform:uppercase}.lockedNote{margin-top:12px;border-radius:18px;background:#f8fafc;border:1px solid rgba(18,50,77,.08);padding:12px 14px;color:var(--muted);font-weight:850}@media(max-width:800px){.hero{grid-template-columns:1fr;padding:22px}.heroRight{justify-content:space-between}.hero h1{font-size:30px}.logo{height:46px;max-width:170px}.shell{padding:18px 14px 42px}.section{padding:20px;border-radius:26px}.electionHead{display:block}.pill{display:inline-flex;margin-top:12px}.candidate{padding:15px}.btn{width:100%}.voteActions{display:block}.voteActions .msg{margin-top:12px}}
+</style>
+<style id="zummee-global-hero-header-refactor">
+/* v224: safe header refactor - stack contextual actions under the wired logo */
+.heroRight{display:flex !important;flex-direction:column !important;align-items:flex-end !important;justify-content:flex-start !important;gap:10px !important;}
+.heroRight img,.heroRight .logo,.heroRight .heroLogo{margin:0 !important;}
+.heroRight .btn,.heroRight button,.heroRight a{align-self:flex-end !important;}
+@media(max-width:800px){.heroRight{width:100% !important;align-items:flex-end !important;}}
+</style>
+</head>
+<body>
+<main class="shell">
+  <section class="hero">
+    <div><div class="kicker">Resident Home</div><h1>Annual Meeting &amp; Voting</h1></div>
+    <div class="heroRight"><img id="pageCompanyLogo" class="logo" alt="Company logo"><a class="btn" href="community_experience.html">Back</a></div>
+  </section>
+
+  <section class="section">
+    <h2>Voting Status</h2>
+    <p class="sub">Open community elections appear here. Each logged-in resident can submit one ballot per election.</p>
+    <div id="statusStrip" class="statusStrip">Loading voting information…</div>
+  </section>
+
+  <section class="section">
+    <h2>Active Ballots</h2>
+    <p class="sub">Select your candidate and submit your vote. Once submitted, your ballot is locked.</p>
+    <div id="electionsList"></div>
+  </section>
+
+  <section class="section">
+    <h2>Released Results</h2>
+    <p class="sub">Results stay hidden until the board releases them.</p>
+    <div id="resultsList"></div>
+  </section>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+async function getClient(){if(window.ensureSupabase)return await window.ensureSupabase();return window.supabaseClient||window.sb||null}
+let ctx={user:null,resident:null,communityId:'',communityName:'',companyId:''};
+let state={elections:[],votesByElection:{},busy:false};
+function setStatus(text,type){const el=$('statusStrip');el.textContent=text;el.className='statusStrip '+(type||'')}
+function setLogo(url){const img=$('pageCompanyLogo');if(!img)return;if(url){img.src=url;img.classList.add('is-visible')}else{img.classList.remove('is-visible')}}
+async function loadContext(){
+  const auth=window.ZummeeResidentAuth?await window.ZummeeResidentAuth.requireResident({redirect:true}):null;
+  const sb=await getClient();
+  if(!auth||!auth.ok){setStatus('Please sign in as a resident to vote.','closed');return false}
+  ctx.user=auth.ctx.user; ctx.resident=auth.ctx.resident||{};
+  ctx.communityId=ctx.resident.community_id||localStorage.getItem('zummee_selected_community_id')||localStorage.getItem('currentCommunityId')||'';
+  ctx.communityName=ctx.resident.community_name||ctx.resident.community||localStorage.getItem('currentCommunityName')||localStorage.getItem('zummeeCurrentCommunityName')||'';
+  ctx.companyId=ctx.resident.company_id||localStorage.getItem('zummee_company_id')||localStorage.getItem('company_id')||'';
+  try{if(sb&&ctx.companyId){const r=await sb.from('companies').select('logo_path').eq('id',ctx.companyId).maybeSingle();if(r.data&&r.data.logo_path){const path=r.data.logo_path;setLogo(/^https?:\/\//i.test(path)?path:sb.storage.from('company_logos').getPublicUrl(path).data.publicUrl)}}}catch(_e){}
+  if(!ctx.communityId){setStatus('Your resident account is not assigned to a community yet.','closed');return false}
+  return true;
+}
+async function loadVoting(){
+  const sb=await getClient();
+  if(!sb){setStatus('Voting cannot load because Supabase is unavailable.','closed');return}
+  try{
+    let q=sb.from('elections').select('id,community_id,title,description,status,visibility,created_at,candidates(id,name,bio,created_at)').eq('community_id',ctx.communityId).order('created_at',{ascending:false});
+    const r=await q;
+    if(r.error)throw r.error;
+    state.elections=r.data||[];
+    const ids=state.elections.map(e=>e.id);
+    state.votesByElection={};
+    if(ids.length&&ctx.user&&ctx.user.id){
+      const vr=await sb.from('votes').select('id,election_id,candidate_id,created_at').in('election_id',ids).eq('voter_id',ctx.user.id);
+      if(!vr.error){(vr.data||[]).forEach(v=>{state.votesByElection[v.election_id]=v})}
+    }
+    renderElections();
+    renderResults();
+  }catch(e){
+    console.error(e);
+    setStatus('Voting tables are not available yet. Run the V212 resident voting SQL, then refresh.','closed');
+    $('electionsList').innerHTML='<div class="empty">The resident voting page is ready, but the new election tables or security policies need to be installed.</div>';
+    $('resultsList').innerHTML='<div class="empty">Results will appear after setup.</div>';
+  }
+}
+function renderElections(){
+  const host=$('electionsList');
+  const open=(state.elections||[]).filter(e=>String(e.status||'').toLowerCase()==='active');
+  setStatus(open.length?`${open.length} open election${open.length===1?'':'s'} available.`:'No open elections right now.',open.length?'open':'closed');
+  if(!open.length){host.innerHTML='<div class="empty">There are no active ballots for your community right now.</div>';return}
+  host.innerHTML=open.map(renderElectionCard).join('');
+}
+function renderElectionCard(e){
+  const voted=state.votesByElection[e.id];
+  const candidates=(e.candidates||[]).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
+  return `<div class="electionCard" data-election-id="${esc(e.id)}">
+    <div class="electionHead"><div><div class="electionTitle">${esc(e.title||'Community Election')}</div><div class="electionDesc">${esc(e.description||'Review the candidates and submit your ballot.')}</div></div><span class="pill open">Open</span></div>
+    ${voted?`<div class="alreadyVoted">Vote submitted. Your ballot is locked for this election.</div>`:`<div class="candidateList">${candidates.length?candidates.map(c=>`<label class="candidate"><input type="radio" name="vote-${esc(e.id)}" value="${esc(c.id)}"><div><div class="candidateName">${esc(c.name||'Candidate')}</div>${c.bio?`<div class="candidateBio">${esc(c.bio)}</div>`:''}</div></label>`).join(''):'<div class="empty">No candidates have been added yet.</div>'}</div><div class="voteActions"><button class="btn primary" onclick="submitVote('${esc(e.id)}')" ${candidates.length?'':'disabled'}>Submit Vote</button><span class="msg" id="msg-${esc(e.id)}"></span></div>`}
+  </div>`;
+}
+function electionMsg(electionId,msg,type){const el=$('msg-'+electionId);if(el){el.textContent=msg||'';el.className='msg '+(type||'')}}
+async function submitVote(electionId){
+  if(state.busy)return;
+  const sb=await getClient();
+  const chosen=document.querySelector(`input[name="vote-${CSS.escape(electionId)}"]:checked`);
+  if(!chosen){electionMsg(electionId,'Choose a candidate before submitting.','bad');return}
+  if(!ctx.user||!ctx.user.id){electionMsg(electionId,'Please sign in again before voting.','bad');return}
+  state.busy=true; electionMsg(electionId,'Submitting vote…','');
+  try{
+    const payload={election_id:electionId,candidate_id:chosen.value,voter_id:ctx.user.id};
+    const ins=await sb.from('votes').insert(payload).select('id,election_id,candidate_id,created_at').single();
+    if(ins.error)throw ins.error;
+    state.votesByElection[electionId]=ins.data||payload;
+    renderElections();
+    renderResults();
+  }catch(e){
+    console.error(e);
+    const m=String(e.message||'');
+    if(m.includes('duplicate')||e.code==='23505') electionMsg(electionId,'You already submitted a vote for this election.','ok');
+    else electionMsg(electionId,m||'Could not submit vote. Please try again.','bad');
+  }finally{state.busy=false}
+}
+function renderResults(){
+  const host=$('resultsList');
+  const released=(state.elections||[]).filter(e=>String(e.visibility||'').toLowerCase()==='released'||String(e.status||'').toLowerCase()==='closed'&&String(e.visibility||'').toLowerCase()==='released');
+  if(!released.length){host.innerHTML='<div class="empty">No election results have been released yet.</div>';return}
+  host.innerHTML=released.map(e=>`<div class="electionCard"><div class="electionHead"><div><div class="electionTitle">${esc(e.title||'Election Results')}</div><div class="electionDesc">Released results</div></div><span class="pill closed">Released</span></div><div id="results-${esc(e.id)}" class="results">Loading results…</div></div>`).join('');
+  released.forEach(loadResultsForElection);
+}
+async function loadResultsForElection(e){
+  const box=$('results-'+e.id); const sb=await getClient();
+  try{
+    let rows=null;
+    const rpc=await sb.rpc('get_election_results',{p_election_id:e.id});
+    if(!rpc.error) rows=rpc.data||[];
+    if(!rows){
+      const vr=await sb.from('votes').select('candidate_id').eq('election_id',e.id);
+      if(vr.error)throw vr.error;
+      const counts={};(vr.data||[]).forEach(v=>{counts[v.candidate_id]=(counts[v.candidate_id]||0)+1});
+      rows=(e.candidates||[]).map(c=>({candidate_id:c.id,candidate_name:c.name,candidate_bio:c.bio,votes:counts[c.id]||0}));
+    }
+    rows.sort((a,b)=>(b.votes-a.votes)||String(a.candidate_name||'').localeCompare(String(b.candidate_name||'')));
+    const total=rows.reduce((s,r)=>s+(r.votes||0),0); const max=Math.max(0,...rows.map(r=>r.votes||0));
+    box.innerHTML=rows.length?rows.map(r=>{const pct=total?Math.round(((r.votes||0)/total)*100):0;const win=max>0&&r.votes===max;return `<div class="resultRow"><div><span class="resultName">${esc(r.candidate_name||'Candidate')}</span>${win?'<span class="winnerBadge">Top</span>':''}<div class="resultMeta">${pct}% of vote selections</div></div><div class="resultVotes">${r.votes||0}</div><div class="resultBar"><div class="resultBarFill" style="width:${pct}%"></div></div></div>`}).join(''):'<div class="lockedNote">No candidates found.</div>';
+  }catch(err){console.error(err);box.innerHTML='<div class="lockedNote">Results are released, but totals could not load yet.</div>'}
+}
+(async function init(){if(await loadContext()) await loadVoting();})();
+</script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

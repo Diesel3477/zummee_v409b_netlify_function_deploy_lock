@@ -1,0 +1,15 @@
+v50 vendor completion fix
+
+This build patches complete-vendor-job so it only updates:
+- resident_work_orders.status
+- maintenance_requests.status
+
+It no longer attempts to write:
+- completed_at
+- vendor_completion_note
+
+Why:
+The mobile completion portal was failing with:
+'Failed to update resident work order.'
+This strongly indicates a schema mismatch in resident_work_orders.
+The safest fix is to update only the status column.

@@ -1,0 +1,2911 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script>window.ZUMMEE_BUILD="2026-03-27-1";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+
+<script>
+// v840: ensureSupabase Promise shim (clean)
+function ensureSupabaseSync(){
+  try{
+    if(window.sb) return window.sb;
+    if(window.supabaseClient) return window.supabaseClient;
+    if(window.supabase) return window.supabase;
+    if(typeof getSupabaseClientSafe === 'function') return getSupabaseClientSafe();
+  }catch(e){}
+  return null;
+}
+function ensureSupabase(){
+  return new Promise(function(resolve){
+    var c = ensureSupabaseSync();
+    if(c) return resolve(c);
+    var start = Date.now();
+    var t = setInterval(function(){
+      var cc = ensureSupabaseSync();
+      if(cc){
+        clearInterval(t);
+        resolve(cc);
+      } else if(Date.now() - start > 4000){
+        clearInterval(t);
+        resolve(null);
+      }
+    }, 50);
+  });
+}
+</script>
+
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Pool Opening &amp; Closing</title>
+<script src="script_0.js?v=2026-03-27-1"></script>
+<script src="script_2.js?v=2026-03-27-1"></script>
+<script>(()=>{ if(window.ZummeeAuth) window.ZummeeAuth.requireAuth(); })();</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="shared/supabase-client.js?v=2026-04-08-2"></script>
+<script>
+  // --- Communities dropdown (same behavior as Daily Ops) ---
+  (function(){
+    const SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864";
+    let SELECTED_COMMUNITY_KEY = (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.SELECTED_COMMUNITY_KEY) || "zummee_selected_community_v1";
+
+    async function ensureSupabase() {
+      if(window.sb) return window.sb;
+      if(!window.supabase) throw new Error("Supabase library not loaded");
+      window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        auth: { storageKey:'sb-zummee-auth', storage: window.localStorage, persistSession:true, autoRefreshToken:true, detectSessionInUrl:true  }
+      });
+      return window.sb;
+    }
+
+    async function getSessionSafe(sb, ms){
+      ms = ms || 5000;
+      return await Promise.race([
+        sb.auth.getSession(),
+        new Promise((resolve) => {
+          let done = false;
+          const sub = sb.auth.onAuthStateChange((event, session) => {
+            if(done) return;
+            if(event === 'INITIAL_SESSION' || session){
+              done = true;
+              try{ sub.data.subscription.unsubscribe(); }catch(_e){}
+              resolve({ data: { session } });
+            }
+          });
+          setTimeout(() => {
+            if(done) return;
+            done = true;
+            try{ sub.data.subscription.unsubscribe(); }catch(_e){}
+            resolve({ data: { session: null }, error: new Error('session timeout') });
+          }, ms);
+        })
+      ]);
+    }
+
+    function safeLocalSet(k,v){ try{ localStorage.setItem(k,v); }catch(_e){} }
+    function safeLocalGet(k){ try{ return localStorage.getItem(k)||""; }catch(_e){ return ""; } }
+
+    async function requireUid() {
+      const sb = await ensureSupabase();
+      const s = await getSessionSafe(sb, 5000);
+      const uid = s.data?.session?.user?.id;
+      if(!uid) throw new Error("Not signed in");
+      return uid;
+    }
+
+    async function getProfile() {
+      const sb = await ensureSupabase();
+      const uid = await requireUid();
+      const q = await sb.from("profiles").select("*").eq("id", uid).maybeSingle();
+      if(q.error) throw q.error;
+      return { uid, company:(q.data?.company||"").trim(), selected:(q.data?.selected_community_id||"") };
+    }
+
+    function els() {
+      return {
+        select: document.getElementById("zummeeCommunitySelect"),
+        swatch: document.getElementById("zummeeCommunitySwatch"),
+        btnAdd: document.getElementById("zummeeCommunityAdd"),
+        btnRename: document.getElementById("zummeeCommunityRename"),
+        btnRemove: document.getElementById("zummeeCommunityRemove"),
+        sync: document.getElementById("zummeeCommunitySync"),
+      };
+    }
+
+    async function waitForCommunitySelect(timeoutMs){
+      const timeout = Number(timeoutMs || 4000);
+      const start = Date.now();
+      while(Date.now() - start < timeout){
+        const e = els();
+        if(e.select) return e.select;
+        await new Promise(resolve => setTimeout(resolve, 120));
+      }
+      return null;
+    }
+
+    function bindSelectIfReady(){
+      const e = els();
+      if(!e.select) return false;
+      bindSelect(e.select);
+      return true;
+    }
+
+    function setSwatch(seed){
+      const e = els().swatch;
+      if(!e) return;
+      const s = String(seed||"");
+      let h=0; for(let i=0;i<s.length;i++) h=(h*31 + s.charCodeAt(i))>>>0;
+      const hue = h % 360;
+      e.style.background = `hsl(${hue} 70% 45%)`;
+      e.title = seed || "No company";
+    }
+
+    function rebindButton(btn, handler){
+      if(!btn || !btn.parentNode) return btn;
+      try{ btn.onclick = null; btn.removeAttribute("onclick"); }catch(_e){}
+      const clone = btn.cloneNode(true);
+      try{ clone.onclick = null; clone.removeAttribute("onclick"); }catch(_e){}
+      btn.parentNode.replaceChild(clone, btn);
+      clone.addEventListener("click", function(ev){
+        try{ ev.preventDefault(); ev.stopImmediatePropagation(); }catch(_e){}
+        return handler();
+      }, true);
+      return clone;
+    }
+
+    function bindSelect(select) {
+      if(!select) return;
+      select.onchange = async ()=>{
+        const val = String(select.value||"").trim();
+        // Write to all known selected-community keys so all pages stay in sync.
+        safeLocalSet("zummee_selected_community_id", val);
+        safeLocalSet("zummee_selected_community_v1", val);
+        try{
+          SELECTED_COMMUNITY_KEY = (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.SELECTED_COMMUNITY_KEY) || SELECTED_COMMUNITY_KEY;
+          safeLocalSet(SELECTED_COMMUNITY_KEY, val);
+        }catch(_e){}
+        try{
+          const sb = await ensureSupabase();
+          const uid = await requireUid();
+          await sb.from("profiles").update({ selected_community_id: val || null }).eq("id", uid);
+        }catch(_e){}
+        document.dispatchEvent(new CustomEvent("community:changed", { detail: { community_id: val } }));
+      };
+    }
+
+    function getLocalCommunitiesKey(){
+      return (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.COMMUNITIES_KEY) || window.COMMUNITIES_KEY || "zummee_communities_v1";
+    }
+
+    function readLocalCommunities(){
+      try{
+        const raw = localStorage.getItem(getLocalCommunitiesKey()) || "[]";
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr : [];
+      }catch(_e){
+        return [];
+      }
+    }
+
+    function writeLocalCommunities(list){
+      try{ localStorage.setItem(getLocalCommunitiesKey(), JSON.stringify(list||[])); }catch(_e){}
+    }
+
+    // Merge any locally stored communities into Supabase (silent, no UI recursion)
+    async function mergeLocalCommunitiesToCloudSilent(ctx){
+      try{
+        if(!(window.sb && window.sb.from)) return { inserted: 0 };
+        if(typeof navigator!=="undefined" && !navigator.onLine) return { inserted: 0 };
+        if(!ctx || !ctx.company) return { inserted: 0 };
+
+        const localRaw = readLocalCommunities();
+        const local = (localRaw||[])
+          .map(x => ({ name: String((typeof x==="string") ? x : ((x && x.name) || "")).trim() }))
+          .filter(x => x.name)
+          .filter((x,i,arr)=> arr.findIndex(y=>y.name.toLowerCase()===x.name.toLowerCase())===i);
+        if(!local.length) return { inserted: 0 };
+
+        const q = await window.sb.from("PropertyCommunities").select("id,name").ilike("company", String(ctx.company).trim());
+        if(q.error) return { inserted: 0 };
+        const cloudNames = new Set((q.data||[]).map(c=>String(c && c.name || "").trim().toLowerCase()).filter(Boolean));
+
+        const toInsert = local
+          .filter(c => !cloudNames.has(c.name.toLowerCase()))
+          .map(c => ({ company: String(ctx.company).trim(), name: c.name || null }));
+        if(!toInsert.length) return { inserted: 0 };
+
+        const ins = await window.sb.from("PropertyCommunities").insert(toInsert).select("id");
+        if(ins.error) return { inserted: 0 };
+        return { inserted: (ins.data||[]).length };
+      }catch(_e){
+        return { inserted: 0 };
+      }
+    }
+
+    async function syncLocalCommunitiesToCloud(profile){
+      const p = profile || await getProfile();
+      if(!p.company) throw new Error("Set your Management Company in Profile first.");
+      await ensureSupabase();
+
+      const localRaw = readLocalCommunities();
+      const local = (localRaw||[])
+        .map(x => ({ name: String((typeof x==="string") ? x : ((x && x.name) || "")).trim() }))
+        .filter(x => x.name)
+        .filter((x,i,arr)=> arr.findIndex(y=>y.name.toLowerCase()===x.name.toLowerCase())===i);
+
+      const cloudQ = await window.sb.from("PropertyCommunities").select("id,name").ilike("company", String(p.company).trim());
+      if(cloudQ.error) throw cloudQ.error;
+      const cloudNames = new Set((cloudQ.data||[]).map(c=>String(c && c.name || "").trim().toLowerCase()).filter(Boolean));
+
+      const toInsert = local
+        .filter(c => !cloudNames.has(c.name.toLowerCase()))
+        .map(c => ({ company: String(p.company).trim(), name: c.name }));
+
+      let inserted = 0;
+      if(toInsert.length){
+        const ins = await window.sb.from("PropertyCommunities").insert(toInsert).select("id");
+        if(ins.error) throw ins.error;
+        inserted = (ins.data||[]).length;
+      }
+
+      // Return updated cloud count for info
+      const cloudQ2 = await window.sb.from("PropertyCommunities").select("id", { count: "exact", head: true }).ilike("company", String(p.company).trim());
+      const totalCloud = cloudQ2.count || 0;
+      return { inserted, totalCloud };
+    }
+
+    function configureSyncButton(profile, cloudList){
+      const btn = (els() || {}).sync;
+      if(!btn) return;
+      btn.style.display = "none";
+      btn.disabled = false;
+      try{ btn.onclick = null; }catch(_e){}
+
+      const online = (typeof navigator!=="undefined") ? !!navigator.onLine : true;
+      if(!online){
+        btn.style.display = "";
+        btn.disabled = true;
+        btn.title = "Offline — sync unavailable";
+        return;
+      }
+
+      let needsSync = false;
+      try{
+        const localRaw = readLocalCommunities();
+        const localNames = new Set((localRaw||[]).map(x => {
+          if(typeof x === "string") return x.trim();
+          return String((x && x.name) || "").trim();
+        }).filter(Boolean).map(n => n.toLowerCase()));
+
+        const cloudNames = new Set((cloudList||[]).map(c => String((c && c.name) || "").trim().toLowerCase()).filter(Boolean));
+
+        for(const n of localNames){
+          if(!cloudNames.has(n)) { needsSync = true; break; }
+        }
+        if(!needsSync && (localRaw||[]).some(x => typeof x === "string")) needsSync = true;
+      }catch(_e){
+        needsSync = false;
+      }
+
+      if(!needsSync) return;
+
+      btn.style.display = "";
+      btn.title = "Uploads any locally stored communities into Supabase (merge, no deletes).";
+
+      btn.onclick = async function(){
+        btn.disabled = true;
+        const oldText = btn.textContent;
+        btn.textContent = "Syncing…";
+        try{
+          const res = await syncLocalCommunitiesToCloud(profile);
+          alert(`Synced communities to cloud. Added ${res.inserted}. Cloud total: ${res.totalCloud}.`);
+          try{ document.dispatchEvent(new CustomEvent("communities:changed")); }catch(_e){}
+        }catch(err){
+          alert("Sync failed: " + (err && err.message ? err.message : String(err||"Unknown error")));
+        }finally{
+          btn.textContent = oldText;
+          btn.disabled = false;
+        }
+      };
+    }
+
+    async function listCommunities(profile) {
+      // Cloud-first; fallback to local cache if needed.
+      try{
+        if(window.sb && profile && profile.company){
+          try{ if(typeof mergeLocalCommunitiesToCloudSilent==='function') await mergeLocalCommunitiesToCloudSilent({company: String(profile.company).trim(), uid: profile.uid}); }catch(_e){}
+          const q = await window.sb
+            .from('PropertyCommunities')
+            .select('id,name,created_at')
+            .ilike('company', String(profile.company).trim())
+            .order('name', { ascending: true });
+          if(!q.error){
+            const cloudList = (q.data||[])
+              .filter(c=>c && c.id && c.name)
+              .map(c=>({ id:String(c.id), name:String(c.name) }));
+            writeLocalCommunities(cloudList);
+            return cloudList;
+          }
+        }
+      }catch(_e){ /* fall back */ }
+
+      return (readLocalCommunities()||[])
+        .filter(c=>c && c.id && c.name)
+        .map(c=>({ id:String(c.id), name:String(c.name) }))
+        .sort((a,b)=>a.name.localeCompare(b.name));
+    }
+
+    function renderSelect(select, list, selectedId) {
+      if(!select) return;
+      const desired = String(selectedId||"").trim() || safeLocalGet("zummee_selected_community_id");
+      select.innerHTML = "";
+
+      const o0 = document.createElement("option");
+      o0.value = "";
+      o0.textContent = list.length ? "Select a community" : "No communities yet";
+      select.appendChild(o0);
+
+      list.forEach(c=>{
+        const o=document.createElement("option");
+        o.value = String(c.id);
+        o.textContent = c.name;
+        select.appendChild(o);
+      });
+
+      let resolvedId = "";
+      if(desired && list.some(c=>String(c.id)===String(desired))) {
+        resolvedId = String(desired);
+      } else if(desired) {
+        const byName = list.find(c => String(c.name||"").trim().toLowerCase() === String(desired).trim().toLowerCase());
+        if(byName) resolvedId = String(byName.id);
+      }
+
+      if(resolvedId) {
+        select.value = String(resolvedId);
+        safeLocalSet("zummee_selected_community_id", String(resolvedId));
+        safeLocalSet("zummee_selected_community_v1", String(resolvedId));
+        try{ safeLocalSet(SELECTED_COMMUNITY_KEY, String(resolvedId)); }catch(_e){}
+        try{ document.dispatchEvent(new CustomEvent("community:changed", { detail: { community_id: String(resolvedId) } })); }catch(_e){}
+        if(String(resolvedId) !== String(desired)){
+          (async () => {
+            try{
+              const uid = await requireUid();
+              await window.sb.from("profiles").update({ selected_community_id: resolvedId }).eq("id", uid);
+            }catch(_e){}
+          })();
+        }
+      } else {
+        select.value = "";
+        safeLocalSet("zummee_selected_community_id","");
+      }
+
+      select.disabled = false;
+      bindSelect(select);
+    }
+
+    async function refreshUI() {
+      let e = els();
+      if(!e.select){
+        await waitForCommunitySelect(5000);
+        e = els();
+      }
+      if(!e.select) return;
+      try{
+        const profile = await getProfile();
+        setSwatch(profile.company);
+        if(!profile.company){
+          renderSelect(e.select, [], "");
+          bindSelect(e.select);
+          return;
+        }
+        const list = await listCommunities(profile);
+        renderSelect(e.select, list, profile.selected);
+        bindSelect(e.select);
+        try{ configureSyncButton(profile, list); }catch(_e){}
+      }catch(_e){
+        renderSelect(e.select, [], "");
+        bindSelect(e.select);
+      }
+    }
+
+    async function addCommunity(){
+      const profile = await getProfile();
+      if(!profile.company) return alert("Set your Management Company in Profile first.");
+      const name = prompt("Community name:");
+      if(!name) return;
+      const clean = name.trim();
+      if(!clean) return;
+
+      // Try cloud insert; fallback to local insert
+      try{
+        const sb = await ensureSupabase();
+        const ins = await sb.from("PropertyCommunities").insert([{ company: profile.company, name: clean }]).select("id").single();
+        if(ins.error) throw ins.error;
+        await sb.from("profiles").update({ selected_community_id: String(ins.data.id) }).eq("id", profile.uid);
+      }catch(_e){
+        const list = readLocalCommunities();
+        const exists = list.some(c=>String(c.name||"").trim().toLowerCase() === clean.toLowerCase());
+        if(exists) return alert("That community already exists in your list.");
+        const id = String(Date.now()) + "_" + Math.random().toString(16).slice(2);
+        list.push({ id, name: clean });
+        writeLocalCommunities(list);
+        safeLocalSet("zummee_selected_community_id", id);
+      }
+
+      document.dispatchEvent(new CustomEvent("communities:changed"));
+      await refreshUI();
+    }
+
+    async function renameCommunity(){
+      const e = els();
+      const id = String(e.select?.value||"").trim();
+      if(!id) return alert("Select a community first.");
+      const cur = e.select.options[e.select.selectedIndex]?.textContent || "";
+      const name = prompt("New community name:", cur);
+      if(!name) return;
+      const clean = name.trim();
+      if(!clean) return;
+
+      try{
+        const profile = await getProfile();
+        const sb = await ensureSupabase();
+        const up = await sb.from("PropertyCommunities").update({ name: clean }).eq("id", id).ilike("company", profile.company);
+        if(up.error) throw up.error;
+      }catch(_e){
+        const list = readLocalCommunities();
+        const idx = list.findIndex(c=>String(c.id)===String(id));
+        if(idx === -1) return;
+        list[idx].name = clean;
+        writeLocalCommunities(list);
+      }
+
+      document.dispatchEvent(new CustomEvent("communities:changed"));
+      await refreshUI();
+      if(e.select) e.select.value = id;
+    }
+
+    async function removeCommunity(){
+      const e = els();
+      const id = String(e.select?.value||"").trim();
+      if(!id) return alert("Select a community first.");
+      if(!confirm("Remove this community?")) return;
+
+      try{
+        const profile = await getProfile();
+        const sb = await ensureSupabase();
+        const del = await sb.from("PropertyCommunities").delete().eq("id", id).ilike("company", profile.company);
+        if(del.error) throw del.error;
+        await sb.from("profiles").update({ selected_community_id: null }).eq("id", profile.uid);
+      }catch(_e){
+        const list = readLocalCommunities().filter(c=>String(c.id)!==String(id));
+        writeLocalCommunities(list);
+        safeLocalSet("zummee_selected_community_id","");
+      }
+
+      document.dispatchEvent(new CustomEvent("communities:changed"));
+      await refreshUI();
+      document.dispatchEvent(new CustomEvent("community:changed", { detail: { community_id: "" } }));
+    }
+
+    document.addEventListener("DOMContentLoaded", async ()=>{
+      await waitForCommunitySelect(5000);
+      const e = els();
+      bindSelectIfReady();
+      if(e.btnAdd) e.btnAdd = rebindButton(e.btnAdd, addCommunity);
+      if(e.btnRename) e.btnRename = rebindButton(e.btnRename, renameCommunity);
+      if(e.btnRemove) e.btnRemove = rebindButton(e.btnRemove, removeCommunity);
+      await refreshUI();
+      setTimeout(()=>{ try{ refreshUI(); }catch(_e){} }, 350);
+      try{ window.__zummeeCommunityMgmtV2Bound = true; }catch(_e){}
+    });
+
+    document.addEventListener("communities:changed", ()=>refreshUI());
+    window.addEventListener("pageshow", ()=>setTimeout(()=>{ try{ refreshUI(); }catch(_e){} }, 120));
+    document.addEventListener("community:changed", ()=>setTimeout(()=>{ try{ refreshUI(); }catch(_e){} }, 120));
+  })();
+</script>
+
+<script>(()=>{ if(window.ZummeeAuth) window.ZummeeAuth.requireAuth(); })();</script>
+
+
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+  :root{--bg:#f6f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--shadow:0 10px 30px rgba(0,0,0,.08);--r:14px;--brand:#0f2f4a}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
+  .wrap{max-width:980px;margin:0 auto;padding:20px 14px 60px}
+  .top{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center;margin-bottom:14px}
+  .top .left{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .top .right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  a.btn,button.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:#fff;color:var(--text);padding:10px 12px;border-radius:12px;text-decoration:none;cursor:pointer;box-shadow:0 1px 0 rgba(0,0,0,.03)}
+  a.btn.primary,button.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+  a.btn.sm,button.btn.sm{padding:8px 10px;border-radius:10px;font-size:13px}
+  h1{font-size:22px;margin:0}
+  .sub{color:var(--muted);font-size:13px;margin-top:2px}
+  .cards{display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px}
+  @media(min-width:760px){ .cards{grid-template-columns:1fr} }
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:14px}
+  .card .title{font-weight:800;font-size:16px;margin:0 0 2px}
+  .card .desc{color:var(--muted);font-size:13px;margin:0 0 10px}
+  .meta-row{display:flex;align-items:flex-end;justify-content:flex-end;gap:10px;margin:8px 0 10px}
+  .meta-left{display:flex;flex-direction:column;gap:6px;flex:1}
+  .meta-label{font-size:12px;color:var(--muted);font-weight:600}
+  .meta-input{display:flex;gap:8px;align-items:center}
+  input.meta-date{width:100%;max-width:220px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:#fff;color:var(--text)}
+  input.meta-date[disabled]{background:#f3f4f6;color:#6b7280}
+  /* Lock buttons (make state very obvious) */
+  button.lock-btn{min-width:112px;font-weight:800;font-size:14px}
+  button.lock-btn.icon-only{min-width:56px;padding:10px 12px;font-size:22px;line-height:1}
+  button.lock-btn.is-locked{background:var(--brand);border-color:var(--brand);color:#fff;box-shadow:0 0 0 3px rgba(15,47,74,.18), 0 1px 0 rgba(0,0,0,.03)}
+  button.lock-btn.is-unlocked{background:#fff}
+  button.lock-btn:focus{outline:2px solid rgba(15,47,74,.25);outline-offset:2px}
+  .lock-state{font-size:12px;color:var(--muted)}
+  .checklist{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+  .checklist-item{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:rgba(0,0,0,.04);border:1px solid rgba(0,0,0,.04)}
+  .checklist-item input[type="checkbox"]{transform:scale(1.15);margin-top:2px}
+  .checklist-item span{line-height:1.25}
+  .checklist-actions{display:flex;justify-content:flex-end;margin-top:12px}
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#fff;border:1px solid var(--line);color:var(--muted);font-size:12px}
+
+  input.meta-phone{width:100%;max-width:190px;padding:8px 10px;border-radius:12px;border:1px solid var(--line);background:#fff;color:var(--text);font-size:14px}
+  input.meta-phone:focus{outline:2px solid rgba(15,47,74,.15);outline-offset:1px}
+  .emergency-card{border-left:6px solid #dc2626}
+
+  /* Pool Emergency Service details (compact, side-by-side) */
+  /* Make Tax ID column slightly narrower */
+  .service-grid{margin-top:10px;display:grid;grid-template-columns:1.2fr 1.2fr 1fr .8fr;gap:8px}
+  .service-grid .field{display:flex;flex-direction:column;gap:6px}
+  .meta-label.small{font-size:12px;color:var(--muted)}
+  .meta-small{width:100%;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--text);font-size:14px}
+  .meta-small:focus{outline:2px solid rgba(15,47,74,.15);outline-offset:1px}
+  @media (max-width:640px){
+    .service-grid{grid-template-columns:1fr}
+  }
+
+  /* === Standard Zummee header (matching Daily Ops) === */
+  .zummee-header {
+    position: sticky;
+    top: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 18px 28px;
+    border-bottom: 1px solid #6faedc;
+    background: #9fc9ec;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  }
+  .zummee-header__logo {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    margin-right:auto;
+  }
+
+  .zummee-header__logo img {
+    height: 96px;
+    width: auto;
+    display: block;
+  }
+  .zummee-header__logo img{ margin-top:6px !important; }
+  .zummee-header__titles {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+  }
+  .zummee-header__title {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #0f2f4a;
+  }
+  .zummee-header__subtitle {
+    margin-top: 6px;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #0f2f4a;
+    opacity: 0.9;
+  }
+  @media (max-width: 640px) {
+    .zummee-header {
+      padding: 12px 16px;
+      gap: 12px;
+    }
+    .zummee-header__logo img {
+      height: 96px;
+    }
+    .zummee-header__title {
+      font-size: 1.1rem;
+    }
+    .zummee-header__subtitle {
+      font-size: 0.9rem;
+    }
+  }
+
+/* Pool Ops page polish after removing local tab bar */
+.page-top{margin:14px 0 18px !important}
+
+/* Slightly larger mobile/field-friendly checklist touch targets */
+.checklist-item{padding:14px 16px;min-height:56px;align-items:center}
+.checklist-item input[type="checkbox"]{width:22px;height:22px;transform:none;margin-top:0;flex:0 0 22px}
+.checklist-item span{line-height:1.35;font-size:16px}
+@media (max-width:640px){
+  .checklist-item{padding:16px 14px;min-height:60px}
+  .checklist-item span{font-size:17px}
+}
+
+/* GLOBAL ZUMMEE SECTION EDGING */
+.wrap .card,
+.wrap .section,
+.pageBox {
+  border: 2px solid #0f2f4a !important;
+  border-radius: 18px !important;
+  background: rgba(255,255,255,0.96) !important;
+  box-shadow: 0 10px 28px rgba(15,47,74,0.12) !important;
+}
+
+/* === Zummee Brand Header Override (v1211) === */
+.zummee-header{
+  background:#0f2f4a !important;
+  color:#ffffff !important;
+  border-bottom:1px solid rgba(255,255,255,0.10) !important;
+}
+.zummee-header a, .zummee-header a:visited{ color:#ffffff !important; }
+.zummee-header button, .zummee-header select, .zummee-header label, .zummee-header span, .zummee-header div{ color:inherit; }
+.zummee-header button{
+  background:rgba(255,255,255,0.14) !important;
+  border:1px solid rgba(255,255,255,0.18) !important;
+}
+.zummee-header button:hover{ border-color: rgba(123,224,0,0.55) !important; }
+.zummee-header__logo img{ height:120px !important; width:auto !important; }
+
+/* === Modern Community Selector (match Manager Hub) === */
+.zummee-communityPicker{ position:relative; display:inline-block; min-width:260px; }
+.zummee-communityBtn{
+  width:100%;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(15,47,74,0.22);
+  background:#ffffff;
+  color:#0f2f4a;
+  font-weight:700;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.10);
+}
+.zummee-communityBtn:focus{ outline:2px solid rgba(145, 255, 78, 0.55); outline-offset:2px; }
+.zummee-communityChevron{ width:10px; height:10px; border-right:2px solid rgba(15,47,74,0.55); border-bottom:2px solid rgba(15,47,74,0.55); transform:rotate(45deg); margin-top:-2px; }
+.zummee-communityMenu{
+  position:absolute;
+  right:0;
+  top:calc(100% + 10px);
+  width:340px;
+  max-width:84vw;
+  background:#ffffff;
+  border:1px solid rgba(15,47,74,0.18);
+  border-radius:16px;
+  box-shadow:0 18px 60px rgba(0,0,0,0.22);
+  padding:10px;
+  z-index:9999;
+  opacity:0;
+  transform: translateY(-6px) scale(0.99);
+  pointer-events:none;
+  visibility:hidden;
+  transition: opacity 140ms ease, transform 160ms ease, visibility 0s linear 160ms;
+}
+.zummee-communityMenu.open{
+  opacity:1;
+  transform: translateY(0) scale(1);
+  pointer-events:auto;
+  visibility:visible;
+  transition: opacity 140ms ease, transform 160ms ease;
+}
+.zummee-communitySearch{
+  width:100%;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(15,47,74,0.18);
+  background:#f7fafc;
+  color:#000000;
+  font-weight:600;
+  margin-bottom:8px;
+}
+.zummee-communitySearch::placeholder{ color:rgba(0,0,0,0.55); }
+.zummee-communityList{ max-height:280px; overflow:auto; padding:4px 2px; }
+.zummee-communityItem{
+  width:100%;
+  text-align:left;
+  border:0;
+  background:transparent;
+  padding:10px 10px;
+  border-radius:12px;
+  cursor:pointer;
+  font-weight:650;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  color:#000000;
+  position:relative;
+}
+.zummee-communityItem + .zummee-communityItem{ border-top:1px solid rgba(15,47,74,0.08); }
+.zummee-communityItem:hover{ background:rgba(15,47,74,0.06); }
+.zummee-communityItem[aria-selected="true"]{
+  background:rgba(145,255,78,0.16);
+  box-shadow: inset 0 0 0 1px rgba(145,255,78,0.30);
+}
+.zummee-communityCheck{
+  width:18px;height:18px;border-radius:999px;
+  display:inline-flex;align-items:center;justify-content:center;
+  flex:0 0 auto;color:#0f2f4a;opacity:0;transform: scale(0.9);
+  transition: opacity 120ms ease, transform 140ms ease;
+}
+.zummee-communityItem[aria-selected="true"] .zummee-communityCheck{ opacity:1; transform: scale(1); }
+.zummee-communityCheck::before{ content:"✓"; font-weight:900; font-size:13px; line-height:1; }
+
+/* Ensure native <select> readable in edge cases */
+#zummeeCommunitySelect, #zummeeCommunitySelect option{ color:#0f2f4a !important; background:#ffffff !important; }
+
+/* Hub button readable */
+.zummee-header__action--hub{ color:#173a56 !important; }
+
+/* Force Hub action pill styling (match other header actions) */
+.zummee-header a.zummee-header__action--hub{
+  background:#ffffff !important;
+  color:#0f2f4a !important;
+  border:1px solid rgba(15,47,74,0.22) !important;
+  box-shadow:0 6px 18px rgba(0,0,0,0.10) !important;
+  height:44px !important;
+  min-width:120px !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  text-decoration:none !important;
+}
+.zummee-header a.zummee-header__action--hub:hover{
+  background:rgba(255,255,255,0.92) !important;
+}
+
+/* Ensure community dropdown text is dark and readable */
+#zummeeCommunitySelect{
+  color:#0f2f4a !important;
+  font-weight:700 !important;
+}
+.zummee-modern-picker__button,
+.zummee-modern-picker__item{
+  color:#0f2f4a !important;
+}
+
+/* Force subpage dropdown to match Manager Hub */
+#zummeeCommunitySelect{
+  background:#ffffff !important;
+  color:#000000 !important;
+  font-weight:700 !important;
+}
+
+.zummee-modern-picker__button{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+.zummee-modern-picker__menu{
+  background:#ffffff !important;
+}
+
+.zummee-modern-picker__item{
+  color:#000000 !important;
+}
+
+/* Match Manager Hub community picker styling (white dropdown, black text) */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communityBtn span{
+  color:#000000 !important;
+}
+.zummee-communityMenu{
+  background:#ffffff !important;
+  border:1px solid rgba(15,47,74,0.18) !important;
+}
+.zummee-communitySearch{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communitySearch::placeholder{
+  color: rgba(0,0,0,0.55) !important;
+}
+.zummee-communityItem{
+  color:#000000 !important;
+}
+
+/* Force dropdown button background to white */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Override header generic button styling for community picker */
+.zummee-header .zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Remove bullet points from modern community dropdown */
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+  padding-left:0 !important;
+  margin-left:0 !important;
+}
+
+.zummee-communityItem::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* FORCE remove bullets everywhere inside community dropdown */
+.zummee-communityMenu,
+.zummee-communityMenu *{
+  list-style-type:none !important;
+  list-style:none !important;
+}
+
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+}
+
+.zummee-communityMenu li::marker{
+  content:"" !important;
+}
+
+.zummee-communityMenu li::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* Subpage Hub button — match Manager Hub */
+.zummee-header .zummee-hubBtn {
+  background: #ffffff !important;
+  color: #0f2f4a !important;
+  border-radius: 28px !important;
+  padding: 10px 22px !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  border: 1px solid rgba(15,47,74,0.15) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+  transition: all .2s ease;
+  text-decoration:none !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+.zummee-header .zummee-hubBtn:hover {
+  background: #f4f6f8 !important;
+}
+
+/* Fix Hub button text color + alignment under dropdown */
+.zummee-header .zummee-hubBtn {
+  color: #000000 !important;
+  display: block !important;
+  margin-left: auto !important;
+  margin-top: 10px !important;
+}
+
+.zummee-header .community-header-right {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+}
+
+/* Correct Hub button sizing and force black text */
+.zummee-header .zummee-hubBtn {
+  background:#ffffff !important;
+  color:#000000 !important;
+  border-radius:28px !important;
+  padding:8px 18px !important;
+  font-weight:700 !important;
+  font-size:15px !important;
+  border:1px solid rgba(15,47,74,0.15) !important;
+  box-shadow:0 4px 10px rgba(0,0,0,0.08) !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:auto !important;
+  min-width:auto !important;
+  margin-top:8px !important;
+  align-self:flex-end !important;
+}
+
+/* Ensure container stacks properly */
+.zummee-header .community-header-right {
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:flex-end !important;
+}
+
+/* Subpage header: stack hub under dropdown aligned right */
+.zummee-header__controls{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+}
+.zummee-header__communityRow{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  justify-content:flex-end;
+}
+.zummee-header__communityActions{
+  width:100%;
+  display:flex;
+  justify-content:flex-end;
+  margin-top:10px;
+}
+
+/* Force Hub button text to true black */
+.zummee-header .zummee-hubBtn,
+.zummee-header .zummee-hubBtn:visited,
+.zummee-header .zummee-hubBtn span {
+  color:#000000 !important;
+}
+
+/* Align page titles (like Daily Ops) to the left */
+.page-title,
+h1.page-title,
+.ops-title,
+h1 {
+  text-align:left !important;
+  margin-left:0 !important;
+}
+
+/* Precisely align page titles with main card container */
+.main-content h1,
+.content-wrapper h1,
+.page-container h1 {
+  text-align:left !important;
+  margin-left:40px !important;  /* matches card container padding */
+  margin-right:0 !important;
+}
+
+/* Prevent centering from parent flex containers */
+.page-header,
+.title-row {
+  justify-content:flex-start !important;
+  text-align:left !important;
+}
+
+/* Precisely match left edge of main section container */
+#opsHeaderRow {
+  padding-left: 60px !important; /* match section container padding */
+  justify-content: flex-start !important;
+}
+
+#opsHeaderRow h1 {
+  margin: 0 !important;
+}
+
+/* Match subpage logo size to Manager Hub */
+.zummee-header .zummee-logo {
+  font-size: 42px !important;
+  line-height: 1 !important;
+}
+
+.zummee-header .zummee-subtitle {
+  font-size: 16px !important;
+  letter-spacing: 2px !important;
+}
+
+.zummee-header svg {
+  height: 28px !important;
+}
+
+/* === Zummee Standard Header (shared across pages) === */
+.zummee-header{
+  background-color: rgb(15, 47, 74);
+}
+.zummee-header__divider{
+  display:none;
+}
+@media (min-width: 701px){
+  .zummee-header__divider{
+    display:block;
+    width:1px;
+    height:36px;
+    background: rgba(255,255,255,0.28);
+  }
+}
+@media (max-width: 700px){
+  .zummee-header{
+    padding: 10px 12px;
+  }
+  .zummee-header__inner{
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .zummee-header__brand{
+    justify-content: center;
+  }
+  .zummee-header__controls{
+    width: 100%;
+    display:flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .zummee-header__community{
+    width: 100%;
+    max-width: 420px;
+    justify-content: center;
+    gap: 10px;
+  }
+  .zummee-header__community-label{
+    min-width: auto;
+  }
+  #zummeeCommunitySelect{
+    width: 100%;
+  }
+  .zummee-header__hub{
+    width: 100%;
+    max-width: 420px;
+    justify-content: center;
+  }
+  .zummee-header__hubbtn{
+    width: 100%;
+  }
+}
+/* === End Zummee Standard Header === */
+
+
+body[data-header-mode="simple"] .wrap{padding-top:8px !important;}
+
+/* 🔥 FINAL OVERRIDE — Pool Emergency Gold Card */
+body .card.emergency-card {
+  background: linear-gradient(135deg, #d4af37 0%, #f5d76e 40%, #e6b93c 100%) !important;
+  border: 2px solid #b8962e !important;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.25) !important;
+}
+
+/* Text contrast */
+body .card.emergency-card .title,
+body .card.emergency-card .desc,
+body .card.emergency-card .meta-label,
+body .card.emergency-card .lock-state {
+  color: #1a2b3c !important;
+}
+
+/* Inputs */
+body .card.emergency-card input,
+body .card.emergency-card select {
+  background: rgba(255,255,255,0.95) !important;
+  border-color: rgba(120,90,10,0.35) !important;
+  color: #1a2b3c !important;
+}
+
+/* Buttons */
+body .card.emergency-card .btn {
+  border-color: rgba(120,90,10,0.35) !important;
+}
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+
+.mh2-actions .mh2-btn--ghost{display:none !important;}
+</style>
+  <link rel="icon" type="image/png" href="zummee_mark_32.png">
+<style id="zummeeEnterpriseHeaderPolish">
+  .zummee-header{ padding-top:24px !important; padding-bottom:18px !important; min-height:124px !important; }
+  .zummee-header__logo{ padding-top:6px !important; }
+  .zummee-header #zummeeSignOut{
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    padding:10px 14px !important;
+    border-radius:12px !important;
+    font-weight:800 !important;
+    line-height:1 !important;
+    cursor:pointer !important;
+    background: rgba(255,255,255,0.18) !important;
+    color:#ffffff !important;
+    border:1px solid rgba(255,255,255,0.28) !important;
+  }
+  .zummee-header #zummeeSignOut:hover{ background: rgba(255,255,255,0.26) !important; }
+
+/* Ensure community dropdown text is dark and readable */
+#zummeeCommunitySelect{
+  color:#0f2f4a !important;
+  font-weight:700 !important;
+}
+.zummee-modern-picker__button,
+.zummee-modern-picker__item{
+  color:#0f2f4a !important;
+}
+
+/* Force subpage dropdown to match Manager Hub */
+#zummeeCommunitySelect{
+  background:#ffffff !important;
+  color:#000000 !important;
+  font-weight:700 !important;
+}
+
+.zummee-modern-picker__button{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+.zummee-modern-picker__menu{
+  background:#ffffff !important;
+}
+
+.zummee-modern-picker__item{
+  color:#000000 !important;
+}
+
+/* Match Manager Hub community picker styling (white dropdown, black text) */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communityBtn span{
+  color:#000000 !important;
+}
+.zummee-communityMenu{
+  background:#ffffff !important;
+  border:1px solid rgba(15,47,74,0.18) !important;
+}
+.zummee-communitySearch{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communitySearch::placeholder{
+  color: rgba(0,0,0,0.55) !important;
+}
+.zummee-communityItem{
+  color:#000000 !important;
+}
+
+/* Force dropdown button background to white */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Override header generic button styling for community picker */
+.zummee-header .zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Remove bullet points from modern community dropdown */
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+  padding-left:0 !important;
+  margin-left:0 !important;
+}
+
+.zummee-communityItem::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* FORCE remove bullets everywhere inside community dropdown */
+.zummee-communityMenu,
+.zummee-communityMenu *{
+  list-style-type:none !important;
+  list-style:none !important;
+}
+
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+}
+
+.zummee-communityMenu li::marker{
+  content:"" !important;
+}
+
+.zummee-communityMenu li::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* Subpage Hub button — match Manager Hub */
+.zummee-header .zummee-hubBtn {
+  background: #ffffff !important;
+  color: #0f2f4a !important;
+  border-radius: 28px !important;
+  padding: 10px 22px !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  border: 1px solid rgba(15,47,74,0.15) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+  transition: all .2s ease;
+  text-decoration:none !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+.zummee-header .zummee-hubBtn:hover {
+  background: #f4f6f8 !important;
+}
+
+/* Fix Hub button text color + alignment under dropdown */
+.zummee-header .zummee-hubBtn {
+  color: #000000 !important;
+  display: block !important;
+  margin-left: auto !important;
+  margin-top: 10px !important;
+}
+
+.zummee-header .community-header-right {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+}
+
+/* Correct Hub button sizing and force black text */
+.zummee-header .zummee-hubBtn {
+  background:#ffffff !important;
+  color:#000000 !important;
+  border-radius:28px !important;
+  padding:8px 18px !important;
+  font-weight:700 !important;
+  font-size:15px !important;
+  border:1px solid rgba(15,47,74,0.15) !important;
+  box-shadow:0 4px 10px rgba(0,0,0,0.08) !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:auto !important;
+  min-width:auto !important;
+  margin-top:8px !important;
+  align-self:flex-end !important;
+}
+
+/* Ensure container stacks properly */
+.zummee-header .community-header-right {
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:flex-end !important;
+}
+
+/* Force Hub button text to true black */
+.zummee-header .zummee-hubBtn,
+.zummee-header .zummee-hubBtn:visited,
+.zummee-header .zummee-hubBtn span {
+  color:#000000 !important;
+}
+
+/* Align page titles (like Daily Ops) to the left */
+.page-title,
+h1.page-title,
+.ops-title,
+h1 {
+  text-align:left !important;
+  margin-left:0 !important;
+}
+
+/* Precisely align page titles with main card container */
+.main-content h1,
+.content-wrapper h1,
+.page-container h1 {
+  text-align:left !important;
+  margin-left:40px !important;  /* matches card container padding */
+  margin-right:0 !important;
+}
+
+/* Prevent centering from parent flex containers */
+.page-header,
+.title-row {
+  justify-content:flex-start !important;
+  text-align:left !important;
+}
+
+/* Precisely match left edge of main section container */
+#opsHeaderRow {
+  padding-left: 60px !important; /* match section container padding */
+  justify-content: flex-start !important;
+}
+
+#opsHeaderRow h1 {
+  margin: 0 !important;
+}
+
+/* Match subpage logo size to Manager Hub */
+.zummee-header .zummee-logo {
+  font-size: 42px !important;
+  line-height: 1 !important;
+}
+
+.zummee-header .zummee-subtitle {
+  font-size: 16px !important;
+  letter-spacing: 2px !important;
+}
+
+.zummee-header svg {
+  height: 28px !important;
+}
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+  <link rel="stylesheet" href="shared/header.css?v=2026-03-27-1">
+
+  <script id="zummeeStaffGuard">
+  (async () => {
+    if (window.__zummeeStaffGuardRan) return;
+    window.__zummeeStaffGuardRan = true;
+
+    async function getClient(){
+      try{ if(typeof ensureSupabase === 'function'){ const c = await ensureSupabase(); if(c && c.auth && typeof c.auth.getSession === 'function') return c; } }catch(_e){}
+      try{ if(window.supabaseClient && window.supabaseClient.auth && typeof window.supabaseClient.auth.getSession === 'function') return window.supabaseClient; }catch(_e){}
+      try{ if(window.sb && window.sb.auth && typeof window.sb.auth.getSession === 'function') return window.sb; }catch(_e){}
+      return null;
+    }
+
+    const go = (target) => {
+      try{ window.location.replace(target); }catch(_e){ window.location.href = target; }
+    };
+
+    const sb = await getClient();
+    if(!sb){ go('login.html'); return; }
+
+    const sessionRes = await sb.auth.getSession();
+    const user = sessionRes && sessionRes.data && sessionRes.data.session ? sessionRes.data.session.user : null;
+    if(!user){ go('login.html'); return; }
+
+    const ud = await sb
+      .from('userdirectory')
+      .select('role')
+      .eq('auth_user_id', user.id)
+      .single();
+
+    const role = String((ud && ud.data && ud.data.role) || '').trim();
+    if(role === 'Resident'){ go('resident_portal.html'); return; }
+
+    document.documentElement.setAttribute('data-staff-role', role || '');
+  })();
+  </script>
+
+<style id="poolOpsBlueSectionMatch">
+/* Pool Opening / Closing cards — match Mileage Tracker blue sections exactly */
+.wrap .card{
+  position:relative !important;
+  overflow:hidden !important;
+  background:#8fc2f2 !important;
+  border:1px solid rgba(255,255,255,0.30) !important;
+  border-radius:28px !important;
+  box-shadow:0 24px 52px rgba(22,42,74,0.18), inset 0 1px 0 rgba(255,255,255,0.28) !important;
+  backdrop-filter:blur(18px) saturate(130%) !important;
+  -webkit-backdrop-filter:blur(18px) saturate(130%) !important;
+  padding:18px 18px 20px !important;
+  color:#17324d !important;
+}
+.wrap .card::before{
+  content:"";
+  position:absolute;
+  top:0;
+  bottom:0;
+  left:-45%;
+  width:32%;
+  transform:skewX(-16deg);
+  background:linear-gradient(115deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.10) 35%, rgba(255,255,255,.24) 50%, rgba(255,255,255,.10) 65%, rgba(255,255,255,0) 100%) !important;
+  opacity:0;
+  pointer-events:none;
+  z-index:0;
+}
+.wrap .card:hover::before{ animation:mileageUniformShine .95s ease-out 1 !important; }
+.wrap .card:hover{
+  transform:translateY(-2px) !important;
+  box-shadow:0 28px 58px rgba(22,42,74,.22), inset 0 1px 0 rgba(255,255,255,.34) !important;
+  border-color:rgba(255,255,255,.38) !important;
+}
+@keyframes mileageUniformShine{
+  0%{left:-45%;opacity:0;}
+  8%{opacity:.55;}
+  40%{left:115%;opacity:.55;}
+  60%{left:115%;opacity:0;}
+  100%{left:115%;opacity:0;}
+}
+.wrap .card > *{ position:relative; z-index:1; }
+.wrap .card .title,
+.wrap .card .desc,
+.wrap .card .meta-label,
+.wrap .card .lock-state,
+.wrap .card h2,
+.wrap .card h3,
+.wrap .card p,
+.wrap .card label {
+  color:#17324d !important;
+}
+.wrap .card .desc,
+.wrap .card .lock-state{ color:#4d6680 !important; }
+.wrap .card input.meta-date,
+.wrap .card input.meta-phone,
+.wrap .card .meta-small,
+.wrap .card select.meta-small,
+.wrap .card .pill{
+  background:rgba(255,255,255,0.82) !important;
+  color:#17324d !important;
+  border:1px solid rgba(255,255,255,0.40) !important;
+  border-radius:16px !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.55) !important;
+}
+.wrap .card a.btn,
+.wrap .card button.btn,
+.wrap .card button.lock-btn{
+  background:#214b74 !important;
+  color:#ffffff !important;
+  border:1px solid rgba(255,255,255,0.12) !important;
+  border-radius:999px !important;
+  box-shadow:0 10px 22px rgba(33,75,116,0.18), inset 0 1px 0 rgba(255,255,255,0.18) !important;
+}
+.wrap .card a.btn:hover,
+.wrap .card button.btn:hover,
+.wrap .card button.lock-btn:hover{ background:#193a5b !important; }
+.wrap .card .checklist-item {
+  background:rgba(216,234,251,0.52) !important;
+  border:1px solid rgba(255,255,255,0.22) !important;
+  border-radius:22px !important;
+  color:#17324d !important;
+}
+.wrap .card .checklist-item span { color:#17324d !important; }
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+  <script src="community_state_stable.js"></script>
+<style>
+/* FORCE white text in Status & Details section */
+#boardSubmittedItemsSection,
+#boardSubmittedItemsSection *:not(button),
+#boardMemberHubStatus,
+#boardMemberHubStatus *:not(button),
+#annualMeetingApprovals,
+#annualMeetingApprovals *:not(button) {
+  color: #ffffff !important;
+}
+
+/* Secondary text (slightly dimmed white) */
+#boardSubmittedItemsSection .muted,
+#boardMemberHubStatus .muted,
+#annualMeetingApprovals .muted {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style>
+/* HARD OVERRIDE — force white text in dark section */
+.hub-zone:last-of-type,
+.hub-zone:last-of-type *:not(button):not(.badge):not(.pill) {
+  color: #ffffff !important;
+}
+
+/* Slightly softer for secondary text */
+.hub-zone:last-of-type .muted,
+.hub-zone:last-of-type p,
+.hub-zone:last-of-type span {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+</head>
+<body data-header-mode="simple">
+<div id="zummeeHeaderMount"></div>
+<script src="shared/header.js?v=2026-04-08-2"></script>
+<style id="zummeeSubpageHeaderForce">
+  /* Force readable community dropdown text on all subpages */
+  #zummeeCommunitySelect, #zummeeCommunitySelect *{ color:#0f2f4a !important; }
+  #zummeeCommunitySelect option{ color:#0f2f4a !important; background:#ffffff !important; }
+
+/* Ensure community dropdown text is dark and readable */
+#zummeeCommunitySelect{
+  color:#0f2f4a !important;
+  font-weight:700 !important;
+}
+.zummee-modern-picker__button,
+.zummee-modern-picker__item{
+  color:#0f2f4a !important;
+}
+
+/* Force subpage dropdown to match Manager Hub */
+#zummeeCommunitySelect{
+  background:#ffffff !important;
+  color:#000000 !important;
+  font-weight:700 !important;
+}
+
+.zummee-modern-picker__button{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+.zummee-modern-picker__menu{
+  background:#ffffff !important;
+}
+
+.zummee-modern-picker__item{
+  color:#000000 !important;
+}
+
+/* Match Manager Hub community picker styling (white dropdown, black text) */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communityBtn span{
+  color:#000000 !important;
+}
+.zummee-communityMenu{
+  background:#ffffff !important;
+  border:1px solid rgba(15,47,74,0.18) !important;
+}
+.zummee-communitySearch{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communitySearch::placeholder{
+  color: rgba(0,0,0,0.55) !important;
+}
+.zummee-communityItem{
+  color:#000000 !important;
+}
+
+/* Force dropdown button background to white */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Override header generic button styling for community picker */
+.zummee-header .zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Remove bullet points from modern community dropdown */
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+  padding-left:0 !important;
+  margin-left:0 !important;
+}
+
+.zummee-communityItem::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* FORCE remove bullets everywhere inside community dropdown */
+.zummee-communityMenu,
+.zummee-communityMenu *{
+  list-style-type:none !important;
+  list-style:none !important;
+}
+
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+}
+
+.zummee-communityMenu li::marker{
+  content:"" !important;
+}
+
+.zummee-communityMenu li::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* Subpage Hub button — match Manager Hub */
+.zummee-header .zummee-hubBtn {
+  background: #ffffff !important;
+  color: #0f2f4a !important;
+  border-radius: 28px !important;
+  padding: 10px 22px !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  border: 1px solid rgba(15,47,74,0.15) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+  transition: all .2s ease;
+  text-decoration:none !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+.zummee-header .zummee-hubBtn:hover {
+  background: #f4f6f8 !important;
+}
+
+/* Fix Hub button text color + alignment under dropdown */
+.zummee-header .zummee-hubBtn {
+  color: #000000 !important;
+  display: block !important;
+  margin-left: auto !important;
+  margin-top: 10px !important;
+}
+
+.zummee-header .community-header-right {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+}
+
+/* Correct Hub button sizing and force black text */
+.zummee-header .zummee-hubBtn {
+  background:#ffffff !important;
+  color:#000000 !important;
+  border-radius:28px !important;
+  padding:8px 18px !important;
+  font-weight:700 !important;
+  font-size:15px !important;
+  border:1px solid rgba(15,47,74,0.15) !important;
+  box-shadow:0 4px 10px rgba(0,0,0,0.08) !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:auto !important;
+  min-width:auto !important;
+  margin-top:8px !important;
+  align-self:flex-end !important;
+}
+
+/* Ensure container stacks properly */
+.zummee-header .community-header-right {
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:flex-end !important;
+}
+
+/* Force Hub button text to true black */
+.zummee-header .zummee-hubBtn,
+.zummee-header .zummee-hubBtn:visited,
+.zummee-header .zummee-hubBtn span {
+  color:#000000 !important;
+}
+
+/* Align page titles (like Daily Ops) to the left */
+.page-title,
+h1.page-title,
+.ops-title,
+h1 {
+  text-align:left !important;
+  margin-left:0 !important;
+}
+
+/* Precisely align page titles with main card container */
+.main-content h1,
+.content-wrapper h1,
+.page-container h1 {
+  text-align:left !important;
+  margin-left:40px !important;  /* matches card container padding */
+  margin-right:0 !important;
+}
+
+/* Prevent centering from parent flex containers */
+.page-header,
+.title-row {
+  justify-content:flex-start !important;
+  text-align:left !important;
+}
+
+/* Precisely match left edge of main section container */
+#opsHeaderRow {
+  padding-left: 60px !important; /* match section container padding */
+  justify-content: flex-start !important;
+}
+
+#opsHeaderRow h1 {
+  margin: 0 !important;
+}
+
+/* Match subpage logo size to Manager Hub */
+.zummee-header .zummee-logo {
+  font-size: 42px !important;
+  line-height: 1 !important;
+}
+
+.zummee-header .zummee-subtitle {
+  font-size: 16px !important;
+  letter-spacing: 2px !important;
+}
+
+.zummee-header svg {
+  height: 28px !important;
+}
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style id="zummeeSubpageHeaderLayoutV1217">
+  /* Subpage header polish (v1217): add brand mark left, controls stacked right, crisp swatch, readable Hub */
+  header.{
+    background:#173a56 !important;
+    padding:16px 22px !important;
+    border-bottom: 1.2px solid rgba(255,255,255,0.14) !important;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.14) !important;
+  }
+  header. .{
+    width:100% !important;
+    display:flex !important;
+    align-items:flex-start !important;
+    justify-content:space-between !important;
+    gap:18px !important;
+  }
+  header. .zummee-header__brand{
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    width:54px !important;
+    height:54px !important;
+    border-radius:16px !important;
+    text-decoration:none !important;
+    flex:0 0 auto !important;
+  }
+  header. .zummee-header__brand img{
+    height:54px !important;
+    width:auto !important;
+    max-width:320px !important;
+    display:block !important;
+  }
+
+  header. .zummee-header__controls{
+    display:flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+  }
+  header. .zummee-header__communityRow{ justify-content:flex-end !important; }
+
+  /* Crisp color dot (no blob) */
+  #zummeeCommunitySwatch{
+    display:inline-block !important;
+    width:12px !important;
+    height:12px !important;
+    border-radius:999px !important;
+    border:2px solid rgba(255,255,255,0.70) !important;
+    background: rgba(255,255,255,0.15) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18) !important;
+  }
+
+  /* Hub button readability */
+  header. .zummee-header__action--hub{
+    align-self:flex-end !important;
+    background:#e9ecef !important;
+    color:#173a56 !important;
+    border:1px solid rgba(15,47,74,0.22) !important;
+    box-shadow:0 6px 18px rgba(0,0,0,0.10) !important;
+  }
+  header. .zummee-header__action--hub:hover{
+    background:#dfe3e6 !important;
+  }
+
+/* Ensure community dropdown text is dark and readable */
+#zummeeCommunitySelect{
+  color:#0f2f4a !important;
+  font-weight:700 !important;
+}
+.zummee-modern-picker__button,
+.zummee-modern-picker__item{
+  color:#0f2f4a !important;
+}
+
+/* Force subpage dropdown to match Manager Hub */
+#zummeeCommunitySelect{
+  background:#ffffff !important;
+  color:#000000 !important;
+  font-weight:700 !important;
+}
+
+.zummee-modern-picker__button{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+.zummee-modern-picker__menu{
+  background:#ffffff !important;
+}
+
+.zummee-modern-picker__item{
+  color:#000000 !important;
+}
+
+/* Match Manager Hub community picker styling (white dropdown, black text) */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communityBtn span{
+  color:#000000 !important;
+}
+.zummee-communityMenu{
+  background:#ffffff !important;
+  border:1px solid rgba(15,47,74,0.18) !important;
+}
+.zummee-communitySearch{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communitySearch::placeholder{
+  color: rgba(0,0,0,0.55) !important;
+}
+.zummee-communityItem{
+  color:#000000 !important;
+}
+
+/* Force dropdown button background to white */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Override header generic button styling for community picker */
+.zummee-header .zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Remove bullet points from modern community dropdown */
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+  padding-left:0 !important;
+  margin-left:0 !important;
+}
+
+.zummee-communityItem::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* FORCE remove bullets everywhere inside community dropdown */
+.zummee-communityMenu,
+.zummee-communityMenu *{
+  list-style-type:none !important;
+  list-style:none !important;
+}
+
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+}
+
+.zummee-communityMenu li::marker{
+  content:"" !important;
+}
+
+.zummee-communityMenu li::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* Subpage Hub button — match Manager Hub */
+.zummee-header .zummee-hubBtn {
+  background: #ffffff !important;
+  color: #0f2f4a !important;
+  border-radius: 28px !important;
+  padding: 10px 22px !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  border: 1px solid rgba(15,47,74,0.15) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+  transition: all .2s ease;
+  text-decoration:none !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+.zummee-header .zummee-hubBtn:hover {
+  background: #f4f6f8 !important;
+}
+
+/* Fix Hub button text color + alignment under dropdown */
+.zummee-header .zummee-hubBtn {
+  color: #000000 !important;
+  display: block !important;
+  margin-left: auto !important;
+  margin-top: 10px !important;
+}
+
+.zummee-header .community-header-right {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+}
+
+/* Correct Hub button sizing and force black text */
+.zummee-header .zummee-hubBtn {
+  background:#ffffff !important;
+  color:#000000 !important;
+  border-radius:28px !important;
+  padding:8px 18px !important;
+  font-weight:700 !important;
+  font-size:15px !important;
+  border:1px solid rgba(15,47,74,0.15) !important;
+  box-shadow:0 4px 10px rgba(0,0,0,0.08) !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:auto !important;
+  min-width:auto !important;
+  margin-top:8px !important;
+  align-self:flex-end !important;
+}
+
+/* Ensure container stacks properly */
+.zummee-header .community-header-right {
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:flex-end !important;
+}
+
+/* Force Hub button text to true black */
+.zummee-header .zummee-hubBtn,
+.zummee-header .zummee-hubBtn:visited,
+.zummee-header .zummee-hubBtn span {
+  color:#000000 !important;
+}
+
+/* Align page titles (like Daily Ops) to the left */
+.page-title,
+h1.page-title,
+.ops-title,
+h1 {
+  text-align:left !important;
+  margin-left:0 !important;
+}
+
+/* Precisely align page titles with main card container */
+.main-content h1,
+.content-wrapper h1,
+.page-container h1 {
+  text-align:left !important;
+  margin-left:40px !important;  /* matches card container padding */
+  margin-right:0 !important;
+}
+
+/* Prevent centering from parent flex containers */
+.page-header,
+.title-row {
+  justify-content:flex-start !important;
+  text-align:left !important;
+}
+
+/* Precisely match left edge of main section container */
+#opsHeaderRow {
+  padding-left: 60px !important; /* match section container padding */
+  justify-content: flex-start !important;
+}
+
+#opsHeaderRow h1 {
+  margin: 0 !important;
+}
+
+/* Match subpage logo size to Manager Hub */
+.zummee-header .zummee-logo {
+  font-size: 42px !important;
+  line-height: 1 !important;
+}
+
+.zummee-header .zummee-subtitle {
+  font-size: 16px !important;
+  letter-spacing: 2px !important;
+}
+
+.zummee-header svg {
+  height: 28px !important;
+}
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+
+<div class="wrap">
+  <div class="card emergency-card">
+      <div class="title">Pool Emergency Number</div>
+      <div class="desc">Saved automatically. Format: 111-111-1111</div>
+      <div class="meta-input">
+        <input id="poolEmergencyPhone" class="meta-phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="111-111-1111" maxlength="12"/>
+        <button id="poolEmergencyPhoneLock" class="btn lock-btn icon-only" type="button" aria-label="Lock pool phone fields" title="Lock / Unlock">🔒</button>
+        <a id="poolEmergencyCall" class="btn primary" href="#" style="display:none">Call</a>
+      </div>
+      <div class="lock-state" id="poolEmergencyHint">Enter a 10-digit number.</div>
+
+      <div class="service-grid" aria-label="Pool service account details">
+        <div class="field">
+          <div class="meta-label small">Service Provider</div>
+          <select id="poolServiceProvider" class="meta-small">
+            <option value="">Select…</option>
+            <option value="Verizon">Verizon</option>
+            <option value="AT&T">AT&amp;T</option>
+            <option value="Comcast">Comcast</option>
+          </select>
+        </div>
+        <div class="field">
+          <div class="meta-label small">Provider Phone</div>
+          <div class="meta-input">
+            <input id="poolServiceProviderPhone" class="meta-small" type="tel" inputmode="numeric" autocomplete="tel" placeholder="111-111-1111" maxlength="12"/>
+            <a id="poolServiceProviderCall" class="btn primary sm" href="#" style="display:none">Call</a>
+          </div>
+        </div>
+        <div class="field">
+          <div class="meta-label small">Account #</div>
+          <input id="poolServiceAccount" class="meta-small" type="text" inputmode="numeric" autocomplete="off" placeholder="Account number"/>
+        </div>
+        <div class="field">
+          <div class="meta-label small">Tax ID</div>
+          <input id="poolServiceTaxId" class="meta-small" type="text" autocomplete="off" placeholder="Tax ID"/>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="title">Pool Opening</div>
+        <div class="meta-row">
+          <div class="meta-left">
+            <div class="meta-label">Pool Opening Date</div>
+            <div class="meta-input">
+              <input id="poolOpeningDate" class="meta-date" type="date" />
+            </div>
+          </div>
+          <button id="poolOpeningDateLock" class="btn lock-btn" type="button" onclick="toggleDateLock('opening')">🔒 Lock</button>
+        </div>
+        <div class="desc">Opening checklist</div>
+        <div id="poolOpeningChecklist" class="checklist"></div>
+        <div class="checklist-actions">
+          <button class="btn" type="button" onclick="resetChecklist('opening')">Reset Opening</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="title">Pool Closing</div>
+        <div class="meta-row">
+          <div class="meta-left">
+            <div class="meta-label">Pool Closing Date</div>
+            <div class="meta-input">
+              <input id="poolClosingDate" class="meta-date" type="date" />
+            </div>
+          </div>
+          <button id="poolClosingDateLock" class="btn lock-btn" type="button" onclick="toggleDateLock('closing')">🔒 Lock</button>
+        </div>
+        <div class="desc">Closing checklist</div>
+        <div id="poolClosingChecklist" class="checklist"></div>
+        <div class="checklist-actions">
+          <button class="btn" type="button" onclick="resetChecklist('closing')">Reset Closing</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  // ------------------------------
+  // Safe localStorage helpers (never throw)
+  // ------------------------------
+  function safeLocalGet(k){
+    try{ return localStorage.getItem(k); }catch(e){ return null; }
+  }
+  function safeLocalSet(k,v){
+    try{ localStorage.setItem(k, v==null ? "" : String(v)); }catch(e){}
+  }
+
+  function emergencyPhoneKey(){
+    const uid = getUserId();
+    const communityId = getActiveCommunityId();
+    let base = "zummee_pool_emergency_phone";
+    if(uid) base += "__user__" + uid;
+    if(communityId) base += "__community__" + communityId;
+    return base;
+  }
+  function emergencyPhoneLockKey(){
+    const uid = getUserId();
+    const communityId = getActiveCommunityId();
+    let base = "zummee_pool_emergency_phone_lock";
+    if(uid) base += "__user__" + uid;
+    if(communityId) base += "__community__" + communityId;
+    return base;
+  }
+  function readEmergencyPhone(){
+    return safeLocalGet(emergencyPhoneKey()) || "";
+  }
+  function writeEmergencyPhone(val){
+    safeLocalSet(emergencyPhoneKey(), val || "");
+  }
+  function readEmergencyPhoneLocked(){
+    return (safeLocalGet(emergencyPhoneLockKey()) || "") === "1";
+  }
+  function writeEmergencyPhoneLocked(locked){
+    safeLocalSet(emergencyPhoneLockKey(), locked ? "1" : "0");
+  }
+
+  const OPENING_ITEMS = [
+    "Remove pool cover (if applicable)",
+    "Inspect pool deck, gates, and signage",
+    "Verify safety equipment is present (ring buoy, shepherd hook, first aid)",
+    "Check pumps/filters/heaters for leaks and proper operation",
+    "Prime/clean skimmer baskets and pump strainer basket",
+    "Test water chemistry (pH / chlorine / alkalinity) and adjust",
+    "Brush and vacuum pool; empty baskets",
+    "Set furniture and confirm pool rules signage is posted",
+    "Log opening checklist complete"
+  ];
+
+  const CLOSING_ITEMS = [
+    "Skim, brush, and vacuum pool thoroughly",
+    "Balance water chemistry for closing",
+    "Backwash/clean filter; empty baskets",
+    "Lower water level (if required for your cover/type)",
+    "Winterize lines and equipment (blow out, plug, antifreeze if used)",
+    "Shut down and secure pumps/heaters; drain as needed",
+    "Remove/store furniture and pool accessories",
+    "Install pool cover (if applicable) and secure",
+    "Lock gates/secure area and post closing signage",
+    "Log closing checklist complete"
+  ];
+
+  function getUserId(){
+    try { return String(localStorage.getItem("zummee_user_id_v1")||"").trim(); }
+    catch(e){ return ""; }
+  }
+
+  function getActiveCommunityId(){
+    try{
+      const liveSelect = document.getElementById("zummeeCommunitySelect");
+      const liveValue = String((liveSelect && liveSelect.value) || "").trim();
+      if(liveValue) return liveValue;
+
+      return String(
+        localStorage.getItem("zummee_selected_community_id") ||
+        localStorage.getItem("zummee_selected_community_v1") ||
+        ((window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.SELECTED_COMMUNITY_KEY) ? localStorage.getItem(window.ZUMMEE_KEYS.SELECTED_COMMUNITY_KEY) : "") ||
+        ""
+      ).trim();
+    }catch(e){ return ""; }
+  }
+
+  function key(kind){
+    const uid = getUserId();
+    const communityId = getActiveCommunityId();
+    let base = "zummee_pool_ops_" + kind;
+    if(uid) base += "__user__" + uid;
+    if(communityId) base += "__community__" + communityId;
+    return base;
+  }
+
+  function dateKey(kind){
+    return key(kind+"_date");
+  }
+
+  function loadDateState(kind){
+    try{
+      const raw = localStorage.getItem(dateKey(kind));
+      if(!raw) return { value: "", locked: false };
+      const parsed = JSON.parse(raw);
+      return {
+        value: (parsed && typeof parsed.value === "string") ? parsed.value : "",
+        locked: !!(parsed && parsed.locked)
+      };
+    }catch(e){
+      return { value: "", locked: false };
+    }
+  }
+
+  function saveDateState(kind, state){
+    try{ localStorage.setItem(dateKey(kind), JSON.stringify({ value: state.value || "", locked: !!state.locked })); }catch(e){}
+  }
+
+  function syncDateUI(kind){
+    const input = document.getElementById(kind === "opening" ? "poolOpeningDate" : "poolClosingDate");
+    const btn = document.getElementById(kind === "opening" ? "poolOpeningDateLock" : "poolClosingDateLock");
+    if(!input || !btn) return;
+
+    const state = loadDateState(kind);
+    if(input.value !== state.value) input.value = state.value;
+    input.disabled = !!state.locked;
+    // Show state on the button itself (easy to see at a glance)
+    btn.textContent = state.locked ? "🔒 Locked" : "🔓 Unlocked";
+    btn.title = state.locked ? "Unlock" : "Lock";
+    btn.classList.toggle("is-locked", !!state.locked);
+    btn.classList.toggle("is-unlocked", !state.locked);
+  }
+
+  function initDateField(kind){
+    const input = document.getElementById(kind === "opening" ? "poolOpeningDate" : "poolClosingDate");
+    if(!input) return;
+
+    if(input.dataset.inited === "1") {
+      syncDateUI(kind);
+      return;
+    }
+    input.dataset.inited = "1";
+
+    // Initialize once
+    const state = loadDateState(kind);
+    input.value = state.value || "";
+    input.disabled = !!state.locked;
+
+    input.addEventListener("change", ()=>{
+      const st = loadDateState(kind);
+      if(st.locked) {
+        // revert if locked
+        input.value = st.value || "";
+        return;
+      }
+      saveDateState(kind, { value: input.value || "", locked: false });
+      syncDateUI(kind);
+    });
+
+    syncDateUI(kind);
+  }
+
+  window.toggleDateLock = function(kind){
+    const input = document.getElementById(kind === "opening" ? "poolOpeningDate" : "poolClosingDate");
+    if(!input) return;
+    const current = loadDateState(kind);
+    const next = { value: (current.locked ? current.value : (input.value || current.value || "")), locked: !current.locked };
+    saveDateState(kind, next);
+    syncDateUI(kind);
+  };
+
+  function load(kind, defaults){
+    try{
+      const raw = localStorage.getItem(key(kind));
+      if(!raw) return defaults.map((label,i)=>({id:i+1,label,done:false}));
+      const parsed = JSON.parse(raw);
+      const doneByLabel = new Map((parsed||[]).map(x=>[x.label, !!x.done]));
+      return defaults.map((label,i)=>({id:i+1,label,done: doneByLabel.get(label) || false}));
+    }catch(e){
+      return defaults.map((label,i)=>({id:i+1,label,done:false}));
+    }
+  }
+
+  function save(kind, items){
+    try{ localStorage.setItem(key(kind), JSON.stringify(items)); }catch(e){}
+  }
+
+  function esc(s){
+    return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  }
+
+  function render(containerId, kind, defaults){
+    const el = document.getElementById(containerId);
+    if(!el) return;
+    const items = load(kind, defaults);
+    el.innerHTML = items.map(it => (
+      '<label class="checklist-item">'+
+        '<input type="checkbox" '+(it.done?'checked':'')+' data-kind="'+kind+'" data-label="'+esc(it.label)+'"/>'+
+        '<span>'+esc(it.label)+'</span>'+
+      '</label>'
+    )).join("");
+
+    el.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+      cb.addEventListener("change", (e)=>{
+        const label = e.target.getAttribute("data-label");
+        const kind = e.target.getAttribute("data-kind");
+        const current = load(kind, kind==="opening"?OPENING_ITEMS:CLOSING_ITEMS);
+        const updated = current.map(x => x.label===label ? ({...x, done:e.target.checked}) : x);
+        save(kind, updated);
+      });
+    });
+  }
+
+  window.resetChecklist = function(kind){
+    const defaults = kind==="opening" ? OPENING_ITEMS : CLOSING_ITEMS;
+    const items = defaults.map((label,i)=>({id:i+1,label,done:false}));
+    save(kind, items);
+    draw();
+  };
+
+  // ------------------------------
+  // Pool Emergency Phone (auto-format + click-to-call)
+  // ------------------------------
+  function phoneKey(){
+    return key("emergency_phone");
+  }
+
+  function phoneLockKey(){
+    return phoneKey() + "__locked";
+  }
+
+  function loadPhoneLocked(){
+    try{ return localStorage.getItem(phoneLockKey()) === "1"; }catch(e){ return false; }
+  }
+
+  function savePhoneLocked(locked){
+    try{ localStorage.setItem(phoneLockKey(), locked ? "1" : "0"); }catch(e){}
+  }
+
+  function setPoolPhoneFieldsDisabled(disabled){
+    const ids = [
+      "poolEmergencyPhone",
+      "poolServiceProvider",
+      "poolServiceProviderPhone",
+      "poolServiceAccount",
+      "poolServiceTaxId"
+    ];
+    ids.forEach(id=>{
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.disabled = !!disabled;
+      el.setAttribute("aria-disabled", disabled ? "true" : "false");
+    });
+  }
+
+  function syncEmergencyLockUI(){
+    const input = document.getElementById("poolEmergencyPhone");
+    const btn = document.getElementById("poolEmergencyPhoneLock");
+    const hint = document.getElementById("poolEmergencyHint");
+    const locked = loadPhoneLocked();
+
+    // Master lock: locks ALL fields in the pool phone section
+    setPoolPhoneFieldsDisabled(locked);
+
+    if(btn){
+      // Show state on the icon itself (big + obvious)
+      btn.textContent = locked ? "🔒" : "🔓";
+      btn.setAttribute("aria-label", locked ? "Pool phone section locked" : "Pool phone section unlocked");
+      btn.title = locked ? "Unlock" : "Lock";
+      btn.classList.toggle("is-locked", locked);
+      btn.classList.toggle("is-unlocked", !locked);
+    }
+    if(hint){
+      // keep validity hint if valid; otherwise show lock state guidance
+      const val = input ? (input.value || "") : "";
+      const isValid = val.length === 12;
+      if(isValid){
+        hint.textContent = "Ready to call.";
+      } else {
+        hint.textContent = locked ? "Locked. Unlock to edit." : "Enter a 10-digit number.";
+      }
+    }
+  }
+
+  function toggleEmergencyLock(){
+    const locked = loadPhoneLocked();
+    savePhoneLocked(!locked);
+    syncEmergencyUI();      // keeps call button correct
+    syncEmergencyLockUI();  // updates input+button
+  }
+
+  function formatPhone(raw){
+    const digits = String(raw||"").replace(/\D/g, "").slice(0,10);
+    const a = digits.slice(0,3);
+    const b = digits.slice(3,6);
+    const c = digits.slice(6,10);
+    if(digits.length <= 3) return a;
+    if(digits.length <= 6) return a + "-" + b;
+    return a + "-" + b + "-" + c;
+  }
+
+  function syncEmergencyUI(){
+    const input = document.getElementById("poolEmergencyPhone");
+    const call = document.getElementById("poolEmergencyCall");
+    const hint = document.getElementById("poolEmergencyHint");
+    if(!input) return;
+
+    const val = input.value || "";
+    const isValid = val.length === 12; // ###-###-####
+    if(call){
+      if(isValid){
+        call.href = "tel:" + val.replace(/-/g,"");
+        call.style.display = "inline-flex";
+      } else {
+        call.style.display = "none";
+        call.href = "#";
+      }
+    }
+    if(hint){
+      if(isValid){
+        hint.textContent = "Ready to call.";
+      } else {
+        hint.textContent = loadPhoneLocked() ? "Locked. Unlock to edit." : "Enter a 10-digit number.";
+      }
+    }
+  }
+
+  function hydrateEmergencyPhone(){
+    const input = document.getElementById("poolEmergencyPhone");
+    const callBtn = document.getElementById("poolEmergencyCall");
+    const lockBtn = document.getElementById("poolEmergencyPhoneLock");
+    const hint = document.getElementById("poolEmergencyHint");
+    if(!input || !lockBtn) return;
+
+    const raw = readEmergencyPhone();
+    const locked = readEmergencyPhoneLocked();
+    input.value = formatPhone(raw || "");
+    input.disabled = !!locked;
+    lockBtn.classList.toggle("is-locked", !!locked);
+    lockBtn.classList.toggle("is-unlocked", !locked);
+    lockBtn.textContent = locked ? "🔒" : "🔓";
+    lockBtn.title = locked ? "Unlock" : "Lock";
+    if(hint) hint.textContent = locked ? "Locked for this community." : "Enter a 10-digit number.";
+    if(callBtn){
+      const formatted = formatPhone(raw || "");
+      if(formatted && formatted.length === 12){
+        callBtn.href = "tel:" + formatted.replace(/-/g, "");
+        callBtn.style.display = "inline-flex";
+      } else {
+        callBtn.href = "#";
+        callBtn.style.display = "none";
+      }
+    }
+  }
+
+  function initEmergencyPhone(){
+    const input = document.getElementById("poolEmergencyPhone");
+    if(!input) return;
+    if(input.dataset.inited === "1") {
+      hydrateEmergencyPhone();
+      syncEmergencyUI();
+      syncEmergencyLockUI();
+      return;
+    }
+    input.dataset.inited = "1";
+
+    hydrateEmergencyPhone();
+    syncEmergencyUI();
+    syncEmergencyLockUI();
+
+    const lockBtn = document.getElementById("poolEmergencyPhoneLock");
+    if(lockBtn && lockBtn.dataset.inited !== "1"){
+      lockBtn.dataset.inited = "1";
+      lockBtn.addEventListener("click", toggleEmergencyLock);
+    }
+
+    input.addEventListener("input", ()=>{
+      const formatted = formatPhone(input.value);
+      input.value = formatted;
+      writeEmergencyPhone(formatted);
+      syncEmergencyUI();
+      syncEmergencyLockUI();
+    });
+  }
+
+  function draw(){
+    render("poolOpeningChecklist","opening",OPENING_ITEMS);
+    render("poolClosingChecklist","closing",CLOSING_ITEMS);
+    syncDateUI("opening");
+    syncDateUI("closing");
+  }
+
+  document.addEventListener("DOMContentLoaded", ()=>{
+    initDateField("opening");
+    initDateField("closing");
+    setTimeout(()=>{ try{ initEmergencyPhone(); }catch(_e){} }, 180);
+    draw();
+  
+  // Pool service provider + provider phone + account + tax id (auto-save)
+  const spEl = document.getElementById("poolServiceProvider");
+  const spPhoneEl = document.getElementById("poolServiceProviderPhone");
+  const spCallEl = document.getElementById("poolServiceProviderCall");
+  const acctEl = document.getElementById("poolServiceAccount");
+  const taxEl = document.getElementById("poolServiceTaxId");
+
+  function serviceKey(suffix){
+    const uid = getUserId();
+    const communityId = getActiveCommunityId();
+    let base = "zummee_pool_service_" + suffix;
+    if(uid) base += "__user__" + uid;
+    if(communityId) base += "__community__" + communityId;
+    return base;
+  }
+  function readServiceField(suffix){
+    return safeLocalGet(serviceKey(suffix)) || "";
+  }
+  function writeServiceField(suffix, value){
+    safeLocalSet(serviceKey(suffix), value || "");
+  }
+
+  function syncServiceProviderCall(){
+    if(!spCallEl) return;
+    const val = spPhoneEl ? (spPhoneEl.value || "") : "";
+    const isValid = val.length === 12; // ###-###-####
+    if(isValid){
+      spCallEl.href = "tel:" + val.replace(/-/g,"");
+      spCallEl.style.display = "inline-flex";
+    } else {
+      spCallEl.style.display = "none";
+      spCallEl.href = "#";
+    }
+  }
+
+  function hydrateServiceFields(){
+    if (spEl) spEl.value = readServiceField("provider") || "";
+    if (spPhoneEl) spPhoneEl.value = formatPhone(readServiceField("provider_phone") || "");
+    if (acctEl) acctEl.value = readServiceField("account") || "";
+    if (taxEl) taxEl.value = readServiceField("taxid") || "";
+    syncServiceProviderCall();
+  }
+
+  hydrateServiceFields();
+
+  if (spEl){
+    spEl.addEventListener("change", () => writeServiceField("provider", spEl.value || ""));
+  }
+
+  if (spPhoneEl){
+    spPhoneEl.addEventListener("input", () => {
+      const formatted = formatPhone(spPhoneEl.value);
+      spPhoneEl.value = formatted;
+      writeServiceField("provider_phone", formatted);
+      syncServiceProviderCall();
+    });
+  }
+  if (acctEl){
+    acctEl.addEventListener("input", () => writeServiceField("account", (acctEl.value || "").trim()));
+  }
+  if (taxEl){
+    taxEl.addEventListener("input", () => writeServiceField("taxid", (taxEl.value || "").trim()));
+  }
+  document.addEventListener("community:changed", ()=>{
+    try{
+      draw();
+      syncDateUI("opening");
+      syncDateUI("closing");
+      hydrateServiceFields();
+    }catch(_e){}
+  });
+
+
+  document.addEventListener("community:changed", ()=>{
+    setTimeout(()=>{
+      try{
+        initEmergencyPhone();
+        hydrateEmergencyPhone();
+        syncEmergencyUI();
+        syncEmergencyLockUI();
+      }catch(_e){}
+    }, 120);
+  });
+
+  window.addEventListener("pageshow", ()=>{
+    setTimeout(()=>{
+      try{
+        initEmergencyPhone();
+        hydrateEmergencyPhone();
+        syncEmergencyUI();
+        syncEmergencyLockUI();
+      }catch(_e){}
+    }, 120);
+  });
+
+
+});
+})();
+
+// Modern selector UI that wraps the native <select> (keeps existing behavior & RLS-safe updates)
+function initModernCommunityPicker(select){
+  try{
+    if(!select || select.__zumModernBound) return;
+    select.__zumModernBound = true;
+
+    // Build UI
+    const host = document.createElement("div");
+    host.className = "zummee-communityPicker";
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "zummee-communityBtn";
+    btn.setAttribute("aria-haspopup","listbox");
+    btn.setAttribute("aria-expanded","false");
+
+    const btnLabel = document.createElement("span");
+    btnLabel.textContent = "Select…";
+    const chev = document.createElement("span");
+    chev.className = "zummee-communityChevron";
+    btn.appendChild(btnLabel);
+    btn.appendChild(chev);
+
+    const menu = document.createElement("div");
+    menu.className = "zummee-communityMenu";
+    const search = document.createElement("input");
+    search.className = "zummee-communitySearch";
+    search.type = "text";
+    search.placeholder = "Search communities…";
+    const list = document.createElement("div");
+    list.className = "zummee-communityList";
+    menu.appendChild(search);
+    menu.appendChild(list);
+
+    host.appendChild(btn);
+    host.appendChild(menu);
+
+    // Insert host before select; then hide select
+    select.parentNode.insertBefore(host, select);
+    select.style.display = "none";
+
+    function getSelectedText(){
+      const opt = select.options[select.selectedIndex];
+      return opt ? opt.textContent : "";
+    }
+
+    function rebuildList(filter){
+      const q = String(filter||"").toLowerCase();
+      list.innerHTML = "";
+      const opts = Array.from(select.options || []);
+      if(!opts.length){
+        const empty = document.createElement("div");
+        empty.className = "zummee-communityMuted";
+        empty.textContent = "No communities available.";
+        list.appendChild(empty);
+        return;
+      }
+      opts.forEach(opt=>{
+        const name = String(opt.textContent||"");
+        if(q && !name.toLowerCase().includes(q)) return;
+        const item = document.createElement("button");
+        item.type="button";
+        item.className="zummee-communityItem";
+
+        const label = document.createElement("span");
+        label.textContent = name;
+
+        const check = document.createElement("span");
+        check.className = "zummee-communityCheck";
+        check.setAttribute("aria-hidden","true");
+
+        item.appendChild(label);
+        item.appendChild(check);
+        item.setAttribute("role","option");
+        item.setAttribute("aria-selected", opt.value===select.value ? "true":"false");
+        item.addEventListener("click", ()=>{
+          select.value = opt.value;
+          try{ select.dispatchEvent(new Event("change")); }catch(_e){}
+          closeMenu();
+        });
+        list.appendChild(item);
+      });
+      if(!list.children.length){
+        const none = document.createElement("div");
+        none.className = "zummee-communityMuted";
+        none.textContent = "No matches.";
+        list.appendChild(none);
+      }
+    }
+
+    function openMenu(){
+      menu.classList.add("open");
+      btn.setAttribute("aria-expanded","true");
+      rebuildList(search.value);
+      setTimeout(()=>{ try{ search.focus(); }catch(_e){} }, 10);
+    }
+    function closeMenu(){
+      menu.classList.remove("open");
+      btn.setAttribute("aria-expanded","false");
+    }
+
+    btn.addEventListener("click", ()=>{
+      if(menu.classList.contains("open")) closeMenu();
+      else openMenu();
+    });
+    search.addEventListener("input", ()=> rebuildList(search.value));
+
+    document.addEventListener("click", (e)=>{
+      if(host.contains(e.target)) return;
+      closeMenu();
+    });
+
+    // Keep label in sync
+    const sync = ()=>{
+      const t = getSelectedText() || "Select…";
+      btnLabel.textContent = t;
+    };
+    sync();
+    select.addEventListener("change", sync);
+
+    // Initial list
+    rebuildList("");
+  }catch(e){
+    console.warn("Modern selector init failed", e);
+  }
+}
+
+// Ensure modern (searchable) community picker is initialized on every page
+  document.addEventListener("DOMContentLoaded", function(){
+    try{
+      var sel = document.getElementById("zummeeCommunitySelect");
+      if(sel && typeof initModernCommunityPicker === "function"){
+        initModernCommunityPicker(sel);
+      }
+    }catch(e){}
+  });
+
+</script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</html>

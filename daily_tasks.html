@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Supervisor Communications</title>
+<link rel="icon" type="image/png" href="zummee_mark_32.png"/>
+
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+  :root{--bg:#f4f8ff;--ink:#12304b;--muted:#60748d;--line:#a9cdfb;--blue:#0f3c5f;--blue2:#6fa4e8;--glass:rgba(255,255,255,.84);--shadow:0 22px 55px rgba(36,91,150,.16);--r:28px}
+  *{box-sizing:border-box} body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:radial-gradient(circle at 20% 0%,#eaf4ff 0,#f7fbff 42%,#f4f8ff 100%);color:var(--ink)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid rgba(15,60,95,.16);background:#fff;color:#12304b;padding:12px 18px;border-radius:18px;text-decoration:none;font-weight:950;font-size:15px;box-shadow:0 8px 24px rgba(15,47,74,.08);cursor:pointer;white-space:nowrap}.btn.primary{background:#123f63;color:#fff;border-color:#123f63}.btn.soft{background:rgba(255,255,255,.74)}.btn.danger{background:#fff7f7;color:#a42828;border-color:#f6b9b9}.btn.good{background:#e6fbef;color:#17633a;border-color:#bfeccc}.btn:active{transform:translateY(1px)}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 28px 70px}.shell{border:2px solid var(--line);border-radius:34px;background:rgba(255,255,255,.72);box-shadow:var(--shadow);padding:34px}.header{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:22px}.title-row{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:8px}.title-copy{min-width:0;flex:1}.kicker{font-size:13px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;color:#163a5c;margin-bottom:8px}h1{font-size:34px;line-height:1;margin:0;letter-spacing:-.04em}.header-logo{height:58px;max-width:230px;object-fit:contain;object-position:right center;flex:0 0 auto;opacity:0;transition:opacity .18s ease}.header-logo.is-visible{opacity:1}.sub{font-size:18px;color:var(--muted);margin-top:12px;max-width:760px;line-height:1.45}.context{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}.pill{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 16px;border-radius:999px;border:1px solid rgba(82,139,205,.25);background:rgba(255,255,255,.78);font-weight:950;color:#17324d}
+  .grid{display:grid;grid-template-columns:minmax(320px,.9fr) minmax(360px,1.1fr);gap:22px;align-items:start}.panel{border:2px solid rgba(169,205,251,.9);border-radius:28px;background:var(--glass);box-shadow:0 12px 34px rgba(36,91,150,.10);padding:24px}.panel h2{font-size:26px;line-height:1.05;margin:0 0 8px}.panel-note{color:var(--muted);font-weight:700;line-height:1.4;margin-bottom:18px}.form{display:grid;gap:14px}.field label{display:block;font-size:12px;font-weight:950;letter-spacing:.12em;text-transform:uppercase;color:#60748d;margin:0 0 7px}.field input,.field select{width:100%;height:50px;border-radius:16px;border:1px solid rgba(18,48,75,.14);background:#fff;color:#12304b;padding:0 14px;font-weight:850;font-size:16px;outline:none}.field input:focus,.field select:focus{border-color:#6fa4e8;box-shadow:0 0 0 4px rgba(111,164,232,.18)}.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;min-width:0}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}.status{min-height:20px;font-size:13px;font-weight:850;color:#60748d}.records-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}.record-list{display:grid;gap:12px}.record{border:1px solid rgba(50,107,177,.2);border-radius:20px;background:linear-gradient(135deg,rgba(255,255,255,.95),rgba(238,246,255,.9));padding:16px;box-shadow:0 8px 22px rgba(36,91,150,.08)}.record-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.record-title{font-size:18px;font-weight:950;color:#12304b;line-height:1.2}.record-meta{color:#60748d;font-size:14px;font-weight:700;margin-top:6px;line-height:1.35}.record-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:12px}.tag{display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border-radius:999px;background:rgba(111,164,232,.12);border:1px solid rgba(111,164,232,.28);font-size:12px;font-weight:950;text-transform:uppercase;letter-spacing:.08em;color:#123f63}.empty{padding:20px;border:1px dashed rgba(82,139,205,.4);border-radius:20px;background:rgba(255,255,255,.66);color:#60748d;font-weight:800;text-align:center}.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#123f63;color:#fff;padding:12px 16px;border-radius:16px;box-shadow:0 14px 40px rgba(15,47,74,.2);display:none;z-index:10000;font-weight:900}.note-card{margin-top:18px;border-radius:22px;background:linear-gradient(135deg,rgba(18,63,99,.08),rgba(111,164,232,.14));border:1px solid rgba(111,164,232,.28);padding:16px;color:#12304b;font-weight:750;line-height:1.45}
+  @media(max-width:900px){.wrap{padding:24px 22px 60px}.shell{padding:26px}.header{display:block}.title-row{align-items:center;gap:12px}.header-logo{height:44px;max-width:210px}.context{justify-content:flex-start;margin-top:16px}.grid{grid-template-columns:1fr}h1{font-size:28px}.sub{font-size:16px}.form-row{grid-template-columns:1fr}}@media(max-width:640px){.title-row{align-items:flex-start}.header-logo{height:36px;max-width:150px}h1{font-size:24px}}
+
+  /* V115: LMU-style Hub outline + iPad date input width lock */
+  .hub-link{border:2px solid var(--line)!important;background:rgba(255,255,255,.78)!important;color:#12304b!important;border-radius:24px!important}
+  .field,.form-row{min-width:0!important}
+  .field input[type="date"],#commDate{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;height:50px!important;box-sizing:border-box!important;-webkit-appearance:none!important;appearance:none!important;margin:0!important;padding:0 14px!important;border-radius:16px!important;line-height:50px!important;text-align:left!important;}
+  #commDate::-webkit-date-and-time-value{text-align:left!important;line-height:50px!important;min-height:50px!important;}
+</style>
+<script src="community_state_stable.js"></script>
+</head>
+<body>
+  <main class="wrap">
+    <section class="shell">
+      <div class="header">
+        <div class="title-copy">
+          <div class="title-row">
+            <div>
+              <div class="kicker">Supervisor-only tools</div>
+              <h1>Supervisor Communications</h1>
+            </div>
+            <img id="supervisorCommsLogo" class="header-logo" src="Zummee.png" alt="Company logo" loading="eager" decoding="async"/>
+          </div>
+          <div class="sub">Create company-wide or community-specific directives for employees. Daily Ops stays read-only for employees while supervisors manage the source here.</div>
+        </div>
+        <div class="context"><div class="pill" id="companyPill">Company: —</div><div class="pill" id="communityPill">Community: —</div></div>
+      </div>
+      <div class="grid">
+        <section class="panel">
+          <h2>Create Communication</h2><div class="panel-note">Post reminders, requirements, compliance items, or instructions. Community messages show on the selected community’s Daily Ops page.</div>
+          <div class="form">
+            <div class="field"><label for="commTitle">Title</label><input id="commTitle" autocomplete="off" value="" placeholder="Monthly inspection, board packet, etc."/></div>
+            <div class="form-row"><div class="field"><label for="commType">Type</label><select id="commType"><option>Required Task</option><option>Reminder</option><option>Compliance Item</option><option>Announcement</option></select></div><div class="field"><label for="commScope">Scope</label><select id="commScope"><option>Community</option><option>Company-wide</option></select></div></div>
+            <div class="form-row"><div class="field"><label for="commRule">Due rule</label><select id="commRule"><option>Specific Date</option><option>Daily</option><option>Weekly</option><option>Monthly</option><option>Needs Review</option></select></div><div class="field"><label for="commDate">Due date</label><input id="commDate" type="date" autocomplete="off" value=""/></div></div>
+            <div class="field"><label for="commNotes">Notes</label><input id="commNotes" autocomplete="off" value="" placeholder="Optional instructions or requirement notes"/></div>
+            <div class="actions"><button class="btn primary" id="saveComm" type="button">Save Communication</button><button class="btn soft" id="clearForm" type="button">Clear</button><button class="btn soft" id="refreshRows" type="button">Refresh</button></div>
+            <div class="status" id="saveStatus"></div>
+          </div>
+        </section>
+        <section class="panel">
+          <div class="records-head"><div><h2>Posted Communications</h2><div class="panel-note" style="margin:6px 0 0">Current community plus company-wide messages.</div></div><span class="tag" id="countTag">0 records</span></div>
+          <div id="records" class="record-list"><div class="empty">Loading supervisor communications…</div></div>
+        </section>
+      </div>
+    </section>
+  </main>
+  <div class="toast" id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="shared/supabase-client.js"></script>
+<script>
+(function(){
+  const $=id=>document.getElementById(id); let editingId='';
+  function toast(msg){const el=$('toast'); if(!el) return; el.textContent=msg||''; el.style.display='block'; clearTimeout(toast._t); toast._t=setTimeout(()=>el.style.display='none',2200)}
+  function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+  function client(){return window.sb||window.supabaseClient||null}
+function readManagerHubLogoCache(){
+    try{
+      var cid = companyId();
+      var direct = cid ? sessionStorage.getItem('mh2_brand_logo_v1_' + String(cid).trim()) : '';
+      if(direct){ var p = JSON.parse(direct); if(p && p.url) return p; }
+      for(var i=0;i<sessionStorage.length;i++){
+        var k = sessionStorage.key(i) || '';
+        if(k.indexOf('mh2_brand_logo_v1_') === 0){ var v = JSON.parse(sessionStorage.getItem(k) || '{}'); if(v && v.url) return v; }
+      }
+    }catch(_e){}
+    return null;
+  }
+  function parseCompanyLogoRef(raw){
+    raw = String(raw || '').trim();
+    if(!raw) return null;
+    if(/^https?:\/\//i.test(raw)) return { url: raw };
+    return { bucket:'company_logos', path: raw };
+  }
+  async function applySupervisorCommsLogo(){
+    var img = $('supervisorCommsLogo');
+    if(!img) return;
+    var fallback = 'Zummee.png';
+    function paint(url, alt){
+      img.classList.remove('is-visible');
+      img.src = url || fallback;
+      img.alt = alt || 'Company logo';
+      requestAnimationFrame(function(){ img.classList.add('is-visible'); });
+    }
+    var cached = readManagerHubLogoCache();
+    if(cached && cached.url) paint(cached.url, cached.alt || 'Company logo');
+    try{
+      var sb = client();
+      var cid = companyId();
+      if(!sb || !cid) { if(!(cached && cached.url)) paint(fallback, 'Zummee logo'); return; }
+      var res = await sb.from('companies').select('logo_path,name').eq('id', String(cid)).maybeSingle();
+      if(res.error) throw res.error;
+      var row = res.data || {};
+      var ref = parseCompanyLogoRef(row.logo_path);
+      if(!ref) throw new Error('No company logo');
+      var url = ref.url || '';
+      if(!url && ref.bucket && ref.path && sb.storage && sb.storage.from){
+        var pub = sb.storage.from(ref.bucket).getPublicUrl(ref.path);
+        url = String(pub && pub.data && pub.data.publicUrl || '').trim();
+      }
+      if(!url) throw new Error('No logo URL');
+      try{ sessionStorage.setItem('mh2_brand_logo_v1_' + String(cid).trim(), JSON.stringify({url:url, alt:String(row.name || 'Company logo'), isCompany:true})); }catch(_e){}
+      paint(url, String(row.name || 'Company logo'));
+    }catch(_e){
+      if(!(cached && cached.url)) paint(fallback, 'Zummee logo');
+    }
+  }
+    function companyName(){return window.activeCompanyName||localStorage.getItem('activeCompanyName')||localStorage.getItem('companyName')||''}
+  function companyId(){return window.activeCompanyId||localStorage.getItem('activeCompanyId')||localStorage.getItem('companyId')||''}
+  function companyKey(){return (companyId()||companyName()||'company').toString().trim().toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'')||'company'}
+  function communityId(){return window.activeCommunityId||localStorage.getItem('activeCommunityId')||localStorage.getItem('currentCommunityId')||localStorage.getItem('zummee_community_id')||localStorage.getItem('zummee_selected_community_id')||''}
+  function communityName(){return window.activeCommunityName||localStorage.getItem('activeCommunityName')||localStorage.getItem('currentCommunityName')||localStorage.getItem('zummee_community_name')||''}
+  function setStatus(msg,tone){const el=$('saveStatus'); if(el){el.textContent=msg||''; el.style.color=tone||'#60748d'}}
+  function updateContext(){ $('companyPill').textContent='Company: '+(companyName()||'—'); $('communityPill').textContent='Community: '+(communityName()||'—'); applySupervisorCommsLogo(); }
+  async function getUser(){const sb=client(); if(!sb||!sb.auth) return null; try{const r=await sb.auth.getSession(); return r&&r.data&&r.data.session&&r.data.session.user||null}catch(e){return null}}
+  function baseCols(){return 'id, community_id, scope, company_key, message, type, rule, notes, due_date, created_by, created_at, updated_at'}
+  async function selectRows(){const sb=client(); if(!sb) throw new Error('Supabase is not ready.'); const cid=communityId(); const ck=companyKey(); let rows=[];
+    if(cid){let r=await sb.from('supervisor_messages').select(baseCols()).eq('scope','Community').eq('community_id',cid).order('created_at',{ascending:false}).limit(50); if(r.error) throw r.error; rows=rows.concat(r.data||[])}
+    let c=await sb.from('supervisor_messages').select(baseCols()).eq('scope','Company-wide').eq('company_key',ck).order('created_at',{ascending:false}).limit(50); if(c.error) throw c.error; rows=rows.concat(c.data||[]);
+    rows.sort((a,b)=>String(b.updated_at||b.created_at||'').localeCompare(String(a.updated_at||a.created_at||''))); return rows; }
+  function render(rows){rows=Array.isArray(rows)?rows:[]; $('countTag').textContent=rows.length+' record'+(rows.length===1?'':'s'); const root=$('records'); if(!rows.length){root.innerHTML='<div class="empty">No supervisor communications yet.</div>'; return;} root.innerHTML=rows.map(r=>{const parts=[r.type||'Message',r.rule||'Needs Review']; if(r.due_date) parts.push('Due '+r.due_date); if(r.notes) parts.push(r.notes); const posted=r.created_at?new Date(r.created_at).toLocaleString():''; if(posted) parts.push('Posted '+posted); return `<article class="record"><div class="record-top"><div><div class="record-title">${esc(r.message||'Supervisor communication')}</div><div class="record-meta">${esc(parts.join(' · '))}</div></div><span class="tag">${esc(r.scope||'Community')}</span></div><div class="record-actions"><button class="btn soft edit" data-id="${esc(r.id)}">Edit</button><button class="btn danger del" data-id="${esc(r.id)}">Delete</button></div></article>`}).join(''); root.querySelectorAll('.del').forEach(b=>b.onclick=()=>deleteRow(b.dataset.id)); root.querySelectorAll('.edit').forEach(b=>editRow(b.dataset.id, rows)); }
+  async function load(){updateContext(); try{render(await selectRows()); setStatus('')}catch(e){console.error(e); $('records').innerHTML='<div class="empty">Could not load communications. '+esc(e.message||e)+'</div>';}}
+  function clear(){editingId=''; ['commTitle','commNotes','commDate'].forEach(id=>$(id).value=''); $('commType').value='Required Task'; $('commScope').value='Community'; $('commRule').value='Specific Date'; $('saveComm').textContent='Save Communication'; setStatus('')}
+  function resetFormOnLoad(){ clear(); ['commTitle','commNotes','commDate'].forEach(function(id){ var el=$(id); if(el){ el.value=''; el.defaultValue=''; el.setAttribute('autocomplete','off'); } }); }
+  function editRow(id, rows){const r=(rows||[]).find(x=>String(x.id)===String(id)); if(!r) return; editingId=r.id; $('commTitle').value=r.message||''; $('commType').value=r.type||'Required Task'; $('commScope').value=r.scope||'Community'; $('commRule').value=r.rule||'Specific Date'; $('commNotes').value=r.notes||''; $('commDate').value=r.due_date||''; $('saveComm').textContent='Update Communication'; window.scrollTo({top:0,behavior:'smooth'});}
+  async function save(){const sb=client(); if(!sb){setStatus('Supabase is not ready.','#9a3412');return} const title=$('commTitle').value.trim(); if(!title){setStatus('Enter a title first.','#9a3412');return} const scope=$('commScope').value; const user=await getUser(); const payload={scope,company_key:scope==='Company-wide'?companyKey():null,community_id:scope==='Community'?communityId():null,message:title,type:$('commType').value,rule:$('commRule').value,notes:$('commNotes').value.trim(),due_date:$('commDate').value||null,updated_at:new Date().toISOString()}; if(user&&user.id&&!editingId) payload.created_by=user.id; if(scope==='Community'&&!payload.community_id){setStatus('Choose an active community before saving a community communication.','#9a3412');return} try{setStatus('Saving…'); let res; if(editingId){res=await sb.from('supervisor_messages').update(payload).eq('id',editingId).select('id')} else {res=await sb.from('supervisor_messages').insert([payload]).select('id')} if(res.error) throw res.error; clear(); setStatus('Saved to Supabase.','#17633a'); toast('Supervisor communication saved.'); await load(); try{window.dispatchEvent(new Event('storage'))}catch(e){} }catch(e){console.error(e); setStatus('Save failed: '+(e.message||e),'#9a3412')}}
+  async function deleteRow(id){if(!id) return; if(!confirm('Delete this supervisor communication?')) return; const sb=client(); if(!sb) return; try{const r=await sb.from('supervisor_messages').delete().eq('id',id).select('id'); if(r.error) throw r.error; toast('Deleted.'); await load();}catch(e){console.error(e); toast('Delete failed.')}}
+  $('saveComm').onclick=save; $('clearForm').onclick=clear; $('refreshRows').onclick=load; window.addEventListener('pageshow',load); window.addEventListener('focus',load); document.addEventListener('visibilitychange',()=>{if(!document.hidden) load()}); updateContext(); load();
+})();
+</script>
+<script src="company_logo_sync.js"></script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

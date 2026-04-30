@@ -1,0 +1,2739 @@
+<!doctype html>
+<html lang="en">
+<head>
+
+  <div class="delete-modal-backdrop" id="pv_deleteModal" aria-hidden="true">
+    <div class="delete-modal" role="dialog" aria-modal="true" aria-labelledby="pv_deleteTitle" aria-describedby="pv_deleteText">
+      <div class="delete-modal__pill">Vendor Management</div>
+      <h3 id="pv_deleteTitle">Remove vendor?</h3>
+      <p id="pv_deleteText">This will remove the vendor from your preferred vendors list for the active company.</p>
+      <div class="delete-modal__vendor" id="pv_deleteVendorName">Vendor</div>
+      <div class="delete-modal__actions">
+        <button class="delete-modal__btn delete-modal__btn--secondary" type="button" id="pv_deleteCancel">Cancel</button>
+        <button class="delete-modal__btn delete-modal__btn--danger" type="button" id="pv_deleteConfirm">Remove Vendor</button>
+      </div>
+    </div>
+  </div>
+
+<script>window.ZUMMEE_BUILD="2026-03-27-1";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Preferred Vendors</title>
+<style>
+  :root{--bg:#f6f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--shadow:0 10px 30px rgba(0,0,0,.08);--r:14px;--brand:#0f2f4a}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
+  .wrap{max-width:980px;margin:0 auto;padding:18px 14px 60px}
+  .top{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;justify-content:flex-start;margin-bottom:12px}
+  .btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:#fff;color:var(--text);
+    padding:10px 12px;border-radius:12px;text-decoration:none;font-weight:900;font-size:13px;box-shadow:0 1px 0 rgba(0,0,0,.02);cursor:pointer}
+  .btn:hover{border-color:#d1d5db;box-shadow:0 8px 20px rgba(0,0,0,.06)}
+  h1{margin:0;font-size:26px;letter-spacing:-.02em}
+  .sub{color:var(--muted);font-size:13px;margin:6px 0 14px;line-height:1.4}
+
+  .top > div:first-child{flex:1 1 100%;text-align:left}
+  .top h1,.top .sub{text-align:left}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:14px}
+
+/* Preferred Vendors blue section styling (match Mileage Tracker / Company Directory) */
+.wrap > .card{
+  background: linear-gradient(180deg, rgba(145,175,221,0.96) 0%, rgba(108,149,207,0.96) 100%) !important;
+  border: 1px solid rgba(255,255,255,0.35) !important;
+  border-radius: 28px !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08) !important;
+  color:#0f2f4a !important;
+  padding:24px 24px 18px !important;
+}
+.wrap > .card .row{align-items:center;}
+.wrap > .card table{
+  background: rgba(255,255,255,0.42) !important;
+  border:1px solid rgba(255,255,255,0.28) !important;
+  border-radius: 22px !important;
+  overflow:hidden;
+}
+.wrap > .card th{
+  background: rgba(255,255,255,0.18) !important;
+  color:#17324d !important;
+}
+.wrap > .card td{ color:#17324d; }
+.wrap > .card .pill{
+  background: rgba(255,255,255,0.22) !important;
+  border:1px solid rgba(255,255,255,0.30) !important;
+  color:#17324d !important;
+}
+.wrap > .card input,
+.wrap > .card select,
+.wrap > .card .btn{
+  background:#ffffff !important;
+  color:#0f2f4a !important;
+  border:1px solid rgba(15,47,74,0.10) !important;
+  box-shadow:none !important;
+}
+.wrap > .card .tiny{ color:#17324d !important; }
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  input,select{border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-weight:800;background:#fff}
+  input{min-width:220px;flex:1}
+  table{width:100%;border-collapse:separate;border-spacing:0;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:#fff}
+  th,td{padding:10px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;color:var(--muted);text-align:left;background:#fafafa}
+  tr:last-child td{border-bottom:none}
+  .tiny{font-size:12px;color:var(--muted)}
+  .pill{display:inline-block;padding:3px 8px;border-radius:999px;border:1px solid var(--line);font-size:12px;font-weight:900;color:var(--brand);background:#f8fafc}
+  a.link{color:var(--brand);font-weight:900;text-decoration:none}
+  a.link:hover{text-decoration:underline}
+
+/* GLOBAL ZUMMEE SECTION EDGING */
+.wrap .card,
+.wrap .section,
+.pageBox {
+  border: 2px solid #0f2f4a !important;
+  border-radius: 18px !important;
+  background: rgba(255,255,255,0.96) !important;
+  box-shadow: 0 10px 28px rgba(15,47,74,0.12) !important;
+}
+
+/* === Zummee Brand Header Override (v1211) === */
+.zummee-header{
+  background:#0f2f4a !important;
+  color:#ffffff !important;
+  border-bottom:1px solid rgba(255,255,255,0.10) !important;
+}
+.zummee-header a, .zummee-header a:visited{ color:#ffffff !important; }
+.zummee-header button, .zummee-header select, .zummee-header label, .zummee-header span, .zummee-header div{ color:inherit; }
+.zummee-header button{
+  background:rgba(255,255,255,0.14) !important;
+  border:1px solid rgba(255,255,255,0.18) !important;
+}
+.zummee-header button:hover{ border-color: rgba(123,224,0,0.55) !important; }
+.zummee-header__logo img{ height:120px !important; width:auto !important; }
+  .zummee-header__logo img{ margin-top:6px !important; }
+
+/* === Modern Community Selector (match Manager Hub) === */
+.zummee-communityPicker{ position:relative; display:inline-block; min-width:260px; }
+.zummee-communityBtn{
+  width:100%;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(15,47,74,0.22);
+  background:#ffffff;
+  color:#0f2f4a;
+  font-weight:700;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.10);
+}
+.zummee-communityBtn:focus{ outline:2px solid rgba(145, 255, 78, 0.55); outline-offset:2px; }
+.zummee-communityChevron{ width:10px; height:10px; border-right:2px solid rgba(15,47,74,0.55); border-bottom:2px solid rgba(15,47,74,0.55); transform:rotate(45deg); margin-top:-2px; }
+.zummee-communityMenu{
+  position:absolute;
+  right:0;
+  top:calc(100% + 10px);
+  width:340px;
+  max-width:84vw;
+  background:#ffffff;
+  border:1px solid rgba(15,47,74,0.18);
+  border-radius:16px;
+  box-shadow:0 18px 60px rgba(0,0,0,0.22);
+  padding:10px;
+  z-index:9999;
+  opacity:0;
+  transform: translateY(-6px) scale(0.99);
+  pointer-events:none;
+  visibility:hidden;
+  transition: opacity 140ms ease, transform 160ms ease, visibility 0s linear 160ms;
+}
+.zummee-communityMenu.open{
+  opacity:1;
+  transform: translateY(0) scale(1);
+  pointer-events:auto;
+  visibility:visible;
+  transition: opacity 140ms ease, transform 160ms ease;
+}
+.zummee-communitySearch{
+  width:100%;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(15,47,74,0.18);
+  background:#f7fafc;
+  color:#000000;
+  font-weight:600;
+  margin-bottom:8px;
+}
+.zummee-communitySearch::placeholder{ color:rgba(0,0,0,0.55); }
+.zummee-communityList{ max-height:280px; overflow:auto; padding:4px 2px; }
+.zummee-communityItem{
+  width:100%;
+  text-align:left;
+  border:0;
+  background:transparent;
+  padding:10px 10px;
+  border-radius:12px;
+  cursor:pointer;
+  font-weight:650;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  color:#000000;
+  position:relative;
+}
+.zummee-communityItem + .zummee-communityItem{ border-top:1px solid rgba(15,47,74,0.08); }
+.zummee-communityItem:hover{ background:rgba(15,47,74,0.06); }
+.zummee-communityItem[aria-selected="true"]{
+  background:rgba(145,255,78,0.16);
+  box-shadow: inset 0 0 0 1px rgba(145,255,78,0.30);
+}
+.zummee-communityCheck{
+  width:18px;height:18px;border-radius:999px;
+  display:inline-flex;align-items:center;justify-content:center;
+  flex:0 0 auto;color:#0f2f4a;opacity:0;transform: scale(0.9);
+  transition: opacity 120ms ease, transform 140ms ease;
+}
+.zummee-communityItem[aria-selected="true"] .zummee-communityCheck{ opacity:1; transform: scale(1); }
+.zummee-communityCheck::before{ content:"✓"; font-weight:900; font-size:13px; line-height:1; }
+
+/* Ensure native <select> readable in edge cases */
+#zummeeCommunitySelect, #zummeeCommunitySelect option{ color:#0f2f4a !important; background:#ffffff !important; }
+
+/* Hub button readable */
+.zummee-header__action--hub{ color:#173a56 !important; }
+
+/* Force Hub action pill styling (match other header actions) */
+.zummee-header a.zummee-header__action--hub{
+  background:#ffffff !important;
+  color:#0f2f4a !important;
+  border:1px solid rgba(15,47,74,0.22) !important;
+  box-shadow:0 6px 18px rgba(0,0,0,0.10) !important;
+  height:44px !important;
+  min-width:120px !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  text-decoration:none !important;
+}
+.zummee-header a.zummee-header__action--hub:hover{
+  background:rgba(255,255,255,0.92) !important;
+}
+
+/* Ensure community dropdown text is dark and readable */
+#zummeeCommunitySelect{
+  color:#0f2f4a !important;
+  font-weight:700 !important;
+}
+.zummee-modern-picker__button,
+.zummee-modern-picker__item{
+  color:#0f2f4a !important;
+}
+
+/* Force subpage dropdown to match Manager Hub */
+#zummeeCommunitySelect{
+  background:#ffffff !important;
+  color:#000000 !important;
+  font-weight:700 !important;
+}
+
+.zummee-modern-picker__button{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+.zummee-modern-picker__menu{
+  background:#ffffff !important;
+}
+
+.zummee-modern-picker__item{
+  color:#000000 !important;
+}
+
+/* Match Manager Hub community picker styling (white dropdown, black text) */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communityBtn span{
+  color:#000000 !important;
+}
+.zummee-communityMenu{
+  background:#ffffff !important;
+  border:1px solid rgba(15,47,74,0.18) !important;
+}
+.zummee-communitySearch{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communitySearch::placeholder{
+  color: rgba(0,0,0,0.55) !important;
+}
+.zummee-communityItem{
+  color:#000000 !important;
+}
+
+/* Force dropdown button background to white */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Override header generic button styling for community picker */
+.zummee-header .zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Remove bullet points from modern community dropdown */
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+  padding-left:0 !important;
+  margin-left:0 !important;
+}
+
+.zummee-communityItem::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* FORCE remove bullets everywhere inside community dropdown */
+.zummee-communityMenu,
+.zummee-communityMenu *{
+  list-style-type:none !important;
+  list-style:none !important;
+}
+
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+}
+
+.zummee-communityMenu li::marker{
+  content:"" !important;
+}
+
+.zummee-communityMenu li::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* Subpage Hub button — match Manager Hub */
+.zummee-header .zummee-hubBtn {
+  background: #ffffff !important;
+  color: #0f2f4a !important;
+  border-radius: 28px !important;
+  padding: 10px 22px !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  border: 1px solid rgba(15,47,74,0.15) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+  transition: all .2s ease;
+  text-decoration:none !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+.zummee-header .zummee-hubBtn:hover {
+  background: #f4f6f8 !important;
+}
+
+/* Fix Hub button text color + alignment under dropdown */
+.zummee-header .zummee-hubBtn {
+  color: #000000 !important;
+  display: block !important;
+  margin-left: auto !important;
+  margin-top: 10px !important;
+}
+
+.zummee-header .community-header-right {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+}
+
+/* Correct Hub button sizing and force black text */
+.zummee-header .zummee-hubBtn {
+  background:#ffffff !important;
+  color:#000000 !important;
+  border-radius:28px !important;
+  padding:8px 18px !important;
+  font-weight:700 !important;
+  font-size:15px !important;
+  border:1px solid rgba(15,47,74,0.15) !important;
+  box-shadow:0 4px 10px rgba(0,0,0,0.08) !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:auto !important;
+  min-width:auto !important;
+  margin-top:8px !important;
+  align-self:flex-end !important;
+}
+
+/* Ensure container stacks properly */
+.zummee-header .community-header-right {
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:flex-end !important;
+}
+
+/* Subpage header: stack hub under dropdown aligned right */
+.zummee-header__controls{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+}
+.zummee-header__communityRow{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  justify-content:flex-end;
+}
+.zummee-header__communityActions{
+  width:100%;
+  display:flex;
+  justify-content:flex-end;
+  margin-top:10px;
+}
+
+/* Force Hub button text to true black */
+.zummee-header .zummee-hubBtn,
+.zummee-header .zummee-hubBtn:visited,
+.zummee-header .zummee-hubBtn span {
+  color:#000000 !important;
+}
+
+/* Align page titles (like Daily Ops) to the left */
+.page-title,
+h1.page-title,
+.ops-title,
+h1 {
+  text-align:left !important;
+  margin-left:0 !important;
+}
+
+/* Precisely align page titles with main card container */
+.main-content h1,
+.content-wrapper h1,
+.page-container h1 {
+  text-align:left !important;
+  margin-left:40px !important;  /* matches card container padding */
+  margin-right:0 !important;
+}
+
+/* Prevent centering from parent flex containers */
+.page-header,
+.title-row {
+  justify-content:flex-start !important;
+  text-align:left !important;
+}
+
+/* Precisely match left edge of main section container */
+#opsHeaderRow {
+  padding-left: 60px !important; /* match section container padding */
+  justify-content: flex-start !important;
+}
+
+#opsHeaderRow h1 {
+  margin: 0 !important;
+}
+
+/* Match subpage logo size to Manager Hub */
+.zummee-header .zummee-logo {
+  font-size: 42px !important;
+  line-height: 1 !important;
+}
+
+.zummee-header .zummee-subtitle {
+  font-size: 16px !important;
+  letter-spacing: 2px !important;
+}
+
+.zummee-header svg {
+  height: 28px !important;
+}
+
+/* === Zummee Standard Header (shared across pages) === */
+.zummee-header{
+  background-color: rgb(15, 47, 74);
+}
+.zummee-header__divider{
+  display:none;
+}
+@media (min-width: 701px){
+  .zummee-header__divider{
+    display:block;
+    width:1px;
+    height:36px;
+    background: rgba(255,255,255,0.28);
+  }
+}
+@media (max-width: 700px){
+  .zummee-header{
+    padding: 10px 12px;
+  }
+  .zummee-header__inner{
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .zummee-header__brand{
+    justify-content: center;
+  }
+  .zummee-header__controls{
+    width: 100%;
+    display:flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .zummee-header__community{
+    width: 100%;
+    max-width: 420px;
+    justify-content: center;
+    gap: 10px;
+  }
+  .zummee-header__community-label{
+    min-width: auto;
+  }
+  #zummeeCommunitySelect{
+    width: 100%;
+  }
+  .zummee-header__hub{
+    width: 100%;
+    max-width: 420px;
+    justify-content: center;
+  }
+  .zummee-header__hubbtn{
+    width: 100%;
+  }
+}
+/* === End Zummee Standard Header === */
+
+
+/* FINAL Preferred Vendors blue override */
+body .wrap > .card{
+  background: linear-gradient(180deg, rgba(145,175,221,0.96) 0%, rgba(108,149,207,0.96) 100%) !important;
+  border: 1px solid rgba(255,255,255,0.35) !important;
+  border-radius: 28px !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08) !important;
+  color:#0f2f4a !important;
+}
+body .wrap > .card table{
+  background: rgba(255,255,255,0.42) !important;
+  border:1px solid rgba(255,255,255,0.28) !important;
+  border-radius: 22px !important;
+}
+body .wrap > .card th{
+  background: rgba(255,255,255,0.18) !important;
+  color:#17324d !important;
+}
+body .wrap > .card td,
+body .wrap > .card .tiny,
+body .wrap > .card .pill{
+  color:#17324d !important;
+}
+body .wrap > .card .pill{
+  background: rgba(255,255,255,0.22) !important;
+  border:1px solid rgba(255,255,255,0.30) !important;
+}
+body .wrap > .card input,
+body .wrap > .card select,
+body .wrap > .card .btn{
+  background:#ffffff !important;
+  color:#0f2f4a !important;
+  border:1px solid rgba(15,47,74,0.10) !important;
+  box-shadow:none !important;
+}
+
+
+.delete-modal-backdrop{position:fixed;inset:0;background:rgba(9,24,38,.46);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:9999;padding:24px;}
+.delete-modal-backdrop.is-open{display:flex;}
+.delete-modal{width:min(520px,92vw);border-radius:24px;padding:24px 24px 20px;background:#ffffff;border:1px solid rgba(17,24,39,.08);box-shadow:0 24px 70px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.65);color:#111827;position:relative;overflow:hidden;}
+.delete-modal:before{content:'';position:absolute;inset:0;background:linear-gradient(135deg, rgba(255,255,255,.82), rgba(255,255,255,.28) 42%, rgba(255,255,255,0) 78%);pointer-events:none;}
+.delete-modal__pill{display:inline-flex;align-items:center;padding:7px 12px;border-radius:999px;background:#f1f5f9;border:1px solid rgba(148,163,184,.28);font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;position:relative;z-index:1;color:#64748b;}
+.delete-modal h3{margin:14px 0 8px;font-size:32px;line-height:1.05;color:#0f172a;position:relative;z-index:1;}
+.delete-modal p{margin:0;color:#475569;font-size:15px;line-height:1.55;position:relative;z-index:1;}
+.delete-modal__vendor{margin-top:14px;display:inline-flex;align-items:center;padding:9px 14px;border-radius:999px;background:#e2e8f0;border:1px solid rgba(148,163,184,.24);font-weight:700;position:relative;z-index:1;color:#1e293b;}
+.delete-modal__actions{display:flex;justify-content:flex-end;gap:12px;margin-top:22px;position:relative;z-index:1;}
+.delete-modal__btn{border:none;border-radius:14px;padding:12px 18px;font-weight:800;font-size:15px;cursor:pointer;transition:transform .16s ease, box-shadow .16s ease, opacity .16s ease;}
+.delete-modal__btn:hover{transform:translateY(-1px);}
+.delete-modal__btn--secondary{background:#f8fafc;color:#1f2937;border:1px solid rgba(148,163,184,.24);box-shadow:0 10px 24px rgba(15,23,42,.08);}
+.delete-modal__btn--danger{background:linear-gradient(180deg, #fff3f2, #ffd7d3);color:#8c1d18;border:1px solid #fecaca;box-shadow:0 12px 28px rgba(15,23,42,.10);}
+@media (max-width: 680px){.delete-modal{padding:20px 18px 18px;border-radius:22px;}.delete-modal h3{font-size:28px;}.delete-modal__actions{flex-direction:column-reverse;}.delete-modal__btn{width:100%;}}
+
+
+  .btn--ghost{background:rgba(255,255,255,0.85) !important}
+  .marketplace{display:flex;flex-direction:column;gap:18px}
+  .category-section{
+    background:rgba(255,255,255,0.34);
+    border:1px solid rgba(255,255,255,0.34);
+    border-radius:24px;
+    padding:18px;
+    box-shadow:0 10px 30px rgba(15,47,74,0.08);
+    transition:padding .18s ease, box-shadow .18s ease;
+  }
+  .category-toggle{
+    display:block;
+    width:100%;
+    border:none;
+    background:transparent;
+    padding:0;
+    margin:0 0 14px;
+    text-align:left;
+    cursor:pointer;
+  }
+  .category-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0;padding:16px 18px;border-radius:18px;background:rgba(255,255,255,0.72);border:1px solid rgba(255,255,255,0.78);box-shadow:0 8px 20px rgba(15,47,74,0.08)}
+  .category-title-wrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .category-title{font-size:22px;font-weight:900;letter-spacing:-.02em;color:#0f2f4a}
+  .category-count{display:inline-flex;align-items:center;justify-content:center;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,0.66);border:1px solid rgba(15,47,74,0.08);font-size:12px;font-weight:900;color:#17324d}
+  .category-sub{font-size:12px;color:#23415d;font-weight:700;margin-top:4px}
+  .category-toggle-pill{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;background:#ffffff;border:1px solid rgba(15,47,74,0.10);font-size:12px;font-weight:900;color:#17324d;box-shadow:0 8px 18px rgba(15,47,74,0.08);white-space:nowrap}
+  .category-chevron{display:inline-block;transition:transform .18s ease;font-size:14px;line-height:1}
+  .category-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .category-section.is-collapsed{padding-bottom:14px}
+  .category-section.is-collapsed .category-grid{display:none}
+  .category-section.is-collapsed .category-chevron{transform:rotate(-90deg)}
+  .sponsor-card,.vendor-card{
+    border-radius:20px;
+    border:1px solid rgba(15,47,74,0.10);
+    background:#ffffff;
+    box-shadow:0 12px 28px rgba(15,47,74,0.10);
+    padding:16px;
+    min-height:164px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .sponsor-card{
+    background:linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(241,247,255,0.98) 100%);
+    border:1px solid rgba(64,112,184,0.18);
+    position:relative;
+    overflow:hidden;
+  }
+  .sponsor-card:before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:radial-gradient(circle at top right, rgba(145,175,221,0.22), transparent 42%);
+    pointer-events:none;
+  }
+  .sponsor-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;position:relative;z-index:1}
+  .sponsor-label{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(15,47,74,0.08);color:#17324d;font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+  .sponsor-slot{font-size:11px;font-weight:900;color:#57789a;text-transform:uppercase;letter-spacing:.08em}
+  .sponsor-title{font-size:20px;font-weight:900;color:#0f2f4a;line-height:1.05;position:relative;z-index:1}
+  .sponsor-copy{font-size:13px;line-height:1.45;color:#35516c;position:relative;z-index:1}
+  .sponsor-cta{display:inline-flex;align-items:center;justify-content:center;border-radius:14px;padding:10px 12px;background:#0f2f4a;color:#ffffff;font-size:12px;font-weight:900;position:relative;z-index:1;align-self:flex-start}
+  .vendor-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .vendor-name{font-size:19px;font-weight:900;color:#0f2f4a;line-height:1.1}
+  .vendor-meta{display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:#35516c;font-weight:700}
+  .vendor-contact{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .vendor-contact-block{padding:10px 12px;border-radius:14px;background:rgba(15,47,74,0.04);border:1px solid rgba(15,47,74,0.05)}
+  .vendor-contact-label{display:block;font-size:11px;font-weight:900;letter-spacing:.08em;color:#57789a;text-transform:uppercase;margin-bottom:4px}
+  .vendor-contact-value{font-size:13px;color:#17324d;font-weight:800;word-break:break-word}
+  .vendor-notes{padding:10px 12px;border-radius:14px;background:rgba(64,112,184,0.06);border:1px solid rgba(64,112,184,0.10);font-size:13px;color:#17324d;line-height:1.45}
+  .vendor-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto}
+  .vendor-empty{grid-column:1/-1;border:1px dashed rgba(15,47,74,0.18);border-radius:18px;padding:16px;background:rgba(255,255,255,0.55);color:#35516c;font-weight:700}
+  .vendor-empty strong{display:block;color:#0f2f4a;margin-bottom:4px}
+  @media (max-width: 860px){
+    .category-grid{grid-template-columns:1fr}
+  }
+  @media (max-width: 640px){
+    .category-section{padding:14px}
+    .category-toggle{margin-bottom:12px}
+    .category-header{padding:14px 14px;align-items:flex-start}
+    .category-toggle-pill{padding:9px 12px;font-size:11px}
+    .vendor-contact{grid-template-columns:1fr}
+    .category-title{font-size:19px}
+    .sponsor-title{font-size:18px}
+    .vendor-name{font-size:17px}
+  }
+
+
+/* === GOLD SPONSORED CARDS === */
+.vendor-card.sponsored-card {
+  background: linear-gradient(135deg, #f7d774 0%, #f1c24b 100%) !important;
+  border: 1px solid rgba(180, 140, 0, 0.4);
+  box-shadow: 0 8px 18px rgba(240, 193, 75, 0.35);
+}
+.vendor-card.sponsored-card * {
+  color: #1a2a3a !important;
+}
+
+</style>
+  <link rel="icon" type="image/png" href="zummee_mark_32.png">
+  <link rel="stylesheet" href="shared/header.css?v=2026-03-27-1">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="shared/supabase-client.js?v=2026-04-08-2"></script>
+
+  <script id="zummeeStaffGuard">
+window.addEventListener("DOMContentLoaded", function(){
+  (async () => {
+    if (window.__zummeeStaffGuardRan) return;
+    window.__zummeeStaffGuardRan = true;
+
+    function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+    async function getClient(){
+      for (let i = 0; i < 80; i++) {
+        try {
+          if (typeof ensureSupabase === "function") {
+            const c = await ensureSupabase();
+            if (c && c.auth && typeof c.auth.getSession === "function") return c;
+          }
+        } catch(_e) {}
+        try {
+          if (window.supabaseClient && window.supabaseClient.auth && typeof window.supabaseClient.auth.getSession === "function") return window.supabaseClient;
+        } catch(_e) {}
+        try {
+          if (window.sb && window.sb.auth && typeof window.sb.auth.getSession === "function") return window.sb;
+        } catch(_e) {}
+        await sleep(100);
+      }
+      return null;
+    }
+
+    const go = (target) => {
+      var next = encodeURIComponent(window.location.pathname.split("/").pop() || "preferred_vendors.html");
+      var url = target === "login.html" ? ("login.html?next=" + next) : target;
+      try { window.location.replace(url); }
+      catch(_e) { window.location.href = url; }
+    };
+
+    const sb = await getClient();
+    if (!sb) { go("login.html"); return; }
+
+    let sessionRes = null;
+    try { sessionRes = await sb.auth.getSession(); } catch(_e) {}
+    const user = sessionRes && sessionRes.data && sessionRes.data.session ? sessionRes.data.session.user : null;
+    if (!user) { go("login.html"); return; }
+
+    let ud = null;
+    try {
+      ud = await sb.from("userdirectory").select("role").eq("auth_user_id", user.id).single();
+    } catch(_e) {}
+
+    const role = String((ud && ud.data && ud.data.role) || "").trim();
+    if (role === "Resident") { go("resident_portal.html"); return; }
+
+    document.documentElement.setAttribute("data-staff-role", role || "");
+  })();
+});
+</script>
+</head>
+<body data-header-mode="simple">
+<div id="zummeeHeaderMount"></div>
+<script src="shared/header.js?v=2026-04-08-2"></script>
+<style id="zummeeSubpageHeaderForce">
+  /* Force readable community dropdown text on all subpages */
+  #zummeeCommunitySelect, #zummeeCommunitySelect *{ color:#0f2f4a !important; }
+  #zummeeCommunitySelect option{ color:#0f2f4a !important; background:#ffffff !important; }
+
+/* Ensure community dropdown text is dark and readable */
+#zummeeCommunitySelect{
+  color:#0f2f4a !important;
+  font-weight:700 !important;
+}
+.zummee-modern-picker__button,
+.zummee-modern-picker__item{
+  color:#0f2f4a !important;
+}
+
+/* Force subpage dropdown to match Manager Hub */
+#zummeeCommunitySelect{
+  background:#ffffff !important;
+  color:#000000 !important;
+  font-weight:700 !important;
+}
+
+.zummee-modern-picker__button{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+.zummee-modern-picker__menu{
+  background:#ffffff !important;
+}
+
+.zummee-modern-picker__item{
+  color:#000000 !important;
+}
+
+/* Match Manager Hub community picker styling (white dropdown, black text) */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communityBtn span{
+  color:#000000 !important;
+}
+.zummee-communityMenu{
+  background:#ffffff !important;
+  border:1px solid rgba(15,47,74,0.18) !important;
+}
+.zummee-communitySearch{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communitySearch::placeholder{
+  color: rgba(0,0,0,0.55) !important;
+}
+.zummee-communityItem{
+  color:#000000 !important;
+}
+
+/* Force dropdown button background to white */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Override header generic button styling for community picker */
+.zummee-header .zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Remove bullet points from modern community dropdown */
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+  padding-left:0 !important;
+  margin-left:0 !important;
+}
+
+.zummee-communityItem::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* FORCE remove bullets everywhere inside community dropdown */
+.zummee-communityMenu,
+.zummee-communityMenu *{
+  list-style-type:none !important;
+  list-style:none !important;
+}
+
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+}
+
+.zummee-communityMenu li::marker{
+  content:"" !important;
+}
+
+.zummee-communityMenu li::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* Subpage Hub button — match Manager Hub */
+.zummee-header .zummee-hubBtn {
+  background: #ffffff !important;
+  color: #0f2f4a !important;
+  border-radius: 28px !important;
+  padding: 10px 22px !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  border: 1px solid rgba(15,47,74,0.15) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+  transition: all .2s ease;
+  text-decoration:none !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+.zummee-header .zummee-hubBtn:hover {
+  background: #f4f6f8 !important;
+}
+
+/* Fix Hub button text color + alignment under dropdown */
+.zummee-header .zummee-hubBtn {
+  color: #000000 !important;
+  display: block !important;
+  margin-left: auto !important;
+  margin-top: 10px !important;
+}
+
+.zummee-header .community-header-right {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+}
+
+/* Correct Hub button sizing and force black text */
+.zummee-header .zummee-hubBtn {
+  background:#ffffff !important;
+  color:#000000 !important;
+  border-radius:28px !important;
+  padding:8px 18px !important;
+  font-weight:700 !important;
+  font-size:15px !important;
+  border:1px solid rgba(15,47,74,0.15) !important;
+  box-shadow:0 4px 10px rgba(0,0,0,0.08) !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:auto !important;
+  min-width:auto !important;
+  margin-top:8px !important;
+  align-self:flex-end !important;
+}
+
+/* Ensure container stacks properly */
+.zummee-header .community-header-right {
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:flex-end !important;
+}
+
+/* Force Hub button text to true black */
+.zummee-header .zummee-hubBtn,
+.zummee-header .zummee-hubBtn:visited,
+.zummee-header .zummee-hubBtn span {
+  color:#000000 !important;
+}
+
+/* Align page titles (like Daily Ops) to the left */
+.page-title,
+h1.page-title,
+.ops-title,
+h1 {
+  text-align:left !important;
+  margin-left:0 !important;
+}
+
+/* Precisely align page titles with main card container */
+.main-content h1,
+.content-wrapper h1,
+.page-container h1 {
+  text-align:left !important;
+  margin-left:40px !important;  /* matches card container padding */
+  margin-right:0 !important;
+}
+
+/* Prevent centering from parent flex containers */
+.page-header,
+.title-row {
+  justify-content:flex-start !important;
+  text-align:left !important;
+}
+
+/* Precisely match left edge of main section container */
+#opsHeaderRow {
+  padding-left: 60px !important; /* match section container padding */
+  justify-content: flex-start !important;
+}
+
+#opsHeaderRow h1 {
+  margin: 0 !important;
+}
+
+/* Match subpage logo size to Manager Hub */
+.zummee-header .zummee-logo {
+  font-size: 42px !important;
+  line-height: 1 !important;
+}
+
+.zummee-header .zummee-subtitle {
+  font-size: 16px !important;
+  letter-spacing: 2px !important;
+}
+
+.zummee-header svg {
+  height: 28px !important;
+}
+
+
+  .btn--ghost{background:rgba(255,255,255,0.85) !important}
+  .marketplace{display:flex;flex-direction:column;gap:18px}
+  .category-section{
+    background:rgba(255,255,255,0.34);
+    border:1px solid rgba(255,255,255,0.34);
+    border-radius:24px;
+    padding:18px;
+    box-shadow:0 10px 30px rgba(15,47,74,0.08);
+  }
+  .category-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .category-title-wrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .category-title{font-size:22px;font-weight:900;letter-spacing:-.02em;color:#0f2f4a}
+  .category-count{display:inline-flex;align-items:center;justify-content:center;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,0.66);border:1px solid rgba(15,47,74,0.08);font-size:12px;font-weight:900;color:#17324d}
+  .category-sub{font-size:12px;color:#23415d;font-weight:700}
+  .category-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .sponsor-card,.vendor-card{
+    border-radius:20px;
+    border:1px solid rgba(15,47,74,0.10);
+    background:#ffffff;
+    box-shadow:0 12px 28px rgba(15,47,74,0.10);
+    padding:16px;
+    min-height:164px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .sponsor-card{
+    background:linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(241,247,255,0.98) 100%);
+    border:1px solid rgba(64,112,184,0.18);
+    position:relative;
+    overflow:hidden;
+  }
+  .sponsor-card:before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:radial-gradient(circle at top right, rgba(145,175,221,0.22), transparent 42%);
+    pointer-events:none;
+  }
+  .sponsor-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;position:relative;z-index:1}
+  .sponsor-label{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(15,47,74,0.08);color:#17324d;font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+  .sponsor-slot{font-size:11px;font-weight:900;color:#57789a;text-transform:uppercase;letter-spacing:.08em}
+  .sponsor-title{font-size:20px;font-weight:900;color:#0f2f4a;line-height:1.05;position:relative;z-index:1}
+  .sponsor-copy{font-size:13px;line-height:1.45;color:#35516c;position:relative;z-index:1}
+  .sponsor-cta{display:inline-flex;align-items:center;justify-content:center;border-radius:14px;padding:10px 12px;background:#0f2f4a;color:#ffffff;font-size:12px;font-weight:900;position:relative;z-index:1;align-self:flex-start}
+  .vendor-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .vendor-name{font-size:19px;font-weight:900;color:#0f2f4a;line-height:1.1}
+  .vendor-meta{display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:#35516c;font-weight:700}
+  .vendor-contact{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .vendor-contact-block{padding:10px 12px;border-radius:14px;background:rgba(15,47,74,0.04);border:1px solid rgba(15,47,74,0.05)}
+  .vendor-contact-label{display:block;font-size:11px;font-weight:900;letter-spacing:.08em;color:#57789a;text-transform:uppercase;margin-bottom:4px}
+  .vendor-contact-value{font-size:13px;color:#17324d;font-weight:800;word-break:break-word}
+  .vendor-notes{padding:10px 12px;border-radius:14px;background:rgba(64,112,184,0.06);border:1px solid rgba(64,112,184,0.10);font-size:13px;color:#17324d;line-height:1.45}
+  .vendor-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto}
+  .vendor-empty{grid-column:1/-1;border:1px dashed rgba(15,47,74,0.18);border-radius:18px;padding:16px;background:rgba(255,255,255,0.55);color:#35516c;font-weight:700}
+  .vendor-empty strong{display:block;color:#0f2f4a;margin-bottom:4px}
+  @media (max-width: 860px){
+    .category-grid{grid-template-columns:1fr}
+  }
+  @media (max-width: 640px){
+    .category-section{padding:14px}
+    .vendor-contact{grid-template-columns:1fr}
+    .category-title{font-size:19px}
+    .sponsor-title{font-size:18px}
+    .vendor-name{font-size:17px}
+  }
+
+
+/* === GOLD SPONSORED CARDS === */
+.vendor-card.sponsored-card {
+  background: linear-gradient(135deg, #f7d774 0%, #f1c24b 100%) !important;
+  border: 1px solid rgba(180, 140, 0, 0.4);
+  box-shadow: 0 8px 18px rgba(240, 193, 75, 0.35);
+}
+.vendor-card.sponsored-card * {
+  color: #1a2a3a !important;
+}
+
+</style>
+<style id="zummeeSubpageHeaderLayoutV1217">
+  /* Subpage header polish (v1217): add brand mark left, controls stacked right, crisp swatch, readable Hub */
+  header.{
+    background:#173a56 !important;
+    padding:16px 22px !important;
+    border-bottom: 1.2px solid rgba(255,255,255,0.14) !important;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.14) !important;
+  }
+  header. .{
+    width:100% !important;
+    display:flex !important;
+    align-items:flex-start !important;
+    justify-content:space-between !important;
+    gap:18px !important;
+  }
+  header. .zummee-header__brand{
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    width:54px !important;
+    height:54px !important;
+    border-radius:16px !important;
+    text-decoration:none !important;
+    flex:0 0 auto !important;
+  }
+  header. .zummee-header__brand img{
+    height:54px !important;
+    width:auto !important;
+    max-width:320px !important;
+    display:block !important;
+  }
+
+  header. .zummee-header__controls{
+    display:flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+  }
+  header. .zummee-header__communityRow{ justify-content:flex-end !important; }
+
+  /* Crisp color dot (no blob) */
+  #zummeeCommunitySwatch{
+    display:inline-block !important;
+    width:12px !important;
+    height:12px !important;
+    border-radius:999px !important;
+    border:2px solid rgba(255,255,255,0.70) !important;
+    background: rgba(255,255,255,0.15) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18) !important;
+  }
+
+  /* Hub button readability */
+  header. .zummee-header__action--hub{
+    align-self:flex-end !important;
+    background:#e9ecef !important;
+    color:#173a56 !important;
+    border:1px solid rgba(15,47,74,0.22) !important;
+    box-shadow:0 6px 18px rgba(0,0,0,0.10) !important;
+  }
+  header. .zummee-header__action--hub:hover{
+    background:#dfe3e6 !important;
+  }
+
+/* Ensure community dropdown text is dark and readable */
+#zummeeCommunitySelect{
+  color:#0f2f4a !important;
+  font-weight:700 !important;
+}
+.zummee-modern-picker__button,
+.zummee-modern-picker__item{
+  color:#0f2f4a !important;
+}
+
+/* Force subpage dropdown to match Manager Hub */
+#zummeeCommunitySelect{
+  background:#ffffff !important;
+  color:#000000 !important;
+  font-weight:700 !important;
+}
+
+.zummee-modern-picker__button{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+.zummee-modern-picker__menu{
+  background:#ffffff !important;
+}
+
+.zummee-modern-picker__item{
+  color:#000000 !important;
+}
+
+/* Match Manager Hub community picker styling (white dropdown, black text) */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communityBtn span{
+  color:#000000 !important;
+}
+.zummee-communityMenu{
+  background:#ffffff !important;
+  border:1px solid rgba(15,47,74,0.18) !important;
+}
+.zummee-communitySearch{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communitySearch::placeholder{
+  color: rgba(0,0,0,0.55) !important;
+}
+.zummee-communityItem{
+  color:#000000 !important;
+}
+
+/* Force dropdown button background to white */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Override header generic button styling for community picker */
+.zummee-header .zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Remove bullet points from modern community dropdown */
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+  padding-left:0 !important;
+  margin-left:0 !important;
+}
+
+.zummee-communityItem::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* FORCE remove bullets everywhere inside community dropdown */
+.zummee-communityMenu,
+.zummee-communityMenu *{
+  list-style-type:none !important;
+  list-style:none !important;
+}
+
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+}
+
+.zummee-communityMenu li::marker{
+  content:"" !important;
+}
+
+.zummee-communityMenu li::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* Subpage Hub button — match Manager Hub */
+.zummee-header .zummee-hubBtn {
+  background: #ffffff !important;
+  color: #0f2f4a !important;
+  border-radius: 28px !important;
+  padding: 10px 22px !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  border: 1px solid rgba(15,47,74,0.15) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+  transition: all .2s ease;
+  text-decoration:none !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+.zummee-header .zummee-hubBtn:hover {
+  background: #f4f6f8 !important;
+}
+
+/* Fix Hub button text color + alignment under dropdown */
+.zummee-header .zummee-hubBtn {
+  color: #000000 !important;
+  display: block !important;
+  margin-left: auto !important;
+  margin-top: 10px !important;
+}
+
+.zummee-header .community-header-right {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+}
+
+/* Correct Hub button sizing and force black text */
+.zummee-header .zummee-hubBtn {
+  background:#ffffff !important;
+  color:#000000 !important;
+  border-radius:28px !important;
+  padding:8px 18px !important;
+  font-weight:700 !important;
+  font-size:15px !important;
+  border:1px solid rgba(15,47,74,0.15) !important;
+  box-shadow:0 4px 10px rgba(0,0,0,0.08) !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:auto !important;
+  min-width:auto !important;
+  margin-top:8px !important;
+  align-self:flex-end !important;
+}
+
+/* Ensure container stacks properly */
+.zummee-header .community-header-right {
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:flex-end !important;
+}
+
+/* Force Hub button text to true black */
+.zummee-header .zummee-hubBtn,
+.zummee-header .zummee-hubBtn:visited,
+.zummee-header .zummee-hubBtn span {
+  color:#000000 !important;
+}
+
+/* Align page titles (like Daily Ops) to the left */
+.page-title,
+h1.page-title,
+.ops-title,
+h1 {
+  text-align:left !important;
+  margin-left:0 !important;
+}
+
+/* Precisely align page titles with main card container */
+.main-content h1,
+.content-wrapper h1,
+.page-container h1 {
+  text-align:left !important;
+  margin-left:40px !important;  /* matches card container padding */
+  margin-right:0 !important;
+}
+
+/* Prevent centering from parent flex containers */
+.page-header,
+.title-row {
+  justify-content:flex-start !important;
+  text-align:left !important;
+}
+
+/* Precisely match left edge of main section container */
+#opsHeaderRow {
+  padding-left: 60px !important; /* match section container padding */
+  justify-content: flex-start !important;
+}
+
+#opsHeaderRow h1 {
+  margin: 0 !important;
+}
+
+/* Match subpage logo size to Manager Hub */
+.zummee-header .zummee-logo {
+  font-size: 42px !important;
+  line-height: 1 !important;
+}
+
+.zummee-header .zummee-subtitle {
+  font-size: 16px !important;
+  letter-spacing: 2px !important;
+}
+
+.zummee-header svg {
+  height: 28px !important;
+}
+
+
+  .btn--ghost{background:rgba(255,255,255,0.85) !important}
+  .marketplace{display:flex;flex-direction:column;gap:18px}
+  .category-section{
+    background:rgba(255,255,255,0.34);
+    border:1px solid rgba(255,255,255,0.34);
+    border-radius:24px;
+    padding:18px;
+    box-shadow:0 10px 30px rgba(15,47,74,0.08);
+  }
+  .category-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .category-title-wrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .category-title{font-size:22px;font-weight:900;letter-spacing:-.02em;color:#0f2f4a}
+  .category-count{display:inline-flex;align-items:center;justify-content:center;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,0.66);border:1px solid rgba(15,47,74,0.08);font-size:12px;font-weight:900;color:#17324d}
+  .category-sub{font-size:12px;color:#23415d;font-weight:700}
+  .category-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .sponsor-card,.vendor-card{
+    border-radius:20px;
+    border:1px solid rgba(15,47,74,0.10);
+    background:#ffffff;
+    box-shadow:0 12px 28px rgba(15,47,74,0.10);
+    padding:16px;
+    min-height:164px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .sponsor-card{
+    background:linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(241,247,255,0.98) 100%);
+    border:1px solid rgba(64,112,184,0.18);
+    position:relative;
+    overflow:hidden;
+  }
+  .sponsor-card:before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:radial-gradient(circle at top right, rgba(145,175,221,0.22), transparent 42%);
+    pointer-events:none;
+  }
+  .sponsor-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;position:relative;z-index:1}
+  .sponsor-label{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(15,47,74,0.08);color:#17324d;font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+  .sponsor-slot{font-size:11px;font-weight:900;color:#57789a;text-transform:uppercase;letter-spacing:.08em}
+  .sponsor-title{font-size:20px;font-weight:900;color:#0f2f4a;line-height:1.05;position:relative;z-index:1}
+  .sponsor-copy{font-size:13px;line-height:1.45;color:#35516c;position:relative;z-index:1}
+  .sponsor-cta{display:inline-flex;align-items:center;justify-content:center;border-radius:14px;padding:10px 12px;background:#0f2f4a;color:#ffffff;font-size:12px;font-weight:900;position:relative;z-index:1;align-self:flex-start}
+  .vendor-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .vendor-name{font-size:19px;font-weight:900;color:#0f2f4a;line-height:1.1}
+  .vendor-meta{display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:#35516c;font-weight:700}
+  .vendor-contact{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .vendor-contact-block{padding:10px 12px;border-radius:14px;background:rgba(15,47,74,0.04);border:1px solid rgba(15,47,74,0.05)}
+  .vendor-contact-label{display:block;font-size:11px;font-weight:900;letter-spacing:.08em;color:#57789a;text-transform:uppercase;margin-bottom:4px}
+  .vendor-contact-value{font-size:13px;color:#17324d;font-weight:800;word-break:break-word}
+  .vendor-notes{padding:10px 12px;border-radius:14px;background:rgba(64,112,184,0.06);border:1px solid rgba(64,112,184,0.10);font-size:13px;color:#17324d;line-height:1.45}
+  .vendor-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto}
+  .vendor-empty{grid-column:1/-1;border:1px dashed rgba(15,47,74,0.18);border-radius:18px;padding:16px;background:rgba(255,255,255,0.55);color:#35516c;font-weight:700}
+  .vendor-empty strong{display:block;color:#0f2f4a;margin-bottom:4px}
+  @media (max-width: 860px){
+    .category-grid{grid-template-columns:1fr}
+  }
+  @media (max-width: 640px){
+    .category-section{padding:14px}
+    .vendor-contact{grid-template-columns:1fr}
+    .category-title{font-size:19px}
+    .sponsor-title{font-size:18px}
+    .vendor-name{font-size:17px}
+  }
+
+
+  /* compact vendor marketplace cards */
+  .category-section{padding:14px 14px 16px;border-radius:22px}
+  .category-header{margin-bottom:10px;gap:10px}
+  .category-title{font-size:18px}
+  .category-count{padding:4px 9px;font-size:11px}
+  .category-sub{font-size:11px}
+  .category-grid{gap:10px}
+  .sponsor-card,.vendor-card{padding:12px;border-radius:18px;min-height:0;gap:8px;box-shadow:0 8px 20px rgba(15,47,74,0.08)}
+  .sponsor-top{gap:10px}
+  .sponsor-label{padding:5px 9px;font-size:10px}
+  .sponsor-slot{font-size:10px}
+  .sponsor-title{font-size:16px;line-height:1.05}
+  .sponsor-copy{font-size:12px;line-height:1.35}
+  .sponsor-cta{padding:8px 11px;border-radius:12px;font-size:11px}
+  .vendor-card-top{gap:8px}
+  .vendor-name{font-size:16px;line-height:1.05}
+.vendor-contact-name{margin-left:auto;text-align:right;font-size:13px;font-weight:700;color:#57789a;white-space:nowrap;align-self:center}
+  .vendor-meta{gap:6px;font-size:11px}
+  .vendor-contact{gap:8px}
+  .vendor-contact-block{padding:8px 10px;border-radius:12px}
+  .vendor-contact-label{font-size:10px;margin-bottom:3px}
+  .vendor-contact-value{font-size:12px;line-height:1.25}
+  .vendor-notes{padding:8px 10px;border-radius:12px;font-size:12px;line-height:1.35}
+  .vendor-actions{gap:6px}
+  .vendor-actions .btn,.vendor-card .btn{padding:8px 12px;border-radius:12px;font-size:11px;min-height:0}
+  .vendor-empty{padding:12px;border-radius:16px;font-size:12px}
+  @media (max-width: 1024px){
+    .sponsor-title{font-size:15px}
+    .vendor-name{font-size:15px}
+  }
+  @media (max-width: 640px){
+    .category-section{padding:12px 12px 14px}
+    .category-title{font-size:17px}
+    .sponsor-title{font-size:15px}
+    .vendor-name{font-size:15px}
+    .vendor-contact{grid-template-columns:1fr}
+  }
+
+
+  .vendor-contact-button{display:block;text-decoration:none;color:#123454;background:rgba(255,255,255,0.55);border:1px solid rgba(17,24,39,0.08);border-radius:12px;padding:8px 10px;transition:background .18s ease,border-color .18s ease,transform .18s ease;}
+  .vendor-contact-button:hover,.vendor-contact-button:focus{background:rgba(255,255,255,0.82);border-color:rgba(18,52,84,0.18);transform:translateY(-1px);outline:none;}
+  .vendor-contact-button .vendor-contact-label{display:block;}
+  .vendor-contact-button .vendor-contact-value{display:block;}
+
+
+  /* Final compact vendor row fix */
+  .vendor-card{min-height:0 !important}
+  .vendor-card .vendor-contact.vendor-contact--with-action{
+    display:grid !important;
+    grid-template-columns:190px minmax(0,1fr) 170px !important;
+    gap:10px !important;
+    align-items:stretch !important;
+  }
+  .vendor-card .vendor-contact.vendor-contact--with-action .vendor-contact-block{
+    padding:8px 10px !important;
+    min-width:0 !important;
+    margin:0 !important;
+  }
+  .vendor-card .vendor-contact.vendor-contact--with-action .vendor-contact-block--phone{max-width:190px;width:100%}
+  .vendor-card .vendor-contact.vendor-contact--with-action .vendor-contact-block--email{min-width:0;max-width:320px;justify-self:start;width:100%}
+  .vendor-card .vendor-contact.vendor-contact--with-action .vendor-contact-block--phone .vendor-contact-value{
+    overflow:visible !important;
+    text-overflow:clip !important;
+    white-space:nowrap !important;
+  }
+  .vendor-card .vendor-contact.vendor-contact--with-action .vendor-contact-label{
+    font-size:10px !important;
+    margin-bottom:3px !important;
+  }
+  .vendor-card .vendor-contact.vendor-contact--with-action .vendor-contact-value,
+  .vendor-card .vendor-contact.vendor-contact--with-action .vendor-contact-value a{
+    font-size:12px !important;
+    line-height:1.2 !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+    display:block;
+  }
+  .vendor-card .vendor-inline-action{
+    display:flex !important;
+    align-items:stretch !important;
+    justify-content:flex-end !important;
+  }
+  .vendor-card .vendor-inline-action .btn{
+    width:100%;
+    min-height:58px !important;
+    padding:0 12px !important;
+    border-radius:12px !important;
+    font-size:11px !important;
+    white-space:nowrap !important;
+  }
+  .vendor-card .vendor-actions{margin-top:0 !important}
+  @media (max-width: 900px){
+    .vendor-card .vendor-contact.vendor-contact--with-action{
+      grid-template-columns:150px minmax(0,1fr) 124px !important;
+      gap:8px !important;
+    }
+    .vendor-card .vendor-contact.vendor-contact--with-action .vendor-contact-block--phone{
+      max-width:none !important;
+      min-width:150px !important;
+    }
+    .vendor-card .vendor-contact.vendor-contact--with-action .vendor-contact-block--email{
+      max-width:none !important;
+    }
+    .vendor-card .vendor-inline-action .btn{min-height:56px !important;font-size:10.5px !important}
+  }
+  @media (max-width: 640px){
+    .vendor-card .vendor-contact.vendor-contact--with-action{
+      grid-template-columns:1fr !important;
+    }
+  }
+
+/* === GOLD SPONSORED CARDS === */
+.vendor-card.sponsored-card {
+  background: linear-gradient(135deg, #f7d774 0%, #f1c24b 100%) !important;
+  border: 1px solid rgba(180, 140, 0, 0.4);
+  box-shadow: 0 8px 18px rgba(240, 193, 75, 0.35);
+}
+.vendor-card.sponsored-card * {
+  color: #1a2a3a !important;
+}
+
+</style>
+
+  <div class="wrap">
+    <div class="top">
+      <div>
+        
+        
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:flex-end">
+        <div class="tiny"><span class="pill" id="pv_companyPill">Company: —</span></div>
+        <div class="row" style="justify-content:flex-end">
+          <input id="pv_search" type="text" placeholder="Search vendors (name, type, contact)..." />
+          <button class="btn" id="pv_refreshBtn" type="button">Refresh</button>
+        </div>
+      </div>
+
+      <div id="pv_manageCard" class="card" style="display:none; margin:14px 0 12px 0; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.10); box-shadow:none;">
+        <div class="row" style="justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:800; font-size:18px; color:#0f2f4a;">Manage Vendors</div>
+            
+          </div>
+          <div class="tiny" id="pv_modePill"><span class="pill">Add vendor</span></div>
+        </div>
+        <div style="height:10px"></div>
+        <form id="pv_form" class="row" style="gap:10px; flex-wrap:wrap; align-items:flex-end;">
+          <input id="pv_vendorName" type="text" placeholder="Vendor name" style="min-width:220px; flex:1 1 220px;" />
+          <select id="pv_vendorType" style="min-width:180px; flex:1 1 180px;">
+            <option value="">Select vendor type</option>
+            <option>Plumbing</option>
+            <option>Electrical</option>
+            <option>HVAC</option>
+            <option>Roofing</option>
+            <option>Pest Control</option>
+            <option>Landscaping</option>
+            <option>Pool</option>
+            <option>Cleaning / Janitorial</option>
+            <option>Attorneys</option>
+            <option>Insurance</option>
+            <option>Reserve Study</option>
+            <option>Elevator</option>
+            <option>Fire Safety</option>
+            <option>Security</option>
+            <option>Asphalt / Concrete</option>
+            <option>Painting</option>
+            <option>General Contractor</option>
+            <option>Restoration</option>
+            <option>Tree Service</option>
+            <option>Locksmith</option>
+            <option>Appliance Repair</option>
+            <option>Waste / Recycling</option>
+            <option>Other</option>
+          </select>
+          <input id="pv_contactName" type="text" placeholder="Contact name" style="min-width:180px; flex:1 1 180px;" />
+          <input id="pv_phone" type="text" placeholder="Phone" style="min-width:160px; flex:1 1 160px;" />
+          <input id="pv_email" type="email" placeholder="Email" style="min-width:220px; flex:1 1 220px;" />
+          <input id="pv_notes" type="text" placeholder="Notes" style="min-width:260px; flex:2 1 260px;" />
+          <input id="pv_editIndex" type="hidden" value="" />
+          <button class="btn" id="pv_saveBtn" type="submit">Save Vendor</button>
+          <button class="btn btn--ghost" id="pv_cancelBtn" type="button" style="display:none;">Cancel Edit</button>
+        </form>
+        <div class="tiny" id="pv_manageStatus" style="margin-top:10px;"></div>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <div id="pv_marketplace"></div>
+
+      <div class="tiny" style="margin-top:10px" id="pv_count"></div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  function safeGet(k){ try{ return localStorage.getItem(k)||""; }catch(e){ return ""; } }
+  function safeSet(k,v){ try{ localStorage.setItem(k, v); return true; }catch(e){ return false; } }
+  function safeJSON(k, def){ try{ return JSON.parse(safeGet(k)||"") || def; }catch(e){ return def; } }
+  function escapeHtml(s){
+    return String(s||"").replace(/[&<>"']/g, function(ch){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]);
+    });
+  }
+
+  function currentRole(){
+    var role = String(
+      document.documentElement.getAttribute('data-staff-role') ||
+      (window.ZUMMEE_AUTH && window.ZUMMEE_AUTH.role) ||
+      window.__zummeeUserRole ||
+      window.__zummeeRole ||
+      ''
+    ).trim();
+    if(!role){
+      try{ role = String(localStorage.getItem('zummee_role') || localStorage.getItem('staff_role') || '').trim(); }catch(_e){}
+    }
+    return role;
+  }
+
+  function isPrivilegedRole(){
+    var role = currentRole().toLowerCase();
+    return role.includes('supervisor') || role.includes('admin') || role.includes('companyadmin');
+  }
+
+  function getCompany(){
+    try{
+      var auth = window.ZUMMEE_AUTH || {};
+      var role = String(auth.role || window.__zummeeUserRole || '').trim();
+      if(role === 'Admin'){
+        var picked = String(safeGet('zummee_admin_selected_company')||'').trim();
+        if(picked) return picked;
+      }
+      return String(window.__zummeeCompany || safeGet('zummee_company') || "").trim();
+    }catch(e){ return String(safeGet('zummee_company')||"").trim(); }
+  }
+
+  function vendorsKey(company, communityId){
+    return "zummee_preferred_vendors_v2__" + String(company||"").trim() + "__" + String(communityId||"").trim();
+  }
+
+  function legacyVendorsKey(company){
+    return "zummee_preferred_vendors_v1__" + String(company||"").trim();
+  }
+
+  function cloudVendorsPrefKey(company, communityId){
+    return 'preferred_vendors_v2::' + String(company||'').trim() + '::' + String(communityId||'').trim();
+  }
+
+  function cloudVendorsPrefKeys(company, communityId){
+    var cleanCompany = String(company||'').trim();
+    var cleanCommunityId = String(communityId||'').trim();
+    return [
+      cloudVendorsPrefKey(cleanCompany, cleanCommunityId),
+      'preferred_vendors_v2__' + cleanCompany + '__' + cleanCommunityId
+    ];
+  }
+
+  function sharedVendorTableName(){
+    return 'preferred_vendors_shared';
+  }
+
+  function normalizeVendorRows(rows){
+    if(!Array.isArray(rows)) return [];
+    return rows.filter(function(row){ return row && typeof row === 'object'; }).map(function(row){
+      return {
+        vendorName: String(row.vendorName || '').trim(),
+        vendorType: String(row.vendorType || '').trim(),
+        contactName: String(row.contactName || '').trim(),
+        phone: String(row.phone || '').trim(),
+        email: String(row.email || '').trim(),
+        notes: String(row.notes || '').trim()
+      };
+    }).filter(function(row){ return !!row.vendorName; });
+  }
+
+  var pvRowsCache = null;
+
+  function loadRowsLocal(){
+    var company = getCompany();
+    var cid = getSelectedCommunityId();
+    var scoped = normalizeVendorRows(safeJSON(vendorsKey(company, cid), []));
+    if(scoped.length) return scoped;
+    return normalizeVendorRows(safeJSON(legacyVendorsKey(company), []));
+  }
+
+  function saveRowsLocal(rows){
+    var company = getCompany();
+    var cid = getSelectedCommunityId();
+    var normalized = normalizeVendorRows(rows || []);
+    safeSet(vendorsKey(company, cid), JSON.stringify(normalized));
+    pvRowsCache = normalized.slice();
+    return normalized;
+  }
+
+  function getCurrentRows(){
+    if(Array.isArray(pvRowsCache)) return pvRowsCache.slice();
+    var rows = loadRowsLocal();
+    pvRowsCache = rows.slice();
+    return rows;
+  }
+
+  async function readRowsFromCloud(){
+    await warmPvContext();
+    var company = getCompany();
+    var cid = getSelectedCommunityId();
+    if(!(pvCtx.sb && pvCtx.sb.from && company && cid)) return null;
+    try{
+      var sharedRes = await pvCtx.sb.from(sharedVendorTableName())
+        .select('vendors,company,community_id')
+        .eq('company', String(company||'').trim())
+        .eq('community_id', String(cid||'').trim())
+        .maybeSingle();
+      if(sharedRes && sharedRes.error){
+        throw sharedRes.error;
+      }
+      var sharedValue = sharedRes && sharedRes.data ? sharedRes.data.vendors : null;
+      var sharedRows = Array.isArray(sharedValue) ? sharedValue : (sharedValue && Array.isArray(sharedValue.rows) ? sharedValue.rows : []);
+      var normalizedShared = normalizeVendorRows(sharedRows);
+      window.__pvLastSharedRows = normalizedShared.slice();
+      if(normalizedShared.length) return normalizedShared;
+      if(sharedRes && sharedRes.data) return [];
+
+      if(!(pvCtx.uid && company && cid)) return [];
+      var keys = cloudVendorsPrefKeys(company, cid);
+      for(var i=0;i<keys.length;i++){
+        var res = await pvCtx.sb.from('user_ui_prefs')
+          .select('pref_value')
+          .eq('user_id', pvCtx.uid)
+          .eq('pref_key', keys[i])
+          .maybeSingle();
+        var pref = res && res.data ? res.data.pref_value : null;
+        var rows = Array.isArray(pref) ? pref : (pref && Array.isArray(pref.rows) ? pref.rows : []);
+        var normalized = normalizeVendorRows(rows);
+        if(normalized.length){
+          window.__pvLastSharedRows = normalized.slice();
+          return normalized;
+        }
+      }
+      return [];
+    }catch(err){
+      console.warn('Preferred Vendors readRowsFromCloud failed', err);
+      return null;
+    }
+  }
+
+  async function saveRows(rows){
+    var normalized = saveRowsLocal(rows || []);
+    await warmPvContext();
+    var company = getCompany();
+    var cid = getSelectedCommunityId();
+    if(!(company && cid)) return normalized;
+    try{
+      var sb = (pvCtx && pvCtx.sb) ? pvCtx.sb : await getPvClient();
+      if(!sb || !sb.from || !sb.auth) return normalized;
+      var gu = await sb.auth.getUser();
+      var uid = String(gu && gu.data && gu.data.user && gu.data.user.id || pvCtx.uid || '').trim();
+      if(uid) pvCtx.uid = uid;
+      pvCtx.sb = sb;
+      var payload = {
+        company: String(company||'').trim(),
+        community_id: String(cid||'').trim(),
+        vendors: normalized,
+        updated_at: new Date().toISOString()
+      };
+      var result = await sb.from(sharedVendorTableName()).upsert(payload, { onConflict: 'company,community_id' });
+      if(result && result.error) throw result.error;
+      console.log('Preferred Vendors shared cloud save success', { company: company, community_id: cid, count: normalized.length });
+    }catch(err){
+      console.error('Preferred Vendors saveRows failed', err);
+    }
+    return normalized;
+  }
+
+  async function refreshVendorRows(forceRefresh){
+    if(!forceRefresh && Array.isArray(pvRowsCache)) return pvRowsCache.slice();
+    var localRows = loadRowsLocal();
+    pvRowsCache = localRows.slice();
+    var cloudRows = await readRowsFromCloud();
+    if(Array.isArray(cloudRows)){
+      pvRowsCache = saveRowsLocal(cloudRows);
+      return pvRowsCache.slice();
+    }
+    return localRows.slice();
+  }
+
+  var pvCtx = { uid:'', cid:'', sb:null };
+
+  async function getPvClient(){
+    for(var i=0;i<20;i++){
+      try{
+        if(typeof ensureSupabase === 'function'){
+          var c = await ensureSupabase();
+          if(c && c.auth) return c;
+        }
+      }catch(_e){}
+      try{ if(window.supabaseClient && window.supabaseClient.auth) return window.supabaseClient; }catch(_e2){}
+      try{ if(window.sb && window.sb.auth) return window.sb; }catch(_e3){}
+      await new Promise(function(r){ setTimeout(r, 80); });
+    }
+    return null;
+  }
+
+  function getSelectedCommunityId(){
+    try{
+      return String(
+        localStorage.getItem('zummee_selected_community_id') ||
+        localStorage.getItem('activeCommunityId') ||
+        localStorage.getItem('zummee_community_id') ||
+        ''
+      ).trim();
+    }catch(_e){ return ''; }
+  }
+
+  async function warmPvContext(){
+    try{
+      pvCtx.cid = getSelectedCommunityId();
+      var sb = await getPvClient();
+      if(sb) pvCtx.sb = sb;
+      if(sb && sb.auth && typeof sb.auth.getUser === 'function'){
+        var gu = await sb.auth.getUser();
+        var user = gu && gu.data && gu.data.user ? gu.data.user : null;
+        pvCtx.uid = String(user && user.id || '').trim();
+      }
+      if(!pvCtx.uid && sb && sb.auth && typeof sb.auth.getSession === 'function'){
+        var gs = await sb.auth.getSession();
+        var user2 = gs && gs.data && gs.data.session ? gs.data.session.user : null;
+        pvCtx.uid = String(user2 && user2.id || '').trim();
+      }
+    }catch(_e){}
+    return pvCtx;
+  }
+
+  function dailyOpsScopedKey(uid, cid){
+    var base = 'daily_ops_manager_v9';
+    uid = String(uid || '').trim();
+    cid = String(cid || '').trim();
+    if(uid && cid) return base + '::' + uid + '::' + cid;
+    if(uid) return base + '::' + uid;
+    if(cid) return base + '::' + cid;
+    return base;
+  }
+
+  function defaultDailyOpsState(){
+    return {
+      data: {
+        accessCodes: [],
+        nonNegotiables: [],
+        importantDates: [],
+        vendors: [],
+        supplies: [],
+        boatSlips: [],
+        boardMembers: [],
+        quickNotes: [],
+        committees: [],
+        departments: []
+      }
+    };
+  }
+
+  function readDailyOpsState(uid, cid){
+    var raw = '';
+    var key = dailyOpsScopedKey(uid, cid);
+    raw = safeGet(key);
+    if(!raw && cid) raw = safeGet('daily_ops_manager_v9::' + cid);
+    if(!raw) return defaultDailyOpsState();
+    try{
+      var parsed = JSON.parse(raw);
+      if(!parsed || typeof parsed !== 'object') return defaultDailyOpsState();
+      parsed.data = parsed.data && typeof parsed.data === 'object' ? parsed.data : defaultDailyOpsState().data;
+      if(!Array.isArray(parsed.data.vendors)) parsed.data.vendors = [];
+      return parsed;
+    }catch(_e){ return defaultDailyOpsState(); }
+  }
+
+  function saveDailyOpsStateLocal(state, uid, cid){
+    var stamp = new Date().toISOString();
+    state = state || defaultDailyOpsState();
+    state.data = state.data || defaultDailyOpsState().data;
+    state.data.community_id = cid || state.data.community_id || '';
+    state.__updated_at = stamp;
+    safeSet(dailyOpsScopedKey(uid, cid), JSON.stringify(state));
+    if(cid){
+      safeSet('daily_ops_manager_v9::' + cid, JSON.stringify(state));
+      safeSet('daily_ops_vendors_cache_v1::' + cid, JSON.stringify({ vendors: state.data.vendors || [], updated_at: stamp }));
+    }
+    return state;
+  }
+
+  function opsVendorFingerprint(row){
+    var norm = function(v){ return String(v || '').trim().toLowerCase(); };
+    var phone = norm(String(row && row.phone || '').replace(/[^0-9]/g,''));
+    return [norm(row && row.name), norm(row && row.type), phone, norm(row && row.email)].join('|');
+  }
+
+  function buildDailyOpsVendorRow(preferredRow){
+    return {
+      _id: 'pv_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,7),
+      locked: false,
+      name: String(preferredRow && preferredRow.vendorName || '').trim(),
+      type: String(preferredRow && preferredRow.vendorType || '').trim(),
+      phone: String(preferredRow && preferredRow.phone || '').trim(),
+      email: String(preferredRow && preferredRow.email || '').trim(),
+      contactName: String(preferredRow && preferredRow.contactName || '').trim(),
+      notes: String(preferredRow && preferredRow.notes || '').trim(),
+      preferred_vendor_copy: true,
+      preferred_vendor_added_at: new Date().toISOString()
+    };
+  }
+
+  function isVendorAlreadyInDailyOps(preferredRow){
+    var cid = getSelectedCommunityId();
+    var state = readDailyOpsState(pvCtx.uid, cid);
+    var rows = Array.isArray(state && state.data && state.data.vendors) ? state.data.vendors : [];
+    var fp = opsVendorFingerprint(buildDailyOpsVendorRow(preferredRow));
+    return rows.some(function(v){ return opsVendorFingerprint(v) === fp; });
+  }
+
+  async function addVendorToDailyOps(index, triggerBtn){
+    if(isPrivilegedRole()) return;
+    var rows = getCurrentRows();
+    var source = rows[index];
+    if(!source) return;
+    await warmPvContext();
+    var cid = getSelectedCommunityId();
+    if(!cid){
+      alert('Select a community first.');
+      return;
+    }
+    if(triggerBtn){ triggerBtn.disabled = true; triggerBtn.textContent = 'Adding…'; }
+    try{
+      var state = readDailyOpsState(pvCtx.uid, cid);
+      if(!state.data || typeof state.data !== 'object') state.data = defaultDailyOpsState().data;
+      if(!Array.isArray(state.data.vendors)) state.data.vendors = [];
+      var candidate = buildDailyOpsVendorRow(source);
+      var fp = opsVendorFingerprint(candidate);
+      var existingIndex = state.data.vendors.findIndex(function(v){ return opsVendorFingerprint(v) === fp; });
+      if(existingIndex < 0){
+        state.data.vendors.unshift(candidate);
+      }
+      saveDailyOpsStateLocal(state, pvCtx.uid, cid);
+
+      try{
+        var sb = pvCtx.sb || await getPvClient();
+        if(sb && sb.from && pvCtx.uid){
+          var existing = await sb.from('daily_ops_state').select('state').eq('user_id', pvCtx.uid).eq('community_id', cid).maybeSingle();
+          var cloudState = (existing && existing.data && existing.data.state && typeof existing.data.state === 'object') ? existing.data.state : defaultDailyOpsState();
+          if(!cloudState.data || typeof cloudState.data !== 'object') cloudState.data = defaultDailyOpsState().data;
+          if(!Array.isArray(cloudState.data.vendors)) cloudState.data.vendors = [];
+          var cloudIdx = cloudState.data.vendors.findIndex(function(v){ return opsVendorFingerprint(v) === fp; });
+          if(cloudIdx < 0) cloudState.data.vendors.unshift(candidate);
+          cloudState.data.community_id = cid;
+          cloudState.__updated_at = new Date().toISOString();
+          await sb.from('daily_ops_state').upsert({
+            user_id: pvCtx.uid,
+            community_id: cid,
+            state: cloudState,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id,community_id' });
+        }
+      }catch(_cloudErr){}
+
+      render();
+    }catch(e){
+      if(triggerBtn){ triggerBtn.disabled = false; triggerBtn.textContent = 'Add'; }
+      alert((e && e.message) ? e.message : 'Could not add vendor to Daily Ops.');
+      return;
+    }
+  }
+
+  function setManageStatus(msg, isError){
+    var el = document.getElementById('pv_manageStatus');
+    if(!el) return;
+    el.textContent = msg || '';
+    el.style.color = isError ? '#9b1c1c' : '#44607a';
+  }
+
+  function resetForm(){
+    var form = document.getElementById('pv_form');
+    if(form) form.reset();
+    var idx = document.getElementById('pv_editIndex');
+    if(idx) idx.value = '';
+    var cancelBtn = document.getElementById('pv_cancelBtn');
+    if(cancelBtn) cancelBtn.style.display = 'none';
+    var saveBtn = document.getElementById('pv_saveBtn');
+    if(saveBtn) saveBtn.textContent = 'Save Vendor';
+    var pill = document.getElementById('pv_modePill');
+    if(pill) pill.innerHTML = '<span class="pill">Add vendor</span>';
+    setManageStatus('');
+  }
+
+  function beginEdit(index){
+    var rows = getCurrentRows();
+    var row = rows[index];
+    if(!row) return;
+    document.getElementById('pv_editIndex').value = String(index);
+    document.getElementById('pv_vendorName').value = row.vendorName || '';
+    document.getElementById('pv_vendorType').value = row.vendorType || '';
+    document.getElementById('pv_contactName').value = row.contactName || '';
+    document.getElementById('pv_phone').value = row.phone || '';
+    document.getElementById('pv_email').value = row.email || '';
+    document.getElementById('pv_notes').value = row.notes || '';
+    document.getElementById('pv_cancelBtn').style.display = '';
+    document.getElementById('pv_saveBtn').textContent = 'Update Vendor';
+    document.getElementById('pv_modePill').innerHTML = '<span class="pill">Editing vendor</span>';
+    setManageStatus('Editing ' + (row.vendorName || 'vendor') + '.');
+    try{ document.getElementById('pv_vendorName').focus(); }catch(_e){}
+  }
+
+  var pvDeleteIndex = null;
+
+  function closeDeleteModal(){
+    var modal = document.getElementById('pv_deleteModal');
+    if(modal){
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+    pvDeleteIndex = null;
+  }
+
+  function openDeleteModal(index){
+    if(!isPrivilegedRole()) return;
+    var rows = getCurrentRows();
+    var row = rows[index];
+    if(!row) return;
+    pvDeleteIndex = Number(index);
+    var nameEl = document.getElementById('pv_deleteVendorName');
+    if(nameEl) nameEl.textContent = row.vendorName || 'This vendor';
+    var modal = document.getElementById('pv_deleteModal');
+    if(modal){
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+    }
+    try{ document.getElementById('pv_deleteConfirm').focus(); }catch(_e){}
+  }
+
+  async function confirmDeleteVendor(){
+    if(!isPrivilegedRole()) return;
+    if(pvDeleteIndex === null || pvDeleteIndex === undefined) return closeDeleteModal();
+    var rows = getCurrentRows();
+    var row = rows[pvDeleteIndex];
+    if(!row) return closeDeleteModal();
+    rows.splice(pvDeleteIndex, 1);
+    await saveRows(rows);
+    closeDeleteModal();
+    resetForm();
+    setManageStatus('Vendor removed.');
+    await render(false);
+  }
+
+  function bindDeleteModal(){
+    var modal = document.getElementById('pv_deleteModal');
+    var cancelBtn = document.getElementById('pv_deleteCancel');
+    var confirmBtn = document.getElementById('pv_deleteConfirm');
+    if(cancelBtn && !cancelBtn.__pvBound){
+      cancelBtn.__pvBound = true;
+      cancelBtn.addEventListener('click', closeDeleteModal);
+    }
+    if(confirmBtn && !confirmBtn.__pvBound){
+      confirmBtn.__pvBound = true;
+      confirmBtn.addEventListener('click', confirmDeleteVendor);
+    }
+    if(modal && !modal.__pvBound){
+      modal.__pvBound = true;
+      modal.addEventListener('click', function(e){ if(e.target === modal) closeDeleteModal(); });
+    }
+    if(!document.__pvDeleteEscBound){
+      document.__pvDeleteEscBound = true;
+      document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeDeleteModal(); });
+    }
+  }
+
+  function removeVendor(index){
+    openDeleteModal(index);
+  }
+
+  var VENDOR_CATEGORIES = [
+    'Plumbing','Electrical','HVAC','Roofing','Pest Control','Landscaping','Pool','Cleaning / Janitorial',
+    'Attorneys','Insurance','Reserve Study','Elevator','Fire Safety','Security','Asphalt / Concrete',
+    'Painting','General Contractor','Restoration','Tree Service','Locksmith','Appliance Repair','Waste / Recycling','Other'
+  ];
+
+  function normalizeCategory(type){
+    var value = String(type || '').trim();
+    if(!value) return 'Other';
+    var map = {
+      'cleaning': 'Cleaning / Janitorial',
+      'janitorial': 'Cleaning / Janitorial',
+      'cleaning / janitorial': 'Cleaning / Janitorial',
+      'attorney': 'Attorneys',
+      'legal': 'Attorneys',
+      'pest': 'Pest Control',
+      'asphalt': 'Asphalt / Concrete',
+      'concrete': 'Asphalt / Concrete',
+      'waste': 'Waste / Recycling',
+      'trash': 'Waste / Recycling'
+    };
+    var lower = value.toLowerCase();
+    if(map[lower]) return map[lower];
+    for(var i=0;i<VENDOR_CATEGORIES.length;i++){
+      if(VENDOR_CATEGORIES[i].toLowerCase() === lower) return VENDOR_CATEGORIES[i];
+    }
+    return value;
+  }
+
+  function categorySubtitle(name){
+    var map = {
+      'Plumbing':'Leaks, water heaters, drains, and emergency pipe repairs.',
+      'Electrical':'Panels, lighting, troubleshooting, and power restoration.',
+      'HVAC':'Heating, cooling, seasonal service, and after-hours support.',
+      'Roofing':'Roof repairs, inspections, gutters, and storm response.',
+      'Pest Control':'Routine treatments, infestations, and preventative service.',
+      'Landscaping':'Grounds care, irrigation, seasonal color, and tree planning.',
+      'Pool':'Pool operations, chemicals, resurfacing, and compliance.',
+      'Cleaning / Janitorial':'Clubhouse, common area, porter, and turnover cleaning.',
+      'Attorneys':'Association counsel, collections, contracts, and compliance.',
+      'Insurance':'Property, liability, claims support, and risk strategy.',
+      'Reserve Study':'Reserve planning, capital forecasting, and asset reviews.',
+      'Elevator':'Maintenance, inspections, modernization, and outage response.',
+      'Fire Safety':'Alarms, extinguishers, inspections, and code readiness.',
+      'Security':'Patrol, cameras, gate systems, and access management.',
+      'Asphalt / Concrete':'Paving, sidewalks, curbs, sealcoating, and repairs.',
+      'Painting':'Interior, exterior, trim, and common area repainting.',
+      'General Contractor':'Multi-trade repairs, capital projects, and renovations.',
+      'Restoration':'Water, fire, mold, and emergency recovery services.',
+      'Tree Service':'Pruning, removals, storm cleanup, and arborist support.',
+      'Locksmith':'Locks, rekeys, doors, closers, and access hardware.',
+      'Appliance Repair':'Shared-area and amenity appliance repairs and replacements.',
+      'Waste / Recycling':'Trash service, recycling, compactors, and bulk pickup.',
+      'Other':'Specialty partners that support unique community needs.'
+    };
+    return map[name] || 'Trusted partners and featured opportunities for this service category.';
+  }
+
+
+  function pvStorageKey(prefix){
+    var company = getCompany() || 'global';
+    return 'zummee_pv_' + prefix + '_' + company;
+  }
+
+  function getCollapsedCategoryMap(){
+    try{ return JSON.parse(localStorage.getItem(pvStorageKey('collapsed_categories')) || '{}') || {}; }
+    catch(_e){ return {}; }
+  }
+
+  function isCategoryCollapsed(category){
+    var map = getCollapsedCategoryMap();
+    return !!map[String(category || '')];
+  }
+
+  function setCategoryCollapsed(category, collapsed){
+    try{
+      var map = getCollapsedCategoryMap();
+      if(collapsed) map[String(category || '')] = true;
+      else delete map[String(category || '')];
+      localStorage.setItem(pvStorageKey('collapsed_categories'), JSON.stringify(map));
+    }catch(_e){}
+  }
+
+  function toggleCategorySection(category){
+    var nextCollapsed = !isCategoryCollapsed(category);
+    setCategoryCollapsed(category, nextCollapsed);
+    var section = document.querySelector('.category-section[data-category="' + cssEscapeAttr(category) + '"]');
+    var btn = document.querySelector('[data-category-toggle="' + cssEscapeAttr(category) + '"]');
+    if(section) section.classList.toggle('is-collapsed', nextCollapsed);
+    if(btn){
+      btn.setAttribute('aria-expanded', nextCollapsed ? 'false' : 'true');
+      var pill = btn.querySelector('.category-toggle-pill span');
+      if(pill) pill.textContent = nextCollapsed ? 'Expand' : 'Collapse';
+    }
+  }
+
+  function cssEscapeAttr(value){
+    return String(value || '').replace(/\\/g,'\\\\').replace(/"/g,'\\"');
+  }
+
+  function renderSponsorCard(category, slot){
+    var tier = slot === 1 ? 'Top Featured Placement' : 'Featured Placement';
+    var copy = slot === 1
+      ? 'Own the first impression for managers searching this category. Premium placement is designed for your highest-value vendor partners.'
+      : 'Secure a high-visibility ad slot that stays in front of managers while they review preferred vendors and compare options.';
+    return '<div class="sponsor-card">'
+      + '<div class="sponsor-top"><span class="sponsor-label">Sponsored</span><span class="sponsor-slot">Slot ' + slot + '</span></div>'
+      + '<div class="sponsor-title">' + tier + '</div>'
+      + '<div class="sponsor-copy">Advertise in <strong>' + escapeHtml(category) + '</strong>. ' + copy + '</div>'
+      + '<div class="sponsor-cta">Featured partner opportunity</div>'
+      + '</div>';
+  }
+
+
+  function formatPhoneDisplay(phone){
+    var digits = String(phone || '').replace(/\D/g,'').slice(0,10);
+    if(digits.length !== 10) return String(phone || '').trim();
+    return digits.slice(0,3) + '-' + digits.slice(3,6) + '-' + digits.slice(6);
+  }
+
+  function renderVendorCard(v, realIndex, canManage){
+    var phone = String(v.phone||'').trim();
+    var phoneHref = phone.replace(/\D/g,'');
+    var phoneDisplay = formatPhoneDisplay(phone);
+    var email = String(v.email||'').trim();
+    var notes = String(v.notes||'').trim();
+    var category = normalizeCategory(v.vendorType);
+    var contactName = String(v.contactName||'').trim();
+    var added = isVendorAlreadyInDailyOps(v);
+    var actions = '';
+    var contactClass = canManage ? 'vendor-contact' : 'vendor-contact vendor-contact--with-action';
+    if(canManage){
+      actions = '<div class="vendor-actions">'
+        + '<button class="btn btn--ghost" type="button" data-pv-edit="'+realIndex+'">Edit</button>'
+        + '<button class="btn btn--ghost" type="button" data-pv-delete="'+realIndex+'">Delete</button>'
+        + '</div>';
+    }
+    return '<div class="vendor-card">'
+      + '<div class="vendor-card-top">'
+      + '<div class="vendor-name">' + escapeHtml(v.vendorName||'Unnamed Vendor') + '</div>'
+      + (contactName ? '<div class="vendor-contact-name">Company Contact: ' + escapeHtml(contactName) + '</div>' : '')
+      + '</div>'
+      + '<div class="' + contactClass + '">'
+      + '<div class="vendor-contact-block vendor-contact-block--phone">' + (phone ? '<a class="vendor-contact-button" href="tel:'+phoneHref+'"><span class="vendor-contact-label">Phone</span><span class="vendor-contact-value">'+escapeHtml(phoneDisplay)+'</span></a>' : '<span class="tiny">No phone saved</span>') + '</div>'
+      + '<div class="vendor-contact-block vendor-contact-block--email">' + (email ? '<a class="vendor-contact-button" href="mailto:'+email+'"><span class="vendor-contact-label">Email</span><span class="vendor-contact-value">'+escapeHtml(email)+'</span></a>' : '<span class="tiny">No email saved</span>') + '</div>'
+      + (canManage ? '' : '<div class="vendor-inline-action"><button class="btn btn--ghost" type="button" data-pv-add="'+realIndex+'"'+(added ? ' disabled' : '')+'>'+(added ? 'Added to Daily Ops' : 'Add to Daily Ops')+'</button></div>')
+      + '</div>'
+      + (notes ? '<div class="vendor-notes"><strong style="display:block;margin-bottom:4px;color:#0f2f4a;">Manager Notes</strong>' + escapeHtml(notes) + '</div>' : '')
+      + actions
+      + '</div>';
+  }
+
+  function renderCategorySection(category, rows, allRows, canManage){
+    var collapsed = isCategoryCollapsed(category);
+    var cards = [renderSponsorCard(category, 1), renderSponsorCard(category, 2)];
+    if(rows.length){
+      cards = cards.concat(rows.map(function(v){ return renderVendorCard(v, allRows.indexOf(v), canManage); }));
+    } else {
+      cards.push('<div class="vendor-empty"><strong>No saved vendors yet</strong>' + (canManage ? 'Add your first ' + escapeHtml(category) + ' partner above, or sell the featured slots to create revenue from this section.' : 'No preferred vendors are saved in this category yet.') + '</div>');
+    }
+    return '<section class="category-section' + (collapsed ? ' is-collapsed' : '') + '" data-category="' + escapeHtml(category) + '">'
+      + '<button class="category-toggle" type="button" data-category-toggle="' + escapeHtml(category) + '" aria-expanded="' + (!collapsed ? 'true' : 'false') + '">'
+      + '<div class="category-header">'
+      + '<div><div class="category-title-wrap"><div class="category-title">' + escapeHtml(category) + '</div><span class="category-count">' + rows.length + ' saved</span></div><div class="category-sub">' + escapeHtml(categorySubtitle(category)) + '</div></div>'
+      + '<div class="category-toggle-pill"><span>' + (collapsed ? 'Expand' : 'Collapse') + '</span><span class="category-chevron" aria-hidden="true">▾</span></div>'
+      + '</div>'
+      + '</button>'
+      + '<div class="category-grid">' + cards.join('') + '</div>'
+      + '</section>';
+  }
+
+  function wireManageCard(){
+    var manageCard = document.getElementById('pv_manageCard');
+    var actionsHead = document.getElementById('pv_actionsHead');
+    var show = isPrivilegedRole();
+    if(manageCard) manageCard.style.display = show ? '' : 'none';
+    if(actionsHead) actionsHead.style.display = show ? '' : 'none';
+
+    var form = document.getElementById('pv_form');
+    if(form && !form.__pvBound){
+      form.__pvBound = true;
+      form.addEventListener('submit', async function(e){
+        e.preventDefault();
+        if(!isPrivilegedRole()) return;
+        var company = getCompany();
+        if(!company){ setManageStatus('Select a company before saving vendors.', true); return; }
+        var vendorName = String(document.getElementById('pv_vendorName').value || '').trim();
+        if(!vendorName){ setManageStatus('Vendor name is required.', true); return; }
+        var rows = getCurrentRows();
+        var payload = {
+          vendorName: vendorName,
+          vendorType: String(document.getElementById('pv_vendorType').value || '').trim(),
+          contactName: String(document.getElementById('pv_contactName').value || '').trim(),
+          phone: String(document.getElementById('pv_phone').value || '').trim(),
+          email: String(document.getElementById('pv_email').value || '').trim(),
+          notes: String(document.getElementById('pv_notes').value || '').trim()
+        };
+        var editIndex = String(document.getElementById('pv_editIndex').value || '').trim();
+        if(editIndex !== '' && rows[Number(editIndex)]){
+          rows[Number(editIndex)] = Object.assign({}, rows[Number(editIndex)], payload);
+          await saveRows(rows);
+          setManageStatus('Vendor updated.');
+        } else {
+          rows.unshift(payload);
+          await saveRows(rows);
+          setManageStatus('Vendor added.');
+        }
+        resetForm();
+        await render(false);
+      });
+    }
+
+    var cancelBtn = document.getElementById('pv_cancelBtn');
+    if(cancelBtn && !cancelBtn.__pvBound){
+      cancelBtn.__pvBound = true;
+      cancelBtn.addEventListener('click', function(){ resetForm(); });
+    }
+  }
+
+  async function render(forceRefresh){
+    wireManageCard();
+    bindDeleteModal();
+    pvCtx.cid = getSelectedCommunityId();
+    var company = getCompany();
+    document.getElementById("pv_companyPill").textContent = "Company: " + (company || "—");
+    var rows = [];
+    if(forceRefresh){
+      var directCloudRows = await readRowsFromCloud();
+      if(Array.isArray(directCloudRows)){
+        rows = saveRowsLocal(directCloudRows);
+        pvRowsCache = rows.slice();
+      }
+    }
+    if(!rows.length && Array.isArray(window.__pvLastSharedRows) && window.__pvLastSharedRows.length){
+      rows = saveRowsLocal(window.__pvLastSharedRows);
+      pvRowsCache = rows.slice();
+    }
+    if(!rows.length){
+      rows = await refreshVendorRows(!!forceRefresh);
+    }
+    rows = normalizeVendorRows(rows || []);
+    pvRowsCache = rows.slice();
+    window.__pvRenderedRows = rows.slice();
+    var q = String(document.getElementById("pv_search").value||"").toLowerCase().trim();
+
+    var filtered = rows.filter(function(v){
+      if(!q) return true;
+      var hay = [
+        v.vendorName, v.vendorType, v.contactName, v.phone, v.email, v.notes
+      ].map(function(x){ return String(x||"").toLowerCase(); }).join(" ");
+      return hay.indexOf(q) !== -1;
+    });
+
+    var marketplace = document.getElementById('pv_marketplace');
+    var canManage = isPrivilegedRole();
+    if(!marketplace) return;
+
+    var grouped = {};
+    VENDOR_CATEGORIES.forEach(function(cat){ grouped[cat] = []; });
+    filtered.forEach(function(v){
+      var category = normalizeCategory(v.vendorType);
+      if(!grouped[category]) grouped[category] = [];
+      grouped[category].push(v);
+    });
+
+    var sections = [];
+    Object.keys(grouped).forEach(function(category){
+      sections.push(renderCategorySection(category, grouped[category], rows, canManage));
+    });
+
+    var extraCats = Object.keys(grouped).filter(function(cat){ return VENDOR_CATEGORIES.indexOf(cat) === -1; }).sort();
+    if(extraCats.length){
+      sections = VENDOR_CATEGORIES.map(function(category){ return renderCategorySection(category, grouped[category] || [], rows, canManage); });
+      extraCats.forEach(function(category){ sections.push(renderCategorySection(category, grouped[category], rows, canManage)); });
+    }
+
+    marketplace.className = 'marketplace';
+    marketplace.setAttribute('data-rendered-vendors', String(rows.length));
+    marketplace.innerHTML = sections.join('');
+
+    document.getElementById("pv_count").textContent = filtered.length + " vendor" + (filtered.length===1?"":"s") + (q ? ' matching search' : ' across all categories');
+
+    marketplace.querySelectorAll('[data-category-toggle]').forEach(function(btn){
+      btn.addEventListener('click', function(){ toggleCategorySection(btn.getAttribute('data-category-toggle')); });
+    });
+
+    if(canManage){
+      marketplace.querySelectorAll('[data-pv-edit]').forEach(function(btn){
+        btn.addEventListener('click', function(){ beginEdit(Number(btn.getAttribute('data-pv-edit'))); });
+      });
+      marketplace.querySelectorAll('[data-pv-delete]').forEach(function(btn){
+        btn.addEventListener('click', function(){ removeVendor(Number(btn.getAttribute('data-pv-delete'))); });
+      });
+    } else {
+      marketplace.querySelectorAll('[data-pv-add]').forEach(function(btn){
+        btn.addEventListener('click', function(){ addVendorToDailyOps(Number(btn.getAttribute('data-pv-add')), btn); });
+      });
+    }
+  }
+
+  function bindRoleWatch(){
+    try{
+      var root = document.documentElement;
+      if(root && !root.__pvRoleObserverBound){
+        root.__pvRoleObserverBound = true;
+        new MutationObserver(function(muts){
+          for(var i=0;i<muts.length;i++){
+            if(muts[i].attributeName === 'data-staff-role'){
+              wireManageCard();
+              render();
+              break;
+            }
+          }
+        }).observe(root, { attributes:true });
+      }
+    }catch(_e){}
+
+    var tries = 0;
+    var timer = setInterval(function(){
+      tries += 1;
+      wireManageCard();
+      render();
+      if(isPrivilegedRole() || tries >= 25) clearInterval(timer);
+    }, 250);
+  }
+
+  document.getElementById("pv_search").addEventListener("input", function(){ render(false); });
+  document.getElementById("pv_refreshBtn").addEventListener("click", function(){ render(true); });
+  document.addEventListener("DOMContentLoaded", function(){ wireManageCard(); resetForm(); warmPvContext().then(function(){ return render(true); }).catch(function(){ return render(false); }); bindRoleWatch(); });
+  document.addEventListener('change', function(e){ if(e && e.target && e.target.id === 'zummeeCommunitySelect') setTimeout(function(){ render(true); }, 50); });
+  window.addEventListener('storage', function(){ render(true); });
+  window.ZUMMEE_preferredVendorsRender = render;
+  window.getPvClient = getPvClient;
+  window.currentRole = window.currentRole || currentRole;
+  window.getCompany = window.getCompany || getCompany;
+})();
+
+// Modern selector UI that wraps the native <select> (keeps existing behavior & RLS-safe updates)
+function initModernCommunityPicker(select){
+  try{
+    if(!select || select.__zumModernBound) return;
+    select.__zumModernBound = true;
+
+    // Build UI
+    const host = document.createElement("div");
+    host.className = "zummee-communityPicker";
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "zummee-communityBtn";
+    btn.setAttribute("aria-haspopup","listbox");
+    btn.setAttribute("aria-expanded","false");
+
+    const btnLabel = document.createElement("span");
+    btnLabel.textContent = "Select…";
+    const chev = document.createElement("span");
+    chev.className = "zummee-communityChevron";
+    btn.appendChild(btnLabel);
+    btn.appendChild(chev);
+
+    const menu = document.createElement("div");
+    menu.className = "zummee-communityMenu";
+    const search = document.createElement("input");
+    search.className = "zummee-communitySearch";
+    search.type = "text";
+    search.placeholder = "Search communities…";
+    const list = document.createElement("div");
+    list.className = "zummee-communityList";
+    menu.appendChild(search);
+    menu.appendChild(list);
+
+    host.appendChild(btn);
+    host.appendChild(menu);
+
+    // Insert host before select; then hide select
+    select.parentNode.insertBefore(host, select);
+    select.style.display = "none";
+
+    function getSelectedText(){
+      const opt = select.options[select.selectedIndex];
+      return opt ? opt.textContent : "";
+    }
+
+    function rebuildList(filter){
+      const q = String(filter||"").toLowerCase();
+      list.innerHTML = "";
+      const opts = Array.from(select.options || []);
+      if(!opts.length){
+        const empty = document.createElement("div");
+        empty.className = "zummee-communityMuted";
+        empty.textContent = "No communities available.";
+        list.appendChild(empty);
+        return;
+      }
+      opts.forEach(opt=>{
+        const name = String(opt.textContent||"");
+        if(q && !name.toLowerCase().includes(q)) return;
+        const item = document.createElement("button");
+        item.type="button";
+        item.className="zummee-communityItem";
+
+        const label = document.createElement("span");
+        label.textContent = name;
+
+        const check = document.createElement("span");
+        check.className = "zummee-communityCheck";
+        check.setAttribute("aria-hidden","true");
+
+        item.appendChild(label);
+        item.appendChild(check);
+        item.setAttribute("role","option");
+        item.setAttribute("aria-selected", opt.value===select.value ? "true":"false");
+        item.addEventListener("click", ()=>{
+          select.value = opt.value;
+          try{ select.dispatchEvent(new Event("change")); }catch(_e){}
+          closeMenu();
+        });
+        list.appendChild(item);
+      });
+      if(!list.children.length){
+        const none = document.createElement("div");
+        none.className = "zummee-communityMuted";
+        none.textContent = "No matches.";
+        list.appendChild(none);
+      }
+    }
+
+    function openMenu(){
+      menu.classList.add("open");
+      btn.setAttribute("aria-expanded","true");
+      rebuildList(search.value);
+      setTimeout(()=>{ try{ search.focus(); }catch(_e){} }, 10);
+    }
+    function closeMenu(){
+      menu.classList.remove("open");
+      btn.setAttribute("aria-expanded","false");
+    }
+
+    btn.addEventListener("click", ()=>{
+      if(menu.classList.contains("open")) closeMenu();
+      else openMenu();
+    });
+    search.addEventListener("input", ()=> rebuildList(search.value));
+
+    document.addEventListener("click", (e)=>{
+      if(host.contains(e.target)) return;
+      closeMenu();
+    });
+
+    // Keep label in sync
+    const sync = ()=>{
+      const t = getSelectedText() || "Select…";
+      btnLabel.textContent = t;
+    };
+    sync();
+    select.addEventListener("change", sync);
+
+    // Initial list
+    rebuildList("");
+  }catch(e){
+    console.warn("Modern selector init failed", e);
+  }
+}
+
+
+
+// Preferred Vendors: actively hydrate the shared header community dropdown.
+(async function preferredVendorsHydrateHeaderCommunitySelect(){
+  function delay(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+  function getStored(k){ try{ return localStorage.getItem(k) || ''; }catch(_e){ return ''; } }
+  function getStoredCommunityId(){
+    return String(
+      getStored('zummee_selected_community_id') ||
+      getStored('activeCommunityId') ||
+      getStored('zummeeActiveCommunityId') ||
+      getStored('zummee_community_id') ||
+      ''
+    ).trim();
+  }
+  function setStoredCommunity(id, name){
+    try{
+      if(id){
+        localStorage.setItem('zummee_selected_community_id', String(id));
+        localStorage.setItem('activeCommunityId', String(id));
+        localStorage.setItem('zummeeActiveCommunityId', String(id));
+      }
+      if(name != null){
+        localStorage.setItem('activeCommunityName', String(name || ''));
+        localStorage.setItem('zummeeActiveCommunityName', String(name || ''));
+      }
+    }catch(_e){}
+  }
+  function getLocalCommunities(){
+    var raw = getStored('zummee_communities_v1') || getStored('zummee_communities');
+    if(!raw) return [];
+    try{
+      var arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [];
+    }catch(_e){ return []; }
+  }
+  async function getUid(sb){
+    try{
+      var gu = await sb.auth.getUser();
+      var user = gu && gu.data && gu.data.user ? gu.data.user : null;
+      if(user && user.id) return String(user.id);
+    }catch(_e){}
+    try{
+      var gs = await sb.auth.getSession();
+      var user2 = gs && gs.data && gs.data.session ? gs.data.session.user : null;
+      if(user2 && user2.id) return String(user2.id);
+    }catch(_e){}
+    return '';
+  }
+  async function fetchCommunities(){
+    var sb = await getPvClient();
+    var rows = [];
+    if(!sb) return rows;
+    var uid = await getUid(sb);
+    var role = String(currentRole() || '').toLowerCase();
+    var company = String(getCompany() || '').trim();
+    var companyId = String(getStored('zummee_company_id') || getStored('company_id') || '').trim();
+
+    function normalize(list){
+      var seen = {};
+      return (Array.isArray(list) ? list : []).map(function(r){
+        return { id:String((r && r.id) || '').trim(), name:String((r && (r.name || r.community_name)) || '').trim() };
+      }).filter(function(r){
+        if(!r.id || !r.name || seen[r.id]) return false;
+        seen[r.id] = true;
+        return true;
+      }).sort(function(a,b){ return a.name.localeCompare(b.name); });
+    }
+
+    try{
+      if((role.indexOf('supervisor') !== -1 || role.indexOf('admin') !== -1 || role.indexOf('companyadmin') !== -1) && companyId){
+        var qId = await sb.from('PropertyCommunities').select('id,name').eq('company_id', companyId).order('name', { ascending:true });
+        if(!(qId && qId.error) && qId && Array.isArray(qId.data) && qId.data.length) return normalize(qId.data);
+      }
+    }catch(_e){}
+
+    try{
+      if((role.indexOf('supervisor') !== -1 || role.indexOf('admin') !== -1 || role.indexOf('companyadmin') !== -1) && company){
+        var qCompany = await sb.from('PropertyCommunities').select('id,name,company').ilike('company', company).order('name', { ascending:true });
+        if(!(qCompany && qCompany.error) && qCompany && Array.isArray(qCompany.data) && qCompany.data.length) return normalize(qCompany.data);
+      }
+    }catch(_e){}
+
+    try{
+      if(uid){
+        var qa = await sb.from('CommunityAssignments').select('community_id,user_id,company').eq('user_id', uid);
+        if(!(qa && qa.error) && qa && Array.isArray(qa.data) && qa.data.length){
+          var ids = qa.data.map(function(r){ return String((r && r.community_id) || '').trim(); }).filter(Boolean);
+          if(ids.length){
+            var qc = await sb.from('PropertyCommunities').select('id,name').in('id', ids).order('name', { ascending:true });
+            if(!(qc && qc.error) && qc && Array.isArray(qc.data) && qc.data.length) return normalize(qc.data);
+          }
+        }
+      }
+    }catch(_e){}
+
+    return normalize(getLocalCommunities());
+  }
+  async function hydrate(){
+    var select = null;
+    for(var i=0;i<80;i++){
+      select = document.getElementById('zummeeCommunitySelect');
+      if(select) break;
+      await delay(100);
+    }
+    if(!select || select.__pvHydrated) return;
+
+    var rows = await fetchCommunities();
+    select.innerHTML = '';
+
+    var placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = rows.length ? 'Select community' : 'No communities available';
+    select.appendChild(placeholder);
+
+    rows.forEach(function(row){
+      var opt = document.createElement('option');
+      opt.value = row.id;
+      opt.textContent = row.name;
+      select.appendChild(opt);
+    });
+
+    var storedId = getStoredCommunityId();
+    if(storedId && rows.some(function(r){ return r.id === storedId; })){
+      select.value = storedId;
+    } else if(rows.length === 1){
+      select.value = rows[0].id;
+      setStoredCommunity(rows[0].id, rows[0].name);
+    }
+
+    select.__pvHydrated = true;
+    select.disabled = false;
+    select.style.removeProperty('display');
+    try{ select.dispatchEvent(new Event('change', { bubbles:true })); }catch(_e){}
+
+    select.addEventListener('change', function(){
+      var opt = select.options[select.selectedIndex];
+      setStoredCommunity(select.value || '', opt ? (opt.textContent || '').trim() : '');
+      setTimeout(function(){ try{ render(); }catch(_e){} }, 0);
+    });
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(hydrate, 50); setTimeout(hydrate, 400); });
+  } else {
+    setTimeout(hydrate, 50);
+    setTimeout(hydrate, 400);
+  }
+  window.addEventListener('focus', function(){ if(!document.getElementById('zummeeCommunitySelect').options.length) hydrate(); });
+})();
+
+// Ensure modern (searchable) community picker is initialized on every page
+  document.addEventListener("DOMContentLoaded", function(){
+    try{
+      var sel = document.getElementById("zummeeCommunitySelect");
+      if(sel && typeof initModernCommunityPicker === "function" && !sel.closest("header.zm-header") && sel.dataset.noModern !== "1"){
+        initModernCommunityPicker(sel);
+      }
+    }catch(e){}
+  });
+
+</script>
+</html>
+<script>
+// Force picker colors to match Manager Hub (some inline styles may be set by JS)
+(function enforcePickerColors(){
+  try{
+    const btns = document.querySelectorAll('.zummee-communityBtn');
+    btns.forEach(b=>{
+      b.style.setProperty('background', '#ffffff', 'important');
+      b.style.setProperty('background-color', '#ffffff', 'important');
+      b.style.setProperty('color', '#000000', 'important');
+      b.style.setProperty('border', '1px solid rgba(15,47,74,0.25)', 'important');
+    });
+    const menus = document.querySelectorAll('.zummee-communityMenu');
+    menus.forEach(m=>{
+      m.style.setProperty('background', '#ffffff', 'important');
+      m.style.setProperty('background-color', '#ffffff', 'important');
+      m.style.setProperty('color', '#000000', 'important');
+    });
+    const items = document.querySelectorAll('.zummee-communityItem');
+    items.forEach(i=> i.style.setProperty('color', '#000000', 'important'));
+    const search = document.querySelectorAll('.zummee-communitySearch');
+    search.forEach(s=>{
+      s.style.setProperty('background', '#ffffff', 'important');
+      s.style.setProperty('color', '#000000', 'important');
+    });
+  }catch(e){}
+})();
+</script>
+
+<style>.vendor-header{display:flex;align-items:center;}
+/* === GOLD SPONSORED CARDS === */
+.vendor-card.sponsored-card {
+  background: linear-gradient(135deg, #f7d774 0%, #f1c24b 100%) !important;
+  border: 1px solid rgba(180, 140, 0, 0.4);
+  box-shadow: 0 8px 18px rgba(240, 193, 75, 0.35);
+}
+.vendor-card.sponsored-card * {
+  color: #1a2a3a !important;
+}
+
+</style>

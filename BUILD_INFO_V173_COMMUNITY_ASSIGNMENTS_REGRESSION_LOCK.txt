@@ -1,0 +1,22 @@
+V173 Community Assignments Regression Lock
+
+Base: V172 community assignments save schema lock.
+
+Locked behavior:
+- Current Assignments renders only Supabase community_assignments rows.
+- Unassigned PropertyCommunities rows are never shown in Current Assignments.
+- Browser/localStorage assignment cache is cleanup-only and never a data source.
+- Community picker may use PropertyCommunities, but picker rows are not assignment rows.
+- Save/update path remains schema-compatible with the live community_assignments table.
+
+Included SQL:
+- COMMUNITY_ASSIGNMENTS_REGRESSION_LOCK.sql
+- Adds unique constraint on (company_id, community_id) after de-duping duplicate rows.
+
+Regression checklist:
+1. Supervisor login: Current Assignments shows only saved rows.
+2. Unassigned communities do not appear in Current Assignments.
+3. Save Assignment creates or updates one row only.
+4. Edit fills form, then update preserves a single row.
+5. Remove deletes the row.
+6. Employee Manager Hub dropdown shows only assigned communities.

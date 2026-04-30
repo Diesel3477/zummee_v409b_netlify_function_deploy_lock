@@ -1,0 +1,426 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>window.ZUMMEE_BUILD="2026-03-27-1";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Emergency Alert History</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="shared/supabase-client.js?v=2026-04-08-2"></script>
+  <script src="shared/resident-auth.js?v=2026-03-27-1"></script>
+  <script src="shared/header.js?v=2026-04-08-2"></script>
+  <link rel="stylesheet" href="shared/header.css?v=2026-03-27-1">
+  <script>
+    window.SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+    window.SUPABASE_ANON_KEY = 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
+  </script>
+  <script id="zummeeStaffGuard">
+  (async () => {
+    if (window.__zummeeStaffGuardRan) return;
+    window.__zummeeStaffGuardRan = true;
+    async function getClient(){
+      try{ if(typeof ensureSupabase === 'function'){ const c = await ensureSupabase(); if(c && c.auth && typeof c.auth.getSession === 'function') return c; } }catch(_e){}
+      try{ if(window.supabaseClient && window.supabaseClient.auth && typeof window.supabaseClient.auth.getSession === 'function') return window.supabaseClient; }catch(_e){}
+      try{ if(window.sb && window.sb.auth && typeof window.sb.auth.getSession === 'function') return window.sb; }catch(_e){}
+      return null;
+    }
+    const go = (target) => { try{ window.location.replace(target); }catch(_e){ window.location.href = target; } };
+    const sb = await getClient();
+    if(!sb){ go('login.html'); return; }
+    const sessionRes = await sb.auth.getSession();
+    const user = sessionRes && sessionRes.data && sessionRes.data.session ? sessionRes.data.session.user : null;
+    if(!user){ go('login.html'); return; }
+    const ud = await sb.from('userdirectory').select('role').eq('auth_user_id', user.id).single();
+    const role = String((ud && ud.data && ud.data.role) || '').trim();
+    if(role === 'Resident'){ go('resident_portal.html'); return; }
+    document.documentElement.setAttribute('data-staff-role', role || '');
+  })();
+  </script>
+  
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+    :root{--brand:#0f3554;--gold:#c19120;--bg:#f4f6fa;--card:#fff;--muted:#5d6b7a;--border:#d9e1ea}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:#17324c}
+    main{max-width:1320px;margin:26px auto;padding:0 16px 46px}
+    .card{background:#fff;border:1px solid rgba(15,53,84,.12);border-radius:28px;padding:22px;box-shadow:0 18px 42px rgba(15,53,84,.08)}
+    .topRow{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap}
+    h1{margin:0;font-size:clamp(30px,5vw,42px);line-height:1.04;color:var(--brand)}
+    .sub{color:var(--muted);font-size:14px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:11px 18px;border-radius:999px;border:2px solid var(--brand);background:#fff;color:var(--brand);text-decoration:none;font-size:15px;font-weight:800;cursor:pointer}
+    .btn.primary{background:var(--brand);color:#fff}
+    .btnRow{display:flex;gap:10px;flex-wrap:wrap}
+    .grid{display:grid;grid-template-columns:320px 1fr;gap:22px;margin-top:18px}
+    .field label{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;font-weight:800}
+    .field select,.field input{width:100%;border:1.5px solid var(--border);border-radius:16px;padding:12px 14px;font-size:16px;background:#fff;color:#17324c}
+    .statWrap{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+    .stat{border:1px solid rgba(15,53,84,.12);border-radius:18px;padding:14px;background:#fbfdff}
+    .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:800}
+    .v{font-size:24px;font-weight:900;color:#17324c;margin-top:6px}
+    .helper{color:var(--muted);font-size:14px}
+    .list{display:flex;flex-direction:column;gap:12px;margin-top:16px}
+    .item{border:1px solid rgba(15,53,84,.1);border-radius:20px;padding:16px;background:#fff}
+    .pill{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:900;background:#f3f6fa;color:#476079;text-transform:capitalize}
+    .empty{padding:20px;border:1px dashed rgba(15,53,84,.18);border-radius:18px;color:var(--muted);background:#fbfdff}
+    .msg{margin-top:12px;font-weight:700}
+    .msg.err{color:#8c1d18}.msg.ok{color:#11653a}
+    .metaRow{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:8px;color:#42576d;font-size:14px}
+    .body{margin-top:10px;white-space:pre-wrap;color:#17324c}
+    .tableGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+    @media (max-width:980px){.grid{grid-template-columns:1fr}.statWrap{grid-template-columns:1fr}.tableGrid{grid-template-columns:1fr}}
+  
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+
+.mh2-actions .mh2-btn--ghost{display:none !important;}
+</style>
+  <script src="community_state_stable.js"></script>
+<style>
+/* FORCE white text in Status & Details section */
+#boardSubmittedItemsSection,
+#boardSubmittedItemsSection *:not(button),
+#boardMemberHubStatus,
+#boardMemberHubStatus *:not(button),
+#annualMeetingApprovals,
+#annualMeetingApprovals *:not(button) {
+  color: #ffffff !important;
+}
+
+/* Secondary text (slightly dimmed white) */
+#boardSubmittedItemsSection .muted,
+#boardMemberHubStatus .muted,
+#annualMeetingApprovals .muted {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style>
+/* HARD OVERRIDE — force white text in dark section */
+.hub-zone:last-of-type,
+.hub-zone:last-of-type *:not(button):not(.badge):not(.pill) {
+  color: #ffffff !important;
+}
+
+/* Slightly softer for secondary text */
+.hub-zone:last-of-type .muted,
+.hub-zone:last-of-type p,
+.hub-zone:last-of-type span {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+</head>
+<body>
+  <div id="zummeeHeaderMount"></div>
+  <main>
+    <section class="card">
+      <div class="topRow">
+        <div>
+          <h1>Emergency Alert History</h1>
+          <div class="sub">Review past emergency texts, recipient totals, and delivery status across your communities.</div>
+        </div>
+        <div class="btnRow">
+          <a class="btn" href="emergency_texting.html">Back to Emergency Texting</a>
+          <a class="btn" href="manager_hub.html">Back to Manager Hub</a>
+        </div>
+      </div>
+      <div class="msg" id="pageMsg"></div>
+    </section>
+
+    <section class="grid">
+      <section class="card">
+        <h2 style="margin:0 0 8px;color:var(--brand)">Filters</h2>
+        <div class="field" style="margin-top:12px">
+          <label for="communityFilter">Community</label>
+          <select id="communityFilter"></select>
+        </div>
+        <div class="field" style="margin-top:12px">
+          <label for="statusFilter">Status</label>
+          <select id="statusFilter">
+            <option value="">All statuses</option>
+            <option value="sent">Sent</option>
+            <option value="partial_success">Partial Success</option>
+            <option value="twilio_not_configured">Twilio Not Configured</option>
+            <option value="failed">Failed</option>
+          </select>
+        </div>
+        <div class="field" style="margin-top:12px">
+          <label for="daysFilter">Time Window</label>
+          <select id="daysFilter">
+            <option value="7">Last 7 days</option>
+            <option value="30" selected>Last 30 days</option>
+            <option value="90">Last 90 days</option>
+            <option value="365">Last 12 months</option>
+            <option value="0">All time</option>
+          </select>
+        </div>
+        <div class="btnRow" style="margin-top:16px">
+          <button class="btn primary" id="refreshBtn" type="button">Refresh History</button>
+          <button class="btn" id="clearBtn" type="button">Clear Filters</button>
+        </div>
+        <div class="helper" style="margin-top:12px">History is filtered to your company communities when company_id is available.</div>
+      </section>
+
+      <section class="card">
+        <h2 style="margin:0 0 8px;color:var(--brand)">Summary</h2>
+        <div class="statWrap">
+          <div class="stat"><div class="k">Alerts Found</div><div class="v" id="alertsCount">0</div></div>
+          <div class="stat"><div class="k">Recipients Reached</div><div class="v" id="recipientsTotal">0</div></div>
+          <div class="stat"><div class="k">Communities Reached</div><div class="v" id="communitiesCount">0</div></div>
+        </div>
+        <div class="tableGrid">
+          <div class="stat"><div class="k">Sent</div><div class="v" id="sentCount">0</div></div>
+          <div class="stat"><div class="k">Partial / Pending</div><div class="v" id="otherCount">0</div></div>
+        </div>
+        <div class="list" id="historyList"><div class="empty">No emergency alerts found yet.</div></div>
+      </section>
+    </section>
+  </main>
+  <script>
+    let sbClient = null;
+    let profileCtx = null;
+    let communityRows = [];
+    let allLogs = [];
+
+    function setMsg(text, ok){
+      const el = document.getElementById('pageMsg');
+      el.textContent = text || '';
+      el.className = 'msg ' + (text ? (ok ? 'ok' : 'err') : '');
+    }
+    async function getClient(){
+      if(sbClient) return sbClient;
+      try{ if(typeof ensureSupabase === 'function'){ sbClient = await ensureSupabase(); } }catch(_e){}
+      if(!sbClient && window.supabaseClient) sbClient = window.supabaseClient;
+      if(!sbClient && window.sb) sbClient = window.sb;
+      if(!sbClient){ sbClient = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY); }
+      return sbClient;
+    }
+    function getStoredCompanyId(){
+      return String(window.activeCompanyId || localStorage.getItem('activeCompanyId') || localStorage.getItem('zummee_active_company_id') || localStorage.getItem('zummee_company_id') || '').trim();
+    }
+    function getStoredCompanyName(){
+      return String(window.activeCompanyName || localStorage.getItem('activeCompanyName') || localStorage.getItem('zummee_active_company_name') || localStorage.getItem('companyName') || '').trim();
+    }
+    async function getProfileContext(){
+      if(profileCtx) return profileCtx;
+      const sb = await getClient();
+      const authRes = await sb.auth.getUser();
+      const uid = authRes?.data?.user?.id || '';
+      let profile = null;
+      if(uid){
+        const q = await sb.from('profiles').select('name,email,company,company_id,selected_community_id,role').eq('id', uid).maybeSingle();
+        if(!q.error && q.data) profile = q.data;
+      }
+      profileCtx = {
+        uid,
+        name: String(profile?.name || authRes?.data?.user?.user_metadata?.name || authRes?.data?.user?.email || 'Zummee Staff').trim(),
+        email: String(profile?.email || authRes?.data?.user?.email || '').trim(),
+        company: String(profile?.company || '').trim() || getStoredCompanyName(),
+        company_id: String(profile?.company_id || '').trim() || getStoredCompanyId(),
+        role: String(profile?.role || localStorage.getItem('role') || '').trim()
+      };
+      return profileCtx;
+    }
+    async function loadCommunities(){
+      const sb = await getClient();
+      const ctx = await getProfileContext();
+      let rows = [];
+      if(ctx.company_id){
+        const q = await sb.from('PropertyCommunities').select('id,name,company_id,company').eq('company_id', ctx.company_id).order('name', { ascending:true });
+        if(!q.error && Array.isArray(q.data) && q.data.length) rows = q.data;
+      }
+      if(!rows.length && ctx.company){
+        const q = await sb.from('PropertyCommunities').select('id,name,company_id,company').eq('company', ctx.company).order('name', { ascending:true });
+        if(!q.error && Array.isArray(q.data) && q.data.length) rows = q.data;
+      }
+      if(!rows.length && ctx.company){
+        const q = await sb.from('Communities').select('id,name,company').eq('company', ctx.company).order('name', { ascending:true });
+        if(!q.error && Array.isArray(q.data) && q.data.length) rows = q.data;
+      }
+      if((ctx.role === 'Employee' || ctx.role === 'Supervisor') && ctx.uid){
+        const a = await sb.from('CommunityAssignments').select('community_id').eq('user_id', ctx.uid);
+        const ids = (a.data||[]).map(r => String(r.community_id||'').trim()).filter(Boolean);
+        if(ids.length) rows = rows.filter(r => ids.includes(String(r.id||'')));
+      }
+      communityRows = Array.isArray(rows) ? rows : [];
+      const select = document.getElementById('communityFilter');
+      select.innerHTML = '<option value="">All communities</option>' + communityRows.map(r => `<option value="${String(r.id||'')}">${String(r.name||'Unnamed Community')}</option>`).join('');
+    }
+    function statusTone(status){
+      const v = String(status || '').toLowerCase();
+      if(v === 'sent') return '#11653a';
+      if(v === 'partial_success') return '#8a5a00';
+      if(v === 'twilio_not_configured') return '#6b7280';
+      return '#8c1d18';
+    }
+    function formatRow(r){
+      const sentAt = new Date(r.sent_at || r.created_at || Date.now()).toLocaleString();
+      const uniqueCount = Array.isArray(r.unique_numbers) ? r.unique_numbers.length : Number(r.recipient_count || 0);
+      return `
+        <div class="item">
+          <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start">
+            <div>
+              <strong style="font-size:18px">${String(r.community_name || r.community_id || 'Community')}</strong>
+              <div class="helper" style="margin-top:4px">${String(r.template_title || 'Custom Message')}</div>
+            </div>
+            <span class="pill" style="color:${statusTone(r.status)}">${String(r.status || 'logged').replace(/_/g,' ')}</span>
+          </div>
+          <div class="body">${String(r.message_body || '').replace(/</g,'&lt;')}</div>
+          <div class="metaRow">
+            <span><strong>Sent:</strong> ${sentAt}</span>
+            <span><strong>Recipients:</strong> ${Number(r.recipient_count || 0)}</span>
+            <span><strong>Residents:</strong> ${Number(r.resident_count || 0)}</span>
+            <span><strong>Board:</strong> ${Number(r.board_count || 0)}</span>
+            <span><strong>Unique numbers:</strong> ${uniqueCount}</span>
+            <span><strong>Sent by:</strong> ${String(r.sent_by_name || r.sent_by_email || 'Zummee Staff')}</span>
+          </div>
+        </div>`;
+    }
+    function applyFilters(){
+      const communityId = String(document.getElementById('communityFilter').value || '').trim();
+      const status = String(document.getElementById('statusFilter').value || '').trim().toLowerCase();
+      const days = Number(document.getElementById('daysFilter').value || 30);
+      const cutoff = days > 0 ? (Date.now() - days * 86400000) : 0;
+      const rows = allLogs.filter(r => {
+        const rowCommunity = String(r.community_id || '').trim();
+        const rowStatus = String(r.status || '').trim().toLowerCase();
+        const rowTime = new Date(r.sent_at || r.created_at || Date.now()).getTime();
+        if(communityId && rowCommunity !== communityId) return false;
+        if(status && rowStatus !== status) return false;
+        if(cutoff && rowTime < cutoff) return false;
+        return true;
+      });
+      document.getElementById('alertsCount').textContent = String(rows.length);
+      document.getElementById('recipientsTotal').textContent = String(rows.reduce((sum, r) => sum + Number(r.recipient_count || 0), 0));
+      document.getElementById('communitiesCount').textContent = String(new Set(rows.map(r => String(r.community_id || r.community_name || ''))).size || 0);
+      document.getElementById('sentCount').textContent = String(rows.filter(r => String(r.status || '').toLowerCase() === 'sent').length);
+      document.getElementById('otherCount').textContent = String(rows.filter(r => String(r.status || '').toLowerCase() !== 'sent').length);
+      const wrap = document.getElementById('historyList');
+      if(!rows.length){
+        wrap.innerHTML = '<div class="empty">No emergency alerts match the current filters.</div>';
+        return;
+      }
+      wrap.innerHTML = rows.map(formatRow).join('');
+    }
+    async function loadHistory(){
+      const sb = await getClient();
+      const ctx = await getProfileContext();
+      setMsg('', true);
+      try{
+        let q = sb.from('EmergencyTextLogs').select('*').order('sent_at', { ascending:false }).limit(200);
+        if(ctx.company_id){
+          q = q.eq('company_id', ctx.company_id);
+        }else if(Array.isArray(communityRows) && communityRows.length){
+          const ids = communityRows.map(r => String(r.id || '')).filter(Boolean);
+          if(ids.length) q = q.in('community_id', ids);
+        }
+        const res = await q;
+        if(res.error) throw res.error;
+        allLogs = Array.isArray(res.data) ? res.data : [];
+        applyFilters();
+      }catch(err){
+        allLogs = [];
+        applyFilters();
+        setMsg(err.message || 'Unable to load emergency alert history.', false);
+      }
+    }
+    function bind(){
+      document.getElementById('refreshBtn').addEventListener('click', loadHistory);
+      document.getElementById('clearBtn').addEventListener('click', () => {
+        document.getElementById('communityFilter').value = '';
+        document.getElementById('statusFilter').value = '';
+        document.getElementById('daysFilter').value = '30';
+        applyFilters();
+      });
+      document.getElementById('communityFilter').addEventListener('change', applyFilters);
+      document.getElementById('statusFilter').addEventListener('change', applyFilters);
+      document.getElementById('daysFilter').addEventListener('change', applyFilters);
+    }
+    (async function init(){
+      bind();
+      await loadCommunities();
+      await loadHistory();
+    })();
+  </script>
+<script src="company_logo_sync.js"></script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

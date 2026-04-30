@@ -1,0 +1,26 @@
+Mileage Report Professional Email Setup
+
+This build adds a new Supabase Edge Function:
+  supabase/functions/send-mileage-report-email/index.ts
+
+What it does:
+- Sends a branded Zummee HTML email through Resend
+- Addresses the email to the saved recipient name
+- Clearly states which employee the report is for
+- Attaches the monthly CSV and PDF files automatically
+
+Required one-time setup:
+1. Set your Resend key if not already set:
+   supabase secrets set RESEND_API_KEY=your_resend_api_key_here
+
+2. Optional sender secrets:
+   supabase secrets set MILEAGE_REPORT_FROM_EMAIL="Zummee Reports <noreply@mail.zummee.net>"
+   supabase secrets set MILEAGE_REPORT_REPLY_TO_EMAIL="support@mail.zummee.net"
+
+3. Deploy the function:
+   supabase functions deploy send-mileage-report-email --project-ref slcwuuwyrgnmlmxpcaim --no-verify-jwt
+
+After deployment:
+- Mileage Tracker > Reports > Email Summary will send the professional HTML email
+- The recipient name and email from the report section are used automatically
+- The report is labeled for the logged-in employee

@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>window.ZUMMEE_BUILD="2026-03-27-1";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zummee Maintenance Request</title>
+  
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+    :root{
+      --navy:#0f3554; --bg:#f4f6fa; --card:#ffffff; --muted:#5d6b7a; --border:#d9e1ea;
+      --success:#d9f2e3; --warning:#fff1c9; --info:#dbeafe; --danger:#fee2e2;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(180deg,#eef5fb 0%,#f7f9fc 100%);color:#102a43}
+
+    .wrap{max-width:960px;margin:24px auto;padding:0 16px 44px}
+    .card{background:var(--card);border:1px solid rgba(15,53,84,.14);border-radius:28px;padding:24px;box-shadow:0 18px 42px rgba(15,53,84,.10), 0 4px 12px rgba(15,53,84,.06)}
+    .meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:18px}
+    .metaBox{background:#f9fbfd;border:1.5px solid var(--border);border-radius:18px;padding:14px 16px}
+    .metaLabel{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;font-weight:700}
+    .metaValue{font-size:18px;font-weight:700;word-break:break-word}
+    .requestBox{background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);border:1px solid rgba(15,53,84,.10);border-radius:22px;padding:20px;margin:18px 0;box-shadow:inset 0 1px 0 rgba(255,255,255,.85)}
+    .requestBox h2{margin:0 0 12px;font-size:28px;color:var(--navy);line-height:1.1}
+    .requestHtml{font-size:17px;line-height:1.55;word-break:break-word}
+    .requestHtml h1,.requestHtml h2,.requestHtml h3,.requestHtml h4{color:var(--navy);margin-top:0}
+    .actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:11px 18px;border-radius:999px;border:2px solid var(--navy);background:#fff;color:var(--navy);text-decoration:none;font-size:16px;font-weight:800;cursor:pointer}
+    .btn.primary{background:var(--navy);color:#fff}
+    .btn:disabled{opacity:.55;cursor:not-allowed}
+    .statusRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
+    .pill{display:inline-flex;align-items:center;padding:8px 12px;border-radius:999px;font-size:14px;font-weight:800;border:1px solid transparent}
+    .pill.sent{background:var(--info);color:#174a7c}
+    .pill.pending{background:var(--warning);color:#7b5b00}
+    .pill.error{background:var(--danger);color:#8c1d18}
+    .pill.completed{background:var(--success);color:#11653a}
+    .notice{margin-top:18px;background:#f9fbfd;border:1.5px solid var(--border);border-radius:16px;padding:14px 16px;color:var(--muted);line-height:1.5}
+    .error{background:#fff5f5;color:#8c1d18;border:1.5px solid #fecaca;border-radius:16px;padding:16px;font-weight:700}
+    .loading{color:var(--muted);font-weight:700}
+    .updateBox{background:#fbfcfe;border:1.5px solid var(--border);border-radius:18px;padding:18px;margin-top:18px}
+    .updateBox h3{margin:0 0 12px;color:var(--navy);font-size:24px}
+    .controlRow{display:grid;grid-template-columns:1fr 220px;gap:12px;align-items:end}
+    .field label{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;font-weight:700}
+    .field select,.field textarea{width:100%;border:1.5px solid var(--border);border-radius:16px;background:#fff;padding:12px 14px;font-size:16px;font-family:Arial,Helvetica,sans-serif;color:#102a43}
+    .field textarea{min-height:120px;resize:vertical;margin-top:12px}
+    .statusMsg{margin-top:12px;font-weight:700}
+    .statusMsg.ok{color:#11653a}
+    .statusMsg.err{color:#8c1d18}
+    .hidden{display:none}
+
+#zummeeHeaderMount{position:sticky;top:0;z-index:20;box-shadow:0 6px 18px rgba(15,53,84,.08)}
+.metaBox{background:rgba(255,255,255,.82);border:1px solid rgba(15,53,84,.08);border-radius:18px;padding:16px 18px;box-shadow:0 4px 14px rgba(15,53,84,.05)}
+.requestBox h2{margin-top:0;margin-bottom:12px;font-size:28px;color:#0f2f4a}
+/* Vendor header fallback overrides */
+      .requestBox h2{font-size:24px}.requestHtml{font-size:16px}.actions{flex-direction:column}.btn{width:100%}
+      .controlRow{grid-template-columns:1fr}
+    }
+  /* Vendor skyline logo polish */
+    #zummeeHeaderMount .zummee-header.zummee-header--minimal .zummee-header__logo img{
+      height: 78px !important;
+      max-height: 78px !important;
+      width: auto !important;
+      object-fit: contain !important;
+    }
+
+    /* Vendor header polish */
+    #zummeeHeaderMount .zummee-header.zummee-header--minimal{
+      padding: 20px 28px !important;
+      min-height: 124px;
+    }
+    #zummeeHeaderMount .zummee-header.zummee-header--minimal .zummee-header__logo img{
+      height: 82px !important;
+      max-height: 82px !important;
+      width: auto !important;
+    }
+    #zummeeHeaderMount .zummee-header.zummee-header--minimal .zummee-header__title{
+      font-size: 2.1rem !important;
+      letter-spacing: -0.02em;
+    }
+    @media (max-width: 880px){
+      #zummeeHeaderMount .zummee-header.zummee-header--minimal{
+        padding: 16px 18px !important;
+        min-height: auto;
+      }
+      #zummeeHeaderMount .zummee-header.zummee-header--minimal .zummee-header__logo img{
+        height: 72px !important;
+        max-height: 72px !important;
+      }
+      #zummeeHeaderMount .zummee-header.zummee-header--minimal .zummee-header__title{
+        font-size: 1.45rem !important;
+      }
+    }
+  
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+
+.mh2-actions .mh2-btn--ghost{display:none !important;}
+</style>
+
+<style id="vendorSharedHeaderTune">
+body[data-page-title="Maintenance Request"] #zummeeHeaderMount{position:sticky;top:0;z-index:20;box-shadow:0 6px 18px rgba(15,53,84,.08)}
+body[data-page-title="Maintenance Request"] header.zm-header .zm-header__logo img{
+  height:42px !important;
+  min-height:42px !important;
+  max-height:42px !important;
+  width:auto !important;
+}
+@media (max-width: 768px){
+  body[data-page-title="Maintenance Request"] header.zm-header .zm-header__logo img{
+    height:36px !important;
+    min-height:36px !important;
+    max-height:36px !important;
+  }
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+  <script src="community_state_stable.js"></script>
+<style>
+/* FORCE white text in Status & Details section */
+#boardSubmittedItemsSection,
+#boardSubmittedItemsSection *:not(button),
+#boardMemberHubStatus,
+#boardMemberHubStatus *:not(button),
+#annualMeetingApprovals,
+#annualMeetingApprovals *:not(button) {
+  color: #ffffff !important;
+}
+
+/* Secondary text (slightly dimmed white) */
+#boardSubmittedItemsSection .muted,
+#boardMemberHubStatus .muted,
+#annualMeetingApprovals .muted {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style>
+/* HARD OVERRIDE — force white text in dark section */
+.hub-zone:last-of-type,
+.hub-zone:last-of-type *:not(button):not(.badge):not(.pill) {
+  color: #ffffff !important;
+}
+
+/* Slightly softer for secondary text */
+.hub-zone:last-of-type .muted,
+.hub-zone:last-of-type p,
+.hub-zone:last-of-type span {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+</head>
+<body data-header-mode="simple" data-page-title="Maintenance Request">
+  <div id="zummeeHeaderMount"></div>
+  <main class="wrap">
+    <section class="card">
+      <div id="state" class="loading">Loading request...</div>
+      <div id="content" class="hidden">
+        <div class="meta">
+          <div class="metaBox">
+            <div class="metaLabel">Submitted</div>
+            <div class="metaValue" id="submittedAt">—</div>
+          </div>
+          <div class="metaBox">
+            <div class="metaLabel">Current Status</div>
+            <div class="metaValue statusRow"><span id="statusPill" class="pill sent">Sent</span></div>
+          </div>
+        </div>
+        <div class="requestBox">
+          <h2 id="requestSubject">Maintenance Request</h2>
+          <div id="requestHtml" class="requestHtml"></div>
+        </div>
+        <div class="meta">
+          <div class="metaBox">
+            <div class="metaLabel">Reply Contact</div>
+            <div class="metaValue" id="employeeEmail">—</div>
+          </div>
+          <div class="metaBox">
+            <div class="metaLabel">Request ID</div>
+            <div class="metaValue" id="requestId">—</div>
+          </div>
+        </div>
+        <div class="actions">
+          <a id="replyBtn" class="btn primary" href="#">Reply to Employee</a>
+          <button id="copyBtn" class="btn" type="button">Copy Request Link</button>
+        </div>
+        <div class="updateBox">
+          <h3>Update Status</h3>
+          <div class="controlRow">
+            <div class="field">
+              <label for="statusSelect">New Status</label>
+              <select id="statusSelect">
+                <option value="sent">Sent</option>
+                <option value="received">Received</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="error">Error</option>
+              </select>
+            </div>
+            <button id="saveStatusBtn" class="btn primary" type="button">Save Status</button>
+          </div>
+          <div class="field">
+            <label for="vendorNotes">Vendor Notes (optional)</label>
+            <textarea id="vendorNotes" placeholder="Add a quick update for the team."></textarea>
+          </div>
+          <div id="statusMsg" class="statusMsg hidden"></div>
+        </div>
+        <div class="notice">
+          Use the reply button to respond directly to the employee. Status updates can be saved here and will write back to Zummee.
+        </div>
+      </div>
+    </section>
+  </main>
+  <script>
+    const GET_FUNCTION_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co/functions/v1/get-maintenance-request";
+    const UPDATE_FUNCTION_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co/functions/v1/update-maintenance-status";
+    let currentToken = null;
+    let currentRequestData = null;
+
+    function escapeHtml(str){
+      return (str || "").toString().replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+    }
+    function statusClass(status){
+      const s = (status || "").toLowerCase();
+      if (s === "completed") return "completed";
+      if (s === "error" || s === "failed") return "error";
+      if (s === "pending" || s === "queued" || s === "scheduled" || s === "received" || s === "in_progress") return "pending";
+      return "sent";
+    }
+    function formatStatus(status){
+      return (status || "sent").replaceAll("_"," ").replace(/\b\w/g, m => m.toUpperCase());
+    }
+    function setStatusUi(status){
+      const pill = document.getElementById("statusPill");
+      pill.textContent = formatStatus(status);
+      pill.className = `pill ${statusClass(status)}`;
+      document.getElementById("statusSelect").value = status || "sent";
+    }
+    function setMessage(text, ok){
+      const msg = document.getElementById("statusMsg");
+      msg.textContent = text;
+      msg.className = `statusMsg ${ok ? "ok" : "err"}`;
+      msg.classList.remove("hidden");
+    }
+
+    async function loadRequest(){
+      const state = document.getElementById("state");
+      const content = document.getElementById("content");
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("t");
+      currentToken = token;
+      if (!token){
+        state.className = "error";
+        state.textContent = "Missing request token.";
+        return;
+      }
+      try{
+        const res = await fetch(`${GET_FUNCTION_URL}?t=${encodeURIComponent(token)}`);
+        const raw = await res.text();
+        let data = null;
+        try { data = raw ? JSON.parse(raw) : null; } catch(_e) { throw new Error("Unable to load request (invalid response)."); }
+        if (!res.ok) throw new Error(data?.error || "Unable to load request.");
+        if (!data) throw new Error("Unable to load request (empty response).");
+        currentRequestData = data;
+
+        document.getElementById("submittedAt").textContent = data.created_at ? new Date(data.created_at).toLocaleString() : "—";
+        document.getElementById("requestSubject").textContent = data.subject || "Maintenance Request";
+        document.getElementById("requestId").textContent = data.id || "—";
+        document.getElementById("employeeEmail").textContent = data.employee_email || "—";
+        setStatusUi(data.status || "sent");
+        document.getElementById("requestHtml").innerHTML = data.html || `<pre>${escapeHtml(data.text || "")}</pre>`;
+
+        const replyBtn = document.getElementById("replyBtn");
+        if (data.employee_email){
+          replyBtn.href = `mailto:${encodeURIComponent(data.employee_email)}?subject=${encodeURIComponent("Re: " + (data.subject || "Maintenance Request"))}`;
+        } else {
+          replyBtn.removeAttribute("href");
+          replyBtn.classList.remove("primary");
+          replyBtn.textContent = "No reply email available";
+        }
+
+        document.getElementById("copyBtn").addEventListener("click", async () => {
+          try { await navigator.clipboard.writeText(window.location.href); alert("Request link copied."); }
+          catch(_e){ alert("Unable to copy link on this device."); }
+        });
+
+        document.getElementById("saveStatusBtn").addEventListener("click", updateStatus);
+        state.style.display = "none";
+        content.classList.remove("hidden");
+      }catch(err){
+        state.className = "error";
+        state.textContent = err?.message || "Unable to load request.";
+      }
+    }
+
+    async function updateStatus(){
+      const btn = document.getElementById("saveStatusBtn");
+      const newStatus = document.getElementById("statusSelect").value;
+      const notes = document.getElementById("vendorNotes").value.trim();
+
+      if (!currentToken){
+        setMessage("Missing request token.", false);
+        return;
+      }
+
+      btn.disabled = true;
+      setMessage("Saving update...", true);
+
+      try{
+        const res = await fetch(UPDATE_FUNCTION_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: currentToken, status: newStatus, vendor_notes: notes || null })
+        });
+
+        const raw = await res.text();
+        let data = null;
+        try { data = raw ? JSON.parse(raw) : null; } catch(_e) { data = null; }
+        if (!res.ok) throw new Error(data?.error || "Unable to save status update.");
+
+        setStatusUi(data?.status || newStatus);
+
+        try{
+          var requestId = String((data && data.id) || (currentRequestData && currentRequestData.id) || '').trim();
+          var communityId = (data && data.community_id) || (currentRequestData && currentRequestData.community_id) || null;
+          var employeeUserId = (data && data.employee_user_id) || (currentRequestData && currentRequestData.employee_user_id) || null;
+          var normalizedStatus = String((data && data.status) || newStatus || '').toLowerCase();
+          var eventType = '';
+          var title = '';
+          var message = '';
+
+          if(normalizedStatus === 'received' || normalizedStatus === 'accepted' || normalizedStatus === 'active'){
+            eventType = 'vendor_accepted_job';
+            title = 'Vendor Accepted Job';
+            message = 'A vendor accepted a maintenance request.';
+          }else if(normalizedStatus === 'scheduled'){
+            eventType = 'vendor_scheduled_job';
+            title = 'Vendor Scheduled Job';
+            message = 'A vendor scheduled a maintenance request.';
+          }else if(normalizedStatus === 'in_progress'){
+            eventType = 'vendor_in_progress';
+            title = 'Vendor In Progress';
+            message = 'A maintenance request is in progress.';
+          }else if(normalizedStatus === 'completed'){
+            eventType = 'vendor_completed_job';
+            title = 'Vendor Completed Job';
+            message = 'A vendor completed a maintenance request.';
+          }
+
+          if(eventType && requestId){
+            var sb = null;
+            try{
+              if(typeof ensureSupabase === 'function') sb = await ensureSupabase();
+            }catch(_e){}
+            if(!sb && window.sb) sb = window.sb;
+            if(!sb && window.supabaseClient) sb = window.supabaseClient;
+
+            if(sb && typeof sb.rpc === 'function'){
+              await sb.rpc('create_notification_event', {
+                p_event_type: eventType,
+                p_priority: normalizedStatus === 'completed' ? 'normal' : 'high',
+                p_title: title,
+                p_message: message,
+                p_link_url: 'resident_work_orders.html?open_work_order_id=' + encodeURIComponent(String(requestId)),
+                p_community_id: communityId,
+                p_actor_user_id: null,
+                p_target_user_id: employeeUserId,
+                p_target_role: employeeUserId ? null : 'Employee',
+                p_audience_scope: employeeUserId ? 'user' : 'role',
+                p_source_table: 'resident_work_orders',
+                p_source_id: String(requestId),
+                p_metadata: {
+                  work_order_id: requestId,
+                  status: normalizedStatus
+                }
+              });
+            }
+          }
+        }catch(notificationErr){
+          console.warn('Vendor status notification create failed:', notificationErr);
+        }
+
+        setMessage("Status updated successfully.", true);
+      }catch(err){
+        setMessage(err?.message || "Unable to save status update.", false);
+      }finally{
+        btn.disabled = false;
+      }
+    }
+
+    loadRequest();
+  </script>
+<script src="company_logo_sync.js"></script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

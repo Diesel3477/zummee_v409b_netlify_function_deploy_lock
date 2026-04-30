@@ -1,0 +1,42 @@
+Board Member Invite Flow Setup
+
+This build upgrades the Daily Ops board member Invite button to use a custom Resend email flow with a clean Supabase auth-link generation path.
+
+What is included:
+- ops.html
+  - Board member Invite calls send-board-member-invites
+- login.html
+  - BoardMember invites redirect to board_member_hub.html after sign-in / password setup
+- Edge Function source:
+  - supabase/functions/send-board-member-invites/index.ts
+
+How the new invite flow works:
+1. The function stores a record in board_member_invites.
+2. It checks whether the email already exists in Supabase Auth.
+3. For a new user, it generates a Supabase invite link.
+4. For an existing user, it generates a Supabase magic link.
+5. It sends the email through Resend.
+6. The link returns the user to login.html with the board member invite token.
+7. After sign-in, the app finalizes the invite and routes the user to board_member_hub.html.
+
+Required secrets:
+1. Redirect URL:
+   supabase secrets set BOARD_MEMBER_REDIRECT_URL=https://zummee.net/login.html
+2. Resend API key:
+   supabase secrets set RESEND_API_KEY=your_resend_api_key_here
+3. Optional sender override:
+   supabase secrets set BOARD_MEMBER_FROM_EMAIL="Zummee <noreply@zummee.net>"
+
+Deploy step:
+   supabase functions deploy send-board-member-invites --project-ref slcwuuwyrgnmlmxpcaim --no-verify-jwt
+
+Expected result:
+- Clicking Invite sends a real email through Resend.
+- New board members receive an invite/setup link.
+- Existing users receive a secure sign-in link.
+- After authentication, the board member is routed into Board Member Hub.
+
+Notes:
+- If a board member account is already in Auth, the function sends a magic link instead of failing.
+- The function returns detailed per-email results so the page can show meaningful errors.
+- CORS handling is built in for browser-based calls.

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Message Property Manager</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="shared/supabase-client.js?v=2026-04-26-196"></script>
+  <script src="shared/resident-auth.js?v=2026-04-26-196"></script>
+  <script src="company_logo_sync.js?v=2026-04-26-196"></script>
+  
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+    :root{--blue:#12324d;--line:#9bc9ff;--muted:#5f7288;--bg:#eef5fb;--soft:#f5f9ff}*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:var(--blue);background:linear-gradient(180deg,#f1f7ff 0%,#edf5fd 55%,#f8fbff 100%)}.shell{max-width:1040px;margin:0 auto;padding:24px 18px 50px}.hero,.card{background:rgba(255,255,255,.96);border:2px solid var(--line);border-radius:28px;box-shadow:0 18px 46px rgba(18,50,77,.10)}.hero{padding:22px 26px;display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center}.kicker{font-size:12px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;color:#6c7f94}.hero h1{margin:5px 0 0;font-size:30px;line-height:1.05;letter-spacing:-.04em}.heroRight{display:flex;flex-direction:column;align-items:flex-end;gap:10px}.heroLogo{height:52px;max-width:190px;object-fit:contain;display:none}.heroLogo.is-visible{display:block}.btn{border:2px solid var(--line);background:#fff;color:var(--blue);border-radius:16px;padding:11px 15px;font-weight:950;font-size:14px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.layout{display:grid;grid-template-columns:1fr .78fr;gap:18px;margin-top:18px}.card{padding:20px}.card h2{margin:0;font-size:23px;letter-spacing:-.03em}.sub{margin:7px 0 0;color:var(--muted);line-height:1.38}.managerBox{margin-top:14px;border:1px solid rgba(18,50,77,.12);border-radius:20px;background:#fbfdff;padding:14px}.managerName{font-weight:950}.managerEmail{color:var(--muted);font-size:14px;margin-top:3px}.formGrid{display:grid;gap:12px;margin-top:16px}label{font-weight:900;font-size:13px;color:#37536d}input,textarea{width:100%;border:1px solid rgba(18,50,77,.16);border-radius:16px;background:#fff;color:var(--blue);font:inherit;padding:13px 14px;outline:none}textarea{min-height:138px;resize:vertical}.status{margin-top:10px;font-size:14px;font-weight:850;color:var(--muted)}.status.ok{color:#166534}.status.bad{color:#991b1b}.threadList{display:grid;gap:12px;margin-top:15px}.thread{border:1px solid rgba(18,50,77,.12);border-radius:20px;background:#fff;padding:14px;cursor:pointer}.thread:hover{border-color:#78b8ff;box-shadow:0 10px 22px rgba(18,50,77,.06)}.threadTop{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.thread strong{font-size:15px}.pill{border-radius:999px;background:#eef6ff;border:1px solid rgba(59,130,246,.18);font-size:10px;font-weight:950;text-transform:uppercase;letter-spacing:.08em;color:#1d4ed8;padding:6px 9px;white-space:nowrap}.threadMsg{margin-top:7px;color:#38536e;font-size:14px;line-height:1.35}.conversation{margin-top:15px;border:1px solid rgba(18,50,77,.12);border-radius:20px;background:#fbfdff;padding:14px;display:none}.conversation.is-open{display:block}.bubble{max-width:88%;margin:8px 0;padding:11px 13px;border-radius:16px;background:#fff;border:1px solid rgba(18,50,77,.10);color:#2c4660;line-height:1.35}.bubble.manager{margin-left:auto;background:#eef6ff}.bubbleMeta{font-size:12px;color:var(--muted);font-weight:800;margin-bottom:4px}.empty{padding:13px;border-radius:18px;background:#fff8e6;border:1px solid rgba(180,120,0,.16);color:#725000;font-weight:800;margin-top:12px}@media(max-width:820px){.layout{grid-template-columns:1fr}.hero{grid-template-columns:1fr auto}.hero h1{font-size:27px}.shell{padding:18px 14px 42px}.card{border-radius:24px;padding:18px}}@media(max-width:560px){.hero{grid-template-columns:1fr}.heroRight{align-items:flex-start}}
+  </style>
+<style id="zummee-global-hero-header-refactor">
+/* v224: safe header refactor - stack contextual actions under the wired logo */
+.heroRight{display:flex !important;flex-direction:column !important;align-items:flex-end !important;justify-content:flex-start !important;gap:10px !important;}
+.heroRight img,.heroRight .logo,.heroRight .heroLogo{margin:0 !important;}
+.heroRight .btn,.heroRight button,.heroRight a{align-self:flex-end !important;}
+@media(max-width:800px){.heroRight{width:100% !important;align-items:flex-end !important;}}
+</style>
+
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div><div class="kicker">Resident Support</div><h1>Message Property Manager</h1></div>
+      <div class="heroRight"><img id="pageCompanyLogo" class="heroLogo" alt="Company logo"><a class="btn" href="community_experience.html">Resident Home</a></div>
+    </section>
+    <section class="layout">
+      <section class="card">
+        <h2>Send a Message</h2>
+        <p class="sub">Your message will go to the property manager assigned to your community.</p>
+        <div class="managerBox"><div class="managerName" id="managerName">Loading property manager…</div><div class="managerEmail" id="managerEmail"></div></div>
+        <div class="formGrid">
+          <div><label for="messageSubject">Subject</label><input id="messageSubject" placeholder="What is this about?" /></div>
+          <div><label for="messageBody">Message</label><textarea id="messageBody" placeholder="Type your message here…"></textarea></div>
+          <button class="btn primary" id="sendMessageBtn" type="button">Send Message</button>
+          <div class="status" id="sendStatus"></div>
+        </div>
+      </section>
+      <aside class="card">
+        <h2>Your Messages</h2>
+        <p class="sub">Review messages and replies from your manager.</p>
+        <div id="threadList" class="threadList"><div class="empty">No messages yet.</div></div>
+        <div id="conversation" class="conversation"></div>
+      </aside>
+    </section>
+  </main>
+<script>
+const $=id=>document.getElementById(id);const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));let ctx={resident:null,user:null,communityId:'',communityName:'',companyId:'',managerName:'',managerEmail:'',managerUserId:''};async function getClient(){if(window.ensureSupabase)return await window.ensureSupabase();return window.supabaseClient||window.sb||null}function setStatus(msg,type){const el=$('sendStatus');el.textContent=msg||'';el.className='status '+(type||'')}function setLogo(url){const img=$('pageCompanyLogo');if(!img)return;if(url){img.src=url;img.style.display='block';img.classList.add('is-visible')}else{img.removeAttribute('src');img.style.display='none';img.classList.remove('is-visible')}}async function loadContext(){const sb=await getClient();let auth=null;try{auth=await window.ZummeeResidentAuth.requireResident({redirect:false})}catch(e){}if(!auth||!auth.ok){location.replace('manager_hub.html');return}const resident=auth.ctx.resident||{};const user=auth.ctx.user||{};ctx.resident=resident;ctx.user=user;ctx.communityId=resident.community_id||resident.communityId||localStorage.getItem('zummee_selected_community_id')||'';ctx.communityName=resident.community_name||resident.community||resident.communityName||localStorage.getItem('currentCommunityName')||'Your Community';ctx.companyId=resident.company_id||localStorage.getItem('zummee_company_id')||'';try{if(sb&&ctx.companyId){const r=await sb.from('companies').select('logo_path').eq('id',ctx.companyId).maybeSingle();if(r&&!r.error&&r.data&&r.data.logo_path){const path=r.data.logo_path;const url=/^https?:\/\//i.test(path)?path:sb.storage.from('company_logos').getPublicUrl(path).data.publicUrl;setLogo(url)}}}catch(e){}await loadAssignedManager();await loadThreads()}async function loadAssignedManager(){const sb=await getClient();if(!sb)return;try{let q=sb.from('community_assignments').select('*').limit(1);if(ctx.communityId)q=q.eq('community_id',ctx.communityId);else q=q.eq('community_name',ctx.communityName);const r=await q.maybeSingle();if(r.error)throw r.error;const row=r.data||{};ctx.managerName=row.employee_name||row.manager_name||'Property Manager';ctx.managerEmail=row.employee_email||row.manager_email||'';ctx.managerUserId=row.employee_id||row.manager_user_id||'';$('managerName').textContent=ctx.managerName || 'Property Manager';$('managerEmail').textContent=ctx.managerEmail || 'Manager email not saved yet for this community.'}catch(e){console.warn('Manager lookup failed',e);$('managerName').textContent='Property Manager';$('managerEmail').textContent='Manager assignment not found yet.'}}async function sendMessage(){const sb=await getClient();const subject=$('messageSubject').value.trim();const body=$('messageBody').value.trim();if(!body){setStatus('Please enter a message.','bad');return}try{setStatus('Sending message…','');const row={company_id:ctx.companyId||null,community_id:ctx.communityId||null,community_name:ctx.communityName||null,resident_id:ctx.resident.id||ctx.resident.resident_id||null,resident_name:ctx.resident.name||ctx.resident.resident_name||ctx.resident.full_name||ctx.user.email||'Resident',resident_email:ctx.resident.email||ctx.user.email||null,manager_user_id:ctx.managerUserId||null,manager_name:ctx.managerName||null,manager_email:ctx.managerEmail||null,subject:subject||'Message from resident',message:body,status:'open'};const res=await sb.from('resident_manager_messages').insert(row).select('id').single();if(res.error)throw res.error;await sb.from('resident_manager_message_replies').insert({message_id:res.data.id,sender_role:'resident',sender_user_id:ctx.user.id||null,sender_name:row.resident_name,sender_email:row.resident_email,body:body});$('messageSubject').value='';$('messageBody').value='';setStatus('Message sent.','ok');await loadThreads()}catch(e){console.error('Message send failed',e);setStatus('Could not send message yet. Run RESIDENT_MANAGER_MESSAGING_SETUP.sql and try again.','bad')}}async function loadThreads(){const sb=await getClient();if(!sb)return;const host=$('threadList');try{let q=sb.from('resident_manager_messages').select('*').order('created_at',{ascending:false}).limit(30);if(ctx.resident.id)q=q.eq('resident_id',ctx.resident.id);else if(ctx.user.email)q=q.eq('resident_email',ctx.user.email);const r=await q;if(r.error)throw r.error;const rows=r.data||[];host.innerHTML=rows.length?rows.map(row=>`<div class="thread" data-thread="${esc(row.id)}"><div class="threadTop"><strong>${esc(row.subject||'Message')}</strong><span class="pill">${esc(row.status||'open')}</span></div><div class="threadMsg">${esc(row.message||'').slice(0,140)}</div></div>`).join(''):'<div class="empty">No messages yet.</div>'}catch(e){console.warn('Thread load failed',e);host.innerHTML='<div class="empty">Messages will appear after the messaging SQL is installed.</div>'}}async function openThread(id){const sb=await getClient();const panel=$('conversation');try{const m=await sb.from('resident_manager_messages').select('*').eq('id',id).single();const replies=await sb.from('resident_manager_message_replies').select('*').eq('message_id',id).order('created_at',{ascending:true});if(m.error)throw m.error;if(replies.error)throw replies.error;panel.classList.add('is-open');panel.innerHTML=`<h2>${esc(m.data.subject||'Message')}</h2>${(replies.data||[]).map(r=>`<div class="bubble ${r.sender_role==='manager'||r.sender_role==='employee'?'manager':''}"><div class="bubbleMeta">${esc(r.sender_name||r.sender_role||'Message')} · ${new Date(r.created_at).toLocaleString()}</div>${esc(r.body||'')}</div>`).join('')}`;}catch(e){console.warn('Open thread failed',e)}}document.addEventListener('click',e=>{const t=e.target.closest('[data-thread]');if(t)openThread(t.getAttribute('data-thread'))});$('sendMessageBtn').addEventListener('click',sendMessage);loadContext();
+</script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

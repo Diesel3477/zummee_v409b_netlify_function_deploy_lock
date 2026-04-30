@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resident Message Thread</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="shared/supabase-client.js?v=2026-04-26-199"></script>
+  <script src="company_logo_sync.js?v=2026-04-26-199"></script>
+  
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+    :root{--blue:#12324d;--line:#9bc9ff;--muted:#62788f;--bg:#eef5fb;--good:#166534;--bad:#991b1b}*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:var(--blue);background:linear-gradient(180deg,#eef6ff 0%,#f8fbff 100%)}.shell{max-width:1120px;margin:0 auto;padding:24px 22px 56px}.hero,.card{background:rgba(255,255,255,.97);border:2px solid var(--line);border-radius:32px;box-shadow:0 18px 46px rgba(18,50,77,.10)}.hero{padding:22px 26px;display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center}.kicker{font-size:13px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;color:#6d8196}.hero h1{margin:4px 0 0;font-size:32px;letter-spacing:-.04em;line-height:1.05}.heroRight{display:flex;flex-direction:column;align-items:flex-end;gap:10px}.heroLogo{height:52px;max-width:210px;object-fit:contain;display:none}.heroLogo.is-visible{display:block}.btn{border:2px solid var(--line);background:#fff;color:var(--blue);border-radius:16px;padding:12px 16px;font-weight:950;font-size:14px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn:disabled{opacity:.55;cursor:not-allowed}.grid{display:grid;grid-template-columns:.78fr 1.22fr;gap:18px;margin-top:20px}.card{padding:20px}.card h2{margin:0;font-size:24px;letter-spacing:-.04em}.sub{margin:7px 0 0;color:var(--muted);line-height:1.38}.detail{margin-top:16px;display:grid;gap:12px}.detailRow{border:1px solid rgba(18,50,77,.12);background:#fbfdff;border-radius:18px;padding:12px 14px}.label{font-size:12px;font-weight:950;letter-spacing:.08em;text-transform:uppercase;color:#6d8196}.value{margin-top:4px;font-weight:900;color:#1d3854}.statusPill{display:inline-flex;margin-top:8px;border-radius:999px;background:#eef6ff;border:1px solid rgba(59,130,246,.18);padding:6px 10px;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.08em;color:#1d4ed8}.conversation{margin-top:16px;border:1px solid rgba(18,50,77,.12);border-radius:24px;background:#fbfdff;padding:16px;min-height:280px}.bubble{max-width:86%;margin:10px 0;padding:12px 14px;border-radius:18px;background:#fff;border:1px solid rgba(18,50,77,.10);line-height:1.4;color:#2c4660}.bubble.employee{margin-left:auto;background:#eef6ff;border-color:rgba(59,130,246,.18)}.bubbleMeta{font-size:12px;color:var(--muted);font-weight:850;margin-bottom:5px}.replyBox{margin-top:16px;display:grid;gap:10px}textarea{width:100%;min-height:120px;border:1px solid rgba(18,50,77,.15);border-radius:18px;padding:14px;font:inherit;color:var(--blue);background:#fff;resize:vertical;outline:none}.statusLine{font-size:14px;font-weight:850;color:var(--muted)}.statusLine.ok{color:var(--good)}.statusLine.bad{color:var(--bad)}.empty{padding:14px;border-radius:18px;background:#fff8e6;border:1px solid rgba(180,120,0,.16);color:#725000;font-weight:850}@media(max-width:820px){.grid{grid-template-columns:1fr}.shell{padding:18px 14px 44px}.hero{grid-template-columns:1fr auto;padding:20px}.hero h1{font-size:28px}.heroLogo{height:44px;max-width:170px}.card{border-radius:24px;padding:18px}}@media(max-width:560px){.hero{grid-template-columns:1fr}.heroRight{align-items:flex-start}}
+  </style>
+<style id="zummee-global-hero-header-refactor">
+/* v224: safe header refactor - stack contextual actions under the wired logo */
+.heroRight{display:flex !important;flex-direction:column !important;align-items:flex-end !important;justify-content:flex-start !important;gap:10px !important;}
+.heroRight img,.heroRight .logo,.heroRight .heroLogo{margin:0 !important;}
+.heroRight .btn,.heroRight button,.heroRight a{align-self:flex-end !important;}
+@media(max-width:800px){.heroRight{width:100% !important;align-items:flex-end !important;}}
+</style>
+
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div><div class="kicker">Employee Reply</div><h1>Resident Message</h1></div>
+      <div class="heroRight"><img id="pageCompanyLogo" class="heroLogo" alt="Company logo"><a class="btn" href="manager_hub.html">Back to Hub</a></div>
+    </section>
+    <section class="grid">
+      <aside class="card">
+        <h2>Message Details</h2>
+        <p class="sub">Review the resident request and reply from the employee side.</p>
+        <div class="detail">
+          <div class="detailRow"><div class="label">Resident</div><div class="value" id="residentName">Loading…</div></div>
+          <div class="detailRow"><div class="label">Community</div><div class="value" id="communityName">Loading…</div></div>
+          <div class="detailRow"><div class="label">Subject</div><div class="value" id="subjectText">Loading…</div><span class="statusPill" id="statusPill">Open</span></div>
+        </div>
+      </aside>
+      <section class="card">
+        <h2>Conversation</h2>
+        <p class="sub">Replies are saved to the resident message thread.</p>
+        <div id="conversation" class="conversation"><div class="empty">Loading conversation…</div></div>
+        <div class="replyBox">
+          <textarea id="replyBody" placeholder="Type your reply to the resident…"></textarea>
+          <button id="sendReplyBtn" class="btn primary" type="button">Send Reply</button>
+          <div id="replyStatus" class="statusLine"></div>
+        </div>
+      </section>
+    </section>
+  </main>
+<script>
+const $=id=>document.getElementById(id);const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+let ctx={id:new URLSearchParams(location.search).get('id')||'',message:null,userId:'',employeeName:'Employee',employeeEmail:'',companyId:''};
+async function getClient(){if(window.ensureSupabase)return await window.ensureSupabase();return window.supabaseClient||window.sb||null}
+function setStatus(msg,type){const el=$('replyStatus');el.textContent=msg||'';el.className='statusLine '+(type||'')}
+function getLocalUser(){try{return JSON.parse(localStorage.getItem('zummee_profile_v1')||'{}')||{}}catch(e){return {}}}
+function getStoredUserId(){const keys=['zummee_user_id_v1','zummeeUserId','currentUserId','userId'];for(const k of keys){try{const v=String(localStorage.getItem(k)||'').trim();if(v)return v}catch(e){}}return ''}
+async function loadLogo(sb,companyId){try{if(!sb||!companyId)return;const r=await sb.from('companies').select('logo_path').eq('id',companyId).maybeSingle();if(r&&!r.error&&r.data&&r.data.logo_path){const path=r.data.logo_path;const url=/^https?:\/\//i.test(path)?path:sb.storage.from('company_logos').getPublicUrl(path).data.publicUrl;const img=$('pageCompanyLogo');img.src=url;img.style.display='block';img.classList.add('is-visible')}}catch(e){}}
+async function loadEmployeeContext(sb){const local=getLocalUser();ctx.userId=getStoredUserId()||local.id||local.userId||'';ctx.employeeName=local.full_name||local.name||local.employee_name||local.email||'Employee';ctx.employeeEmail=local.email||'';try{if(sb&&!ctx.userId){const u=await sb.auth.getUser();ctx.userId=u&&u.data&&u.data.user&&u.data.user.id||'';ctx.employeeEmail=ctx.employeeEmail||(u&&u.data&&u.data.user&&u.data.user.email)||''}}catch(e){}try{if(sb&&ctx.userId){const p=await sb.from('profiles').select('name,full_name,email,company_id,role').eq('id',ctx.userId).maybeSingle();if(!p.error&&p.data){ctx.employeeName=p.data.full_name||p.data.name||ctx.employeeName;ctx.employeeEmail=p.data.email||ctx.employeeEmail;ctx.companyId=p.data.company_id||ctx.companyId;}}}catch(e){}}
+async function loadThread(){const sb=await getClient();if(!sb){$('conversation').innerHTML='<div class="empty">Supabase is not available yet.</div>';return}if(!ctx.id){$('conversation').innerHTML='<div class="empty">No message id was provided.</div>';return}await loadEmployeeContext(sb);try{const m=await sb.from('resident_manager_messages').select('*').eq('id',ctx.id).single();if(m.error)throw m.error;ctx.message=m.data;ctx.companyId=ctx.companyId||m.data.company_id||'';await loadLogo(sb,ctx.companyId);$('residentName').textContent=m.data.resident_name||m.data.resident_email||'Resident';$('communityName').textContent=m.data.community_name||'Selected community';$('subjectText').textContent=m.data.subject||'Resident message';$('statusPill').textContent=m.data.status||'open';const replies=await sb.from('resident_manager_message_replies').select('*').eq('message_id',ctx.id).order('created_at',{ascending:true});if(replies.error)throw replies.error;const rows=replies.data||[];$('conversation').innerHTML=rows.length?rows.map(r=>`<div class="bubble ${(r.sender_role==='employee'||r.sender_role==='manager'||r.sender_role==='supervisor')?'employee':''}"><div class="bubbleMeta">${esc(r.sender_name||r.sender_role||'Message')} · ${new Date(r.created_at).toLocaleString()}</div>${esc(r.body||'')}</div>`).join(''):'<div class="empty">No replies yet.</div>';}catch(e){console.error('Load message thread failed',e);$('conversation').innerHTML='<div class="empty">Could not load this message thread.</div>'}}
+async function sendReply(){const sb=await getClient();const body=$('replyBody').value.trim();if(!body){setStatus('Please type a reply first.','bad');return}if(!ctx.id){setStatus('Missing message id.','bad');return}try{setStatus('Sending reply…','');$('sendReplyBtn').disabled=true;const ins=await sb.from('resident_manager_message_replies').insert({message_id:ctx.id,sender_role:'employee',sender_user_id:ctx.userId||null,sender_name:ctx.employeeName||'Employee',sender_email:ctx.employeeEmail||null,body:body});if(ins.error)throw ins.error;await sb.from('resident_manager_messages').update({status:'answered',updated_at:new Date().toISOString()}).eq('id',ctx.id);$('replyBody').value='';setStatus('Reply sent.','ok');await loadThread()}catch(e){console.error('Reply failed',e);setStatus('Could not send reply yet. Check messaging SQL/RLS setup.','bad')}finally{$('sendReplyBtn').disabled=false}}
+$('sendReplyBtn').addEventListener('click',sendReply);loadThread();
+</script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

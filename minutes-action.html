@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>window.ZUMMEE_BUILD="2026-03-27-1";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Minutes Action | Zummee</title>
+  
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+    :root{--brand:#173a5b;--brand2:#23476e;--ok:#2f7d4a;--bad:#b64040;--bg:#eef3f8;--card:#ffffff;--text:#17324d;--muted:#64778c;--line:#d7e2ee;}
+    *{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(180deg,#f4f7fb 0%,#eaf0f6 100%);color:var(--text)}
+    .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+    .card{width:100%;max-width:720px;background:var(--card);border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:0 16px 50px rgba(23,58,91,.10)}
+    .head{background:var(--brand);padding:28px 24px;text-align:center;color:#fff}.head h1{margin:0;font-size:24px}.head p{margin:8px 0 0;color:#d4e1ef;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700}
+    .body{padding:30px 28px}.title{font-size:32px;font-weight:800;line-height:1.1;margin:0 0 10px}.muted{color:var(--muted);font-size:16px;line-height:1.6}
+    .status{margin-top:18px;padding:16px 18px;border-radius:14px;border:1px solid var(--line);background:#f8fbfe;font-size:16px;line-height:1.6}
+    .status.ok{background:#eef8f2;border-color:#b6dec4}.status.bad{background:#fdf0f0;border-color:#efc3c3}.status.warn{background:#fff8ea;border-color:#ecd7a4}
+    .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:22px}.btn{appearance:none;border:none;border-radius:12px;padding:14px 20px;font-size:16px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+    .btn-primary{background:var(--brand2);color:#fff}.btn-ok{background:var(--ok);color:#fff}.btn-bad{background:var(--bad);color:#fff}.btn-soft{background:#edf3f9;color:var(--brand);border:1px solid var(--line)}
+    textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:14px;padding:14px;font:inherit;color:var(--text);margin-top:16px;resize:vertical}
+    .hidden{display:none}.row{margin-top:16px}.small{font-size:14px;color:var(--muted)}
+    @media (max-width:600px){.body{padding:24px 18px}.title{font-size:28px}.actions{flex-direction:column}.btn{width:100%}}
+  
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+
+.mh2-actions .mh2-btn--ghost{display:none !important;}
+</style>
+  <script src="community_state_stable.js"></script>
+<style>
+/* FORCE white text in Status & Details section */
+#boardSubmittedItemsSection,
+#boardSubmittedItemsSection *:not(button),
+#boardMemberHubStatus,
+#boardMemberHubStatus *:not(button),
+#annualMeetingApprovals,
+#annualMeetingApprovals *:not(button) {
+  color: #ffffff !important;
+}
+
+/* Secondary text (slightly dimmed white) */
+#boardSubmittedItemsSection .muted,
+#boardMemberHubStatus .muted,
+#annualMeetingApprovals .muted {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style>
+/* HARD OVERRIDE — force white text in dark section */
+.hub-zone:last-of-type,
+.hub-zone:last-of-type *:not(button):not(.badge):not(.pill) {
+  color: #ffffff !important;
+}
+
+/* Slightly softer for secondary text */
+.hub-zone:last-of-type .muted,
+.hub-zone:last-of-type p,
+.hub-zone:last-of-type span {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="head">
+        <h1>Zummee</h1>
+        <p>Management Assistant</p>
+      </div>
+      <div class="body">
+        <div id="screenInitial">
+          <div class="title" id="pageTitle">Board Minutes Action</div>
+          <div class="muted" id="pageIntro">Preparing your secure board-minutes action...</div>
+          <div class="status warn" id="messageBox">Preparing your secure action link...</div>
+          <div class="row hidden" id="rejectBox">
+            <label for="rejectReason" style="font-weight:700;display:block;margin-bottom:8px;">Optional comments for the manager</label>
+            <textarea id="rejectReason" placeholder="Add any comments you want the manager to receive."></textarea>
+            <div class="small">Your rejection is already recorded. Sending comments here is optional.</div>
+          </div>
+          <div class="actions" id="actionRow">
+            <button class="btn btn-bad hidden" id="commentBtn" type="button">Email Comments to Manager</button>
+            <a class="btn btn-soft" href="https://zummee.net">Open Zummee</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function(){
+      var params = new URLSearchParams(window.location.search || "");
+      var token = params.get("token") || "";
+      var action = String(params.get("action") || "").toLowerCase();
+      var pageTitle = document.getElementById("pageTitle");
+      var pageIntro = document.getElementById("pageIntro");
+      var messageBox = document.getElementById("messageBox");
+      var rejectBox = document.getElementById("rejectBox");
+      var commentBtn = document.getElementById("commentBtn");
+      var rejectReason = document.getElementById("rejectReason");
+      var lastResult = null;
+      var base = (window.SUPABASE_URL || "https://slcwuuwyrgnmlmxpcaim.supabase.co").replace(/\/$/, "");
+      var anon = window.SUPABASE_ANON_KEY || "sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864";
+
+      function setStatus(kind, msg){
+        messageBox.className = 'status ' + (kind || 'warn');
+        messageBox.textContent = msg;
+      }
+
+      async function submit(chosenAction){
+        if(!token){ setStatus('bad', 'This action link is missing its token.'); return; }
+        setStatus('warn', chosenAction === 'approve' ? 'Submitting approval...' : 'Submitting rejection...');
+        try{
+          var res = await fetch(base + '/functions/v1/board-minutes-email-action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'apikey': anon },
+            body: JSON.stringify({ token: token, action: chosenAction })
+          });
+          var raw = await res.text();
+          var obj = null;
+          try{ obj = raw ? JSON.parse(raw) : null; }catch(_e){ obj = raw; }
+          if(!res.ok) throw new Error((obj && (obj.error || obj.message)) || 'Action failed.');
+          lastResult = obj || null;
+          var label = chosenAction === 'approve' ? 'approved' : 'rejected';
+          pageTitle.textContent = chosenAction === 'approve' ? 'Minutes Approved' : 'Minutes Rejected';
+          pageIntro.textContent = 'Thank you. Your response has been recorded.';
+          setStatus(chosenAction === 'approve' ? 'ok' : 'bad', 'These minutes were successfully ' + label + '.');
+          if(chosenAction === 'reject'){
+            rejectBox.classList.remove('hidden');
+            if(commentBtn) commentBtn.classList.remove('hidden');
+            if(commentBtn){
+              commentBtn.onclick = function(){
+                var managerEmail = lastResult && lastResult.manager_email ? String(lastResult.manager_email) : '';
+                if(!managerEmail){
+                  setStatus('warn', 'Your rejection was recorded. Manager email was not available for comments.');
+                  return;
+                }
+                var managerName = lastResult && lastResult.manager_name ? String(lastResult.manager_name) : 'Manager';
+                var communityName = lastResult && lastResult.community_name ? String(lastResult.community_name) : 'your community';
+                var meetingDate = lastResult && lastResult.meeting_date ? String(lastResult.meeting_date) : 'this meeting';
+                var senderName = lastResult && lastResult.recipient_name ? String(lastResult.recipient_name) : 'Board Member';
+                var comment = String(rejectReason.value || '').trim();
+                var subject = 'Board Minutes Rejection Comments – ' + communityName;
+                var body = 'Hello ' + managerName + ',\n\n' +
+                  'I rejected the board meeting minutes for ' + communityName + ' (' + meetingDate + ').\n\n' +
+                  'Comments:\n' + (comment || '[No additional comments provided]') + '\n\n' +
+                  'Thank you,\n' + senderName;
+                window.location.href = 'mailto:' + encodeURIComponent(managerEmail) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+              };
+            }
+          } else {
+            rejectBox.classList.add('hidden');
+            if(commentBtn) commentBtn.classList.add('hidden');
+          }
+        }catch(err){
+          setStatus('bad', (err && err.message) ? err.message : 'Action failed.');
+          rejectBox.classList.add('hidden');
+          if(commentBtn) commentBtn.classList.add('hidden');
+        }
+      }
+
+      if(!token){
+        pageTitle.textContent = 'Invalid Link';
+        pageIntro.textContent = 'This minutes action link is incomplete.';
+        setStatus('bad', 'Missing token. Please use the original email link.');
+        return;
+      }
+      if(action === 'approve'){
+        pageTitle.textContent = 'Approving Minutes';
+        pageIntro.textContent = 'Please wait while we record your approval.';
+        setStatus('warn', 'Submitting approval...');
+        submit('approve');
+      } else if(action === 'reject'){
+        pageTitle.textContent = 'Rejecting Minutes';
+        pageIntro.textContent = 'Please wait while we record your rejection.';
+        setStatus('warn', 'Submitting rejection...');
+        submit('reject');
+      } else {
+        pageTitle.textContent = 'Invalid Action';
+        pageIntro.textContent = 'This email link does not specify a valid action.';
+        setStatus('bad', 'Unsupported action. Please use the original email link.');
+      }
+    })();
+  </script>
+<script src="company_logo_sync.js"></script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

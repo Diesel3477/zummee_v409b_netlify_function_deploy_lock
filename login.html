@@ -1,0 +1,1975 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script>window.ZUMMEE_BUILD="2026-03-27-1";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+
+<script>
+
+// Phone formatting + inline validation (global)
+(function(){
+  function phoneDigits(v){
+    v = String(v||"");
+    // keep digits only
+    var d = v.replace(/\D/g,"");
+    // allow leading 1
+    if(d.length===11 && d.charAt(0)==="1") d = d.slice(1);
+    return d;
+  }
+  function formatPhoneUS(v){
+    var d = phoneDigits(v);
+    if(d.length!==10) return String(v||"").trim();
+    return "(" + d.slice(0,3) + ") " + d.slice(3,6) + "-" + d.slice(6);
+  }
+  function ensureErrorEl(input){
+    if(!input || input.__zummeeErrEl) return input.__zummeeErrEl;
+    var el = document.createElement("div");
+    el.className = "zummee-inline-error";
+    el.style.display = "none";
+    el.textContent = "";
+    // insert after input
+    if(input.parentNode){
+      if(input.nextSibling){
+        input.parentNode.insertBefore(el, input.nextSibling);
+      }else{
+        input.parentNode.appendChild(el);
+      }
+    }
+    input.__zummeeErrEl = el;
+    return el;
+  }
+  function setError(input, msg){
+    var el = ensureErrorEl(input);
+    if(!el) return;
+    if(msg){
+      el.textContent = msg;
+      el.style.display = "block";
+      input.classList.add("zummee-has-error");
+    }else{
+      el.textContent = "";
+      el.style.display = "none";
+      input.classList.remove("zummee-has-error");
+    }
+  }
+  function validatePhoneInput(input){
+    if(!input) return true;
+    var raw = (input.value||"").trim();
+    if(!raw){ setError(input,""); return true; }
+    var d = phoneDigits(raw);
+    if(d.length===10){ setError(input,""); return true; }
+    // allow user typing; show message if not complete
+    setError(input,"Enter a 10-digit phone number.");
+    return false;
+  }
+  function bindOne(input){
+    if(!input || input.__zummeePhoneBound) return;
+    input.__zummeePhoneBound = true;
+    input.addEventListener("input", function(){ validatePhoneInput(input); });
+    input.addEventListener("blur", function(){
+      var ok = validatePhoneInput(input);
+      if(ok){
+        var formatted = formatPhoneUS(input.value);
+        // only replace if it becomes a standard format
+        var d = phoneDigits(input.value);
+        if(d.length===10) input.value = formatted;
+      }
+    });
+  }
+  function attach(root){
+    root = root || document;
+    var inputs = root.querySelectorAll('input[type="tel"], input[id*="phone" i], input[name*="phone" i], input[placeholder*="phone" i]');
+    for(var i=0;i<inputs.length;i++) bindOne(inputs[i]);
+  }
+  // expose
+  window.ZUMMEE_phoneDigits = phoneDigits;
+  window.ZUMMEE_formatPhoneUS = formatPhoneUS;
+  window.ZUMMEE_validatePhoneInput = validatePhoneInput;
+  window.ZUMMEE_attachPhoneFormatting = attach;
+  document.addEventListener("DOMContentLoaded", function(){ attach(document);
+    try{
+      var mo = new MutationObserver(function(muts){
+        for(var i=0;i<muts.length;i++){
+          if(muts[i].addedNodes && muts[i].addedNodes.length){
+            for(var j=0;j<muts[i].addedNodes.length;j++){
+              var n = muts[i].addedNodes[j];
+              if(!n) continue;
+              if(n.nodeType===1){ attach(n); }
+            }
+          }
+        }
+      });
+      mo.observe(document.body, {childList:true, subtree:true});
+    }catch(e){}
+  });
+})();
+
+  function setLocalCompany(val){
+    try{ localStorage.setItem("zummee_company", String(val||"").trim()); }catch(_e){}
+  }
+  function getLocalCompany(){
+    try{ return (localStorage.getItem("zummee_company")||"").trim(); }catch(_e){ return ""; }
+  }
+  async function saveCompanyToProfile(sb, userId, company){
+    const c = String(company||"").trim();
+    if(!c) return "";
+    try{
+      const up = await sb.from("profiles").upsert([{ id: userId, company: c }], { onConflict: "id" });
+      if(up.error) throw up.error;
+      setLocalCompany(c);
+      return c;
+    }catch(e){
+      console.warn("Profile company save failed:", e?.message || e);
+      return "";
+    }
+  }
+
+/** v9_STABLE_REWRITE_2026-01-21
+ * Global constants + safety net. Kept minimal to avoid breaking legacy inline scripts.
+ */
+(function() {
+  // Shared keys (some scripts reference these identifiers directly)
+  window.ZUMMEE_KEYS = {
+    COMMUNITIES_KEY: "zummee_communities_v1",
+    SELECTED_COMMUNITY_KEY: "zummee_selected_community_v1",
+    USERS_KEY: "zummee_users_v1",
+    SESSION_KEY: "zummee_session_v1"
+  };
+  // Provide legacy globals for compatibility
+  window.COMMUNITIES_KEY = window.ZUMMEE_KEYS.COMMUNITIES_KEY;
+  window.SELECTED_COMMUNITY_KEY = window.ZUMMEE_KEYS.SELECTED_COMMUNITY_KEY;
+
+  // Non-fatal error banner (helps debug without white-screen)
+  window.addEventListener("error", function(e) {
+    try {
+      var msg = (e && e.message) ? e.message : "Unknown error";
+      console.error("Zummee error:", e.error || e);
+      var bar = document.getElementById("zummeeErrorBar");
+      if(!bar) {
+        bar = document.createElement("div");
+        bar.id = "zummeeErrorBar";
+        bar.style.position = "fixed";
+        bar.style.top = "0";
+        bar.style.left = "0";
+        bar.style.right = "0";
+        bar.style.zIndex = "1000000";
+        bar.style.background = "#b91c1c";
+        bar.style.color = "#fff";
+        bar.style.padding = "10px 14px";
+        bar.style.fontFamily = "ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial";
+        bar.style.fontSize = "13px";
+        bar.style.boxShadow = "0 4px 14px rgba(0,0,0,.25)";
+        bar.style.cursor = "pointer";
+        bar.title = "Click to dismiss";
+        bar.addEventListener("click", function(){ bar.remove(); });
+        document.documentElement.appendChild(bar);
+      }
+      bar.textContent = "Page error: " + msg;
+    } catch(_) {}
+  }, true);
+
+  window.addEventListener("unhandledrejection", function(e) {
+    try {
+      var msg = (e && e.reason && (e.reason.message || e.reason)) ? (e.reason.message || String(e.reason)) : "Unhandled promise rejection";
+      console.error("Zummee rejection:", e.reason);
+      var bar = document.getElementById("zummeeErrorBar");
+      if(!bar) {
+        bar = document.createElement("div");
+        bar.id = "zummeeErrorBar";
+        bar.style.position = "fixed";
+        bar.style.top = "0";
+        bar.style.left = "0";
+        bar.style.right = "0";
+        bar.style.zIndex = "1000000";
+        bar.style.background = "#b91c1c";
+        bar.style.color = "#fff";
+        bar.style.padding = "10px 14px";
+        bar.style.fontFamily = "ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial";
+        bar.style.fontSize = "13px";
+        bar.style.boxShadow = "0 4px 14px rgba(0,0,0,.25)";
+        bar.style.cursor = "pointer";
+        bar.title = "Click to dismiss";
+        bar.addEventListener("click", function(){ bar.remove(); });
+        document.documentElement.appendChild(bar);
+      }
+      bar.textContent = "Page error: " + msg;
+    } catch(_) {}
+  });
+})();
+</script>
+
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Sign In · </title>
+
+  <script>
+    // Global keys
+    var COMMUNITIES_KEY = "zummee_communities_v1";
+    var SELECTED_COMMUNITY_KEY = "zummee_selected_community_v1";
+  </script>
+
+  
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+    :root{
+      --z-ink:#0f2f4a;
+      --z-ink2:#173c5c;
+      --z-muted:rgba(15,47,74,.70);
+      --z-muted2:rgba(15,47,74,.55);
+      --z-line:rgba(15,47,74,.14);
+      --z-card:rgba(255,255,255,.92);
+      --z-shadow:0 22px 60px rgba(0,0,0,.25);
+      --z-lime:#7BE000;
+      --z-bg:#f6f8fb;
+      --z-radius:22px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--z-bg);color:var(--z-ink)}
+
+    /* Top bar */
+    .z-topbar{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:saturate(160%) blur(10px);
+      background:rgba(255,255,255,.76);border-bottom:1px solid rgba(15,47,74,.12)}
+    .z-topbar__inner{max-width:1200px;margin:0 auto;padding:14px 18px;display:flex;align-items:center;gap:18px}
+    .z-brand{display:flex;align-items:center;gap:10px;min-width:180px}
+    .z-brand img{height:34px;width:auto;display:block}
+    .z-brandTitle{font-weight:950;letter-spacing:.2px}
+    .z-nav{display:flex;gap:18px;align-items:center;flex:1;justify-content:center}
+    .z-nav a{color:rgba(15,47,74,.72);text-decoration:none;font-weight:800;font-size:13px;letter-spacing:1.2px;text-transform:uppercase}
+    .z-nav a:hover{color:var(--z-ink)}
+    .z-topbar__cta{display:flex;gap:10px;align-items:center}
+    .z-pill{border-radius:999px;padding:10px 16px;font-weight:950;text-decoration:none;display:inline-flex;align-items:center;gap:8px;border:2px solid transparent;white-space:nowrap}
+    .z-pill--ghost{color:var(--z-ink);border-color:rgba(15,47,74,.22);background:rgba(255,255,255,.65)}
+    .z-pill--ghost:hover{border-color:rgba(15,47,74,.38)}
+    .z-pill--solid{color:#0b2400;background:var(--z-lime)}
+    .z-pill--solid:hover{filter:brightness(.98)}
+
+    /* Hero */
+    .z-hero{min-height:100vh;position:relative;display:flex;align-items:center}
+    .z-hero__bg{position:absolute;inset:0;
+      background:url('https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=2400&q=80') center/cover no-repeat;
+      filter:saturate(1.03) contrast(1.02);
+    }
+    .z-hero__overlay{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.62) 0%,rgba(0,0,0,.28) 52%,rgba(0,0,0,.52) 100%)}
+    .z-hero__content{position:relative;max-width:1200px;margin:0 auto;padding:96px 18px 72px;
+      display:grid;grid-template-columns:1.12fr .88fr;gap:28px;align-items:center}
+    .z-heroCopy{color:#fff;max-width:640px}
+    .z-eyebrow{font-weight:950;letter-spacing:3px;text-transform:uppercase;font-size:12px;opacity:.9;margin-bottom:14px}
+    .z-heroTitle{font-size:54px;line-height:1.02;margin:0 0 14px;letter-spacing:-.7px}
+    .z-heroSub{font-size:18px;line-height:1.55;margin:0 0 22px;opacity:.92;max-width:520px}
+    .z-primaryCta{border:0;border-radius:999px;padding:14px 20px;font-weight:950;background:var(--z-lime);color:#0b2400;cursor:pointer;box-shadow:0 10px 24px rgba(0,0,0,.22)}
+
+    /* Auth card */
+    .z-card{background:var(--z-card);border:1px solid rgba(255,255,255,.35);border-radius:var(--z-radius);padding:22px;box-shadow:var(--z-shadow)}
+    .z-card h2{margin:0 0 6px;font-size:20px;letter-spacing:-.2px}
+    .z-card p{margin:0 0 16px;color:var(--z-muted);font-weight:650;font-size:13px;line-height:1.35}
+
+    .z-tabs{display:flex;gap:10px;background:rgba(15,47,74,.06);padding:6px;border-radius:999px;border:1px solid rgba(15,47,74,.10);margin:6px 0 16px}
+    .z-tab{flex:1;border:0;background:transparent;padding:10px 12px;border-radius:999px;font-weight:950;cursor:pointer;color:rgba(15,47,74,.72)}
+    .z-tab[aria-selected="true"]{background:#fff;color:var(--z-ink);box-shadow:0 8px 18px rgba(0,0,0,.10)}
+
+    .z-field{margin:10px 0}
+    .z-field label{display:block;font-size:12px;color:var(--z-muted2);margin:0 0 6px;font-weight:850}
+    .z-field input{width:100%;padding:12px 12px;border:1px solid rgba(15,47,74,.18);border-radius:14px;font-size:14px;outline:none;background:rgba(255,255,255,.9)}
+    .z-field input:focus{border-color:rgba(123,224,0,.75);box-shadow:0 0 0 4px rgba(123,224,0,.18)}
+
+    .z-row2{display:grid;grid-template-columns:1fr;gap:10px}
+    @media(min-width:520px){ .z-row2{grid-template-columns:1fr 1fr} }
+
+    .z-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center}
+.z-inviteNote{margin:0 0 12px;padding:12px 14px;border-radius:14px;background:rgba(15,47,74,.06);border:1px solid rgba(15,47,74,.10);color:var(--z-ink2);font-size:13px;line-height:1.45;font-weight:700}
+    .z-btn{cursor:pointer;border-radius:14px;border:1px solid rgba(15,47,74,.18);background:#fff;padding:12px 14px;font-weight:950;color:var(--z-ink)}
+    .z-btn--primary{background:var(--z-ink);border-color:var(--z-ink);color:#fff}
+    .z-btn--primary:hover{filter:brightness(1.03)}
+    .z-btn--ghost{background:rgba(255,255,255,.7)}
+    .z-btn--danger{background:#ef4444;border-color:#ef4444;color:#fff}
+
+    .z-remember{display:flex;align-items:center;gap:10px;margin-top:6px}
+    .z-remember input{width:16px;height:16px}
+    .z-remember span{font-weight:800;color:var(--z-muted);font-size:13px}
+
+    .z-foot{margin-top:14px;display:flex;gap:10px;align-items:center}
+    .z-foot .z-muted{color:var(--z-muted2);font-weight:800;font-size:12px}
+    .z-foot a{color:var(--z-ink2);font-weight:950;text-decoration:none}
+    .z-foot a:hover{text-decoration:underline}
+
+    .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
+      background:#111827;color:#fff;padding:10px 12px;border-radius:12px;display:none;max-width:92vw;z-index:1000000}
+
+    /* Responsive */
+    @media(max-width:980px){
+      .z-nav{display:none}
+      .z-hero__content{grid-template-columns:1fr;padding-top:84px}
+      .z-heroTitle{font-size:40px}
+      .z-card{max-width:560px}
+    }
+  
+/* === Zummee Brand Header Override (v1211) === */
+.zummee-header{
+  background:#0f2f4a !important;
+  color:#ffffff !important;
+  border-bottom:1px solid rgba(255,255,255,0.10) !important;
+}
+.zummee-header a, .zummee-header a:visited{ color:#ffffff !important; }
+.zummee-header button, .zummee-header select, .zummee-header label, .zummee-header span, .zummee-header div{ color:inherit; }
+.zummee-header button{
+  background:rgba(255,255,255,0.14) !important;
+  border:1px solid rgba(255,255,255,0.18) !important;
+}
+.zummee-header button:hover{ border-color: rgba(123,224,0,0.55) !important; }
+.zummee-header__logo img{ height:120px !important; width:auto !important; }
+
+.zummee-header a.zummee-header__action--hub{
+  background:#ffffff !important;
+  color:#0f2f4a !important;
+  border-color: rgba(15,47,74,0.22) !important;
+}
+
+.zummee-header{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+}
+.zummee-header__logo{
+  margin-right:auto !important;
+}
+
+/* Ensure community dropdown text is dark and readable */
+#zummeeCommunitySelect{
+  color:#0f2f4a !important;
+  font-weight:700 !important;
+}
+.zummee-modern-picker__button,
+.zummee-modern-picker__item{
+  color:#0f2f4a !important;
+}
+
+/* Force subpage dropdown to match Manager Hub */
+#zummeeCommunitySelect{
+  background:#ffffff !important;
+  color:#000000 !important;
+  font-weight:700 !important;
+}
+
+.zummee-modern-picker__button{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+.zummee-modern-picker__menu{
+  background:#ffffff !important;
+}
+
+.zummee-modern-picker__item{
+  color:#000000 !important;
+}
+
+/* Match Manager Hub community picker styling (white dropdown, black text) */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communityBtn span{
+  color:#000000 !important;
+}
+.zummee-communityMenu{
+  background:#ffffff !important;
+  border:1px solid rgba(15,47,74,0.18) !important;
+}
+.zummee-communitySearch{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+.zummee-communitySearch::placeholder{
+  color: rgba(0,0,0,0.55) !important;
+}
+.zummee-communityItem{
+  color:#000000 !important;
+}
+
+/* Force dropdown button background to white */
+.zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Override header generic button styling for community picker */
+.zummee-header .zummee-communityBtn{
+  background:#ffffff !important;
+  color:#000000 !important;
+  border:1px solid rgba(15,47,74,0.25) !important;
+}
+
+/* Remove bullet points from modern community dropdown */
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+  padding-left:0 !important;
+  margin-left:0 !important;
+}
+
+.zummee-communityItem::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* FORCE remove bullets everywhere inside community dropdown */
+.zummee-communityMenu,
+.zummee-communityMenu *{
+  list-style-type:none !important;
+  list-style:none !important;
+}
+
+.zummee-communityMenu ul,
+.zummee-communityMenu li{
+  list-style:none !important;
+}
+
+.zummee-communityMenu li::marker{
+  content:"" !important;
+}
+
+.zummee-communityMenu li::before{
+  content:none !important;
+  display:none !important;
+}
+
+/* Subpage Hub button — match Manager Hub */
+.zummee-header .zummee-hubBtn {
+  background: #ffffff !important;
+  color: #0f2f4a !important;
+  border-radius: 28px !important;
+  padding: 10px 22px !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  border: 1px solid rgba(15,47,74,0.15) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+  transition: all .2s ease;
+  text-decoration:none !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+.zummee-header .zummee-hubBtn:hover {
+  background: #f4f6f8 !important;
+}
+
+/* Fix Hub button text color + alignment under dropdown */
+.zummee-header .zummee-hubBtn {
+  color: #000000 !important;
+  display: block !important;
+  margin-left: auto !important;
+  margin-top: 10px !important;
+}
+
+.zummee-header .community-header-right {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+}
+
+/* Correct Hub button sizing and force black text */
+.zummee-header .zummee-hubBtn {
+  background:#ffffff !important;
+  color:#000000 !important;
+  border-radius:28px !important;
+  padding:8px 18px !important;
+  font-weight:700 !important;
+  font-size:15px !important;
+  border:1px solid rgba(15,47,74,0.15) !important;
+  box-shadow:0 4px 10px rgba(0,0,0,0.08) !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:auto !important;
+  min-width:auto !important;
+  margin-top:8px !important;
+  align-self:flex-end !important;
+}
+
+/* Ensure container stacks properly */
+.zummee-header .community-header-right {
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:flex-end !important;
+}
+
+/* Force Hub button text to true black */
+.zummee-header .zummee-hubBtn,
+.zummee-header .zummee-hubBtn:visited,
+.zummee-header .zummee-hubBtn span {
+  color:#000000 !important;
+}
+
+/* Align page titles (like Daily Ops) to the left */
+.page-title,
+h1.page-title,
+.ops-title,
+h1 {
+  text-align:left !important;
+  margin-left:0 !important;
+}
+
+/* Precisely align page titles with main card container */
+.main-content h1,
+.content-wrapper h1,
+.page-container h1 {
+  text-align:left !important;
+  margin-left:40px !important;  /* matches card container padding */
+  margin-right:0 !important;
+}
+
+/* Prevent centering from parent flex containers */
+.page-header,
+.title-row {
+  justify-content:flex-start !important;
+  text-align:left !important;
+}
+
+/* Precisely match left edge of main section container */
+#opsHeaderRow {
+  padding-left: 60px !important; /* match section container padding */
+  justify-content: flex-start !important;
+}
+
+#opsHeaderRow h1 {
+  margin: 0 !important;
+}
+
+/* Match subpage logo size to Manager Hub */
+.zummee-header .zummee-logo {
+  font-size: 42px !important;
+  line-height: 1 !important;
+}
+
+.zummee-header .zummee-subtitle {
+  font-size: 16px !important;
+  letter-spacing: 2px !important;
+}
+
+.zummee-header svg {
+  height: 28px !important;
+}
+
+/* === Zummee Standard Header (shared across pages) === */
+.zummee-header{
+  background-color: rgb(15, 47, 74);
+}
+.zummee-header__divider{
+  display:none;
+}
+@media (min-width: 701px){
+  .zummee-header__divider{
+    display:block;
+    width:1px;
+    height:36px;
+    background: rgba(255,255,255,0.28);
+  }
+}
+@media (max-width: 700px){
+  .zummee-header{
+    padding: 10px 12px;
+  }
+  .zummee-header__inner{
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .zummee-header__brand{
+    justify-content: center;
+  }
+  .zummee-header__controls{
+    width: 100%;
+    display:flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .zummee-header__community{
+    width: 100%;
+    max-width: 420px;
+    justify-content: center;
+    gap: 10px;
+  }
+  .zummee-header__community-label{
+    min-width: auto;
+  }
+  #zummeeCommunitySelect{
+    width: 100%;
+  }
+  .zummee-header__hub{
+    width: 100%;
+    max-width: 420px;
+    justify-content: center;
+  }
+  .zummee-header__hubbtn{
+    width: 100%;
+  }
+}
+/* === End Zummee Standard Header === */
+
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+
+.mh2-actions .mh2-btn--ghost{display:none !important;}
+</style>
+  <link rel="icon" type="image/png" href="zummee_mark_32.png">
+  <link rel="stylesheet" href="shared/header.css?v=2026-03-27-1">
+  <script src="community_state_stable.js"></script>
+<style>
+/* FORCE white text in Status & Details section */
+#boardSubmittedItemsSection,
+#boardSubmittedItemsSection *:not(button),
+#boardMemberHubStatus,
+#boardMemberHubStatus *:not(button),
+#annualMeetingApprovals,
+#annualMeetingApprovals *:not(button) {
+  color: #ffffff !important;
+}
+
+/* Secondary text (slightly dimmed white) */
+#boardSubmittedItemsSection .muted,
+#boardMemberHubStatus .muted,
+#annualMeetingApprovals .muted {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style>
+/* HARD OVERRIDE — force white text in dark section */
+.hub-zone:last-of-type,
+.hub-zone:last-of-type *:not(button):not(.badge):not(.pill) {
+  color: #ffffff !important;
+}
+
+/* Slightly softer for secondary text */
+.hub-zone:last-of-type .muted,
+.hub-zone:last-of-type p,
+.hub-zone:last-of-type span {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+</head>
+<body data-header-mode="simple">
+<div id="zummeeHeaderMount"></div>
+<script src="shared/header.js?v=2026-04-08-2"></script>
+
+  <header class="z-topbar">
+    <div class="z-topbar__inner">
+      <div class="z-brand">
+        <img src="zummee_logo_skyline_dark.svg" alt="Zummee" style="height:72px;width:auto;display:block;">
+</div>
+      <nav class="z-nav" aria-label="Primary">
+        <a href="#" onclick="return false;">Solutions</a>
+        <a href="#" onclick="return false;">Resources</a>
+        <a href="#" onclick="return false;">Company</a>
+      </nav>
+      <div class="z-topbar__cta">
+        <a class="z-pill z-pill--ghost" href="#" onclick="return false;">Contact us</a>
+        <a class="z-pill z-pill--solid" href="#" onclick="return false;">Book a demo</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="z-hero">
+    <div class="z-hero__bg" aria-hidden="true"></div>
+    <div class="z-hero__overlay" aria-hidden="true"></div>
+
+    <div class="z-hero__content">
+      <section class="z-heroCopy">
+        <div class="z-eyebrow">PROPERTY OPERATIONS</div>
+        <h1 class="z-heroTitle">The all‑in‑one hub for modern property teams</h1>
+        <p class="z-heroSub">Daily Ops, compliance, and accountability—designed for fast adoption and consistent execution.</p>
+        <button class="z-primaryCta" id="z_focusLogin" type="button">Sign in</button>
+      </section>
+
+      <aside class="z-card" id="z_loginCard">
+        <h2>Welcome back</h2>
+        <p>Sign in to access your company hub. New here? Create an account in seconds.</p>
+
+        <div class="z-tabs" role="tablist" aria-label="Authentication">
+          <button class="z-tab" id="z_tab_signin" role="tab" aria-selected="true" type="button">Sign in</button>
+          <button class="z-tab" id="z_tab_create" role="tab" aria-selected="false" type="button">Create account</button>
+        </div>
+
+        <div id="z_panel_signin" role="tabpanel">
+          <div class="z-field">
+            <label for="li_username">Email</label>
+            <input id="li_username" autocomplete="username" placeholder="name@company.com" />
+          </div>
+          <div class="z-field">
+            <label for="li_password">Password</label>
+            <input id="li_password" type="password" autocomplete="current-password" placeholder="" />
+          </div>
+          <div class="z-remember">
+            <input id="rememberMe" type="checkbox" />
+            <span>Remember me</span>
+          </div>
+          <div class="z-actions">
+            <button class="z-btn z-btn--primary" id="btnLogin" type="button">Sign in</button>
+            <button class="z-btn z-btn--ghost" id="btnShowReset" type="button" style="display:none">Forgot password?</button>
+          </div>
+
+          <div id="resetPanel" style="display:none;margin-top:14px;border-top:1px solid rgba(15,47,74,.14);padding-top:12px;">
+            <h3 style="margin:0 0 8px;font-size:14px;">Reset password (local)</h3>
+            <p style="margin:0 0 10px;color:rgba(15,47,74,.65);font-size:12px;line-height:1.35;">
+              Enter your username and phone to set a new password on this device.
+            </p>
+            <div class="z-field">
+              <label for="rp_username">Username</label>
+              <input id="rp_username" autocomplete="username" placeholder="Your username" />
+            </div>
+            <div class="z-field">
+              <label for="rp_phone">Phone</label>
+              <input id="rp_phone" inputmode="tel" placeholder="Phone on your account" />
+            </div>
+            <div class="z-field">
+              <label for="rp_newpw">New password</label>
+              <input id="rp_newpw" type="password" autocomplete="new-password" placeholder="New password (6+ chars)" />
+            </div>
+            <div class="z-actions">
+              <button class="z-btn z-btn--primary" id="btnResetPw" type="button">Set new password</button>
+              <button class="z-btn" id="btnHideReset" type="button">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="z_panel_invitepw" role="tabpanel" style="display:none;">
+          <div class="z-inviteNote" id="z_inviteNote">Finish setting up your resident login. Use your email address as your username going forward.</div>
+          <div class="z-field">
+            <label for="ipw_email">Email</label>
+            <input id="ipw_email" type="email" autocomplete="email" readonly />
+          </div>
+          <div class="z-field">
+            <label for="ipw_password">Create Password</label>
+            <input id="ipw_password" type="password" autocomplete="new-password" placeholder="Create a password" />
+          </div>
+          <div class="z-field">
+            <label for="ipw_confirm">Confirm Password</label>
+            <input id="ipw_confirm" type="password" autocomplete="new-password" placeholder="Re-enter password" />
+          </div>
+          <div class="z-actions">
+            <button class="z-btn z-btn--primary" id="btnInviteSetPassword" type="button">Save Password & Continue</button>
+          </div>
+        </div>
+
+        <div id="z_panel_create" role="tabpanel" style="display:none;">
+          <div class="z-field">
+            <label for="su_name">Name</label>
+            <input id="su_name" placeholder="Full name" />
+          </div>
+          <div class="z-row2">
+            <div class="z-field">
+              <label for="su_phone">Phone</label>
+              <input id="su_phone" inputmode="tel" placeholder="(555) 555-5555" />
+            </div>
+            <div class="z-field">
+              <label for="su_company">Company Code</label>
+              <input id="su_company" type="text" autocapitalize="characters" placeholder="Company Code (e.g., SIXES)" />
+            </div>
+          </div>
+          <div class="z-field">
+            <label for="su_email">Email</label>
+            <input id="su_email" type="email" autocomplete="email" placeholder="name@company.com" />
+          </div>
+          <div class="z-field">
+            <label for="su_password">Password</label>
+            <input id="su_password" type="password" autocomplete="new-password" placeholder="Create a password" />
+          </div>
+          <div class="z-field">
+            <label for="su_confirm_password">Confirm Password</label>
+            <input id="su_confirm_password" type="password" autocomplete="new-password" placeholder="Re-enter password" />
+          </div>
+          <div class="z-actions">
+            <button class="z-btn z-btn--primary" id="btnCreate" type="button">Create account</button>
+            <button class="z-btn z-btn--danger" id="btnResetAll" type="button" title="Deletes all local accounts and sign-in state" style="display:none">Reset local accounts</button>
+          </div>
+          <div class="z-foot">
+            <span class="z-muted">Already have an account?</span>
+            <a href="#" id="z_goSignin" onclick="return false;">Sign in</a>
+          </div>
+        </div>
+
+        <div class="z-foot">
+          <span class="z-muted">Having trouble?</span>
+          <a href="#" onclick="return false;">Contact support</a>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script>
+  // Simple tab switcher (keeps existing input IDs, only changes visibility)
+  (function(){
+    function qs(id){ return document.getElementById(id); }
+    var tabIn = qs('z_tab_signin');
+    var tabCr = qs('z_tab_create');
+    var pIn = qs('z_panel_signin');
+    var pCr = qs('z_panel_create');
+    function setTab(which){
+      var isIn = which==='in';
+      var pInvite = qs('z_panel_invitepw');
+      if(tabIn) tabIn.setAttribute('aria-selected', isIn ? 'true' : 'false');
+      if(tabCr) tabCr.setAttribute('aria-selected', isIn ? 'false' : 'true');
+      if(pIn) pIn.style.display = isIn ? '' : 'none';
+      if(pCr) pCr.style.display = isIn ? 'none' : '';
+      if(pInvite) pInvite.style.display = 'none';
+      try{ (isIn ? qs('li_username') : qs('su_name'))?.focus?.(); }catch(e){}
+    }
+    tabIn && tabIn.addEventListener('click', function(){ setTab('in'); });
+    tabCr && tabCr.addEventListener('click', function(){ setTab('cr'); });
+    var go = qs('z_goSignin');
+    go && go.addEventListener('click', function(){ setTab('in'); });
+    var cta = qs('z_focusLogin');
+    var card = qs('z_loginCard');
+    cta && card && cta.addEventListener('click', function(){
+      card.scrollIntoView({behavior:'smooth', block:'center'});
+      setTab('in');
+    });
+  })();
+</script>
+
+<script>
+/* Auth is now handled by Supabase (email + password).
+   Local-only auth scripts were removed to avoid conflicts. */
+</script>
+
+<!-- SUPABASE AUTH (LOGIN) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="shared/supabase-client.js?v=2026-04-29-v327"></script>
+<script>
+(function(){
+  var SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
+  var SUPABASE_KEY = "sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864";
+  window.__ZUMMEE_INITIAL_AUTH_URL = window.location.href;
+
+  if(!window.supabase || typeof window.supabase.createClient !== "function"){
+    console.error("Supabase JS failed to load");
+    return;
+  }
+
+  var sb = null;
+  try { if (typeof window.ensureSupabaseSync === "function") sb = window.ensureSupabaseSync(); } catch(_e){}
+  if(!sb && window.supabaseClient && typeof window.supabaseClient.from === "function") sb = window.supabaseClient;
+  if(!sb){
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { storageKey:'sb-zummee-auth', storage: window.localStorage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+    });
+  }
+  window.supabaseClient = sb;
+  window.sb = sb;
+
+  // ===== Board Member Invite support =====
+  function __qp(name){
+    try{
+      var u = new URL(window.location.href);
+      return u.searchParams.get(name) || "";
+    }catch(e){ return ""; }
+  }
+  var __BM_INVITE = __qp("bm_invite");
+
+  function applyBoardMemberLoginMode(){
+    if(!__BM_INVITE) return;
+    try{
+      var card = $('z_loginCard');
+      var cardTitle = card ? card.querySelector('h2') : null;
+      var cardSub = card ? card.querySelector('p') : null;
+      if(cardTitle) cardTitle.textContent = 'Board Member Login';
+      if(cardSub) cardSub.textContent = 'Access the Board Member Hub to review the calendar, action items, and meeting agenda.';
+      if($('btnLogin')) $('btnLogin').textContent = 'Board Member Sign In';
+      if($('z_tab_signin')) $('z_tab_signin').textContent = 'Board Member Sign In';
+      if($('z_tab_create')) $('z_tab_create').style.display = 'none';
+      if($('z_panel_create')) $('z_panel_create').style.display = 'none';
+      if($('z_focusLogin')) $('z_focusLogin').textContent = 'Board Member Login';
+      var heroTitle = document.querySelector('.z-heroTitle');
+      var heroSub = document.querySelector('.z-heroSub');
+      if(heroTitle) heroTitle.textContent = 'Secure access for board members';
+      if(heroSub) heroSub.textContent = 'Review the calendar, add action items, and manage meeting agenda topics from one board-only hub.';
+    }catch(_e){}
+  }
+
+  applyBoardMemberLoginMode();
+
+  async function acceptBoardMemberInvite(token){
+    token = String(token||"").trim();
+    if(!token) return { ok:false, why:"missing token" };
+
+    // must be logged in
+    var sess = await sb.auth.getSession();
+    var user = sess && sess.data && sess.data.session && sess.data.session.user ? sess.data.session.user : null;
+    if(!user) return { ok:false, why:"no session" };
+
+    var uEmail = String(user.email||"").trim().toLowerCase();
+
+    var invRes = await sb.from("board_member_invites").select("*").eq("token", token).maybeSingle();
+    if(invRes.error) return { ok:false, why:invRes.error.message || "invite lookup failed" };
+    var inv = invRes.data;
+    if(!inv) return { ok:false, why:"invite not found" };
+    if(inv.used_at) return { ok:false, why:"invite already used" };
+    if(inv.expires_at){
+      try{ if(new Date(inv.expires_at).getTime() < Date.now()) return { ok:false, why:"invite expired" }; }catch(e){}
+    }
+    if(String(inv.email||"").trim().toLowerCase() !== uEmail){
+      return { ok:false, why:"This invite was sent to a different email address." };
+    }
+
+    // Upsert into userdirectory as BoardMember
+    var profName = String(inv.name || user.user_metadata?.full_name || "").trim();
+    if(!profName) profName = uEmail.split("@")[0];
+
+    // Try common table name variants
+    var udTables = ["userdirectory", "UserDirectory"];
+    var udOk = false;
+    var lastErr = null;
+    for(var i=0;i<udTables.length;i++){
+      var t = udTables[i];
+      var up = await sb.from(t).upsert([{
+        auth_user_id: user.id,
+        profile_name: profName,
+        profile_email: uEmail,
+        role: "BoardMember",
+        approved: true,
+        company_id: inv.company_id || null,
+        company_name: inv.company_name || null
+      }], { onConflict: "auth_user_id" });
+      if(!up.error){ udOk = true; break; }
+      lastErr = up.error;
+    }
+    if(!udOk) return { ok:false, why:(lastErr && lastErr.message) ? lastErr.message : "userdirectory upsert failed" };
+
+    // Mark invite used
+    await sb.from("board_member_invites").update({ used_at: new Date().toISOString() }).eq("token", token);
+
+    // Set local context for board member hub
+    try{
+      if(inv.company_id) localStorage.setItem("activeCompanyId", String(inv.company_id));
+      if(inv.company_name) localStorage.setItem("activeCompanyName", String(inv.company_name));
+      if(inv.community_id) localStorage.setItem("activeCommunityId", String(inv.community_id));
+      if(inv.community_name) localStorage.setItem("activeCommunityName", String(inv.community_name));
+    }catch(e){}
+
+    return { ok:true };
+  }
+
+  // Auth hang guard: prevents infinite pending promises on some pages.
+  (function(){
+    try{
+      if(!sb || !sb.auth) return;
+      const origGetUser = sb.auth.getUser ? sb.auth.getUser.bind(sb.auth) : null;
+      const origGetSession = sb.auth.getSession ? sb.auth.getSession.bind(sb.auth) : null;
+
+      if(origGetUser){
+        sb.auth.getUser = async function(){
+          try{
+            return await Promise.race([
+              origGetUser(),
+              new Promise((_,rej)=>setTimeout(()=>rej(new Error('getUser timeout')), 4000))
+            ]);
+          }catch(e){
+            try{
+              const s = origGetSession ? await origGetSession() : { data:{ session:null } };
+              return { data:{ user: s.data?.session?.user || null }, error: null };
+            }catch(_e2){
+              return { data:{ user: null }, error: e };
+            }
+          }
+        };
+      }
+
+      if(origGetSession){
+        sb.auth.getSession = async function(){
+          try{
+            return await Promise.race([
+              origGetSession(),
+              new Promise((_,rej)=>setTimeout(()=>rej(new Error('getSession timeout')), 4000))
+            ]);
+          }catch(e){
+            // F reminded the session via auth state change INIT.
+            return await new Promise((resolve)=>{
+              let done = false;
+              const sub = sb.auth.onAuthStateChange((event, session)=>{
+                if(done) return;
+                if(event === 'INITIAL_SESSION' || session){
+                  done = true;
+                  try{ sub.data.subscription.unsubscribe(); }catch(_e3){}
+                  resolve({ data:{ session: session || null }, error: null });
+                }
+              });
+              setTimeout(()=>{
+                if(done) return;
+                done = true;
+                try{ sub.data.subscription.unsubscribe(); }catch(_e4){}
+                resolve({ data:{ session: null }, error: e });
+              }, 1200);
+            });
+          }
+        };
+      }
+    }catch(_e){}
+  })();
+
+  // Pending profile bootstrap (stored at signup, applied on first successful login).
+  // This guarantees company/name/phone persist even if signUp doesn't create a session.
+  function pendingKey(email){
+    return "zummee_pending_profile_" + String(email||"").toLowerCase();
+  }
+  function setPendingProfile(email, payload){
+    try{
+      if(!email) return;
+      localStorage.setItem(pendingKey(email), JSON.stringify(payload||{}));
+    }catch(e){}
+  }
+  function getPendingProfile(email){
+    try{
+      var raw = localStorage.getItem(pendingKey(email));
+      if(!raw) return null;
+      var obj = JSON.parse(raw);
+      if(obj && typeof obj === 'object') return obj;
+    }catch(e){}
+    return null;
+  }
+  function clearPendingProfile(email){
+    try{ if(email) localStorage.removeItem(pendingKey(email)); }catch(e){}
+  }
+  async function upsertProfileFromAuth(user){
+    try{
+      if(!user || !user.id) return;
+      var meta = (user.user_metadata || {}) || {};
+      var email = user.email || meta.email || "";
+      var name = meta.name || "";
+      var phone = meta.phone || "";
+      var company = (meta.company || "").trim();
+      if(!company) company = getLocalCompany();
+      // If company still missing, try pending profile captured at signup.
+      if(!company && email){
+        var pend = getPendingProfile(email);
+        if(pend){
+          if(!name && pend.name) name = String(pend.name);
+          if(!phone && pend.phone) phone = String(pend.phone);
+          if(pend.company) company = String(pend.company).trim();
+        }
+      }
+      // Attempt to upsert with email column; if schema doesn't have email, fall back.
+      var department = (meta.department || "").trim();
+      var role = (meta.role || meta.userRole || "").trim();
+
+      // IMPORTANT: Never overwrite existing role/department with blanks on login.
+      // Build payload with only non-empty fields.
+      var payload = { id: user.id };
+      if(name) payload.name = name;
+      if(phone) payload.phone = phone;
+      if(company) payload.company = company;
+      if(email) payload.email = email;
+      if(department) payload.department = department; // only if provided
+      if(role) payload.role = role; // only if provided
+
+      var up = await sb.from("profiles").upsert([payload], { onConflict: "id" });
+      if(up && up.error){
+        // Fallback without email if schema doesn't have email
+        var payload2 = { id: user.id };
+        if(name) payload2.name = name;
+        if(phone) payload2.phone = phone;
+        if(company) payload2.company = company;
+        if(department) payload2.department = department;
+        if(role) payload2.role = role;
+
+        var up2 = await sb.from("profiles").upsert([payload2], { onConflict: "id" });
+        if(up2 && up2.error) {
+          console.warn("Profile upsert error:", up2.error.message);
+          // Preserve pending profile so we can retry on next login
+          if(email){
+            setPendingProfile(email, { name:name, phone:phone, company:company });
+          }
+          return;
+        }
+      }
+
+      // Success: clear pending profile record for this email.
+      if(email) clearPendingProfile(email);
+    }catch(e){
+      console.warn("Profile upsert exception:", e && e.message ? e.message : e);
+    }
+  }
+
+  function $(id){ return document.getElementById(id); }
+  function val(id){ var el=$(id); return el ? (el.value||"") : ""; }
+
+  // Premium modal-style messages (match Supervisor popups)
+  function openAuthModal(title, msg){
+    try{
+      var back = $("authModalBack");
+      var t = $("authModalTitle");
+      var b = $("authModalBody");
+      if(!back || !t || !b){
+        // Fallback
+        alert(String(msg || title || ""));
+        return;
+      }
+      t.textContent = String(title || "Notice");
+      b.textContent = String(msg || "");
+      back.style.display = "flex";
+      back.setAttribute("aria-hidden","false");
+      setTimeout(function(){ try{ $("authModalOk").focus(); }catch(_e){} }, 30);
+    }catch(e){
+      alert(String(msg || title || ""));
+    }
+  }
+  function closeAuthModal(){
+    try{
+      var back = $("authModalBack");
+      if(back){
+        back.style.display = "none";
+        back.setAttribute("aria-hidden","true");
+      }
+    }catch(_e){}
+  }
+
+  function show(msg){
+    openAuthModal("Notice", msg);
+  }
+
+  async function loadCompanies(){
+    var sel = $("su_company");
+    if(!sel) return;
+    sel.innerHTML = '<option value="">Loading...</option>';
+    try{
+      var q = await sb.from("Companies").select("name,active").eq("active", true).order("name", { ascending: true });
+      if(q && q.error) throw q.error;
+
+      var rows = (q && q.data) ? q.data : [];
+      var html = '<option value="">Select a company...</option>';
+      for(var i=0;i<rows.length;i++){
+        var nm = rows[i] && rows[i].name ? String(rows[i].name) : "";
+        if(!nm) continue;
+        html += '<option value="' + nm.replace(/"/g,'&quot;') + '">' + nm + '</option>';
+      }
+      sel.innerHTML = html;
+    }catch(e){
+      console.warn("Could not load companies", e && e.message ? e.message : e);
+      sel.innerHTML = '<option value="">Could not load companies</option>';
+    }
+  }
+  window.loadCompanies = loadCompanies;
+
+  function getInitialAuthHint(){
+    try{
+      var raw = String(window.__ZUMMEE_INITIAL_AUTH_URL || window.location.href || '');
+      var lower = raw.toLowerCase();
+      return lower.indexOf('access_token=') >= 0 || lower.indexOf('refresh_token=') >= 0 || lower.indexOf('type=invite') >= 0 || lower.indexOf('type=recovery') >= 0 || lower.indexOf('?code=') >= 0 || lower.indexOf('&code=') >= 0;
+    }catch(_e){ return false; }
+  }
+
+  async function shouldShowInvitePasswordSetup(session){
+    try{
+      var user = session && session.user ? session.user : null;
+      if(!user) return false;
+      if(user.user_metadata && user.user_metadata.password_set === true) return false;
+      if(!getInitialAuthHint()) return false;
+      var role = String((user.user_metadata && (user.user_metadata.role || user.user_metadata.userRole)) || '').trim().toLowerCase();
+      if(role === 'resident') return true;
+      if(user.id){
+        try{
+          var q = await sb.from('resident_directory').select('id').eq('auth_user_id', user.id).limit(1).maybeSingle();
+          if(q && !q.error && q.data && q.data.id) return true;
+        }catch(_e){}
+      }
+      if(user.email){
+        try{
+          var q2 = await sb.from('resident_directory').select('id').eq('email', user.email).order('updated_at', { ascending:false }).limit(1).maybeSingle();
+          if(q2 && !q2.error && q2.data && q2.data.id) return true;
+        }catch(_e){}
+      }
+    }catch(_e){}
+    return false;
+  }
+
+  async function showInvitePasswordPanel(session){
+    var user = session && session.user ? session.user : null;
+    if(!user) return false;
+    if(!(await shouldShowInvitePasswordSetup(session))) return false;
+    try{
+      var cardTitle = $('z_loginCard') ? $('z_loginCard').querySelector('h2') : null;
+      var cardSub = $('z_loginCard') ? $('z_loginCard').querySelector('p') : null;
+      var isBoardInvite = !!__BM_INVITE;
+      if(cardTitle) cardTitle.textContent = isBoardInvite ? 'Create your board member password' : 'Create your resident password';
+      if(cardSub) cardSub.textContent = isBoardInvite
+        ? 'Finish your board member invite by setting a password. Use your email address and this password the next time you sign in.'
+        : 'Finish your invite by setting a password. Use your email address and this password the next time you sign in.';
+      if($('z_inviteNote')) $('z_inviteNote').textContent = isBoardInvite
+        ? 'Finish setting up your board member login. Use your email address as your username going forward.'
+        : 'Finish setting up your resident login. Use your email address as your username going forward.';
+      if($('btnInviteSetPassword')) $('btnInviteSetPassword').textContent = isBoardInvite ? 'Save Password & Open Board Member Hub' : 'Save Password & Continue';
+      if($('z_panel_signin')) $('z_panel_signin').style.display = 'none';
+      if($('z_panel_create')) $('z_panel_create').style.display = 'none';
+      if($('z_panel_invitepw')) $('z_panel_invitepw').style.display = '';
+      if($('z_tab_signin')) $('z_tab_signin').style.display = 'none';
+      if($('z_tab_create')) $('z_tab_create').style.display = 'none';
+      if($('ipw_email')) $('ipw_email').value = String(user.email || '');
+      if($('ipw_password')) $('ipw_password').value = '';
+      if($('ipw_confirm')) $('ipw_confirm').value = '';
+      try{ $('ipw_password').focus(); }catch(_e){}
+      return true;
+    }catch(_e){}
+    return false;
+  }
+
+  async function handleInvitePasswordSetup(){
+    var pw = val('ipw_password');
+    var confirm = val('ipw_confirm');
+    if(!pw || !confirm){
+      show('Please enter and confirm your new password.');
+      return;
+    }
+    if(pw !== confirm){
+      show('Passwords do not match.');
+      return;
+    }
+    if(pw.length < 6){
+      show('Password should be at least 6 characters.');
+      return;
+    }
+    try{
+      var ures = null;
+      var user = null;
+      try{ ures = await sb.auth.getUser(); user = ures && ures.data ? ures.data.user : null; }catch(_e){}
+      if(!user){
+        try{ var sres = await sb.auth.getSession(); user = sres && sres.data && sres.data.session ? sres.data.session.user : null; }catch(_e2){}
+      }
+      if(!user){
+        show('Your invite session has expired. Please request a new invite.');
+        return;
+      }
+      var mergedMeta = Object.assign({}, user.user_metadata || {}, { password_set: true, role: (user.user_metadata && user.user_metadata.role) || 'Resident' });
+      var resp = await sb.auth.updateUser({ password: pw, data: mergedMeta });
+      if(resp && resp.error) throw resp.error;
+      try{ history.replaceState({}, document.title, 'login.html'); }catch(_e){}
+      window.location.replace('community_experience.html');
+    }catch(err){
+      show((err && err.message) ? err.message : 'Unable to save your password.');
+    }
+  }
+
+  function setInvitePasswordAndContinue(){
+    return handleInvitePasswordSetup();
+  }
+
+  async function getPostLoginDestination(){
+    try{
+      var user = null;
+      try{ var ures = await sb.auth.getUser(); user = ures && ures.data ? ures.data.user : null; }catch(_e){}
+      if(!user){
+        try{ var sres = await sb.auth.getSession(); user = sres && sres.data && sres.data.session ? sres.data.session.user : null; }catch(_e2){}
+      }
+      var meta = (user && user.user_metadata) ? user.user_metadata : {};
+      var role = String(meta.role || meta.userRole || '').trim().toLowerCase();
+      if(role === 'resident') return 'community_experience.html';
+      if(role === 'boardmember' || role === 'board member' || role === 'board_member' || role === 'board') return 'board_member_hub.html';
+      if(user && user.id){
+        try{
+          var q = await sb.from('resident_directory').select('id').eq('auth_user_id', user.id).limit(1).maybeSingle();
+          if(q && !q.error && q.data && q.data.id) return 'community_experience.html';
+        }catch(_e){}
+        try{
+          var q2 = await sb.from('userdirectory').select('role').eq('auth_user_id', user.id).limit(1).maybeSingle();
+          var role2 = String(q2 && q2.data && q2.data.role || '').trim().toLowerCase();
+          if(role2 === 'boardmember' || role2 === 'board member' || role2 === 'board_member' || role2 === 'board') return 'board_member_hub.html';
+        }catch(_e3){}
+      }
+    }catch(_e){}
+    return "manager_hub.html";
+  }
+
+  async function redirectAfterLogin(){
+    var dest = await getPostLoginDestination();
+    window.location.replace(dest || "manager_hub.html");
+  }
+
+  var invitePwBtn = $('btnInviteSetPassword');
+  if(invitePwBtn && !invitePwBtn.__zummeeBound){
+    invitePwBtn.__zummeeBound = true;
+    invitePwBtn.addEventListener('click', handleInvitePasswordSetup);
+  }
+  var invitePwInput = $('ipw_password');
+  var invitePwConfirm = $('ipw_confirm');
+  [invitePwInput, invitePwConfirm].forEach(function(input){
+    if(input && !input.__zummeeEnterBound){
+      input.__zummeeEnterBound = true;
+      input.addEventListener('keydown', function(ev){
+        if(ev.key === 'Enter'){
+          ev.preventDefault();
+          handleInvitePasswordSetup();
+        }
+      });
+    }
+  });
+
+  sb.auth.getSession().then(async function(res){
+    try{
+      if(res && res.data && res.data.session){
+        if(await showInvitePasswordPanel(res.data.session)){
+          return;
+        }
+        if(__BM_INVITE){
+          try{
+            var r = await acceptBoardMemberInvite(__BM_INVITE);
+            if(r && r.ok){
+              window.location.replace("board_member_hub.html");
+              return;
+            }
+          }catch(e){}
+        }
+        if(__BM_INVITE){ try{ var rr = await acceptBoardMemberInvite(__BM_INVITE); if(rr && rr.ok){ window.location.replace("board_member_hub.html"); return; } }catch(_e){} }
+        redirectAfterLogin();
+      }
+    }catch(e){}
+  });
+
+  function resetCreateAccountFields(){
+    try{
+      ["su_name","su_phone","su_email","su_company","su_password","su_confirm_password"].forEach(function(id){
+        var el = $(id);
+        if(el) el.value = "";
+      });
+    }catch(_e){}
+  }
+
+  async function handleCreate(){
+    var name = val("su_name").trim();
+    var phone = val("su_phone").trim();
+    var email = val("su_email").trim();
+    var companyCode = (val("su_company") || "").trim().toUpperCase();
+    var password = val("su_password");
+    var confirmPassword = val("su_confirm_password");
+    if(password !== confirmPassword){
+      show("Passwords do not match");
+      return;
+    }
+
+    if(!name || !phone || !email || !companyCode || !password){
+      show("Please complete all fields");
+      return;
+    }
+    if(email.indexOf("@") === -1){
+      show("Please enter a valid email");
+      return;
+    }
+    if(password.length < 6){
+      show("Password should be at least 6 characters");
+      return;
+    }
+
+    
+    // Lookup Company by Code (required)
+    var companyName = "";
+    var companyId = "";
+    var qC = await sb.from("Companies").select("id,name,code").eq("code", companyCode).maybeSingle();
+    if(qC && qC.data){
+      companyName = String(qC.data.name || "").trim();
+      companyId = String(qC.data.id || "").trim();
+    }
+    if(!companyId){
+      show("Company code not found. Please check with your supervisor.");
+      return;
+    }
+
+var resp = await sb.auth.signUp({
+      email: email,
+      password: password,
+      options: { data: { name: name, phone: phone, company: companyName, company_id: companyId } }
+    });
+
+    if(resp && resp.error){
+      show("Create account failed: " + resp.error.message);
+      return;
+    }
+
+// Ensure bootstrap admin always has Admin role + Supervisor department in Profiles (even if metadata is missing)
+// (Guarded here because normal sign-ups won't define isBootstrapAdmin.)
+if(typeof isBootstrapAdmin !== 'undefined' && isBootstrapAdmin){
+  try{
+    var u0 = (resp && resp.data ? resp.data.user : null) || {};
+    if(u0 && u0.id){
+      var company0 = getLocalCompany();
+      var payload0 = { id: u0.id, name: "CompanyAdmin", company: company0, department: "Supervisor", role: "Admin" };
+      await sb.from("profiles").upsert([payload0], { onConflict: "id" });
+    }
+  }catch(_e){}
+}
+
+    // Store pending profile details so we can reliably persist to Profiles on first login.
+    // Supabase signUp may not create a session (depending on email confirmation settings).
+    setPendingProfile(email, { name: name, phone: phone, company: companyName, company_id: companyId, approved: false });
+
+    // Best-effort: if the auth user is available and policies allow, attempt an immediate profile upsert.
+    await upsertProfileFromAuth(resp && resp.data ? resp.data.user : null);
+
+    // Ensure profile has routing + approval fields
+    var uNew = (resp && resp.data && resp.data.user) ? resp.data.user : null;
+    if(uNew && uNew.id){
+      await sb.from("profiles").upsert([{
+        id: uNew.id,
+        company: companyName,
+        company_id: companyId,
+        approved: false,
+        // Set a sane default role for new accounts so approvals & permissions work.
+        role: "Employee"
+      }], { onConflict: "id" });
+    }
+
+    // New accounts require Supervisor approval before sign-in (unless Admin/Supervisor).
+    try{
+      var uNew = (resp && resp.data ? resp.data.user : null) || null;
+      if(uNew && uNew.id){
+        var meta = (uNew.user_metadata || {}) || {};
+        var role = String(meta.role || meta.userRole || '').trim();
+        var dept = String(meta.department || '').trim();
+        var needsApproval = !(role === 'Admin' || dept === 'Supervisor');
+        if(needsApproval){
+          await sb.from("profiles").update({ approved: false }).eq('id', uNew.id);
+        } else {
+          await sb.from("profiles").update({ approved: true }).eq('id', uNew.id);
+        }
+      }
+    }catch(_e){ /* ignore if schema lacks column */ }
+
+    show("Your account has been submitted for approval. Please sign in. (If you don’t see your company later, sign in once and it will sync automatically.)");
+    resetCreateAccountFields();
+  }
+
+  
+  async function isApprovedToSignIn(user){
+    // Staff accounts require approval. Resident accounts should bypass the staff gate.
+    window.__denyMessage = "";
+    if(!user || !user.id || !window.sb) return false;
+
+    var emailL = String(user.email || "").toLowerCase();
+    if(emailL === "companyadmin@zummee.local") return true;
+
+    var meta = (user.user_metadata || {}) || {};
+    var roleM = String(meta.role || meta.userRole || "").trim().toLowerCase();
+    var deptM = String(meta.department || "").trim();
+    if(roleM === "resident") return true;
+    if(roleM === "admin" || deptM === "Supervisor") return true;
+
+    // Resident fallback: if linked in resident_directory, skip staff approval.
+    try{
+      var rd = await sb
+        .from('resident_directory')
+        .select('id,auth_user_id,email')
+        .or('auth_user_id.eq.' + user.id + ',email.eq.' + emailL)
+        .limit(1)
+        .maybeSingle();
+      if(rd && !rd.error && rd.data && rd.data.id){
+        return true;
+      }
+    }catch(_e){ /* ignore */ }
+
+    // We enforce "disabled" from profiles if present, but approval source-of-truth is userdirectory.
+    var q = await sb.from("profiles").select("approved,department,disabled,role").eq("id", user.id).maybeSingle();
+    if(q && q.error){
+      q = await sb.from("profiles").select("approved,department,role").eq("id", user.id).maybeSingle();
+    }
+
+    if(q && q.data){
+      var profileRole = String(q.data.role || '').trim().toLowerCase();
+      if(profileRole === 'resident') return true;
+      var dis = (q.data.disabled === true || q.data.disabled === 1);
+      if(dis){
+        window.__denyMessage = "Your account has been disabled. Please contact an administrator.";
+        return false;
+      }
+    }
+
+    try{
+      var ud = await sb
+        .from('userdirectory')
+        .select('approved,company_id,role,created_at')
+        .eq('auth_user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if(ud && !ud.error && Array.isArray(ud.data) && ud.data.length){
+        var hasResidentRow = ud.data.some(function(r){ return String((r && r.role) || '').trim().toLowerCase() === 'resident'; });
+        if(hasResidentRow) return true;
+        var okAny = ud.data.some(function(r){ return (r && (r.approved === true || r.approved === 1)); });
+        if(okAny) return true;
+      }
+    }catch(_e){ /* ignore */ }
+
+    if(q && q.data){
+      var ap = q.data.approved;
+      if(ap === true || ap === 1) return true;
+    }
+
+    window.__denyMessage = "Your account is pending Supervisor approval. Please contact your supervisor for access.";
+    return false;
+  }
+
+async function handleLogin(){
+    var rawUser = val("li_username").trim();
+    var password = val("li_password");
+
+    if(!rawUser || !password){
+      show("Enter email and password");
+      return;
+    }
+
+    // Temporary bootstrap admin alias:
+    // Allow logging in with username "CompanyAdmin" (maps to an internal email).
+    var email = rawUser;
+    var isBootstrapAdmin = (String(rawUser).toLowerCase() === "companyadmin");
+    if(isBootstrapAdmin){
+      email = "companyadmin@zummee.local";
+    } else {
+      if(email.indexOf("@") === -1){
+        show("Please enter your email address");
+        return;
+      }
+    }
+
+    // Try sign in
+    var resp = await sb.auth.signInWithPassword({ email: email, password: password });
+
+    // If the bootstrap admin doesn't exist yet, create it automatically on first login attempt.
+    if(isBootstrapAdmin && resp && resp.error){
+      var msg = String(resp.error.message || "");
+      // Common Supabase message: "Invalid login credentials"
+      if(msg.toLowerCase().indexOf("invalid") !== -1 || msg.toLowerCase().indexOf("credentials") !== -1){
+        try{
+          var company = getLocalCompany();
+          await sb.auth.signUp({
+            email: email,
+            password: password,
+            options: { data: { name: "CompanyAdmin", company: company, department: "Supervisor", role: "Admin" } }
+          });
+          // Try sign in again
+          resp = await sb.auth.signInWithPassword({ email: email, password: password });
+        }catch(e){
+          // fall through to error handler below
+        }
+      }
+    }
+
+    if(resp && resp.error){
+      // Normalize common auth errors for a friendlier UX
+      var raw = String(resp.error.message || "");
+      var nice = raw;
+      if(raw.toLowerCase().indexOf("invalid login") !== -1 || raw.toLowerCase().indexOf("invalid") !== -1){
+        nice = "Email or password is incorrect.";
+      }
+      openAuthModal("Sign in failed", nice);
+      return;
+    }
+
+// Ensure bootstrap admin always has Admin role + Supervisor department in Profiles (even if metadata is missing)
+if(isBootstrapAdmin){
+  try{
+    var u0 = (resp && resp.data ? resp.data.user : null) || {};
+    if(u0 && u0.id){
+      var company0 = getLocalCompany();
+      var payload0 = { id: u0.id, name: "CompanyAdmin", company: company0, department: "Supervisor", role: "Admin" };
+      await sb.from("profiles").upsert([payload0], { onConflict: "id" });
+    }
+  }catch(_e){}
+}
+
+    await upsertProfileFromAuth(resp && resp.data ? resp.data.user : null);
+
+    // Enforce Supervisor approval before allowing access
+    try{
+      var uNow = (resp && resp.data ? resp.data.user : null) || null;
+      var ok = await isApprovedToSignIn(uNow);
+      if(!ok){
+        try{ await sb.auth.signOut(); }catch(_e){}
+        show(window.__denyMessage || 'Your account is pending Supervisor approval. Please contact your supervisor for access.');
+        return;
+      }
+    }catch(_e){ }
+
+    // Store a lightweight local session for legacy pages
+    try{
+      var u = (resp && resp.data ? resp.data.user : null) || {};
+      var sid = u.id || (isBootstrapAdmin ? "companyadmin" : "");
+      if(sid){
+        var ses = { userId: sid, email: email, name: (u.user_metadata && u.user_metadata.name) ? u.user_metadata.name : rawUser };
+        localStorage.setItem("zummee_session_v1", JSON.stringify(ses));
+        sessionStorage.setItem("zummee_session_v1", JSON.stringify(ses));
+        localStorage.setItem("zummee_user_id_v1", sid);
+        console.log("[Zummee login v326] token save hook reached");
+
+        // v326: persist Supabase auth tokens under every key used by downstream pages.
+        try{
+          if(resp && resp.data && resp.data.session){
+            var zs = resp.data.session;
+            if(window.zummeePersistSupabaseSession) window.zummeePersistSupabaseSession(zs);
+            localStorage.setItem("sb_access_token", zs.access_token || "");
+            localStorage.setItem("sb_refresh_token", zs.refresh_token || "");
+            localStorage.setItem("zummee_sb_access_token", zs.access_token || "");
+            localStorage.setItem("zummee_sb_refresh_token", zs.refresh_token || "");
+            localStorage.setItem("sb-zummee-auth", JSON.stringify({ currentSession: zs, session: zs, access_token: zs.access_token, refresh_token: zs.refresh_token, user: zs.user || u }));
+            sessionStorage.setItem("sb_access_token", zs.access_token || "");
+            sessionStorage.setItem("sb_refresh_token", zs.refresh_token || "");
+            console.log("[Zummee login v326] Supabase session tokens saved");
+          } else {
+            console.warn("[Zummee login v326] No Supabase session returned from sign-in");
+          }
+        }catch(_e2){ console.warn("[Zummee login v326] token persist failed", _e2); }
+      }
+    }catch(e){}
+
+    // If company is missing, DO NOT block login. Employees must land directly on the Hub.
+    // We'll attempt a best-effort auto-fill of `profiles.company` from userdirectory
+    // (or localStorage) and continue.
+    try{
+      var ucheck = (resp && resp.data ? resp.data.user : null) || {};
+      var uidCheck = ucheck.id;
+      if(uidCheck){
+        var qp = await sb.from("profiles").select("*").eq("id", uidCheck).maybeSingle();
+        var c = (qp && qp.data && qp.data.company) ? String(qp.data.company).trim() : "";
+        if(!c){
+          // Best-effort: infer company from userdirectory (preferred) or local storage.
+          try{
+            var ud = await sb.from("userdirectory")
+              .select("company_name")
+              .eq("auth_user_id", uidCheck)
+              .limit(1)
+              .maybeSingle();
+            var inferred = (ud && ud.data && ud.data.company_name) ? String(ud.data.company_name).trim() : "";
+            if(!inferred){ inferred = getLocalCompany(); }
+            if(inferred){
+              await sb.from("profiles").upsert([{ id: uidCheck, company: inferred }], { onConflict: "id" });
+              setLocalCompany(inferred);
+            }
+          }catch(_e2){}
+          // Always continue to Hub.
+        }
+      }
+    }catch(_e){}
+
+    redirectAfterLogin();
+  }
+
+  function wire(){
+    var btnCreate = $("btnCreate");
+    if(btnCreate){
+      btnCreate.addEventListener("click", function(e){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        handleCreate();
+      }, true);
+    }
+
+    var btnLogin = $("btnLogin");
+    if(btnLogin){
+      btnLogin.addEventListener("click", function(e){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        handleLogin();
+      }, true);
+    }
+  }
+
+  if(document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", wire);
+  }else{
+    wire();
+  }
+})();
+</script>
+
+<script>
+// US phone formatter: (123) 456-7890
+function formatPhoneUS(raw){
+  var s = String(raw||"").replace(/\D/g,"").slice(0,10);
+  if(s.length === 0) return "";
+  if(s.length < 4) return "(" + s;
+  if(s.length < 7) return "(" + s.slice(0,3) + ") " + s.slice(3);
+  return "(" + s.slice(0,3) + ") " + s.slice(3,6) + "-" + s.slice(6);
+}
+function attachPhoneFormatter(inputId){
+  var el = document.getElementById(inputId);
+  if(!el) return;
+  // Format existing value
+  el.value = formatPhoneUS(el.value);
+  el.addEventListener("input", function(){
+    var start = el.selectionStart;
+    el.value = formatPhoneUS(el.value);
+    // Put cursor at end (simple, reliable)
+    try{ el.setSelectionRange(el.value.length, el.value.length); }catch(e){}
+  });
+}
+</script>
+
+<script>
+// PHONE_FMT_INIT_LOGIN
+document.addEventListener("DOMContentLoaded", function(){
+  attachPhoneFormatter("su_phone");
+  attachPhoneFormatter("phone");
+});
+</script>
+
+<!-- Auth Modal (premium Zummee style) -->
+<div id="authModalBack" aria-hidden="true" style="position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; z-index:999999; padding:20px;">
+  <div role="dialog" aria-modal="true" aria-labelledby="authModalTitle"
+       style="background:#fff; border-radius:18px; padding:22px 24px; width:min(560px,92vw); box-shadow:0 20px 60px rgba(0,0,0,.20); border:3px solid rgba(15,47,74,0.35);">
+    <h3 id="authModalTitle" style="margin:0; font-size:22px; font-weight:900; color:#0f2f4a;">Notice</h3>
+    <div id="authModalBody" style="margin-top:10px; color:#546577; font-size:15px; line-height:1.35;"></div>
+    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:18px; flex-wrap:wrap;">
+      <button type="button" class="primary" id="authModalOk" style="border-radius:14px; padding:10px 16px;">OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Auth modal wiring
+(function(){
+  var back = document.getElementById('authModalBack');
+  var ok = document.getElementById('authModalOk');
+  if(!back || !ok) return;
+
+  // Close helper (avoid dependency on any other script scope)
+  function closeLocal(){
+    try{
+      back.style.display = 'none';
+      back.setAttribute('aria-hidden','true');
+    }catch(_e){}
+  }
+
+  back.addEventListener('click', function(ev){
+    if(ev.target === back) closeLocal();
+  });
+  ok.addEventListener('click', function(){ closeLocal(); });
+  document.addEventListener('keydown', function(ev){
+    try{
+      if(!back || back.style.display !== 'flex') return;
+      if(ev.key === 'Escape' || ev.key === 'Enter'){
+        ev.preventDefault();
+        closeLocal();
+      }
+    }catch(_e){}
+  });
+})();
+</script>
+
+<script>
+// Force picker colors to match Manager Hub (some inline styles may be set by JS)
+(function enforcePickerColors(){
+  try{
+    const btns = document.querySelectorAll('.zummee-communityBtn');
+    btns.forEach(b=>{
+      b.style.setProperty('background', '#ffffff', 'important');
+      b.style.setProperty('background-color', '#ffffff', 'important');
+      b.style.setProperty('color', '#000000', 'important');
+      b.style.setProperty('border', '1px solid rgba(15,47,74,0.25)', 'important');
+    });
+    const menus = document.querySelectorAll('.zummee-communityMenu');
+    menus.forEach(m=>{
+      m.style.setProperty('background', '#ffffff', 'important');
+      m.style.setProperty('background-color', '#ffffff', 'important');
+      m.style.setProperty('color', '#000000', 'important');
+    });
+    const items = document.querySelectorAll('.zummee-communityItem');
+    items.forEach(i=> i.style.setProperty('color', '#000000', 'important'));
+    const search = document.querySelectorAll('.zummee-communitySearch');
+    search.forEach(s=>{
+      s.style.setProperty('background', '#ffffff', 'important');
+      s.style.setProperty('color', '#000000', 'important');
+    });
+  }catch(e){}
+})();
+</script>
+
+<script id="zummeeCommunityController_v1">
+/* Unified Community Controller — single source of truth for all pages (v2092) */
+(function(){
+  const KEY="activeCommunityId";
+
+  function getSelect(){
+    return document.getElementById("zummeeCommunitySelect");
+  }
+
+  function isPlaceholder(opt){
+    const v = (opt?.value || "").trim();
+    const t = (opt?.textContent || "").trim().toLowerCase();
+    if(!v) return true;
+    return (t === "select" || t === "select..." || t === "— select —" || t === "-- select --");
+  }
+
+  function firstRealValue(sel){
+    const opts = Array.from(sel?.options || []);
+    for(const o of opts){
+      if(!isPlaceholder(o)) return o.value;
+    }
+    return "";
+  }
+
+  function syncLabel(){
+    const sel=getSelect();
+    if(!sel) return;
+    const txt=sel.selectedOptions?.[0]?.textContent?.trim();
+    if(!txt) return;
+    [
+      document.getElementById("mzCommunityPickerLabel"),
+      document.getElementById("zummeeCommunityLabel"),
+      document.querySelector(".communityPickerLabel"),
+      document.querySelector("[data-community-label]"),
+      // Hub header uses this label class
+      document.querySelector(".zummee-header__communityLabelValue")
+    ].filter(Boolean).forEach(el=>{ try{ el.textContent=txt; }catch(_e){} });
+  }
+
+  function applySaved(){
+    const sel=getSelect();
+    if(!sel) return;
+
+    const saved=(localStorage.getItem(KEY)||"").trim();
+
+    // If saved exists and option exists, apply it.
+    if(saved){
+      const opt=sel.querySelector('option[value="'+CSS.escape(saved)+'"]');
+      if(opt){
+        sel.value=saved;
+      }
+    }
+
+    // If still placeholder/empty, choose first real option.
+    const currentOpt = sel.selectedOptions?.[0];
+    if(!sel.value || isPlaceholder(currentOpt)){
+      const first = firstRealValue(sel);
+      if(first){
+        sel.value = first;
+      }
+    }
+
+    if(sel.value){
+      localStorage.setItem(KEY, sel.value);
+    }
+
+    syncLabel();
+  }
+
+  function wire(){
+    const sel=getSelect();
+    if(!sel) return;
+
+    if(!sel.__zummeeBound){
+      sel.__zummeeBound=true;
+      sel.addEventListener("change", ()=>{
+        const opt = sel.selectedOptions?.[0];
+        if(sel.value && !isPlaceholder(opt)){
+          localStorage.setItem(KEY, sel.value);
+        }
+        syncLabel();
+      });
+    }
+
+    applySaved();
+  }
+
+  function start(){
+    wire();
+
+    // Observe for header rebuild / option repopulation (Hub does this)
+    const obs = new MutationObserver(()=>{ if(getSelect()) wire(); });
+    obs.observe(document.body,{childList:true,subtree:true});
+
+    // Retry window during load
+    let tries=0;
+    const t=setInterval(()=>{
+      wire();
+      tries++;
+      if(tries>120) clearInterval(t);
+    },100);
+  }
+
+  document.addEventListener("DOMContentLoaded", start);
+  start();
+})();
+</script>
+
+<script src="company_logo_sync.js"></script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

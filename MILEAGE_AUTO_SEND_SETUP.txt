@@ -1,0 +1,34 @@
+Mileage month-end auto-send setup
+
+1) Run this SQL in Supabase SQL Editor:
+   supabase/supabase_mileage_report_settings.sql
+
+2) Deploy both functions from the project root:
+   supabase functions deploy send-mileage-report-email --project-ref slcwuuwyrgnmlmxpcaim --no-verify-jwt
+   supabase functions deploy send-monthly-mileage-reports --project-ref slcwuuwyrgnmlmxpcaim --no-verify-jwt
+
+3) Set secrets:
+   supabase secrets set RESEND_API_KEY=your_resend_key --project-ref slcwuuwyrgnmlmxpcaim
+   supabase secrets set MILEAGE_REPORT_FROM_EMAIL="Zummee Reports <noreply@mail.zummee.net>" --project-ref slcwuuwyrgnmlmxpcaim
+   supabase secrets set MILEAGE_REPORT_REPLY_TO_EMAIL="support@mail.zummee.net" --project-ref slcwuuwyrgnmlmxpcaim
+   supabase secrets set MILEAGE_REPORT_CRON_SECRET="choose_a_long_random_secret" --project-ref slcwuuwyrgnmlmxpcaim
+
+4) Create a month-end cron job in Supabase Cron / pg_cron that POSTs to:
+   https://slcwuuwyrgnmlmxpcaim.supabase.co/functions/v1/send-monthly-mileage-reports
+
+   Include header:
+   x-cron-secret: your same MILEAGE_REPORT_CRON_SECRET value
+
+   Recommended schedule:
+   5 6 1 * *
+   This sends the previous month's report on the 1st day of each month at 06:05 UTC.
+
+5) In Mileage Tracker > Reports:
+   - enter recipient name and email
+   - lock the recipient
+   - turn on "Auto-send at month end"
+
+Notes:
+- The scheduler sends the prior month only.
+- If an employee had no mileage rows for the prior month, that employee is skipped.
+- The manual Email Summary button still works immediately from the page.

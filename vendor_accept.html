@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>window.ZUMMEE_BUILD="2026-04-03-accept-email-hotfix";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Accept Vendor Job | Zummee</title>
+  
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+    :root{--brand:#0f3554;--bg:#f4f6fa;--card:#fff;--muted:#617181;--border:#d9e1ea;--ok:#d9f2e3;--okText:#1f6b44;--err:#fde8e8;--errText:#991b1b}
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#eef5fb 0%,#f6f8fb 100%);font-family:Arial,Helvetica,sans-serif;color:#17324c}
+    .wrap{max-width:760px;margin:40px auto;padding:0 16px}
+    .card{background:var(--card);border:1px solid rgba(15,53,84,.12);border-radius:28px;padding:28px;box-shadow:0 18px 42px rgba(15,53,84,.08)}
+    h1{margin:0 0 10px;font-size:40px;line-height:1;color:var(--brand)}
+    .sub{color:var(--muted);font-size:17px;margin-bottom:18px}
+    .status{padding:16px 18px;border-radius:18px;font-weight:700;margin:16px 0;display:none}
+    .status.show{display:block}
+    .status.ok{background:var(--ok);color:var(--okText)}
+    .status.err{background:var(--err);color:var(--errText)}
+    .box{padding:16px;border:1px solid var(--border);border-radius:18px;background:#f8fbff;margin-top:14px}
+    .label{font-size:13px;font-weight:800;letter-spacing:.06em;color:#6b7788;text-transform:uppercase;margin-bottom:8px}
+    .value{font-size:18px;font-weight:700;color:#17324c;word-break:break-word}
+    .spinner{width:26px;height:26px;border-radius:50%;border:3px solid #d7e2ee;border-top-color:var(--brand);animation:spin .9s linear infinite;display:inline-block;vertical-align:middle;margin-right:10px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:22px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;background:var(--brand);color:#fff;text-decoration:none;padding:13px 18px;border-radius:999px;font-weight:700;min-height:48px}
+    .btn.secondary{background:#fff;color:var(--brand);border:2px solid var(--brand)}
+    @media (max-width:720px){h1{font-size:32px}.actions{flex-direction:column}.btn{width:100%}}
+  
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+
+.mh2-actions .mh2-btn--ghost{display:none !important;}
+</style>
+  <script src="community_state_stable.js"></script>
+<style>
+/* FORCE white text in Status & Details section */
+#boardSubmittedItemsSection,
+#boardSubmittedItemsSection *:not(button),
+#boardMemberHubStatus,
+#boardMemberHubStatus *:not(button),
+#annualMeetingApprovals,
+#annualMeetingApprovals *:not(button) {
+  color: #ffffff !important;
+}
+
+/* Secondary text (slightly dimmed white) */
+#boardSubmittedItemsSection .muted,
+#boardMemberHubStatus .muted,
+#annualMeetingApprovals .muted {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style>
+/* HARD OVERRIDE — force white text in dark section */
+.hub-zone:last-of-type,
+.hub-zone:last-of-type *:not(button):not(.badge):not(.pill) {
+  color: #ffffff !important;
+}
+
+/* Slightly softer for secondary text */
+.hub-zone:last-of-type .muted,
+.hub-zone:last-of-type p,
+.hub-zone:last-of-type span {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="card">
+      <h1>Accepting Job…</h1>
+      <div class="sub">Zummee is confirming this maintenance request for the assigned vendor.</div>
+      <div id="status" class="status show"><span class="spinner" id="spinner"></span><span id="statusText">Processing your acceptance…</span></div>
+      <div class="box">
+        <div class="label">Work Order</div>
+        <div class="value" id="workOrderValue">Loading…</div>
+      </div>
+      <div class="box">
+        <div class="label">Vendor Email</div>
+        <div class="value" id="vendorEmailValue">Loading…</div>
+      </div>
+      <div class="actions">
+        <a id="viewBtn" class="btn secondary" href="#">View Full Work Order</a>
+        <a id="contactBtn" class="btn secondary" href="#">Manager Contact</a>
+        <a id="completeBtn" class="btn secondary" href="#">Mark Job Complete</a>
+      </div>
+    </section>
+  </main>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const workOrderId = params.get('work_order_id') || '';
+    const vendorEmail = (params.get('vendor_email') || '').trim();
+    const token = (params.get('token') || '').trim();
+    const managerName = params.get('manager_name') || 'Manager';
+    const managerPhone = params.get('manager_phone') || '';
+    const companyName = params.get('company_name') || 'Property Management';
+
+    const statusEl = document.getElementById('status');
+    const statusTextEl = document.getElementById('statusText');
+    const spinnerEl = document.getElementById('spinner');
+    document.getElementById('workOrderValue').textContent = workOrderId || 'Missing';
+    document.getElementById('vendorEmailValue').textContent = vendorEmail || 'Missing';
+
+    const commonQs =
+      'work_order_id=' + encodeURIComponent(workOrderId) +
+      '&vendor_email=' + encodeURIComponent(vendorEmail) +
+      '&token=' + encodeURIComponent(token) +
+      '&manager_name=' + encodeURIComponent(managerName) +
+      '&manager_phone=' + encodeURIComponent(managerPhone) +
+      '&company_name=' + encodeURIComponent(companyName);
+
+    document.getElementById('viewBtn').href = 'vendor_work_order.html?' + commonQs;
+    document.getElementById('contactBtn').href = 'vendor_contact.html?' + commonQs;
+    document.getElementById('completeBtn').href = 'vendor_complete.html?work_order_id=' + encodeURIComponent(workOrderId) + '&vendor_email=' + encodeURIComponent(vendorEmail) + '&token=' + encodeURIComponent(token);
+
+    function setStatus(text, ok){
+      statusTextEl.textContent = text;
+      statusEl.className = 'status show ' + (ok ? 'ok' : 'err');
+      if (spinnerEl) spinnerEl.style.display = 'none';
+      document.title = ok ? 'Job Accepted | Zummee' : 'Unable to Accept Job | Zummee';
+      const h1 = document.querySelector('h1');
+      if (h1) h1.textContent = ok ? 'Job Accepted' : 'Acceptance Failed';
+    }
+
+    async function run(){
+      if(!workOrderId || !vendorEmail || !token){
+        setStatus('This secure link is missing required information.', false);
+        return;
+      }
+      try{
+        const res = await fetch('https://slcwuuwyrgnmlmxpcaim.supabase.co/functions/v1/accept-vendor-job', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': (window.SUPABASE_ANON_KEY || 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864'),
+            'Authorization': 'Bearer ' + (window.SUPABASE_ANON_KEY || 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864')
+          },
+          body: JSON.stringify({
+            work_order_id: workOrderId,
+            vendor_email: vendorEmail,
+            token
+          })
+        });
+        const raw = await res.text();
+        let data = null;
+        try{ data = raw ? JSON.parse(raw) : null; }catch(_e){ data = raw; }
+        if(!res.ok){
+          const details = data && typeof data.details === 'object' ? JSON.stringify(data.details) : (data && data.details ? String(data.details) : '');
+          throw new Error((data && (data.error || data.message)) || details || raw || 'Unable to accept this job.');
+        }
+        setStatus((data && data.message) || 'This work order has been accepted and moved to active.', true);
+      }catch(err){
+        const message = err && err.message ? err.message : 'Unable to accept this job.';
+        if(/already/i.test(message) || /accepted/i.test(message)){
+          setStatus(message, true);
+          return;
+        }
+        setStatus(message, false);
+      }
+    }
+
+    run();
+  </script>
+<script src="company_logo_sync.js"></script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

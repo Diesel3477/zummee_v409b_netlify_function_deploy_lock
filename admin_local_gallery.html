@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zummee Local Gallery Admin</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="shared/supabase-client.js?v=2026-04-27-240"></script>
+  <script src="company_logo_sync.js?v=2026-04-27-240"></script>
+  
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+    :root{--blue:#12324d;--line:#9bc9ff;--muted:#5f7288;--bg:#eef5fb;--ok:#166534;--bad:#991b1b}*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:var(--blue);background:linear-gradient(180deg,#f1f7ff 0%,#edf5fd 50%,#f8fbff 100%)}.shell{max-width:1080px;margin:0 auto;padding:24px 22px 54px}.hero,.card{background:rgba(255,255,255,.96);border:2px solid var(--line);border-radius:34px;box-shadow:0 18px 46px rgba(18,50,77,.10)}.hero{padding:24px 28px;display:grid;grid-template-columns:1fr auto;gap:18px;align-items:flex-start}.kicker{font-size:13px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;color:#6c7f94}.hero h1{margin:4px 0 0;font-size:32px;line-height:1.04;letter-spacing:-.04em}.heroRight{display:flex;flex-direction:column;align-items:flex-end;gap:12px}.heroLogo{height:54px;max-width:210px;object-fit:contain;display:none}.heroLogo.is-visible{display:block}.btn{border:2px solid var(--line);background:#fff;color:var(--blue);border-radius:18px;padding:12px 16px;font-weight:950;font-size:15px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}.btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}.card{margin-top:22px;padding:24px}.card h2{margin:0;font-size:28px;letter-spacing:-.04em}.sub{margin:7px 0 0;color:var(--muted);font-size:16px;line-height:1.35}.form{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}.field{display:flex;flex-direction:column;gap:7px;font-weight:900}.field.full{grid-column:1/-1}.field input,.field textarea,.field select{width:100%;border:1px solid rgba(18,50,77,.14);border-radius:18px;padding:13px 14px;font:inherit;color:var(--blue);background:#fff}.field textarea{min-height:96px;resize:vertical}.note{margin-top:14px;padding:13px 15px;border-radius:18px;background:#eef6ff;border:1px solid rgba(59,130,246,.16);color:#38536e;font-weight:800}.status{margin-top:12px;font-size:14px;font-weight:850;color:var(--muted)}.status.ok{color:var(--ok)}.status.bad{color:var(--bad)}.grid{margin-top:18px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.tile{border:1px solid rgba(18,50,77,.12);border-radius:20px;overflow:hidden;background:#fff}.tile img{width:100%;height:150px;object-fit:cover;display:block}.tile div{padding:10px;font-size:13px;color:var(--muted);font-weight:800}@media(max-width:800px){.form{grid-template-columns:1fr}.grid{grid-template-columns:repeat(2,1fr)}.hero{grid-template-columns:1fr}.heroRight{align-items:flex-start}.shell{padding:18px 14px 42px}.card{padding:18px;border-radius:24px}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero"><div><div class="kicker">Zummee Admin</div><h1>Local Gallery Posts</h1></div><div class="heroRight"><img id="pageCompanyLogo" class="heroLogo" alt="Company logo"><a class="btn" href="manager_hub.html">Back</a></div></section>
+    <section class="card">
+      <h2>Post Local Event Photo</h2>
+      <p class="sub">Upload photos for family events, restaurants, and local highlights. These publish immediately to every community using the same area key.</p>
+      <div class="form">
+        <label class="field"><span>Area Key</span><input id="areaKey" placeholder="Example: atlanta-north" /></label>
+        <label class="field"><span>Category</span><select id="category"><option>Family Event</option><option>Restaurant</option><option>Local Highlight</option><option>Community Fun</option></select></label>
+        <label class="field full"><span>Caption</span><textarea id="caption" placeholder="Write a short friendly caption…"></textarea></label>
+        <label class="field full"><span>Photo</span><input id="photo" type="file" accept="image/*" /></label>
+      </div>
+      <button id="publishBtn" class="btn primary" style="margin-top:14px" type="button">Publish to Area Gallery</button>
+      <div class="note">Area posts are marked as Zummee Local and appear in the resident gallery for communities with the matching area key.</div>
+      <div id="status" class="status"></div>
+    </section>
+    <section class="card"><h2>Recent Local Posts</h2><div id="recentGrid" class="grid"></div></section>
+  </main>
+<script>
+const $=id=>document.getElementById(id);const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));async function getClient(){if(window.ensureSupabase)return await window.ensureSupabase();return window.supabaseClient||window.sb||null}function setStatus(msg,type){const el=$('status');el.textContent=msg||'';el.className='status '+(type||'')}function publicUrl(path){try{const sb=window.supabaseClient||window.sb;if(!path)return'';if(/^https?:\/\//i.test(path))return path;return sb.storage.from('community-gallery').getPublicUrl(path).data.publicUrl}catch(e){return path||''}}async function init(){try{const key=localStorage.getItem('zummee_area_key')||localStorage.getItem('resident_area_key')||localStorage.getItem('selected_area_key')||'';$('areaKey').value=key}catch(e){}try{const logo=localStorage.getItem('company_logo')||localStorage.getItem('zummee_company_logo_url')||'';if(logo){const img=$('pageCompanyLogo');img.src=logo;img.classList.add('is-visible');img.style.display='block'}}catch(e){}$('publishBtn').addEventListener('click',publish);await loadRecent()}async function publish(){const sb=await getClient();const file=$('photo').files&&$('photo').files[0];const area=($('areaKey').value||'').trim();const caption=($('caption').value||'').trim();const category=($('category').value||'Local Highlight').trim();if(!sb){setStatus('Admin gallery is still loading.','bad');return}if(!area){setStatus('Enter an area key first.','bad');return}if(!file){setStatus('Choose a photo first.','bad');return}try{setStatus('Publishing local photo…','');const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';const path=`area/${area}/${Date.now()}-${Math.random().toString(16).slice(2)}.${ext}`;const up=await sb.storage.from('community-gallery').upload(path,file,{cacheControl:'3600',upsert:false,contentType:file.type||'image/jpeg'});if(up.error)throw up.error;const row={area_key:area,scope:'area',post_source:'admin',resident_name:'Zummee Local',caption:caption,category:category,image_path:path,status:'approved',likes_count:0,reviewed_at:new Date().toISOString()};const ins=await sb.from('resident_gallery_posts').insert(row);if(ins.error)throw ins.error;$('photo').value='';$('caption').value='';setStatus('Published to the area gallery.','ok');await loadRecent()}catch(e){console.error(e);setStatus('Could not publish. Run the V240 gallery SQL/storage setup.','bad')}}async function loadRecent(){const sb=await getClient();const grid=$('recentGrid');if(!sb)return;try{let q=sb.from('resident_gallery_posts').select('*').eq('post_source','admin').order('created_at',{ascending:false}).limit(12);const area=($('areaKey').value||'').trim();if(area)q=q.eq('area_key',area);const r=await q;if(r.error)throw r.error;const rows=r.data||[];grid.innerHTML=rows.length?rows.map(x=>`<article class="tile"><img src="${esc(publicUrl(x.image_path||x.image_url||x.photo_url))}" loading="lazy"><div>${esc(x.caption||'Zummee Local')}</div></article>`).join(''):'<div class="note">No local posts yet.</div>'}catch(e){grid.innerHTML='<div class="note">Recent posts will appear after setup is complete.</div>'}}init();
+</script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

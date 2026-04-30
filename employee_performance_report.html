@@ -1,0 +1,3472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>window.ZUMMEE_BUILD="2026-04-25-v99-employee-performance-top-polish";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Employee Performance</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="shared/supabase-client.js?v=2026-04-08-2"></script>
+  <link rel="stylesheet" href="shared/header.css?v=2026-03-27-1">
+  
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+    :root{
+      --brand:#0f3554;
+      --brand-2:#1d4f80;
+      --bg:#f3f6fb;
+      --card:#ffffff;
+      --muted:#627487;
+      --border:rgba(15,53,84,.10);
+      --shadow:0 16px 34px rgba(15,53,84,.10);
+      --good:#dcfce7;
+      --warn:#fef3c7;
+      --bad:#fee2e2;
+      --info:#dbeafe;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Arial,Helvetica,sans-serif;
+      background:var(--bg);
+      color:#17324d;
+    }
+    #zummeeHeaderMount{display:block}
+    main{
+      max-width:1320px;
+      margin:24px auto 42px;
+      padding:0 18px 36px;
+    }
+    .page-shell{
+      background:linear-gradient(180deg, rgba(188,220,255,.36) 0%, rgba(164,205,249,.22) 100%);
+      border:1px solid rgba(255,255,255,.55);
+      border-radius:30px;
+      padding:22px;
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(16px);
+      -webkit-backdrop-filter:blur(16px);
+    }
+    .hero{
+      background:rgba(255,255,255,.72);
+      border:1px solid rgba(255,255,255,.65);
+      border-radius:28px;
+      padding:26px;
+      box-shadow:0 10px 28px rgba(15,53,84,.08);
+    }
+    .hero-top{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto;
+      gap:18px;
+      align-items:start;
+    }
+    h1{
+      margin:0;
+      font-size:clamp(34px,5vw,54px);
+      line-height:1.02;
+      letter-spacing:-.04em;
+      color:#163451;
+    }
+    .hero-sub{
+      margin-top:10px;
+      color:var(--muted);
+      font-size:16px;
+      line-height:1.5;
+      max-width:860px;
+    }
+    .hero-actions{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .hero-right{
+      display:flex;
+      flex-direction:column;
+      align-items:flex-end;
+      gap:14px;
+      min-width:0;
+    }
+    .perf-brand-logo{
+      display:block;
+      width:min(230px, 30vw);
+      max-width:230px;
+      height:78px;
+      object-fit:contain;
+      object-position:right center;
+      opacity:0;
+      transition:opacity .18s ease;
+      background:transparent;
+      border:0;
+      box-shadow:none;
+    }
+    .perf-brand-logo.is-visible{opacity:1;}
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:46px;
+      padding:11px 18px;
+      border-radius:999px;
+      border:2px solid var(--brand);
+      background:#fff;
+      color:var(--brand);
+      text-decoration:none;
+      font-size:15px;
+      font-weight:800;
+      cursor:pointer;
+    }
+    .btn.primary{
+      background:var(--brand);
+      color:#fff;
+    }
+    .filters{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:14px;
+      margin-top:20px;
+    }
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .field label{
+      font-size:11px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+      color:#6b7c8f;
+    }
+    .field select,.field input{
+      width:100%;
+      min-height:48px;
+      border-radius:16px;
+      border:1px solid rgba(15,53,84,.16);
+      background:#fff;
+      color:#17324d;
+      padding:12px 14px;
+      font-size:15px;
+      font-weight:700;
+    }
+    .summary-strip{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:14px;
+      margin-top:20px;
+    }
+    .summary-card{
+      background:rgba(255,255,255,.78);
+      border:1px solid rgba(15,53,84,.08);
+      border-radius:22px;
+      padding:18px;
+      min-height:118px;
+    }
+    .summary-card .k{
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+      font-weight:900;
+      color:#6b7c8f;
+    }
+    .summary-card .v{
+      margin-top:8px;
+      font-size:34px;
+      font-weight:900;
+      color:#163451;
+      letter-spacing:-.04em;
+    }
+    .summary-card .sub{
+      margin-top:8px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.4;
+    }
+    .grade-pill{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:60px;
+      padding:10px 14px;
+      border-radius:999px;
+      font-size:24px;
+      font-weight:900;
+      background:var(--info);
+      color:#163451;
+      margin-top:10px;
+    }
+
+    .report-spotlight{
+      display:grid;
+      grid-template-columns:minmax(0,1.15fr) minmax(340px,.85fr);
+      gap:18px;
+      margin-top:22px;
+    }
+    .cover-card,.executive-card{
+      position:relative;
+      overflow:hidden;
+      background:linear-gradient(135deg, rgba(15,53,84,.96) 0%, rgba(30,79,128,.92) 52%, rgba(65,132,204,.86) 100%);
+      color:#fff;
+      border:1px solid rgba(255,255,255,.22);
+      border-radius:28px;
+      padding:24px;
+      box-shadow:0 20px 38px rgba(15,53,84,.18);
+      min-height:220px;
+    }
+    .cover-card::before,.executive-card::before{
+      content:'';
+      position:absolute;
+      inset:auto -40px -55px auto;
+      width:220px;
+      height:220px;
+      border-radius:999px;
+      background:radial-gradient(circle at center, rgba(255,255,255,.30), rgba(255,255,255,0) 68%);
+      pointer-events:none;
+    }
+    .cover-card::after{
+      content:'';
+      position:absolute;
+      top:-18px;
+      right:46px;
+      width:160px;
+      height:160px;
+      border-radius:999px;
+      background:radial-gradient(circle at center, rgba(255,255,255,.14), rgba(255,255,255,0) 70%);
+      pointer-events:none;
+    }
+    .report-tag{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 12px;
+      border-radius:999px;
+      background:rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.18);
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+    .cover-grid{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto;
+      gap:16px;
+      align-items:start;
+      margin-top:16px;
+    }
+    .cover-title{
+      font-size:13px;
+      font-weight:800;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:rgba(255,255,255,.76);
+    }
+    .cover-name{
+      margin-top:10px;
+      font-size:clamp(28px,4vw,42px);
+      line-height:1.03;
+      font-weight:900;
+      letter-spacing:-.05em;
+      color:#fff;
+    }
+    .cover-subline{
+      margin-top:10px;
+      color:rgba(255,255,255,.82);
+      font-size:16px;
+      line-height:1.45;
+      max-width:560px;
+    }
+    .score-orb{
+      width:122px;
+      height:122px;
+      border-radius:999px;
+      background:linear-gradient(180deg, rgba(255,255,255,.20), rgba(255,255,255,.08));
+      border:1px solid rgba(255,255,255,.22);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.18);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      backdrop-filter:blur(8px);
+      -webkit-backdrop-filter:blur(8px);
+    }
+    .score-orb .score-label{
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:rgba(255,255,255,.72);
+    }
+    .score-orb .score-value{
+      margin-top:4px;
+      font-size:48px;
+      line-height:1;
+      font-weight:900;
+      letter-spacing:-.06em;
+      color:#fff;
+    }
+    .cover-meta{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:12px;
+      margin-top:20px;
+    }
+    .cover-meta-card{
+      border-radius:20px;
+      padding:14px 16px;
+      background:rgba(255,255,255,.11);
+      border:1px solid rgba(255,255,255,.16);
+      min-height:86px;
+    }
+    .cover-meta-card .k{
+      font-size:10px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      font-weight:800;
+      color:rgba(255,255,255,.68);
+    }
+    .cover-meta-card .v{
+      margin-top:8px;
+      font-size:24px;
+      line-height:1.05;
+      font-weight:900;
+      color:#fff;
+      letter-spacing:-.04em;
+    }
+    .cover-meta-card .sub{
+      margin-top:6px;
+      color:rgba(255,255,255,.76);
+      font-size:12px;
+      line-height:1.35;
+    }
+    .executive-card{
+      background:linear-gradient(180deg, rgba(255,255,255,.96) 0%, rgba(245,250,255,.96) 100%);
+      color:#17324d;
+      border-color:rgba(15,53,84,.08);
+      box-shadow:0 16px 34px rgba(15,53,84,.10);
+    }
+    .executive-card::before{
+      inset:auto -20px -60px auto;
+      background:radial-gradient(circle at center, rgba(59,130,246,.12), rgba(59,130,246,0) 72%);
+    }
+    .executive-title{
+      font-size:13px;
+      font-weight:800;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:#5c7390;
+    }
+    .executive-summary{
+      margin-top:14px;
+      font-size:18px;
+      line-height:1.6;
+      color:#23425f;
+      font-weight:700;
+    }
+    .executive-highlights{
+      display:grid;
+      gap:10px;
+      margin-top:18px;
+    }
+    .executive-chip{
+      display:flex;
+      align-items:flex-start;
+      gap:10px;
+      padding:12px 14px;
+      border-radius:18px;
+      background:#fff;
+      border:1px solid rgba(15,53,84,.08);
+      color:#23425f;
+      font-size:14px;
+      line-height:1.4;
+      box-shadow:0 8px 20px rgba(15,53,84,.05);
+    }
+    .executive-chip .dot{
+      width:24px;
+      height:24px;
+      border-radius:999px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font-size:13px;
+      font-weight:900;
+      background:#e8f1ff;
+      color:#17324d;
+      flex:0 0 auto;
+      margin-top:1px;
+    }
+    .metric-card.featured{
+      grid-column:1 / -1;
+    }
+
+    .metric-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:18px;
+      margin-top:22px;
+    }
+    .metric-card{
+      background:rgba(255,255,255,.82);
+      border:1px solid rgba(15,53,84,.08);
+      border-radius:24px;
+      padding:22px;
+      box-shadow:0 10px 24px rgba(15,53,84,.05);
+    }
+    .metric-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:14px;
+      flex-wrap:wrap;
+    }
+    .metric-title{
+      font-size:24px;
+      font-weight:900;
+      letter-spacing:-.03em;
+      color:#17324d;
+      margin:0;
+    }
+    .metric-desc{
+      margin-top:8px;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.5;
+      max-width:680px;
+    }
+    .metric-grade{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:52px;
+      min-height:52px;
+      border-radius:999px;
+      background:#e2e8f0;
+      color:#17324d;
+      font-size:22px;
+      font-weight:900;
+      padding:10px 14px;
+    }
+    .metric-stats{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:12px;
+      margin-top:18px;
+    }
+    .mini-stat{
+      border-radius:18px;
+      padding:16px;
+      background:#f8fbff;
+      border:1px solid rgba(15,53,84,.08);
+    }
+    .mini-stat .k{
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+      font-weight:900;
+      color:#6b7c8f;
+    }
+    .mini-stat .v{
+      margin-top:6px;
+      font-size:28px;
+      font-weight:900;
+      color:#17324d;
+      letter-spacing:-.03em;
+    }
+    .mini-stat .sub{
+      margin-top:6px;
+      color:var(--muted);
+      font-size:12px;
+    }
+    .metric-footer{
+      margin-top:16px;
+      padding-top:14px;
+      border-top:1px solid rgba(15,53,84,.08);
+      color:#5f7388;
+      font-size:13px;
+      line-height:1.5;
+    }
+    .insights-list{
+      display:grid;
+      gap:10px;
+      margin-top:18px;
+    }
+    .insight-item{
+      display:flex;
+      align-items:flex-start;
+      gap:10px;
+      padding:14px 16px;
+      border-radius:18px;
+      background:#f8fbff;
+      border:1px solid rgba(15,53,84,.08);
+      color:#17324d;
+      font-size:14px;
+      line-height:1.45;
+    }
+    .insight-item.good{background:rgba(220,252,231,.65);}
+    .insight-item.warn{background:rgba(254,243,199,.7);}
+    .insight-item.bad{background:rgba(254,226,226,.75);}
+    .insight-icon{
+      flex:0 0 auto;
+      width:24px;
+      height:24px;
+      border-radius:999px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font-size:14px;
+      font-weight:900;
+      background:rgba(255,255,255,.9);
+      border:1px solid rgba(15,53,84,.08);
+      margin-top:1px;
+    }
+    .ranking-list{
+      display:grid;
+      gap:12px;
+      margin-top:18px;
+    }
+    .ranking-row{
+      display:grid;
+      grid-template-columns:auto minmax(0,1.3fr) repeat(4,minmax(84px,1fr));
+      gap:12px;
+      align-items:stretch;
+      padding:14px;
+      border-radius:20px;
+      background:#f8fbff;
+      border:1px solid rgba(15,53,84,.08);
+    }
+    .ranking-row.selected{
+      background:rgba(219,234,254,.65);
+      border-color:rgba(37,99,235,.22);
+      box-shadow:0 8px 20px rgba(37,99,235,.08);
+    }
+    .ranking-pos{
+      width:48px;
+      height:48px;
+      border-radius:999px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#e2e8f0;
+      color:#17324d;
+      font-size:20px;
+      font-weight:900;
+    }
+    .ranking-person{
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      gap:6px;
+    }
+    .ranking-name{
+      font-size:18px;
+      font-weight:900;
+      color:#17324d;
+      line-height:1.15;
+      letter-spacing:-.02em;
+    }
+    .ranking-badge{
+      display:inline-flex;
+      align-items:center;
+      width:max-content;
+      max-width:100%;
+      padding:6px 10px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:800;
+      border:1px solid rgba(15,53,84,.08);
+      background:rgba(255,255,255,.92);
+      color:#27435f;
+    }
+    .ranking-badge.top{background:rgba(220,252,231,.8); color:#166534;}
+    .ranking-badge.attention{background:rgba(254,226,226,.82); color:#991b1b;}
+    .ranking-badge.active{background:rgba(219,234,254,.9); color:#1d4ed8;}
+    .ranking-stat{
+      min-width:0;
+      border-radius:16px;
+      padding:10px 12px;
+      background:rgba(255,255,255,.82);
+      border:1px solid rgba(15,53,84,.07);
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      gap:4px;
+    }
+    .ranking-stat-value{
+      font-size:26px;
+      line-height:1;
+      font-weight:900;
+      color:#17324d;
+      letter-spacing:-.03em;
+    }
+    .ranking-stat-label{
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+      font-weight:900;
+      color:#6b7c8f;
+    }
+    .ranking-empty{
+      padding:18px;
+      border-radius:18px;
+      background:#f8fbff;
+      border:1px solid rgba(15,53,84,.08);
+      color:#5f7388;
+      font-size:14px;
+      line-height:1.45;
+    }
+    .board-meeting-row{
+      display:grid;
+      grid-template-columns:minmax(220px,1.5fr) repeat(2,minmax(132px,1fr));
+      gap:14px;
+      align-items:stretch;
+      padding:14px;
+      border-radius:20px;
+      background:#f8fbff;
+      border:1px solid rgba(15,53,84,.08);
+    }
+    .board-meeting-main{
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      gap:10px;
+    }
+    .board-meeting-title{
+      font-size:18px;
+      font-weight:900;
+      color:#17324d;
+      line-height:1.15;
+      letter-spacing:-.02em;
+    }
+    .board-meeting-stat{
+      min-width:0;
+      border-radius:18px;
+      padding:14px 16px;
+      background:rgba(255,255,255,.9);
+      border:1px solid rgba(15,53,84,.07);
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      align-items:flex-start;
+      gap:6px;
+    }
+    .board-meeting-stat-value{
+      font-size:22px;
+      line-height:1;
+      font-weight:900;
+      color:#17324d;
+      letter-spacing:-.03em;
+    }
+    .board-meeting-stat-label{
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+      font-weight:900;
+      color:#6b7c8f;
+    }
+    .print-note{
+      margin-top:22px;
+      padding:16px 18px;
+      border-radius:18px;
+      background:rgba(255,255,255,.78);
+      border:1px solid rgba(15,53,84,.08);
+      color:#5d7287;
+      font-size:14px;
+    }
+    @media (max-width: 1080px){
+      .filters,.summary-strip,.metric-grid,.metric-stats{grid-template-columns:repeat(2,minmax(0,1fr));}
+      .report-spotlight,.hero-top{grid-template-columns:1fr;}
+      .hero-actions{justify-content:flex-start;}
+      .ranking-row{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:10px;
+        padding:12px;
+      }
+      .ranking-pos{display:none;}
+      .ranking-person{
+        grid-column:1 / -1;
+        padding:2px 2px 6px;
+      }
+      .ranking-name{font-size:16px;}
+      .ranking-badge{font-size:11px;padding:5px 9px;}
+      .ranking-stat{
+        min-height:88px;
+        padding:10px 12px;
+      }
+      .ranking-stat-value{font-size:22px;}
+      .ranking-stat.hide-md{display:flex;}
+    }
+    @media (max-width: 1024px){
+      .summary-strip{display:none;}
+      .report-spotlight{margin-top:16px;}
+    }
+    @media (max-width: 700px){
+      main{padding:0 12px 28px;}
+      .page-shell,.hero,.metric-card,.cover-card,.executive-card{padding:16px;}
+      .filters,.summary-strip,.metric-grid,.metric-stats,.cover-meta{grid-template-columns:1fr;}
+      .ranking-row,.board-meeting-row,.cover-grid{grid-template-columns:1fr;}
+      .ranking-pos{width:42px;height:42px;font-size:18px;}
+      .ranking-person{gap:8px;}
+      .ranking-stat.hide-md{display:flex;}
+      h1{font-size:40px;}
+    }
+
+    .print-report{display:none;}
+    .print-only{display:none;}
+    .print-page{display:block;}
+    .print-page + .print-page{margin-top:18px;}
+    .print-page-header,
+    .print-page-footer,
+    .print-section-band,
+    .print-module-grid,
+    .print-observation-list,
+    .print-ranking-table,
+    .print-board-table,
+    .print-compliance-table{display:none;}
+    .print-footer{
+      display:none;
+    }
+    @media print{
+      @page{
+        size:auto;
+        margin:0.55in 0.5in 0.65in;
+      }
+      html,body{
+        background:#fff !important;
+        color:#17324d !important;
+        -webkit-print-color-adjust:exact;
+        print-color-adjust:exact;
+      }
+      #zummeeHeaderMount,.hero-top,.filters,.summary-strip,.print-note,.no-print,#perfBackBtn,#perfRefreshBtn,#perfPrintBtn{
+        display:none !important;
+      }
+      main{
+        max-width:none;
+        margin:0;
+        padding:0;
+      }
+      .page-shell{display:none !important;}
+      .print-report{display:block !important;}
+      .print-page{
+        position:relative;
+        min-height:9.2in;
+        page-break-after:always;
+        break-after:page;
+        padding:0 0 0.38in 0;
+      }
+      .print-page:last-child{page-break-after:auto;break-after:auto;}
+      .print-page-header{
+        display:flex !important;
+        justify-content:space-between;
+        align-items:flex-end;
+        gap:16px;
+        padding:0 0 14px;
+        border-bottom:1px solid rgba(15,53,84,.14);
+        margin-bottom:18px;
+      }
+      .print-page-header .eyebrow{
+        font-size:10px;
+        font-weight:900;
+        letter-spacing:.18em;
+        text-transform:uppercase;
+        color:#5f7388;
+        margin-bottom:6px;
+      }
+      .print-page-header .title{
+        font-size:24px;
+        line-height:1.08;
+        font-weight:900;
+        letter-spacing:-.04em;
+        color:#163451;
+      }
+      .print-page-header .meta{
+        margin-top:6px;
+        font-size:12px;
+        color:#5f7388;
+      }
+      .print-page-header .grade-chip{
+        display:inline-flex;align-items:center;justify-content:center;
+        min-width:60px;height:60px;border-radius:999px;
+        background:#eef5ff;border:1px solid rgba(15,53,84,.1);
+        font-weight:900;font-size:24px;color:#163451;
+      }
+      .print-page.cover-page{padding-top:0.45in; min-height:10.35in; display:flex; flex-direction:column;}
+      .print-cover-header{display:flex;align-items:flex-start;justify-content:flex-start;gap:16px;padding:0 6px 0; margin-bottom:0.46in;}
+      .print-cover-brand{display:flex;align-items:flex-start;gap:0;}
+      .print-cover-brand img{display:none !important;}
+      .print-cover-brand .wordmark{font-size:18px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:#163451;text-align:left;}
+      .print-cover-main{flex:1;display:flex;flex-direction:column;justify-content:flex-start;gap:18px;padding-top:0.46in;}
+      .print-cover-hero{
+        background:linear-gradient(135deg, #0f3554 0%, #1d4f80 55%, #4a8ad1 100%) !important;
+        color:#fff;border-radius:28px;padding:22px 26px 20px;
+        border:1px solid rgba(15,53,84,.12);
+        margin-bottom:14px; position:relative; overflow:hidden; box-shadow:0 10px 28px rgba(15,53,84,.10);
+      }
+      .print-cover-hero:before{content:'';position:absolute;right:-35px;bottom:-40px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle at center, rgba(255,255,255,.24), rgba(255,255,255,0) 70%);}
+      .print-cover-top{display:grid;grid-template-columns:minmax(0,1fr) 100px;gap:12px;align-items:start;}
+      .print-cover-kicker{font-size:10px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;opacity:.82;margin-bottom:10px;}
+      .print-cover-title{font-size:30px;font-weight:900;letter-spacing:-.05em;line-height:1.02;margin:0 0 6px;}
+      .print-cover-name{font-size:19px;font-weight:800;line-height:1.1;margin:0 0 6px;}
+      .print-cover-subline{font-size:12.5px;line-height:1.55;max-width:520px;color:rgba(255,255,255,.9);}
+      .print-grade-orb{width:98px;height:98px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;background:linear-gradient(180deg, rgba(255,255,255,.26), rgba(255,255,255,.08));border:1px solid rgba(255,255,255,.22);margin-left:auto;box-shadow:inset 0 1px 0 rgba(255,255,255,.16);}
+      .print-grade-orb .label{font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;opacity:.8;}
+      .print-grade-orb .value{font-size:42px;font-weight:900;line-height:1;margin-top:4px;}
+      .print-cover-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px;}
+      .print-cover-stat{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:14px 14px 12px;}
+      .print-cover-stat .k{font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;opacity:.82;}
+      .print-cover-stat .v{font-size:18px;font-weight:800;line-height:1.15;margin-top:8px;}
+      .print-cover-stat .s{font-size:12px;line-height:1.45;margin-top:6px;color:rgba(255,255,255,.86);}
+      .print-exec-panel{background:#f7fbff;border:1px solid rgba(15,53,84,.12);border-radius:22px;padding:16px 20px 14px; box-shadow:0 8px 24px rgba(15,53,84,.05); margin-bottom:0;}
+      .print-exec-label{font-size:10px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:#5f7388;margin-bottom:10px;}
+      .print-exec-copy{font-size:16px;line-height:1.55;color:#163451;margin-bottom:12px;max-width:86%;}
+      .print-highlight-list{display:grid;grid-template-columns:1fr 1fr;gap:9px;align-items:stretch;}
+      .print-highlight-item{background:#fff;border:1px solid rgba(15,53,84,.1);border-radius:14px;padding:11px 12px;font-size:12px;line-height:1.48;color:#314a63;min-height:54px;display:flex;align-items:flex-start;}
+      .print-section-band{display:block !important;font-size:12px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#163451;background:linear-gradient(90deg, rgba(15,53,84,.08), rgba(15,53,84,.02));border-left:4px solid #1d4f80;border-radius:12px;padding:12px 14px;margin:0 0 14px;}
+      .print-module-grid{display:grid !important;grid-template-columns:1.1fr .9fr;gap:14px;margin-bottom:16px;}
+      .print-module{background:#fff;border:1px solid rgba(15,53,84,.11);border-radius:18px;padding:16px 16px 14px;break-inside:avoid;page-break-inside:avoid;}
+      .print-module .module-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding-bottom:10px;margin-bottom:12px;border-bottom:1px solid rgba(15,53,84,.08);}
+      .print-module .module-title{font-size:18px;font-weight:800;letter-spacing:-.03em;color:#163451;}
+      .print-module .module-sub{font-size:12px;line-height:1.45;color:#627487;margin-top:5px;}
+      .print-module .module-grade{display:inline-flex;align-items:center;justify-content:center;min-width:50px;height:50px;border-radius:999px;background:#eef5ff;border:1px solid rgba(15,53,84,.1);font-size:22px;font-weight:900;color:#163451;}
+      .print-stat-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+      .print-stat-grid.two{grid-template-columns:repeat(2,minmax(0,1fr));}
+      .print-stat{background:#fbfdff;border:1px solid rgba(15,53,84,.08);border-radius:14px;padding:12px 12px 10px;min-height:82px;}
+      .print-stat .k{font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#6b7c8f;}
+      .print-stat .v{font-size:26px;font-weight:900;letter-spacing:-.04em;color:#163451;margin-top:8px;line-height:1.05;}
+      .print-stat .s{font-size:11px;color:#627487;margin-top:4px;line-height:1.4;}
+      .print-note-line{font-size:12px;line-height:1.55;color:#4b6278;margin-top:12px;padding-top:11px;border-top:1px solid rgba(15,53,84,.08);}
+      .print-observation-list{display:block !important;}
+      .print-observation-item{background:#fff;border:1px solid rgba(15,53,84,.09);border-radius:14px;padding:12px 13px;margin-bottom:10px;font-size:13px;line-height:1.55;color:#314a63;}
+      .print-observation-item strong{color:#163451;}
+      .print-ranking-table,.print-board-table,.print-compliance-table{display:block !important;background:#fff;border:1px solid rgba(15,53,84,.09);border-radius:16px;overflow:hidden;}
+      .print-table-head,.print-table-row{display:grid;gap:12px;padding:12px 14px;}
+      .print-ranking-table .print-table-head,.print-ranking-table .print-table-row{grid-template-columns:64px 1.4fr repeat(4, .9fr);}
+      .print-board-table .print-table-head,.print-board-table .print-table-row{grid-template-columns:1.5fr .8fr .8fr .8fr;}
+      .print-compliance-table .print-table-head,.print-compliance-table .print-table-row{grid-template-columns:1.4fr .9fr .9fr;}
+      .print-table-head{background:#f7fbff;border-bottom:1px solid rgba(15,53,84,.09);font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#6b7c8f;}
+      .print-table-row{border-bottom:1px solid rgba(15,53,84,.06);font-size:12px;line-height:1.45;color:#314a63;}
+      .print-table-row:last-child{border-bottom:none;}
+      .print-table-row .name{font-weight:800;color:#163451;}
+      .print-page-footer{display:flex !important;justify-content:space-between;align-items:center;font-size:10px;color:#6b7c8f;border-top:1px solid rgba(15,53,84,.1);padding-top:8px; margin-top:16px;}
+      .cover-page .print-page-footer{margin-top:auto; padding-top:10px;}
+      .print-page .print-page-footer .page{min-width:48px;text-align:right;}
+      .print-page-footer .brand{font-weight:800;color:#163451;letter-spacing:.04em;}
+      .print-page-footer .page::after{content:'';}
+      .hero{
+        background:#fff !important;
+        border:none !important;
+        box-shadow:none !important;
+        padding:0 !important;
+      }
+      .report-spotlight,.metric-grid,.print-footer{display:none !important;}
+      .report-spotlight{
+        grid-template-columns:1fr !important;
+        gap:18px !important;
+        margin-top:0 !important;
+        break-inside:avoid;
+        page-break-inside:avoid;
+      }
+      .cover-card{
+        min-height:auto !important;
+        background:linear-gradient(135deg, #0f3554 0%, #1d4f80 55%, #4a8ad1 100%) !important;
+        color:#fff !important;
+        border:1px solid rgba(15,53,84,.12) !important;
+        box-shadow:none !important;
+        border-radius:22px !important;
+        padding:26px 26px 22px !important;
+        page-break-inside:avoid;
+        break-inside:avoid;
+      }
+      .executive-card{
+        min-height:auto !important;
+        background:#f7fbff !important;
+        color:#17324d !important;
+        border:1px solid rgba(15,53,84,.12) !important;
+        box-shadow:none !important;
+        border-radius:22px !important;
+        padding:22px 24px !important;
+        page-break-inside:avoid;
+        break-inside:avoid;
+      }
+      .cover-card::before,.cover-card::after{
+        opacity:1 !important;
+      }
+      .cover-card .report-tag{
+        background:rgba(255,255,255,.16) !important;
+        border:1px solid rgba(255,255,255,.2) !important;
+        color:#fff !important;
+      }
+      .cover-card .cover-title,
+      .cover-card .cover-name,
+      .cover-card .cover-subline,
+      .cover-card .score-label,
+      .cover-card .score-value,
+      .cover-card .cover-meta-card .k,
+      .cover-card .cover-meta-card .v,
+      .cover-card .cover-meta-card .sub{
+        color:#fff !important;
+      }
+      .cover-card .score-orb{
+        background:linear-gradient(180deg, rgba(255,255,255,.24), rgba(255,255,255,.1)) !important;
+        border:1px solid rgba(255,255,255,.24) !important;
+      }
+      .cover-card .cover-meta-card{
+        background:rgba(255,255,255,.10) !important;
+        border:1px solid rgba(255,255,255,.14) !important;
+      }
+      .executive-title{
+        color:#17324d !important;
+        font-size:13px !important;
+        letter-spacing:.08em !important;
+      }
+      .executive-summary{
+        font-size:18px !important;
+        line-height:1.55 !important;
+      }
+      .executive-chip{
+        background:#fff !important;
+        border:1px solid rgba(15,53,84,.1) !important;
+      }
+      .metric-grid{
+        display:block !important;
+        margin-top:16px !important;
+      }
+      .metric-card{
+        background:#fff !important;
+        border:1px solid rgba(15,53,84,.10) !important;
+        box-shadow:none !important;
+        border-radius:18px !important;
+        padding:18px 18px 16px !important;
+        margin:0 0 14px 0 !important;
+        break-inside:avoid;
+        page-break-inside:avoid;
+      }
+      .metric-card:nth-of-type(odd){
+        background:#fbfdff !important;
+      }
+      .metric-header{
+        align-items:flex-start !important;
+        gap:10px !important;
+        border-bottom:2px solid rgba(29,79,128,.12);
+        padding-bottom:10px;
+        margin-bottom:12px;
+      }
+      .metric-title{
+        font-size:22px !important;
+        color:#163451 !important;
+      }
+      .metric-desc{
+        color:#627487 !important;
+        font-size:13px !important;
+      }
+      .metric-grade{
+        min-width:62px !important;
+        height:62px !important;
+        font-size:28px !important;
+        border:1px solid rgba(15,53,84,.10) !important;
+        background:#eef5ff !important;
+      }
+      .metric-stats{
+        gap:10px !important;
+        grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+      }
+      .mini-stat,
+      .ranking-stat,
+      .board-meeting-stat,
+      .cover-meta-card{
+        border-radius:14px !important;
+        box-shadow:none !important;
+      }
+      .mini-stat{
+        background:#fff !important;
+        border:1px solid rgba(15,53,84,.08) !important;
+        min-height:92px !important;
+      }
+      .mini-stat .v{
+        font-size:30px !important;
+      }
+      .metric-footer{
+        color:#53687d !important;
+        font-size:13px !important;
+        border-top:1px solid rgba(15,53,84,.08);
+        margin-top:12px;
+        padding-top:12px;
+      }
+      .insight-item{
+        border-radius:14px !important;
+      }
+      .ranking-row{
+        background:#fff !important;
+        border:1px solid rgba(15,53,84,.08) !important;
+        border-radius:16px !important;
+        padding:14px !important;
+      }
+      .board-meeting-row{
+        background:#fff !important;
+        border:1px solid rgba(15,53,84,.08) !important;
+        border-radius:16px !important;
+        padding:14px !important;
+      }
+      .print-footer{display:none !important;}
+    }
+  
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+
+.mh2-actions .mh2-btn--ghost{display:none !important;}
+</style>
+
+<style id="supervisor-mileage-submission-styles">
+#mileageSubmissionCard{
+  background:linear-gradient(135deg, rgba(244,209,84,0.96) 0%, rgba(232,186,44,0.92) 60%, rgba(215,157,22,0.92) 100%);
+  border:1px solid rgba(184,134,11,0.68);
+  border-radius:24px;
+  padding:16px 18px;
+  margin-top:16px;
+  box-shadow:0 12px 24px rgba(160,120,20,0.18);
+  color:#17324d;
+}
+#mileageSubmissionCard .msc-title{
+  font-size:16px;
+  font-weight:900;
+  margin-bottom:8px;
+}
+#mileageSubmissionCard .msc-sub{
+  font-size:12px;
+  color:rgba(23,50,77,0.78);
+  margin-bottom:12px;
+}
+#mileageSubmissionList{
+  display:grid;
+  gap:10px;
+}
+.mileage-submission-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 14px;
+  border-radius:18px;
+  background:rgba(255,255,255,0.22);
+  border:1px solid rgba(255,255,255,0.24);
+}
+.mileage-submission-row__name{
+  font-weight:800;
+}
+.mileage-submission-row__meta{
+  font-size:12px;
+  color:rgba(23,50,77,0.74);
+  margin-top:4px;
+}
+.mileage-submission-row__status{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:32px;
+  padding:0 12px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:900;
+  background:rgba(255,255,255,0.56);
+  border:1px solid rgba(255,255,255,0.44);
+  white-space:nowrap;
+}
+.mileage-submission-row__status.is-complete{
+  background:#e8f5e9;
+  color:#1b5e20;
+  border-color:rgba(27,94,32,0.16);
+}
+.mileage-submission-row__status.is-missing{
+  background:#fff3e0;
+  color:#a05a00;
+  border-color:rgba(160,90,0,0.16);
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+
+  <script src="community_state_stable.js"></script>
+<style>
+/* FORCE white text in Status & Details section */
+#boardSubmittedItemsSection,
+#boardSubmittedItemsSection *:not(button),
+#boardMemberHubStatus,
+#boardMemberHubStatus *:not(button),
+#annualMeetingApprovals,
+#annualMeetingApprovals *:not(button) {
+  color: #ffffff !important;
+}
+
+/* Secondary text (slightly dimmed white) */
+#boardSubmittedItemsSection .muted,
+#boardMemberHubStatus .muted,
+#annualMeetingApprovals .muted {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style>
+/* HARD OVERRIDE — force white text in dark section */
+.hub-zone:last-of-type,
+.hub-zone:last-of-type *:not(button):not(.badge):not(.pill) {
+  color: #ffffff !important;
+}
+
+/* Slightly softer for secondary text */
+.hub-zone:last-of-type .muted,
+.hub-zone:last-of-type p,
+.hub-zone:last-of-type span {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+
+<style id="employee-performance-zummee-polish-v96">
+  body{
+    background:
+      radial-gradient(circle at 16% 8%, rgba(191,219,254,.46), transparent 31%),
+      linear-gradient(180deg,#f7fbff 0%, #eef6ff 44%, #f8fbff 100%);
+  }
+  main{
+    max-width:1220px;
+    margin:18px auto 40px;
+    padding:0 22px 38px;
+  }
+  .page-shell{
+    background:rgba(255,255,255,.62);
+    border:2px solid rgba(147,197,253,.70);
+    border-radius:30px;
+    padding:24px;
+    box-shadow:0 16px 40px rgba(30,64,175,.10), inset 0 1px 0 rgba(255,255,255,.88);
+  }
+  .hero{
+    background:rgba(255,255,255,.72);
+    border:2px solid rgba(147,197,253,.58);
+    border-radius:28px;
+    padding:20px 24px 20px;
+    box-shadow:0 12px 30px rgba(15,53,84,.075), inset 0 1px 0 rgba(255,255,255,.86);
+  }
+  .hero-top{
+    grid-template-columns:1fr;
+    gap:12px;
+  }
+  h1{
+    font-size:clamp(30px,3.8vw,44px);
+    line-height:1.05;
+    letter-spacing:-.045em;
+    color:#123554;
+  }
+  .hero-sub{
+    max-width:930px;
+    margin-top:6px;
+    font-size:16px;
+    line-height:1.45;
+    color:#5f7287;
+  }
+  .hero-actions{
+    justify-content:flex-start;
+    gap:12px;
+    margin-top:8px;
+  }
+  .btn{
+    min-height:44px;
+    height:44px;
+    padding:0 18px;
+    border-radius:999px;
+    border:2px solid #123f62;
+    background:rgba(255,255,255,.84);
+    box-shadow:0 8px 20px rgba(15,53,84,.055);
+    font-size:15px;
+    color:#123f62;
+  }
+  .btn.primary{
+    background:#123f62;
+    color:#fff;
+    box-shadow:0 10px 22px rgba(18,63,98,.20);
+  }
+  .filters{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px 18px;
+    margin-top:16px;
+  }
+  .field{gap:6px;}
+  .field label{
+    letter-spacing:.09em;
+    color:#667b90;
+  }
+  .field select,.field input{
+    min-height:44px;
+    height:44px;
+    border-radius:14px;
+    border:1.5px solid rgba(15,53,84,.12);
+    background:rgba(255,255,255,.88);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.78);
+    font-size:16px;
+    padding:10px 14px;
+  }
+  .summary-strip{
+    display:none !important;
+  }
+  .report-spotlight{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:18px;
+    margin-top:20px;
+  }
+  .cover-card{
+    background:linear-gradient(135deg, rgba(18,59,91,.95) 0%, rgba(42,88,132,.92) 56%, rgba(92,153,210,.84) 100%);
+    border:1px solid rgba(255,255,255,.22);
+    border-radius:24px;
+    padding:22px;
+    box-shadow:0 14px 32px rgba(15,53,84,.18), inset 0 1px 0 rgba(255,255,255,.18);
+    min-height:0;
+  }
+  .report-tag{
+    border-radius:999px;
+    padding:8px 13px;
+    background:rgba(255,255,255,.13);
+    border:1px solid rgba(255,255,255,.24);
+  }
+  .cover-grid{
+    margin-top:14px;
+  }
+  .cover-name{
+    font-size:clamp(30px,3.6vw,42px);
+  }
+  .cover-subline{
+    font-size:15px;
+    line-height:1.42;
+  }
+  .score-orb{
+    width:106px;
+    height:106px;
+    border:1px solid rgba(255,255,255,.25);
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
+  }
+  .score-orb .score-value{font-size:48px;}
+  .cover-meta{
+    gap:14px;
+    margin-top:18px;
+  }
+  .cover-meta-card{
+    background:rgba(255,255,255,.10);
+    border:1px solid rgba(255,255,255,.16);
+    border-radius:18px;
+    min-height:96px;
+    padding:16px;
+  }
+  .cover-meta-card .big{
+    font-size:clamp(22px,3vw,30px);
+  }
+  .executive-card,
+  .metric-card{
+    background:rgba(255,255,255,.80);
+    border:2px solid rgba(147,197,253,.48);
+    border-radius:24px;
+    box-shadow:0 12px 28px rgba(15,53,84,.075), inset 0 1px 0 rgba(255,255,255,.84);
+  }
+  .executive-card{padding:18px 20px;}
+  .executive-title,
+  .metric-card .metric-title{
+    color:#153a5b;
+  }
+  .executive-summary{
+    font-size:18px;
+    line-height:1.5;
+    color:#1d3d5f;
+  }
+  .executive-chip,
+  .mini-stat,
+  .insight-item,
+  .ranking-row{
+    background:rgba(255,255,255,.76);
+    border:1px solid rgba(15,53,84,.10);
+    box-shadow:0 8px 18px rgba(15,53,84,.04);
+  }
+  .metric-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:18px;
+    margin-top:20px;
+  }
+  .metric-card{
+    padding:22px;
+  }
+  .metric-title{
+    font-size:24px;
+  }
+  .metric-desc{
+    color:#63768a;
+  }
+  .metric-grade{
+    background:#eef6ff;
+    border:1px solid rgba(147,197,253,.70);
+  }
+  @media (max-width:900px){
+    main{padding:0 22px 34px;}
+    .page-shell{padding:24px;border-radius:28px;}
+    .hero{padding:20px 24px;}
+    .hero-actions{gap:12px;}
+    .filters{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .metric-grid{grid-template-columns:1fr;}
+    .cover-grid{grid-template-columns:minmax(0,1fr) auto;}
+  }
+  @media (max-width:680px){
+    main{padding:0 14px 28px;}
+    .page-shell{padding:16px;}
+    .hero{padding:18px;}
+    .filters{grid-template-columns:1fr;}
+    .hero-right{align-items:stretch;}
+    .perf-brand-logo{width:180px;max-width:55vw;height:58px;align-self:flex-end;}
+    .hero-actions .btn{width:100%;}
+    .cover-grid,.cover-meta{grid-template-columns:1fr;}
+    .score-orb{width:94px;height:94px;}
+  }
+</style>
+
+
+<style id="employee-performance-top-polish-v99">
+  .hero{
+    padding:18px 28px 20px !important;
+  }
+  .hero-top{
+    display:flex !important;
+    flex-direction:column !important;
+    gap:10px !important;
+    margin:0 !important;
+  }
+  .performance-topline{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:22px;
+    width:100%;
+    min-height:76px;
+  }
+  .performance-topline h1{
+    margin:0 !important;
+    font-size:clamp(32px,4vw,44px) !important;
+    line-height:1 !important;
+    letter-spacing:-.045em !important;
+  }
+  .perf-brand-logo{
+    width:220px !important;
+    max-width:30vw !important;
+    height:64px !important;
+    object-fit:contain !important;
+    object-position:right center !important;
+    align-self:center !important;
+    margin:0 !important;
+  }
+  .hero-right{display:contents !important;}
+  .hero-actions{
+    display:flex !important;
+    justify-content:center !important;
+    align-items:center !important;
+    gap:14px !important;
+    width:100% !important;
+    margin:4px 0 12px !important;
+    flex-wrap:wrap !important;
+  }
+  .hero-actions .btn{
+    min-height:42px !important;
+    height:42px !important;
+    padding:0 22px !important;
+    font-size:15px !important;
+  }
+  .filters{
+    margin-top:8px !important;
+    gap:10px 18px !important;
+  }
+  .field{gap:5px !important;}
+  .field select,.field input{
+    height:42px !important;
+    min-height:42px !important;
+  }
+  .report-spotlight{
+    margin-top:18px !important;
+  }
+  @media (max-width:700px){
+    .hero{padding:16px !important;}
+    .performance-topline{min-height:58px;align-items:center;}
+    .perf-brand-logo{width:170px !important;max-width:42vw !important;height:52px !important;}
+    .hero-actions{gap:10px !important;margin:2px 0 10px !important;}
+    .hero-actions .btn{width:100%;}
+  }
+</style>
+
+<script id="supervisor-page-access-guard-v182">
+(function(){
+  function localUid(){
+    var keys=['zummee_user_id_v1','zummee_user_id','user_id','activeUserId','currentUserId'];
+    for(var i=0;i<keys.length;i++){ try{ var v=String(localStorage.getItem(keys[i])||'').trim(); if(v) return v; }catch(_e){} }
+    return '';
+  }
+  function roleOK(role){
+    role=String(role||'').toLowerCase().replace(/[_-]+/g,' ').trim();
+    return role==='admin'||role==='company admin'||role==='companyadmin'||role==='supervisor';
+  }
+  async function getSupabase(){
+    if(window.supabaseClient) return window.supabaseClient;
+    if(window.ZummeeSupabaseClient) return window.ZummeeSupabaseClient;
+    if(window.supabase && window.SUPABASE_URL && window.SUPABASE_ANON_KEY){
+      window.supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+      return window.supabaseClient;
+    }
+    return null;
+  }
+  async function check(){
+    var sb=await getSupabase();
+    if(!sb) return false;
+    var uid=localUid();
+    try{ var u=await sb.auth.getUser(); if(u&&u.data&&u.data.user&&u.data.user.id) uid=u.data.user.id; }catch(_e){}
+    if(!uid) return false;
+    try{
+      var q=await sb.from('profiles').select('role,disabled,deleted').eq('id',uid).maybeSingle();
+      if(q.error) throw q.error;
+      var d=q.data||{};
+      return !d.disabled && !d.deleted && roleOK(d.role);
+    }catch(_e){ return false; }
+  }
+  function deny(){
+    document.body.innerHTML='<main style="font-family:Inter,system-ui,sans-serif;padding:32px;color:#12304f;"><h1>Supervisor access only</h1><p>This page contains sensitive supervisor information.</p><p><a href="manager_hub.html" style="color:#12304f;font-weight:800;">Return to Hub</a></p></main>';
+  }
+  async function run(){
+    var ok=await check();
+    if(!ok){ deny(); }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run,{once:true}); else run();
+})();
+</script>
+
+</head>
+<body data-header-mode="simple" class="zummee-shell-theme zummee-mobile-card-header">
+  <div id="zummeeHeaderMount"></div>
+
+  <main>
+    <div class="page-shell">
+      <section class="hero">
+        <div class="hero-top">
+          <div class="performance-topline">
+            <h1>Employee Performance</h1>
+            <img id="perfBrandLogo" class="perf-brand-logo" src="" alt="Company logo" loading="eager" decoding="async" />
+          </div>
+          <div class="hero-actions">
+            <a class="btn" id="perfBackBtn" href="manager_hub.html">Back to Manager Hub</a>
+            <button class="btn" type="button" id="perfPrintBtn">Print Monthly Report</button>
+            <button class="btn primary" type="button" id="perfRefreshBtn">Refresh</button>
+          </div>
+        </div>
+
+        <div class="filters">
+          <div class="field">
+            <label for="perfEmployeeSelect">Employee</label>
+            <select id="perfEmployeeSelect">
+              <option value="">Choose employee</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="perfMonthSelect">Month</label>
+            <select id="perfMonthSelect">
+              <option value="">Choose month</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="perfCompanyName">Company Scope</label>
+            <input id="perfCompanyName" type="text" value="Loading..." readonly />
+          </div>
+          <div class="field">
+            <label for="perfReportStatus">Report Status</label>
+            <input id="perfReportStatus" type="text" value="Shell ready" readonly />
+          </div>
+        </div>
+
+        <div class="summary-strip">
+          <div class="summary-card">
+            <div class="k">Employee</div>
+            <div class="v" id="perfSummaryEmployee" style="font-size:24px;">Choose employee</div>
+            <div class="sub" id="perfSummaryMonth">Choose a month to build the report.</div>
+          </div>
+          <div class="summary-card">
+            <div class="k">Overall Grade</div>
+            <div class="grade-pill" id="perfOverallGrade">—</div>
+            <div class="sub">Averages the live scored sections that are currently wired into the report.</div>
+          </div>
+          <div class="summary-card">
+            <div class="k">Sections Enabled</div>
+            <div class="v" id="perfSectionCount">7</div>
+            <div class="sub">Resident service metrics and company ranking are now included alongside employee-created work orders.</div>
+          </div>
+          <div class="summary-card">
+            <div class="k">Print Status</div>
+            <div class="v" id="perfPrintStatus" style="font-size:24px;">Ready</div>
+            <div class="sub">Use Print Monthly Report for a supervisor-friendly hard copy.</div>
+          </div>
+        </div>
+
+        <div class="report-spotlight">
+          <article class="cover-card">
+            <div class="report-tag">Supervisor Monthly Report</div>
+            <div class="cover-grid">
+              <div>
+                <div class="cover-title">Employee focus</div>
+                <div class="cover-name" id="perfCoverName">Choose employee</div>
+                <div class="cover-subline" id="perfCoverSubline">Select an employee and month to generate a polished executive snapshot with live operations, compliance, and board meeting follow-through.</div>
+              </div>
+              <div class="score-orb">
+                <div class="score-label">Overall</div>
+                <div class="score-value" id="perfCoverGrade">—</div>
+              </div>
+            </div>
+            <div class="cover-meta">
+              <div class="cover-meta-card">
+                <div class="k">Month</div>
+                <div class="v" id="perfCoverMonth">Choose month</div>
+                <div class="sub">Reporting period</div>
+              </div>
+              <div class="cover-meta-card">
+                <div class="k">Company Scope</div>
+                <div class="v" id="perfCoverCompany">Loading…</div>
+                <div class="sub">Current company context</div>
+              </div>
+              <div class="cover-meta-card">
+                <div class="k">Company Ranking</div>
+                <div class="v" id="perfCoverRank">—</div>
+                <div class="sub">Position within active company</div>
+              </div>
+            </div>
+          </article>
+
+          <article class="executive-card">
+            <div class="executive-title">Executive Summary</div>
+            <div class="executive-summary" id="perfExecutiveSummary">Choose an employee and month to generate a clean supervisor-ready narrative summary.</div>
+            <div class="executive-highlights" id="perfExecutiveHighlights">
+              <div class="executive-chip"><span class="dot">i</span><div>Operational highlights will appear here once a report month is selected.</div></div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="metric-grid">
+
+
+        <article class="metric-card" data-metric-key="resident_service">
+          <div class="metric-header">
+            <div>
+              <h2 class="metric-title">Resident Work Order Service</h2>
+              <div class="metric-desc">Tracks true resident-submitted work orders handled by the selected employee when assignment data exists, with inspection-created employee work orders excluded from this resident section and left in the employee section.</div>
+            </div>
+            <div class="metric-grade" id="metricResidentGrade">—</div>
+          </div>
+          <div class="metric-stats">
+            <div class="mini-stat">
+              <div class="k">Resident Submitted</div>
+              <div class="v" id="metricResidentSubmitted">0</div>
+              <div class="sub">Resident-origin work orders in the month</div>
+            </div>
+            <div class="mini-stat">
+              <div class="k">Completed</div>
+              <div class="v" id="metricResidentCompleted">0</div>
+              <div class="sub">Completed resident requests</div>
+            </div>
+            <div class="mini-stat">
+              <div class="k">Completion %</div>
+              <div class="v" id="metricResidentPercent">—</div>
+              <div class="sub">Completed ÷ resident submitted</div>
+            </div>
+            <div class="mini-stat">
+              <div class="k">Avg Completion</div>
+              <div class="v" id="metricResidentAvgCompletion">—</div>
+              <div class="sub">Average days from submit to completion</div>
+            </div>
+            <div class="mini-stat">
+              <div class="k">Vendor Response</div>
+              <div class="v" id="metricResidentVendorResponse">—</div>
+              <div class="sub">Average hours from dispatch to acceptance</div>
+            </div>
+            <div class="mini-stat">
+              <div class="k">Aging Risk</div>
+              <div class="v" id="metricResidentAging">0</div>
+              <div class="sub">Open items aging past 7 days</div>
+            </div>
+          </div>
+          <div class="metric-footer" id="metricResidentFootnote">
+            Choose an employee and month to calculate resident service load, completion speed, vendor response timing, and aging risk.
+          </div>
+        </article>
+
+        <article class="metric-card" data-metric-key="work_orders">
+          <div class="metric-header">
+            <div>
+              <h2 class="metric-title">Work Order Completion</h2>
+              <div class="metric-desc">Primary monthly scorecard for submitted work orders, completed work orders, completion percentage, and grade.</div>
+            </div>
+            <div class="metric-grade" id="metricWorkOrdersGrade">—</div>
+          </div>
+          <div class="metric-stats">
+            <div class="mini-stat">
+              <div class="k">Submitted</div>
+              <div class="v" id="metricWorkOrdersSubmitted">0</div>
+              <div class="sub">Monthly total created by this employee</div>
+            </div>
+            <div class="mini-stat">
+              <div class="k">Completed</div>
+              <div class="v" id="metricWorkOrdersCompleted">0</div>
+              <div class="sub">Monthly completed total</div>
+            </div>
+            <div class="mini-stat">
+              <div class="k">Completion %</div>
+              <div class="v" id="metricWorkOrdersPercent">—</div>
+              <div class="sub">Completed ÷ Submitted</div>
+            </div>
+          </div>
+          <div class="metric-footer" id="metricWorkOrdersFootnote">
+            Uses employee email as the source of truth, displays the employee name, and grades monthly completion as completed ÷ submitted.
+          </div>
+        </article>
+
+        <article class="metric-card" data-metric-key="performance_insights">
+          <div class="metric-header">
+            <div>
+              <h2 class="metric-title">Performance Insights</h2>
+              <div class="metric-desc">Supervisor-ready signals that highlight strengths, workload risk, service slowdowns, and items that may need attention this month.</div>
+            </div>
+            <div class="metric-grade" id="metricInsightsCount">0</div>
+          </div>
+          <div class="insights-list" id="metricInsightsList">
+            <div class="insight-item">
+              <span class="insight-icon">i</span>
+              <div>Choose a month to generate performance insights.</div>
+            </div>
+          </div>
+          <div class="metric-footer" id="metricInsightsFootnote">
+            Signals are built from the current live work-order and resident-service metrics so supervisors can quickly see strengths and attention areas.
+          </div>
+        </article>
+        <article class="metric-card" data-metric-key="company_ranking">
+          <div class="metric-header">
+            <div>
+              <h2 class="metric-title">Company Ranking</h2>
+              <div class="metric-desc">Compares employees across the selected company for the chosen month using work-order completion plus resident service quality so supervisors can spot top performers and coaching needs quickly.</div>
+            </div>
+            <div class="metric-grade" id="metricRankingCount">0</div>
+          </div>
+          <div class="ranking-list" id="metricRankingList">
+            <div class="ranking-empty">Choose a month to build the company ranking.</div>
+          </div>
+          <div class="metric-footer" id="metricRankingFootnote">
+            Ranking is based on the same live score inputs used in the selected employee report so supervisors can compare performance without leaving the page.
+          </div>
+        </article>
+
+
+        <article class="metric-card" data-metric-key="compliance_completed">
+          <div class="metric-header">
+            <div>
+              <h2 class="metric-title">Compliance Completed</h2>
+              <div class="metric-desc">Tracks monthly compliance drives completed in Mileage Tracker for each assigned community so supervisors can see completion coverage, completion dates, and how compliance contributes to the overall performance score.</div>
+            </div>
+            <div class="metric-grade" id="metricComplianceGrade">—</div>
+          </div>
+          <div class="metric-stats">
+            <div class="mini-stat">
+              <div class="k">Completed</div>
+              <div class="v" id="metricComplianceCompleted">0</div>
+              <div class="sub">Assigned communities marked complete this month</div>
+            </div>
+            <div class="mini-stat">
+              <div class="k">Assigned</div>
+              <div class="v" id="metricComplianceAssigned">0</div>
+              <div class="sub">Assigned communities in the selected company</div>
+            </div>
+            <div class="mini-stat">
+              <div class="k">Completion %</div>
+              <div class="v" id="metricCompliancePercent">—</div>
+              <div class="sub">Completed ÷ Assigned</div>
+            </div>
+          </div>
+          <div class="metric-footer" id="metricComplianceFootnote">Choose an employee and month to show completed monthly compliance drives by community. These same completion records feed the supervisor score for compliance coverage.</div>
+          <div class="ranking-list" id="metricComplianceList" style="margin-top:14px;">
+            <div class="ranking-empty">Choose a month to load compliance completion activity.</div>
+          </div>
+        </article>
+
+        <article class="metric-card" data-metric-key="board_meetings">
+          <div class="metric-header">
+            <div>
+              <h2 class="metric-title">Board Meetings</h2>
+              <div class="metric-desc">Tracks whether monthly board meetings were held, whether agendas were sent at least 3 days before the meeting, and whether meeting minutes were completed and approved by the board.</div>
+            </div>
+            <div class="metric-grade" id="metricBoardGrade">—</div>
+          </div>
+          <div class="metric-stats">
+            <div class="mini-stat">
+              <div class="k">Meetings</div>
+              <div class="v" id="metricBoardMeetingCount">0</div>
+              <div class="sub">Recorded board meetings this month</div>
+            </div>
+            <div class="mini-stat">
+              <div class="k">Held</div>
+              <div class="v" id="metricBoardHeldCount">0</div>
+              <div class="sub">Meetings with recorded start activity</div>
+            </div>
+            <div class="mini-stat">
+              <div class="k">Agenda On Time</div>
+              <div class="v" id="metricBoardAgendaOnTime">0</div>
+              <div class="sub">Agenda sent at least 3 days before</div>
+            </div>
+            <div class="mini-stat">
+              <div class="k">Minutes Approved</div>
+              <div class="v" id="metricBoardMinutesApproved">0</div>
+              <div class="sub">Minutes completed and approved</div>
+            </div>
+          </div>
+          <div class="metric-footer" id="metricBoardFootnote">Choose an employee and month to evaluate board meeting follow-through.</div>
+          <div class="ranking-list" id="metricBoardList" style="margin-top:14px;">
+            <div class="ranking-empty">Choose a month to load board meeting performance.</div>
+          </div>
+        </article>
+
+        <article class="metric-card" data-metric-key="response_time">
+          <div class="metric-header">
+            <div>
+              <h2 class="metric-title">Response Time</h2>
+              <div class="metric-desc">Placeholder section for future average turnaround time, first-action timing, or assignment speed measurements.</div>
+            </div>
+            <div class="metric-grade">—</div>
+          </div>
+          <div class="metric-stats">
+            <div class="mini-stat"><div class="k">Metric</div><div class="v">Soon</div><div class="sub">Add raw timing source here</div></div>
+            <div class="mini-stat"><div class="k">Target</div><div class="v">—</div><div class="sub">Supervisor benchmark</div></div>
+            <div class="mini-stat"><div class="k">Grade</div><div class="v">—</div><div class="sub">Section grade</div></div>
+          </div>
+          <div class="metric-footer">
+            This section is intentionally modular so we can add timing logic later without disturbing the rest of the report.
+          </div>
+        </article>
+
+        <article class="metric-card" data-metric-key="inspections">
+          <div class="metric-header">
+            <div>
+              <h2 class="metric-title">Inspection Activity</h2>
+              <div class="metric-desc">Placeholder for community inspection volume, follow-through, and related maintenance ad/work order performance.</div>
+            </div>
+            <div class="metric-grade">—</div>
+          </div>
+          <div class="metric-stats">
+            <div class="mini-stat"><div class="k">Inspections</div><div class="v">—</div><div class="sub">Monthly inspection count</div></div>
+            <div class="mini-stat"><div class="k">Converted</div><div class="v">—</div><div class="sub">Inspection items turned into work orders</div></div>
+            <div class="mini-stat"><div class="k">Grade</div><div class="v">—</div><div class="sub">Section grade</div></div>
+          </div>
+          <div class="metric-footer">
+            Add this metric when you are ready to measure inspection-driven output.
+          </div>
+        </article>
+
+        <article class="metric-card" data-metric-key="supervisor_notes">
+          <div class="metric-header">
+            <div>
+              <h2 class="metric-title">Supervisor Notes</h2>
+              <div class="metric-desc">Dedicated space for monthly notes, coaching points, or manager commentary on performance.</div>
+            </div>
+            <div class="metric-grade">Note</div>
+          </div>
+          <div class="metric-stats" style="grid-template-columns:1fr;">
+            <div class="mini-stat">
+              <div class="k">Report Strategy</div>
+              <div class="v" style="font-size:20px;">Modular</div>
+              <div class="sub">Each section can be added, removed, or weighted later without rewriting the whole page.</div>
+            </div>
+          </div>
+          <div class="metric-footer">
+            Later we can add a printable supervisor comment box or saved monthly note field here.
+          </div>
+        </article>
+      </section>
+
+      <div class="print-note">
+        This report now includes employee-created work order output, resident service metrics such as average completion time, vendor response time, and aging risk, plus a company ranking view for the selected month, mileage-based compliance completion coverage by community, and board meeting follow-through by meeting. Additional sections can still be added safely without disturbing the live scorecards.
+      </div>
+    </div>
+    <section class="print-report" aria-hidden="true">
+      <article class="print-page cover-page" id="printCoverPage"></article>
+      <article class="print-page" id="printOperationsPage"></article>
+      <article class="print-page" id="printGovernancePage"></article>
+    </section>
+  </main>
+
+  <script>
+      function byId(id){ return document.getElementById(id); }
+      function monthKey(dt){
+        if(!dt) return '';
+        var d = new Date(dt);
+        if(isNaN(d.getTime())) return '';
+        return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+      }
+      function monthLabel(key){
+        if(!key) return 'Unknown';
+        var parts = String(key).split('-');
+        var y = Number(parts[0] || 0), m = Number(parts[1] || 1);
+        var d = new Date(y, Math.max(0, m - 1), 1);
+        try{ return d.toLocaleString(undefined, { month:'long', year:'numeric' }); }catch(_e){ return key; }
+      }
+      function safeNameFromEmail(email){
+        var local = String(email || '').trim().split('@')[0] || '';
+        if(!local) return 'Unknown Employee';
+        return local.replace(/[._-]+/g,' ').replace(/\s+/g,' ').trim().replace(/\b\w/g, function(ch){ return ch.toUpperCase(); });
+      }
+      function gradeInfo(pct){
+        if(pct == null || !isFinite(pct)) return { grade:'—', style:'#dbeafe', text:'#163451' };
+        if(pct >= 90) return { grade:'A', style:'#dcfce7', text:'#166534' };
+        if(pct >= 80) return { grade:'B', style:'#dbeafe', text:'#1d4ed8' };
+        if(pct >= 70) return { grade:'C', style:'#fef3c7', text:'#92400e' };
+        if(pct >= 60) return { grade:'D', style:'#fde68a', text:'#92400e' };
+        return { grade:'F', style:'#fee2e2', text:'#991b1b' };
+      }
+      function isDoneStatus(s){
+        s = String(s || '').trim().toLowerCase();
+        return s === 'completed' || s === 'closed' || s === 'done';
+      }
+      function isActiveStatus(s){
+        s = String(s || '').trim().toLowerCase();
+        return ['active','in_progress','assigned_to_vendor','assigned','sent_to_vendor','awaiting_vendor','awaiting_response'].includes(s);
+      }
+      function toTs(v){
+        var t = v ? new Date(v).getTime() : NaN;
+        return Number.isFinite(t) ? t : NaN;
+      }
+      function diffHours(start, end){
+        var a = toTs(start), b = toTs(end);
+        if(!Number.isFinite(a) || !Number.isFinite(b) || b < a) return null;
+        return (b - a) / 36e5;
+      }
+      function diffDays(start, end){
+        var a = toTs(start), b = toTs(end);
+        if(!Number.isFinite(a) || !Number.isFinite(b) || b < a) return null;
+        return (b - a) / 864e5;
+      }
+      function avg(arr){
+        var vals = (arr || []).filter(function(v){ return typeof v === 'number' && isFinite(v); });
+        if(!vals.length) return null;
+        return vals.reduce(function(sum, v){ return sum + v; }, 0) / vals.length;
+      }
+      function fmtDays(v){
+        if(v == null || !isFinite(v)) return '—';
+        return (Math.round(v * 10) / 10).toFixed(1) + 'd';
+      }
+      function fmtHours(v){
+        if(v == null || !isFinite(v)) return '—';
+        return (Math.round(v * 10) / 10).toFixed(1) + 'h';
+      }
+      function fmtDate(v){
+        if(!v) return '—';
+        var d = new Date(v);
+        if(isNaN(d.getTime())) return '—';
+        try{ return d.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' }); }catch(_e){ return String(v).slice(0,10); }
+      }
+      function residentGradeInfo(completionPct, vendorAvgHours, agingCount){
+        var score = 100;
+        if(completionPct == null || !isFinite(completionPct)) return { grade:'—', style:'#dbeafe', text:'#163451', score:null };
+        score = completionPct;
+        if(vendorAvgHours != null && isFinite(vendorAvgHours)){
+          if(vendorAvgHours <= 4) score += 5;
+          else if(vendorAvgHours <= 24) score += 2;
+          else if(vendorAvgHours > 48) score -= 8;
+          else if(vendorAvgHours > 24) score -= 4;
+        }
+        if(agingCount > 0) score -= Math.min(agingCount * 4, 16);
+        score = Math.max(0, Math.min(100, Math.round(score)));
+        var g = gradeInfo(score);
+        g.score = score;
+        return g;
+      }
+      function meanGrade(parts){
+        var vals = (parts || []).filter(function(v){ return typeof v === 'number' && isFinite(v); });
+        if(!vals.length) return null;
+        return Math.round(vals.reduce(function(sum, v){ return sum + v; }, 0) / vals.length);
+      }
+      function isInspectionOrigin(r){
+        var unitNumber = String((r && r.unit_number) || '').trim().toLowerCase();
+        var description = String((r && r.description) || '').trim().toLowerCase();
+        var subject = String((r && r.subject) || '').trim().toLowerCase();
+        if(unitNumber === 'inspection') return true;
+        if(description.indexOf('created from community inspection.') === 0) return true;
+        if(subject.indexOf('inspection issue - ') === 0 && unitNumber === 'inspection') return true;
+        return false;
+      }
+      function isRealResidentOrigin(r){
+        var residentEmail = String((r && r.resident_email) || '').trim().toLowerCase();
+        var residentName = String((r && r.resident_name) || '').trim().toLowerCase();
+        if(!residentEmail && !residentName) return false;
+        if(residentEmail.endsWith('@zummee.local')) return false;
+        if(residentName === 'board member request') return false;
+        if(isInspectionOrigin(r)) return false;
+        return true;
+      }
+
+      var insightsCount = null;
+      var insightsList = null;
+      var insightsFootnote = null;
+      var rankingCount = null;
+      var rankingList = null;
+      var rankingFootnote = null;
+      var complianceGrade = null;
+      var complianceCompleted = null;
+      var complianceAssigned = null;
+      var compliancePercent = null;
+      var complianceFootnote = null;
+      var complianceList = null;
+      var boardGrade = null;
+      var boardMeetingCount = null;
+      var boardHeldCount = null;
+      var boardAgendaOnTime = null;
+      var boardMinutesApproved = null;
+      var boardFootnote = null;
+      var boardList = null;
+
+      function renderInsights(items, footnote){
+        if(insightsCount) insightsCount.textContent = String((items || []).length);
+        if(insightsList){
+          if(items && items.length){
+            insightsList.innerHTML = items.map(function(item){
+              var tone = String((item && item.tone) || 'good').trim();
+              var icon = String((item && item.icon) || 'i').trim();
+              var text = String((item && item.text) || '').trim();
+              return '<div class="insight-item ' + tone + '"><strong style="margin-right:8px;">' + icon + '</strong><span>' + text + '</span></div>';
+            }).join('');
+          }else{
+            insightsList.innerHTML = '<div class="insight-item"><span>No performance signals yet.</span></div>';
+          }
+        }
+        if(insightsFootnote) insightsFootnote.textContent = footnote || 'Signals are built from the current live work-order and resident-service metrics so supervisors can quickly see strengths and attention areas.';
+      }
+
+      function renderRanking(rows, selectedEmployee, month){
+        if(rankingCount) rankingCount.textContent = String((rows || []).length);
+        if(rankingList){
+          if(rows && rows.length){
+            rankingList.innerHTML = rows.map(function(row, idx){
+              var selectedEmail = selectedEmployee && selectedEmployee.email ? String(selectedEmployee.email).trim().toLowerCase() : '';
+              var isSelected = selectedEmail && row.email === selectedEmail;
+              var badge = idx === 0 ? 'Top performer' : ((row.overallScore != null && row.overallScore < 60) ? 'Needs attention' : 'Active');
+              var badgeClass = idx === 0 ? 'top' : ((row.overallScore != null && row.overallScore < 60) ? 'attention' : 'active');
+              return ''
+                + '<div class="ranking-row' + (isSelected ? ' selected' : '') + '">'
+                +   '<div class="ranking-pos">#' + (idx + 1) + '</div>'
+                +   '<div class="ranking-person">'
+                +     '<div class="ranking-name">' + row.name + (isSelected ? ' · Selected' : '') + '</div>'
+                +     '<div class="ranking-badge ' + badgeClass + '">' + badge + '</div>'
+                +   '</div>'
+                +   '<div class="ranking-stat"><div class="ranking-stat-value">' + (row.workOrderPct == null ? '—' : (row.workOrderPct + '%')) + '</div><div class="ranking-stat-label">Work Orders</div></div>'
+                +   '<div class="ranking-stat"><div class="ranking-stat-value">' + (row.residentPct == null ? '—' : (row.residentPct + '%')) + '</div><div class="ranking-stat-label">Resident</div></div>'
+                +   '<div class="ranking-stat hide-md"><div class="ranking-stat-value">' + (row.compliancePct == null ? '—' : (row.compliancePct + '%')) + '</div><div class="ranking-stat-label">Compliance</div></div>'
+                +   '<div class="ranking-stat hide-md"><div class="ranking-stat-value">' + (row.overallGrade || '—') + '</div><div class="ranking-stat-label">Overall</div></div>'
+                + '</div>';
+            }).join('');
+          }else{
+            rankingList.innerHTML = '<div class="ranking-empty">' + (month ? 'No employees have reportable work-order data for ' + monthLabel(month) + '.' : 'Choose a month to build the company ranking.') + '</div>';
+          }
+        }
+        if(rankingFootnote){
+          rankingFootnote.textContent = month
+            ? ('Ranking is based on the same live score inputs used in the selected employee report for ' + monthLabel(month) + '.')
+            : 'Ranking is based on the same live score inputs used in the selected employee report so supervisors can compare performance without leaving the page.';
+        }
+      }
+
+      function renderCompliance(metrics, name, month){
+        metrics = metrics || {};
+        var completedCount = Number(metrics.completedCount || 0);
+        var assignedCount = Number(metrics.assignedCount || 0);
+        var pct = (metrics.pct == null || !isFinite(metrics.pct)) ? null : Number(metrics.pct);
+        var gi = pct == null ? { grade:'—', style:'#e2e8f0', text:'#17324d' } : gradeInfo(pct);
+        if(complianceCompleted) complianceCompleted.textContent = String(completedCount);
+        if(complianceAssigned) complianceAssigned.textContent = String(assignedCount);
+        if(compliancePercent) compliancePercent.textContent = pct == null ? '—' : (pct + '%');
+        if(complianceGrade){
+          complianceGrade.textContent = gi.grade;
+          complianceGrade.style.background = gi.style;
+          complianceGrade.style.color = gi.text;
+        }
+        if(complianceList){
+          var items = Array.isArray(metrics.items) ? metrics.items : [];
+          if(items.length){
+            complianceList.innerHTML = items.map(function(item){
+              var cname = String(item.community_name || item.communityName || 'Community').trim() || 'Community';
+              var when = fmtDate(item.completed_at || item.completedAt);
+              return '<div class="ranking-row"><div class="ranking-person"><div class="ranking-name">' + cname + '</div><div class="ranking-badge active">Completed</div></div><div class="ranking-stat"><div class="ranking-stat-value">' + when + '</div><div class="ranking-stat-label">Completed On</div></div></div>';
+            }).join('');
+          } else {
+            complianceList.innerHTML = '<div class="ranking-empty">' + (month ? ('No compliance drives were marked complete for ' + monthLabel(month) + '.') : 'Choose a month to load compliance completion activity.') + '</div>';
+          }
+        }
+        if(complianceFootnote){
+          if(!month){
+            complianceFootnote.textContent = name && name !== 'Choose employee'
+              ? ('Choose a month to show completed monthly compliance drives for ' + name + '.')
+              : 'Choose an employee and month to show completed monthly compliance drives by community.';
+          } else if(metrics.tableMissing){
+            complianceFootnote.textContent = 'Compliance tracking table is not set up yet. Run the SQL setup, then Mileage Tracker will write community completion records here.';
+          } else if(!assignedCount){
+            complianceFootnote.textContent = 'No assigned communities were found for this employee in the active company, so completion coverage cannot be calculated yet.';
+          } else {
+            complianceFootnote.textContent = 'Compliance coverage for ' + name + ' · ' + monthLabel(month) + '. Completed ' + completedCount + ' of ' + assignedCount + ' assigned communities.';
+          }
+        }
+      }
+
+
+function renderBoardMeetings(metrics, name, month){
+  metrics = metrics || {};
+  var meetingCount = Number(metrics.meetingCount || 0);
+  var heldCount = Number(metrics.heldCount || 0);
+  var agendaOnTimeCount = Number(metrics.agendaOnTimeCount || 0);
+  var minutesApprovedCount = Number(metrics.minutesApprovedCount || 0);
+  var pct = (metrics.pct == null || !isFinite(metrics.pct)) ? null : Number(metrics.pct);
+  var gi = pct == null ? { grade:'—', style:'#e2e8f0', text:'#17324d' } : gradeInfo(pct);
+  if(boardMeetingCount) boardMeetingCount.textContent = String(meetingCount);
+  if(boardHeldCount) boardHeldCount.textContent = String(heldCount);
+  if(boardAgendaOnTime) boardAgendaOnTime.textContent = String(agendaOnTimeCount);
+  if(boardMinutesApproved) boardMinutesApproved.textContent = String(minutesApprovedCount);
+  if(boardGrade){
+    boardGrade.textContent = gi.grade;
+    boardGrade.style.background = gi.style;
+    boardGrade.style.color = gi.text;
+  }
+  if(boardList){
+    var items = Array.isArray(metrics.items) ? metrics.items : [];
+    if(items.length){
+      boardList.innerHTML = items.map(function(item){
+        var title = String(item.community_name || 'Community').trim() || 'Community';
+        var when = item.meeting_date ? fmtDate(item.meeting_date) : (item.meeting_key || 'Meeting');
+        var badge = item.minutesApproved ? 'Approved' : (item.minutesSubmitted ? 'Awaiting Approval' : (item.held ? 'Held' : 'Open'));
+        var badgeClass = item.minutesApproved ? 'top' : ((item.minutesSubmitted || item.held) ? 'active' : 'attention');
+        var statusBits = [];
+        statusBits.push(item.held ? 'Held' : 'Not recorded as held');
+        statusBits.push(item.agendaOnTime ? 'Agenda on time' : (item.agendaSent ? 'Agenda late' : 'Agenda not logged'));
+        statusBits.push(item.minutesApproved ? 'Minutes approved' : (item.minutesSubmitted ? 'Minutes pending approval' : 'Minutes not submitted'));
+        return '<div class="board-meeting-row">'
+          + '<div class="board-meeting-main"><div class="board-meeting-title">' + title + ' · ' + when + '</div><div class="ranking-badge ' + badgeClass + '">' + badge + '</div></div>'
+          + '<div class="board-meeting-stat"><div class="board-meeting-stat-value">' + (item.agendaOnTime ? 'Yes' : (item.agendaSent ? 'Late' : 'No')) + '</div><div class="board-meeting-stat-label">Agenda</div></div>'
+          + '<div class="board-meeting-stat"><div class="board-meeting-stat-value">' + (item.minutesApproved ? 'Yes' : (item.minutesSubmitted ? 'Pending' : 'No')) + '</div><div class="board-meeting-stat-label">Minutes</div></div>'
+          + '</div><div class="metric-footer" style="padding-top:10px;">' + statusBits.join(' · ') + '</div>';
+      }).join('');
+    } else {
+      boardList.innerHTML = '<div class="ranking-empty">' + (month ? ('No board meeting activity was recorded for ' + monthLabel(month) + '.') : 'Choose a month to load board meeting performance.') + '</div>';
+    }
+  }
+  if(boardFootnote){
+    if(!month){
+      boardFootnote.textContent = name && name !== 'Choose employee'
+        ? ('Choose a month to evaluate board meeting follow-through for ' + name + '.')
+        : 'Choose an employee and month to evaluate board meeting follow-through.';
+    } else if(metrics.tableMissing){
+      boardFootnote.textContent = 'Agenda timing events are not fully wired until the board meeting agenda tracking table is created. Held meetings and minutes approval still load from live board meeting records.';
+    } else if(!meetingCount){
+      boardFootnote.textContent = 'No board meeting activity was recorded for ' + name + ' in ' + monthLabel(month) + '.';
+    } else {
+      boardFootnote.textContent = 'Board meeting follow-through for ' + name + ' · ' + monthLabel(month) + '. Held ' + heldCount + ' of ' + meetingCount + ', agendas on time for ' + agendaOnTimeCount + ', and minutes approved for ' + minutesApprovedCount + '.';
+    }
+  }
+}
+
+
+      function safeHTML(v){
+        return String(v == null ? '' : v)
+          .replace(/&/g,'&amp;')
+          .replace(/</g,'&lt;')
+          .replace(/>/g,'&gt;')
+          .replace(/"/g,'&quot;')
+          .replace(/'/g,'&#39;');
+      }
+      function textOf(id){
+        var el = byId(id);
+        return el ? String(el.textContent || '').trim() : '';
+      }
+      function htmlOf(id){
+        var el = byId(id);
+        return el ? String(el.innerHTML || '') : '';
+      }
+      function printGradeClass(grade){
+        grade = String(grade || '').trim().toUpperCase();
+        if(['A+','A','A-','B+','B'].includes(grade)) return 'good';
+        if(['B-','C+','C','C-'].includes(grade)) return 'warn';
+        return grade && grade !== '—' ? 'bad' : 'neutral';
+      }
+      function buildPrintReport(){
+        var employeeSelectEl = byId('perfEmployeeSelect');
+        var monthSelectEl = byId('perfMonthSelect');
+        var selectedOption = employeeSelectEl && employeeSelectEl.selectedIndex >= 0
+          ? employeeSelectEl.options[employeeSelectEl.selectedIndex]
+          : null;
+        var employee = {
+          userId: selectedOption ? String(selectedOption.dataset.userId || '').trim() : '',
+          email: employeeSelectEl ? String(employeeSelectEl.value || '').trim().toLowerCase() : '',
+          name: selectedOption ? String(selectedOption.dataset.name || selectedOption.textContent || '').trim() : ''
+        };
+        var name = employee && (employee.name || employee.email) ? (employee.name || safeNameFromEmail(employee.email || '')) : 'Choose employee';
+        var month = monthSelectEl ? String(monthSelectEl.value || '').trim() : '';
+        var monthText = month ? monthLabel(month) : 'Choose month';
+        var company = textOf('perfCoverCompany') || textOf('perfCompanyName') || 'No company selected';
+        var overall = textOf('perfCoverGrade') || textOf('perfOverallGrade') || '—';
+        var rank = textOf('perfCoverRank') || '—';
+        var summary = textOf('perfExecutiveSummary') || 'Choose an employee and month to generate a polished summary.';
+        var highlightsHTML = htmlOf('perfExecutiveHighlights') || '<div class="print-highlight-item">Operational highlights will appear once a reporting month is selected.</div>';
+
+        var cover = ''
+          + '<div class="print-cover-header"><div class="print-cover-brand"><div class="wordmark">Zummee Supervisor Packet</div></div></div>'
+          + '<div class="print-cover-main">'
+          +   '<div class="print-cover-hero">'
+          +     '<div class="print-cover-top">'
+          +       '<div>'
+          +         '<div class="print-cover-kicker">Employee Performance Report</div>'
+          +         '<div class="print-cover-title">Employee Performance Report</div>'
+          +         '<div class="print-cover-name">' + safeHTML(name) + '</div>'
+          +         '<div class="print-cover-subline">High-level monthly performance review blending employee work order execution, resident service, compliance completion, and board meeting follow-through into one board-ready document.</div>'
+          +       '</div>'
+          +       '<div class="print-grade-orb"><div class="label">Overall</div><div class="value">' + safeHTML(overall) + '</div></div>'
+          +     '</div>'
+          +     '<div class="print-cover-stats">'
+          +       '<div class="print-cover-stat"><div class="k">Month</div><div class="v">' + safeHTML(monthText) + '</div><div class="s">Current reporting period</div></div>'
+          +       '<div class="print-cover-stat"><div class="k">Company Scope</div><div class="v">' + safeHTML(company) + '</div><div class="s">Active supervisor context</div></div>'
+          +       '<div class="print-cover-stat"><div class="k">Company Ranking</div><div class="v">' + safeHTML(rank) + '</div><div class="s">Position within active company</div></div>'
+          +     '</div>'
+          +   '</div>'
+          +   '<div class="print-exec-panel">'
+          +     '<div class="print-exec-label">Executive Summary</div>'
+          +     '<div class="print-exec-copy">' + safeHTML(summary) + '</div>'
+          +     '<div class="print-highlight-list">' + highlightsHTML + '</div>'
+          +   '</div>'
+          + '</div>'
+          + '<div class="print-page-footer"><div class="brand">Prepared by Zummee</div><div>Employee Performance Report</div><div class="page">Page 1</div></div>';
+        byId('printCoverPage').innerHTML = cover;
+
+        function stat(k,v,s,cls){
+          return '<div class="print-stat' + (cls ? (' ' + cls) : '') + '"><div class="k">' + safeHTML(k) + '</div><div class="v">' + safeHTML(v) + '</div>' + (s ? ('<div class="s">' + safeHTML(s) + '</div>') : '') + '</div>';
+        }
+        function module(title, sub, grade, statsHtml, note){
+          return '<section class="print-module">'
+            + '<div class="module-head"><div><div class="module-title">' + safeHTML(title) + '</div><div class="module-sub">' + safeHTML(sub) + '</div></div><div class="module-grade">' + safeHTML(grade || '—') + '</div></div>'
+            + statsHtml
+            + '<div class="print-note-line">' + safeHTML(note || '') + '</div>'
+            + '</section>';
+        }
+
+        var operations = ''
+          + '<div class="print-page-header"><div><div class="eyebrow">Zummee Employee Performance Report</div><div class="title">Operations Review</div><div class="meta">' + safeHTML(name) + ' · ' + safeHTML(monthText) + ' · ' + safeHTML(company) + '</div></div><div class="grade-chip">' + safeHTML(overall) + '</div></div>'
+          + '<div class="print-section-band">Operational Performance Summary</div>'
+          + '<div class="print-module-grid">'
+          + module('Employee Work Orders', 'Monthly completion and throughput for employee-created work orders.', textOf('metricWorkOrdersGrade'), '<div class="print-stat-grid">' + stat('Submitted', textOf('metricWorkOrdersSubmitted')) + stat('Completed', textOf('metricWorkOrdersCompleted')) + stat('Completion', textOf('metricWorkOrdersPercent')) + '</div>', textOf('metricWorkOrdersFootnote'))
+          + module('Resident Work Order Service', 'Resident-origin service execution tied to the selected employee scope.', textOf('metricResidentGrade'), '<div class="print-stat-grid">' + stat('Submitted', textOf('metricResidentSubmitted')) + stat('Completed', textOf('metricResidentCompleted')) + stat('Completion', textOf('metricResidentPercent')) + stat('Avg Completion', textOf('metricResidentAvgCompletion')) + stat('Vendor Response', textOf('metricResidentVendorResponse')) + stat('Aging Risk', textOf('metricResidentAging')) + '</div>', textOf('metricResidentFootnote'))
+          + '</div>'
+          + '<div class="print-module-grid">'
+          + module('Compliance Completed', 'Monthly coverage across assigned communities.', textOf('metricComplianceGrade'), '<div class="print-stat-grid">' + stat('Completed', textOf('metricComplianceCompleted')) + stat('Assigned', textOf('metricComplianceAssigned')) + stat('Coverage', textOf('metricCompliancePercent')) + '</div>', textOf('metricComplianceFootnote'))
+          + module('Performance Observations', 'Smart narrative flags pulled from live thresholds.', textOf('metricInsightsCount'), '<div class="print-observation-list">' + htmlOf('metricInsightsList') + '</div>', textOf('metricInsightsFootnote'))
+          + '</div>'
+          + '<div class="print-compliance-table"><div class="print-table-head"><div>Community</div><div>Status</div><div>Completed On</div></div>' + (function(){
+              var source = byId('metricComplianceList');
+              if(!source || !source.children.length || /ranking-empty/.test(source.innerHTML)) return '<div class="print-table-row"><div class="name">No compliance completions</div><div>—</div><div>Choose a month or add completed drives</div></div>';
+              var rows=[]; Array.from(source.children).forEach(function(el){
+                var nameEl=el.querySelector('.ranking-name'); var badgeEl=el.querySelector('.ranking-badge'); var whenEl=el.querySelector('.ranking-stat-value');
+                rows.push('<div class="print-table-row"><div class="name">'+safeHTML(nameEl?nameEl.textContent:'Community')+'</div><div>'+safeHTML(badgeEl?badgeEl.textContent:'Completed')+'</div><div>'+safeHTML(whenEl?whenEl.textContent:'—')+'</div></div>');
+              }); return rows.join('');
+            })() + '</div>'
+          + '<div class="print-page-footer"><div class="brand">Prepared by Zummee</div><div>Supervisor Operational Review</div><div class="page">Page 2</div></div>';
+        byId('printOperationsPage').innerHTML = operations;
+
+        var governance = ''
+          + '<div class="print-page-header"><div><div class="eyebrow">Zummee Employee Performance Report</div><div class="title">Governance & Company Context</div><div class="meta">' + safeHTML(name) + ' · ' + safeHTML(monthText) + ' · ' + safeHTML(company) + '</div></div><div class="grade-chip">' + safeHTML(overall) + '</div></div>'
+          + '<div class="print-section-band">Board Meetings & Company Ranking</div>'
+          + module('Board Meeting Follow-Through', 'Meeting held status, agenda timing, and minutes approval.', textOf('metricBoardGrade'), '<div class="print-stat-grid two">' + stat('Meetings Recorded', textOf('metricBoardMeetingCount')) + stat('Meetings Held', textOf('metricBoardHeldCount')) + stat('Agendas On Time', textOf('metricBoardAgendaOnTime')) + stat('Minutes Approved', textOf('metricBoardMinutesApproved')) + '</div>', textOf('metricBoardFootnote'))
+          + '<div class="print-board-table" style="margin-top:14px;"><div class="print-table-head"><div>Meeting</div><div>Agenda</div><div>Minutes</div><div>Status</div></div>' + (function(){
+              var source = byId('metricBoardList');
+              if(!source || !source.children.length || /ranking-empty/.test(source.innerHTML)) return '<div class="print-table-row"><div class="name">No board meeting activity</div><div>—</div><div>—</div><div>Choose a month or record activity</div></div>';
+              var rows=[]; Array.from(source.children).forEach(function(el){
+                var titleEl=el.querySelector('.board-meeting-title');
+                var agendaVal=el.querySelectorAll('.board-meeting-stat-value')[0];
+                var minutesVal=el.querySelectorAll('.board-meeting-stat-value')[1];
+                var badgeEl=el.querySelector('.ranking-badge');
+                rows.push('<div class="print-table-row"><div class="name">'+safeHTML(titleEl?titleEl.textContent:'Meeting')+'</div><div>'+safeHTML(agendaVal?agendaVal.textContent:'—')+'</div><div>'+safeHTML(minutesVal?minutesVal.textContent:'—')+'</div><div>'+safeHTML(badgeEl?badgeEl.textContent:'Open')+'</div></div>');
+              }); return rows.join('');
+            })() + '</div>'
+          + '<div class="print-section-band" style="margin-top:16px;">Company Ranking</div>'
+          + '<div class="print-ranking-table"><div class="print-table-head"><div>Rank</div><div>Employee</div><div>Work Orders</div><div>Resident</div><div>Compliance</div><div>Overall</div></div>' + (function(){
+              var source = byId('metricRankingList');
+              if(!source || !source.children.length || /ranking-empty/.test(source.innerHTML)) return '<div class="print-table-row"><div>—</div><div class="name">No ranking available</div><div>—</div><div>—</div><div>—</div><div>Choose a month to compare employees</div></div>';
+              var rows=[]; Array.from(source.children).forEach(function(el){
+                var rankEl=el.querySelector('.ranking-pos');
+                var nameEl=el.querySelector('.ranking-name');
+                var stats=el.querySelectorAll('.ranking-stat-value');
+                rows.push('<div class="print-table-row"><div>'+safeHTML(rankEl?rankEl.textContent:'—')+'</div><div class="name">'+safeHTML(nameEl?nameEl.textContent:'Employee')+'</div><div>'+safeHTML(stats[0]?stats[0].textContent:'—')+'</div><div>'+safeHTML(stats[1]?stats[1].textContent:'—')+'</div><div>'+safeHTML(stats[2]?stats[2].textContent:'—')+'</div><div>'+safeHTML(stats[3]?stats[3].textContent:'—')+'</div></div>');
+              }); return rows.join('');
+            })() + '</div>'
+          + '<div class="print-note-line">' + safeHTML(textOf('metricRankingFootnote')) + '</div>'
+          + '<div class="print-page-footer"><div class="brand">Prepared by Zummee</div><div>Governance & Company Comparison</div><div class="page">Page 3</div></div>';
+        byId('printGovernancePage').innerHTML = governance;
+      }
+
+      async function getSb(){
+        try{ if(window.sb && typeof window.sb.from === 'function') return window.sb; }catch(_e){}
+        try{ if(typeof window.ensureSupabase === 'function'){ const sb = await window.ensureSupabase(); if(sb) return sb; } }catch(_e){}
+        try{
+          if(window.supabase && typeof window.supabase.createClient === 'function'){
+            return window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+          }
+        }catch(_e){}
+        return null;
+      }
+
+      function parsePerfLogoRef(raw){
+        raw = String(raw || '').trim();
+        if(!raw) return null;
+        if(/^https?:\/\//i.test(raw)) return { url: raw };
+        return { bucket:'company_logos', path: raw };
+      }
+      function perfLogoCacheKey(companyId){
+        return 'mh2_brand_logo_v1_' + String(companyId || '').trim();
+      }
+      function readPerfLogoCache(companyId){
+        try{
+          var raw = sessionStorage.getItem(perfLogoCacheKey(companyId));
+          if(!raw) return null;
+          var parsed = JSON.parse(raw);
+          if(parsed && parsed.url) return parsed;
+        }catch(_e){}
+        return null;
+      }
+      function writePerfLogoCache(companyId, payload){
+        try{
+          sessionStorage.setItem(perfLogoCacheKey(companyId), JSON.stringify({
+            url:String(payload && payload.url || '').trim(),
+            alt:String(payload && payload.alt || '').trim(),
+            isCompany:!!(payload && payload.isCompany)
+          }));
+        }catch(_e){}
+      }
+      async function resolvePerfCompanyId(sb){
+        try{
+          var direct = String(window.__activeCompanyId || localStorage.getItem('activeCompanyId') || '').trim();
+          if(direct) return direct;
+        }catch(_e){}
+        try{
+          var userRes = await sb.auth.getUser();
+          var user = userRes && userRes.data && userRes.data.user;
+          var uid = String(user && user.id || '').trim();
+          if(!uid) return '';
+          var ud = await sb.from('userdirectory').select('company_id').eq('auth_user_id', uid).maybeSingle();
+          if(ud && !ud.error && ud.data && ud.data.company_id) return String(ud.data.company_id).trim();
+        }catch(_e){}
+        return '';
+      }
+      async function paintPerfBrandLogo(payload){
+        var logo = byId('perfBrandLogo');
+        if(!logo) return;
+        var url = String(payload && payload.url || '').trim() || 'Zummee.png';
+        var alt = String(payload && payload.alt || '').trim() || 'Zummee logo';
+        logo.classList.remove('is-visible');
+        logo.src = url;
+        logo.alt = alt;
+        requestAnimationFrame(function(){ logo.classList.add('is-visible'); });
+      }
+      async function syncPerfBrandLogo(){
+        var logo = byId('perfBrandLogo');
+        if(!logo) return;
+        try{
+          var sb = await getSb();
+          if(!sb) throw new Error('Supabase unavailable');
+          var companyId = await resolvePerfCompanyId(sb);
+          if(!companyId) throw new Error('No company id');
+          var cached = readPerfLogoCache(companyId);
+          if(cached && cached.url) paintPerfBrandLogo(cached);
+          var res = await sb.from('companies').select('logo_path,name').eq('id', String(companyId)).maybeSingle();
+          if(res && res.error) throw res.error;
+          var row = res && res.data || {};
+          var ref = parsePerfLogoRef(row.logo_path);
+          if(!ref) throw new Error('No company logo');
+          var url = ref.url || '';
+          if(!url && ref.bucket && ref.path && sb.storage && sb.storage.from){
+            var pub = sb.storage.from(ref.bucket).getPublicUrl(ref.path);
+            url = String(pub && pub.data && pub.data.publicUrl || '').trim();
+          }
+          if(!url) throw new Error('No logo URL');
+          var payload = { url:url, alt:String(row.name || 'Company logo'), isCompany:true };
+          writePerfLogoCache(companyId, payload);
+          await paintPerfBrandLogo(payload);
+        }catch(_e){
+          await paintPerfBrandLogo({ url:'Zummee.png', alt:'Zummee logo', isCompany:false });
+        }
+      }
+
+      
+
+async function initShell(){
+        var employeeSel = byId('perfEmployeeSelect');
+        var monthSel = byId('perfMonthSelect');
+        var companyInput = byId('perfCompanyName');
+        var statusInput = byId('perfReportStatus');
+        var summaryEmployee = byId('perfSummaryEmployee');
+        var summaryMonth = byId('perfSummaryMonth');
+        var printStatus = byId('perfPrintStatus');
+        var coverName = byId('perfCoverName');
+        var coverSubline = byId('perfCoverSubline');
+        var coverGrade = byId('perfCoverGrade');
+        var coverMonth = byId('perfCoverMonth');
+        var coverCompany = byId('perfCoverCompany');
+        var coverRank = byId('perfCoverRank');
+        var executiveSummary = byId('perfExecutiveSummary');
+        var executiveHighlights = byId('perfExecutiveHighlights');
+        var workOrdersGrade = byId('metricWorkOrdersGrade');
+        var residentGrade = byId('metricResidentGrade');
+        var overallGrade = byId('perfOverallGrade');
+        var workOrdersFootnote = byId('metricWorkOrdersFootnote');
+        var residentFootnote = byId('metricResidentFootnote');
+        insightsCount = byId('metricInsightsCount');
+        insightsList = byId('metricInsightsList');
+        insightsFootnote = byId('metricInsightsFootnote');
+        rankingCount = byId('metricRankingCount');
+        rankingList = byId('metricRankingList');
+        rankingFootnote = byId('metricRankingFootnote');
+        if(!employeeSel || !monthSel) return;
+        complianceGrade = byId('metricComplianceGrade');
+        complianceCompleted = byId('metricComplianceCompleted');
+        complianceAssigned = byId('metricComplianceAssigned');
+        compliancePercent = byId('metricCompliancePercent');
+        complianceFootnote = byId('metricComplianceFootnote');
+        complianceList = byId('metricComplianceList');
+        boardGrade = byId('metricBoardGrade');
+        boardMeetingCount = byId('metricBoardMeetingCount');
+        boardHeldCount = byId('metricBoardHeldCount');
+        boardAgendaOnTime = byId('metricBoardAgendaOnTime');
+        boardMinutesApproved = byId('metricBoardMinutesApproved');
+        boardFootnote = byId('metricBoardFootnote');
+        boardList = byId('metricBoardList');
+        if(!employeeSel || !monthSel) return;
+
+        byId('perfPrintBtn')?.addEventListener('click', function(){ buildPrintReport(); window.print(); });
+        byId('perfRefreshBtn')?.addEventListener('click', function(){ initShell(); });
+
+        var companyId = '';
+        try{ companyId = String(window.__activeCompanyId || localStorage.getItem('activeCompanyId') || '').trim(); }catch(_e){}
+        var companyName = '';
+        function applyCompanyName(name){
+          var clean = String(name || '').trim();
+          if(!clean) clean = companyId ? ('Company ' + companyId.slice(0,8)) : 'No company selected';
+          if(companyInput) companyInput.value = clean;
+          if(coverCompany) coverCompany.textContent = clean === 'No company selected' ? 'No company' : clean;
+          return clean;
+        }
+        applyCompanyName('');
+        statusInput.value = 'Loading employee performance…';
+        try{ syncPerfBrandLogo(); }catch(_e){}
+        if(printStatus) printStatus.textContent = 'Ready';
+
+        var sb = await getSb();
+        if(!sb){
+          statusInput.value = 'Supabase unavailable';
+          return;
+        }
+
+        var communityIds = [];
+        var communityNamesById = {};
+        if(companyId){
+          try{
+            var commRes = await sb.from('PropertyCommunities').select('id,name,company').eq('company_id', companyId).limit(5000);
+            if(commRes && !commRes.error && Array.isArray(commRes.data)){
+              communityIds = commRes.data.map(function(r){ return String(r.id || '').trim(); }).filter(Boolean);
+              communityNamesById = Object.fromEntries(commRes.data.map(function(r){ return [String(r.id || '').trim(), String(r.name || '').trim()]; }));
+              var companyNameFromCommunities = commRes.data.map(function(r){ return String(r.company || '').trim(); }).find(Boolean) || '';
+              if(companyNameFromCommunities) companyName = applyCompanyName(companyNameFromCommunities);
+            }
+          }catch(_e){}
+        }
+        if(!companyName){
+          try{
+            var authRes = await sb.auth.getUser();
+            var authMeta = authRes && authRes.data && authRes.data.user ? (authRes.data.user.user_metadata || {}) : {};
+            var authCompanyName = String(authMeta.company || authMeta.company_name || '').trim();
+            if(authCompanyName) companyName = applyCompanyName(authCompanyName);
+          }catch(_e){}
+        }
+
+        var employees = {};
+        try{
+          var ud = sb.from('userdirectory').select('auth_user_id, profile_name, profile_email, company_id, approved').eq('approved', true).limit(5000);
+          if(companyId) ud = ud.eq('company_id', companyId);
+          var udRes = await ud;
+          if(udRes && !udRes.error && Array.isArray(udRes.data)){
+            udRes.data.forEach(function(r){
+              var em = String(r.profile_email || '').trim().toLowerCase();
+              if(!em) return;
+              employees[em] = {
+                email: em,
+                user_id: String(r.auth_user_id || '').trim() || null,
+                name: String(r.profile_name || '').trim() || safeNameFromEmail(em)
+              };
+            });
+          }
+        }catch(_e){}
+
+
+        var assignmentsByUserId = {};
+        try{
+          var assignReq = sb.from('CommunityAssignments').select('user_id, community_id').limit(5000);
+          if(communityIds.length) assignReq = assignReq.in('community_id', communityIds);
+          var assignRes = await assignReq;
+          if(assignRes && !assignRes.error && Array.isArray(assignRes.data)){
+            assignRes.data.forEach(function(r){
+              var uid = String(r.user_id || '').trim();
+              var cid = String(r.community_id || '').trim();
+              if(!uid || !cid) return;
+              if(!assignmentsByUserId[uid]) assignmentsByUserId[uid] = {};
+              assignmentsByUserId[uid][cid] = true;
+            });
+          }
+        }catch(_e){}
+
+        async function loadComplianceRows(){
+          var attempts = [
+            { select:'id, employee_user_id, employee_email, employee_name, company_id, community_id, community_name, completed_at, month_key, created_at', filter:'company' },
+            { select:'id, employee_user_id, employee_email, employee_name, community_id, community_name, completed_at, month_key, created_at', filter:'community' },
+            { select:'id, employee_user_id, community_id, community_name, completed_at, month_key', filter:'community' },
+            { select:'id, employee_user_id, community_id, community_name, completed_at, month_key', filter:'none' }
+          ];
+          var lastError = null;
+          for(var i=0;i<attempts.length;i++){
+            try{
+              var attempt = attempts[i];
+              var rq = sb.from('mileage_compliance_completions').select(attempt.select).limit(5000);
+              if(attempt.filter === 'company' && companyId) rq = rq.eq('company_id', companyId);
+              else if(attempt.filter === 'community' && communityIds.length) rq = rq.in('community_id', communityIds);
+              var rr = await rq;
+              if(rr && !rr.error && Array.isArray(rr.data)) return { data: rr.data.slice(), error:null, tableMissing:false };
+              lastError = rr && rr.error ? rr.error : lastError;
+            }catch(err){ lastError = err || lastError; }
+          }
+          var msg = String((lastError && (lastError.message || lastError.details || lastError.hint)) || '').toLowerCase();
+          var missing = msg.indexOf('mileage_compliance_completions') >= 0 || msg.indexOf('relation') >= 0 || msg.indexOf('does not exist') >= 0;
+          if(lastError) console.warn('[employee-performance] mileage_compliance_completions unavailable', lastError);
+          return { data: [], error:lastError, tableMissing: missing || !lastError };
+        }
+
+var complianceLoad = await loadComplianceRows();
+var complianceRows = Array.isArray(complianceLoad && complianceLoad.data) ? complianceLoad.data.slice() : [];
+
+async function loadBoardStateRows(){
+  try{
+    var rq = sb.from('board_meetings_state').select('user_id, community_id, meeting_key, data, updated_at').limit(5000);
+    if(communityIds.length) rq = rq.in('community_id', communityIds);
+    var rr = await rq;
+    if(rr && !rr.error && Array.isArray(rr.data)) return rr.data.slice();
+  }catch(err){ console.warn('[employee-performance] board_meetings_state unavailable', err); }
+  return [];
+}
+async function loadBoardMinutesRows(){
+  try{
+    var rq = sb.from('BoardMeetingMinutesApprovals').select('community_id, community_name, meeting_id, meeting_date, approval_status, approval_requested_at, created_by, approved_at, company_id').limit(5000);
+    if(companyId) rq = rq.eq('company_id', companyId);
+    var rr = await rq;
+    if(rr && !rr.error && Array.isArray(rr.data)) return rr.data.slice();
+  }catch(err){ console.warn('[employee-performance] BoardMeetingMinutesApprovals unavailable', err); }
+  return [];
+}
+async function loadBoardAgendaRows(){
+  var lastError = null;
+  var attempts = [
+    'id, employee_user_id, employee_email, employee_name, company_id, community_id, community_name, meeting_key, meeting_date, sent_at',
+    'id, employee_user_id, employee_email, community_id, community_name, meeting_key, meeting_date, sent_at'
+  ];
+  for(var i=0;i<attempts.length;i++){
+    try{
+      var rq = sb.from('board_meeting_agenda_events').select(attempts[i]).limit(5000);
+      if(companyId && attempts[i].indexOf('company_id') >= 0) rq = rq.eq('company_id', companyId);
+      else if(communityIds.length) rq = rq.in('community_id', communityIds);
+      var rr = await rq;
+      if(rr && !rr.error && Array.isArray(rr.data)) return { data: rr.data.slice(), tableMissing:false };
+      lastError = rr && rr.error ? rr.error : lastError;
+    }catch(err){ lastError = err || lastError; }
+  }
+  var msg = String((lastError && (lastError.message || lastError.details || lastError.hint)) || '').toLowerCase();
+  var missing = msg.indexOf('board_meeting_agenda_events') >= 0 || msg.indexOf('relation') >= 0 || msg.indexOf('does not exist') >= 0;
+  if(lastError) console.warn('[employee-performance] board_meeting_agenda_events unavailable', lastError);
+  return { data: [], tableMissing: missing || !lastError, error:lastError };
+}
+var boardStateRows = await loadBoardStateRows();
+var boardMinutesRows = await loadBoardMinutesRows();
+var boardAgendaLoad = await loadBoardAgendaRows();
+var boardAgendaRows = Array.isArray(boardAgendaLoad && boardAgendaLoad.data) ? boardAgendaLoad.data.slice() : [];
+        async function loadResidentRows(){
+          var selectAttempts = [
+            'id, company_id, community_id, status, subject, description, unit_number, priority, submitted_at, updated_at, completed_at, vendor_dispatched_at, vendor_accepted_at, vendor_response_status, employee_user_id, employee_email, employee_name, resident_name, resident_email',
+            'id, company_id, community_id, status, subject, priority, submitted_at, updated_at, completed_at, vendor_dispatched_at, vendor_accepted_at, vendor_response_status, employee_user_id, employee_email, employee_name, resident_name, resident_email',
+            'id, company_id, community_id, status, subject, description, unit_number, priority, submitted_at, updated_at, completed_at, vendor_dispatched_at, vendor_accepted_at, employee_user_id, employee_email, employee_name, resident_name, resident_email',
+            'id, company_id, community_id, status, subject, priority, submitted_at, updated_at, completed_at, vendor_dispatched_at, vendor_accepted_at, employee_user_id, employee_email, employee_name, resident_name, resident_email',
+            'id, community_id, status, submitted_at, updated_at, employee_user_id, employee_email, employee_name, resident_name, resident_email'
+          ];
+          var lastError = null;
+          for(var i=0;i<selectAttempts.length;i++){
+            try{
+              var rq = sb.from('resident_work_orders').select(selectAttempts[i]).limit(5000);
+              if(communityIds.length) rq = rq.in('community_id', communityIds);
+              var rr = await rq;
+              if(rr && !rr.error && Array.isArray(rr.data)){
+                return { data: rr.data.slice(), selectUsed: selectAttempts[i], error: null };
+              }
+              lastError = rr && rr.error ? rr.error : lastError;
+            }catch(err){
+              lastError = err || lastError;
+            }
+          }
+          return { data: [], selectUsed: '', error: lastError };
+        }
+
+        var loadRowsRes = await loadResidentRows();
+        var rawRows = Array.isArray(loadRowsRes && loadRowsRes.data) ? loadRowsRes.data.slice() : [];
+        if(!rawRows.length && loadRowsRes && loadRowsRes.error){
+          console.warn('[employee-performance] resident_work_orders query fallback exhausted', loadRowsRes.error);
+        }
+
+        function rowEmail(r){ return String(r.employee_email || '').trim().toLowerCase(); }
+        function rowUserId(r){ return String(r.employee_user_id || '').trim(); }
+        function normalizeName(v){ return String(v || '').trim().replace(/\s+/g, ' ').toLowerCase(); }
+        function makeEmployeeState(seed){
+          seed = seed || {};
+          return {
+            userId: String(seed.userId || seed.user_id || '').trim(),
+            email: String(seed.email || '').trim().toLowerCase(),
+            name: String(seed.name || '').trim()
+          };
+        }
+
+function parseMeetingDateSource(v){
+  var s = String(v || '').trim();
+  if(!s) return '';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  var d = new Date(s);
+  if(isNaN(d.getTime())) return '';
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+        function employeeMatchesRow(employee, r){
+          employee = makeEmployeeState(employee);
+          if(!employee.userId && !employee.email && !employee.name) return false;
+          var uid = rowUserId(r);
+          var em = rowEmail(r);
+          var nm = normalizeName(r && r.employee_name);
+          if(employee.userId && uid) return uid === employee.userId;
+          if(employee.email && em) return em === employee.email;
+          if(employee.name && nm) return nm === normalizeName(employee.name);
+          return false;
+        }
+        function buildEmployeeStateFromEmail(email){
+          var roster = employees[email] || {};
+          return makeEmployeeState({ userId: roster.user_id, email: email, name: roster.name || safeNameFromEmail(email) });
+        }
+        function getSelectedEmployee(){
+          if(!employeeSel) return makeEmployeeState();
+          var idx = employeeSel.selectedIndex;
+          var opt = idx >= 0 ? employeeSel.options[idx] : null;
+          if(!opt) return makeEmployeeState();
+          return makeEmployeeState({
+            userId: opt.dataset.userId || opt.value,
+            email: opt.dataset.email || '',
+            name: opt.dataset.name || opt.textContent || ''
+          });
+        }
+        var reportState = { employee: makeEmployeeState(), month: '' };
+
+        var rows = rawRows.filter(function(r){
+          var status = String(r.status || '').trim().toLowerCase();
+          var hasDate = !!(r.submitted_at || r.updated_at);
+          var hasOwner = !!rowEmail(r) || !!rowUserId(r);
+          return hasDate && hasOwner && status !== 'draft' && status !== 'test';
+        });
+
+        // Show company roster employees when they have snapshot-backed work order data by email OR user id.
+        // This fixes the dropdown disappearing when rows are tied only by employee_user_id.
+        var employeeKeysWithData = {};
+        var employeeUserIdsWithData = {};
+        rows.forEach(function(r){
+          var email = rowEmail(r);
+          var uid = rowUserId(r);
+          if(email) employeeKeysWithData[email] = true;
+          if(uid) employeeUserIdsWithData[uid] = true;
+        });
+
+        var employeeList = Object.keys(employees)
+          .filter(function(email){
+            var uid = employees[email] && employees[email].user_id ? employees[email].user_id : '';
+            return !!employeeKeysWithData[email] || (!!uid && !!employeeUserIdsWithData[uid]);
+          })
+          .sort(function(a,b){ return employees[a].name.localeCompare(employees[b].name); });
+
+        // Safety fallback: if the roster filter still yields nothing, show the company roster so supervisors can at least pick employees.
+        if(!employeeList.length){
+          employeeList = Object.keys(employees).sort(function(a,b){ return employees[a].name.localeCompare(employees[b].name); });
+        }
+
+        var allMonths = Array.from(new Set(rows.map(function(r){
+          return monthKey(r.submitted_at || r.updated_at);
+        }).filter(Boolean))).sort().reverse();
+
+        function monthsForEmployee(employee){
+          employee = makeEmployeeState(employee);
+          var scoped = rows.filter(function(r){ return employeeMatchesRow(employee, r); });
+          var months = Array.from(new Set(scoped.map(function(r){
+            return monthKey(r.submitted_at || r.updated_at);
+          }).filter(Boolean))).sort().reverse();
+          return months.length ? months : allMonths.slice();
+        }
+
+        employeeSel.innerHTML = '<option value="">Choose employee</option>' + employeeList.map(function(email){
+          var employee = buildEmployeeStateFromEmail(email);
+          var optionValue = employee.userId || employee.email;
+          return '<option value="' + optionValue + '" data-email="' + employee.email + '" data-user-id="' + employee.userId + '" data-name="' + employee.name.replace(/"/g, '&quot;') + '">' + employee.name + '</option>';
+        }).join('');
+
+        function renderMonthOptions(selectedEmployee, keepValue){
+          var months = monthsForEmployee(selectedEmployee);
+          monthSel.innerHTML = '<option value="">Choose month</option>' + months.map(function(m){
+            return '<option value="' + m + '">' + monthLabel(m) + '</option>';
+          }).join('');
+          if(keepValue && months.includes(keepValue)) monthSel.value = keepValue;
+          else if(months.length) monthSel.value = months[0];
+          else monthSel.value = '';
+        }
+
+        if(employeeList.length){
+          var firstEmployee = buildEmployeeStateFromEmail(employeeList[0]);
+          employeeSel.value = firstEmployee.userId || firstEmployee.email;
+          reportState.employee = firstEmployee;
+        }
+        renderMonthOptions(reportState.employee, '');
+
+        statusInput.value = employeeList.length
+          ? (rows.length
+              ? 'Connected · employee and resident service metrics live'
+              : 'Roster loaded · work order metrics unavailable or no matching rows yet')
+          : (rows.length
+              ? 'Work order data loaded · no matching approved employees found in roster'
+              : 'No snapshot-backed work orders found for the active company communities yet');
+
+        function resetMetric(name, month){
+          var hasEmployee = !!name && name !== 'Choose employee';
+          if(summaryEmployee) summaryEmployee.textContent = hasEmployee ? name : 'Choose employee';
+          if(summaryMonth) summaryMonth.textContent = month ? monthLabel(month) : 'Choose a month to build the report.';
+          byId('metricWorkOrdersSubmitted').textContent = '0';
+          byId('metricWorkOrdersCompleted').textContent = '0';
+          byId('metricWorkOrdersPercent').textContent = '—';
+          byId('metricResidentSubmitted').textContent = '0';
+          byId('metricResidentCompleted').textContent = '0';
+          byId('metricResidentPercent').textContent = '—';
+          byId('metricResidentAvgCompletion').textContent = '—';
+          byId('metricResidentVendorResponse').textContent = '—';
+          byId('metricResidentAging').textContent = '0';
+          renderCompliance({ completedCount:0, assignedCount:0, pct:null, items:[], tableMissing:false }, hasEmployee ? name : '', month || '');
+          renderBoardMeetings({ meetingCount:0, heldCount:0, agendaOnTimeCount:0, minutesApprovedCount:0, pct:null, items:[], tableMissing:false }, hasEmployee ? name : '', month || '');
+          if(workOrdersGrade){
+            workOrdersGrade.textContent = '—';
+            workOrdersGrade.style.background = '#e2e8f0';
+            workOrdersGrade.style.color = '#17324d';
+          }
+          if(residentGrade){
+            residentGrade.textContent = '—';
+            residentGrade.style.background = '#e2e8f0';
+            residentGrade.style.color = '#17324d';
+          }
+          if(overallGrade){
+            overallGrade.textContent = '—';
+            overallGrade.style.background = '#dbeafe';
+            overallGrade.style.color = '#163451';
+          }
+          if(workOrdersFootnote){
+            workOrdersFootnote.textContent = hasEmployee
+              ? ('Choose a month to calculate submitted, completed, completion %, and grade for ' + name + '.')
+              : 'Choose an employee and month to calculate submitted, completed, completion %, and grade.';
+          }
+          if(residentFootnote){
+            residentFootnote.textContent = hasEmployee
+              ? ('Choose a month to calculate resident service load, completion speed, vendor response timing, and aging risk for ' + name + '.')
+              : 'Choose an employee and month to calculate resident service load, completion speed, vendor response timing, and aging risk.';
+          }
+          renderInsights([], hasEmployee
+            ? ('Choose a month to generate performance insights for ' + name + '.')
+            : 'Signals are built from the current live work-order and resident-service metrics so supervisors can quickly see strengths and attention areas.', hasEmployee
+            ? ('Choose a month to generate performance insights for ' + name + '.')
+            : 'Choose a month to generate performance insights.');
+          renderRanking([], hasEmployee ? name : '', month || '', hasEmployee
+            ? ('Choose a month to build the company ranking and highlight ' + name + '.')
+            : 'Choose a month to build the company ranking.');
+          buildPrintReport();
+        }
+
+        function buildEmployeeMonthMetrics(employee, month){
+          employee = makeEmployeeState(employee);
+          var employeeRowSet = rows.filter(function(r){ return employeeMatchesRow(employee, r); });
+          var submitted = 0, completed = 0, sentToVendor = 0, activeNow = 0;
+
+          employeeRowSet.forEach(function(r){
+            var status = String(r.status || '').trim().toLowerCase();
+            var submittedMonth = monthKey(r.submitted_at || r.updated_at);
+            var completedMonth = monthKey(r.completed_at || r.updated_at);
+            if(submittedMonth === month){
+              submitted += 1;
+              if(['sent_to_vendor','awaiting_vendor','assigned','awaiting_response'].includes(status)) sentToVendor += 1;
+              if(isActiveStatus(status)) activeNow += 1;
+            }
+            if(completedMonth === month && isDoneStatus(status)) completed += 1;
+          });
+
+          var pct = submitted > 0 ? Math.round((completed / submitted) * 100) : null;
+          var g = gradeInfo(pct);
+
+          var residentAttributed = rows.filter(function(r){
+            return isRealResidentOrigin(r) && employeeMatchesRow(employee, r);
+          });
+          var residentCompanyWide = rows.filter(function(r){ return isRealResidentOrigin(r); });
+          var residentScopedSource = residentAttributed.length ? residentAttributed : residentCompanyWide;
+          var residentScopeLabel = residentAttributed.length ? 'employee-attributed' : 'company-wide fallback';
+          var residentMonthRows = residentScopedSource.filter(function(r){ return monthKey(r.submitted_at || r.updated_at) === month; });
+
+          var residentSubmitted = residentMonthRows.length;
+          var residentCompleted = 0;
+          var residentActive = 0;
+          var agingCount = 0;
+          var completionDays = [];
+          var vendorHours = [];
+          var nowTs = Date.now();
+
+          residentMonthRows.forEach(function(r){
+            var status = String(r.status || '').trim().toLowerCase();
+            var startIso = r.submitted_at || r.updated_at;
+            var doneIso = r.completed_at || r.updated_at;
+            if(isDoneStatus(status) && monthKey(doneIso) === month){
+              residentCompleted += 1;
+              var cd = diffDays(startIso, doneIso);
+              if(cd != null) completionDays.push(cd);
+            }
+            if(isActiveStatus(status) && !isDoneStatus(status)){
+              residentActive += 1;
+              var startTs = toTs(startIso);
+              if(Number.isFinite(startTs) && ((nowTs - startTs) / 864e5) > 7) agingCount += 1;
+            }
+            var vh = diffHours(r.vendor_dispatched_at, r.vendor_accepted_at);
+            if(vh != null) vendorHours.push(vh);
+          });
+
+          var residentPct = residentSubmitted > 0 ? Math.round((residentCompleted / residentSubmitted) * 100) : null;
+          var residentAvgCompletion = avg(completionDays);
+          var residentAvgVendor = avg(vendorHours);
+          var rg = residentGradeInfo(residentPct, residentAvgVendor, agingCount);
+          var employeeUserId = String(employee.userId || '').trim();
+          var employeeEmail = String(employee.email || '').trim().toLowerCase();
+          var assignedCommunityIds = employeeUserId && assignmentsByUserId[employeeUserId] ? Object.keys(assignmentsByUserId[employeeUserId]) : [];
+          var complianceItemsByCommunity = {};
+          complianceRows.forEach(function(r){
+            var rowMonth = String(r.month_key || monthKey(r.completed_at || r.created_at) || '').trim();
+            if(rowMonth !== month) return;
+            var uid = String(r.employee_user_id || '').trim();
+            var rem = String(r.employee_email || '').trim().toLowerCase();
+            if((employeeUserId && uid && uid !== employeeUserId) && rem !== employeeEmail) return;
+            if(!(employeeUserId ? (uid === employeeUserId || rem === employeeEmail) : (rem === employeeEmail))) return;
+            var cid = String(r.community_id || '').trim();
+            if(!cid) return;
+            var existing = complianceItemsByCommunity[cid];
+            var ts = toTs(r.completed_at || r.created_at);
+            if(!existing || ts > toTs(existing.completed_at || existing.created_at)){
+              complianceItemsByCommunity[cid] = {
+                community_id: cid,
+                community_name: String(r.community_name || communityNamesById[cid] || 'Community').trim() || 'Community',
+                completed_at: r.completed_at || r.created_at || null
+              };
+            }
+          });
+          var complianceItems = Object.keys(complianceItemsByCommunity).map(function(k){ return complianceItemsByCommunity[k]; }).sort(function(a,b){ return toTs(b.completed_at) - toTs(a.completed_at); });
+          var completedCommunityIds = Object.keys(complianceItemsByCommunity);
+          var missingComplianceNames = assignedCommunityIds.filter(function(cid){ return completedCommunityIds.indexOf(cid) === -1; }).map(function(cid){
+            return String(communityNamesById[cid] || 'Community').trim() || 'Community';
+          });
+          var complianceCompletedCount = complianceItems.length;
+          var complianceAssignedCount = assignedCommunityIds.length;
+          var compliancePct = complianceAssignedCount > 0 ? Math.round((complianceCompletedCount / complianceAssignedCount) * 100) : null;
+
+var complianceG = compliancePct == null ? { grade:'—', style:'#e2e8f0', text:'#17324d', score:null } : (function(){ var x = gradeInfo(compliancePct); x.score = compliancePct; return x; })();
+
+var meetingsByKey = {};
+function ensureMeeting(meetingKey, communityId, defaults){
+  var mk = String(meetingKey || '').trim() || 'unknown';
+  var ck = String(communityId || '').trim() || 'unknown';
+  var key = ck + '::' + mk;
+  if(!meetingsByKey[key]){
+    meetingsByKey[key] = {
+      community_id: ck,
+      community_name: String((defaults && defaults.community_name) || communityNamesById[ck] || 'Community').trim() || 'Community',
+      meeting_key: mk,
+      meeting_date: (defaults && defaults.meeting_date) || parseMeetingDateSource(mk) || '',
+      held: false,
+      agendaSent: false,
+      agendaOnTime: false,
+      minutesSubmitted: false,
+      minutesApproved: false,
+      sent_at: '',
+      approved_at: ''
+    };
+  }
+  return meetingsByKey[key];
+}
+
+boardStateRows.forEach(function(r){
+  var uid = String(r.user_id || '').trim();
+  var cid = String(r.community_id || '').trim();
+  if(!cid) return;
+  if(employeeUserId && uid && uid !== employeeUserId) return;
+  if(employeeUserId && !uid) return;
+  if(assignedCommunityIds.length && assignedCommunityIds.indexOf(cid) === -1) return;
+  var data = r.data || {};
+  var startedAt = data && data.started_at ? String(data.started_at) : '';
+  var meetingDate = parseMeetingDateSource(startedAt || r.meeting_key || '');
+  if(monthKey(startedAt || meetingDate || r.updated_at) !== month) return;
+  var item = ensureMeeting(r.meeting_key || meetingDate, cid, { community_name: communityNamesById[cid] || 'Community', meeting_date: meetingDate });
+  item.held = item.held || !!startedAt;
+  if(startedAt && !item.started_at) item.started_at = startedAt;
+});
+
+boardAgendaRows.forEach(function(r){
+  var uid = String(r.employee_user_id || '').trim();
+  var rem = String(r.employee_email || '').trim().toLowerCase();
+  if((employeeUserId && uid && uid !== employeeUserId) && rem !== employeeEmail) return;
+  if(!(employeeUserId ? (uid === employeeUserId || rem === employeeEmail) : (rem === employeeEmail))) return;
+  var cid = String(r.community_id || '').trim();
+  if(!cid) return;
+  if(assignedCommunityIds.length && assignedCommunityIds.indexOf(cid) === -1) return;
+  var meetingDate = parseMeetingDateSource(r.meeting_date || r.meeting_key || '');
+  if(monthKey(meetingDate || r.sent_at) !== month) return;
+  var item = ensureMeeting(r.meeting_key || meetingDate, cid, { community_name: r.community_name || communityNamesById[cid] || 'Community', meeting_date: meetingDate });
+  var sentAt = String(r.sent_at || '').trim();
+  item.agendaSent = item.agendaSent || !!sentAt;
+  if(sentAt && (!item.sent_at || toTs(sentAt) > toTs(item.sent_at))) item.sent_at = sentAt;
+  if(meetingDate && sentAt){
+    var deadlineTs = new Date(meetingDate + 'T23:59:59').getTime() - (3 * 864e5);
+    var sentTs = toTs(sentAt);
+    if(Number.isFinite(sentTs) && Number.isFinite(deadlineTs) && sentTs <= deadlineTs) item.agendaOnTime = true;
+  }
+});
+
+boardMinutesRows.forEach(function(r){
+  var uid = String(r.created_by || '').trim();
+  var cid = String(r.community_id || '').trim();
+  if(!cid) return;
+  if(employeeUserId && uid && uid !== employeeUserId) return;
+  if(employeeUserId && !uid) return;
+  if(assignedCommunityIds.length && assignedCommunityIds.indexOf(cid) === -1) return;
+  var meetingDate = parseMeetingDateSource(r.meeting_date || r.meeting_id || '');
+  if(monthKey(meetingDate || r.approval_requested_at || r.approved_at) !== month) return;
+  var item = ensureMeeting(r.meeting_id || meetingDate, cid, { community_name: r.community_name || communityNamesById[cid] || 'Community', meeting_date: meetingDate });
+  item.minutesSubmitted = true;
+  item.minutesApproved = item.minutesApproved || String(r.approval_status || '').trim().toLowerCase() === 'approved';
+  if(r.approved_at && !item.approved_at) item.approved_at = r.approved_at;
+});
+
+var boardItems = Object.keys(meetingsByKey).map(function(k){ return meetingsByKey[k]; }).sort(function(a,b){
+  var at = toTs(a.meeting_date || a.started_at || a.sent_at || a.approved_at);
+  var bt = toTs(b.meeting_date || b.started_at || b.sent_at || b.approved_at);
+  return bt - at;
+});
+var boardMeetingCountVal = boardItems.length;
+var boardHeldCountVal = boardItems.filter(function(it){ return !!it.held; }).length;
+var boardAgendaOnTimeCountVal = boardItems.filter(function(it){ return !!it.agendaOnTime; }).length;
+var boardMinutesApprovedCountVal = boardItems.filter(function(it){ return !!it.minutesApproved; }).length;
+var boardPct = boardMeetingCountVal > 0
+  ? Math.round((((boardHeldCountVal / boardMeetingCountVal) + (boardAgendaOnTimeCountVal / boardMeetingCountVal) + (boardMinutesApprovedCountVal / boardMeetingCountVal)) / 3) * 100)
+  : null;
+var boardG = boardPct == null ? { grade:'—', style:'#e2e8f0', text:'#17324d', score:null } : (function(){ var x = gradeInfo(boardPct); x.score = boardPct; return x; })();
+var overallScore = meanGrade([pct, rg.score, compliancePct, boardPct]);
+var overall = gradeInfo(overallScore);
+
+          return {
+            userId: employee.userId || '',
+            email: employee.email || '',
+            name: employee.name || safeNameFromEmail(employee.email || ''),
+            submitted: submitted,
+            completed: completed,
+            sentToVendor: sentToVendor,
+            activeNow: activeNow,
+            workOrderPct: pct,
+            workOrderGrade: g,
+            residentSubmitted: residentSubmitted,
+            residentCompleted: residentCompleted,
+            residentActive: residentActive,
+            agingCount: agingCount,
+            residentPct: residentPct,
+            residentAvgCompletion: residentAvgCompletion,
+            residentAvgVendor: residentAvgVendor,
+            residentGrade: rg,
+            residentScopeLabel: residentScopeLabel,
+            complianceCompletedCount: complianceCompletedCount,
+            complianceAssignedCount: complianceAssignedCount,
+            compliancePct: compliancePct,
+            complianceGrade: complianceG,
+            complianceItems: complianceItems,
+            missingComplianceNames: missingComplianceNames,
+            complianceTableMissing: !!(complianceLoad && complianceLoad.tableMissing),
+            boardMeetingCount: boardMeetingCountVal,
+            boardHeldCount: boardHeldCountVal,
+            boardAgendaOnTimeCount: boardAgendaOnTimeCountVal,
+            boardMinutesApprovedCount: boardMinutesApprovedCountVal,
+            boardPct: boardPct,
+            boardGrade: boardG,
+            boardItems: boardItems,
+            boardAgendaTableMissing: !!(boardAgendaLoad && boardAgendaLoad.tableMissing),
+            overallScore: overallScore,
+            overallGrade: overall.grade
+          };
+        }
+
+
+        function setExecutiveSummary(name, month, data){
+          if(!executiveSummary || !executiveHighlights) return;
+          if(!data || !month){
+            executiveSummary.textContent = name && name !== 'Choose employee'
+              ? ('Choose a month to generate a polished summary for ' + name + '.')
+              : 'Choose an employee and month to generate a clean supervisor-ready narrative summary.';
+            executiveHighlights.innerHTML = '<div class="executive-chip"><span class="dot">i</span><div>Operational highlights will appear here once a report month is selected.</div></div>';
+            return;
+          }
+          var bits = [];
+          if(data.submitted > 0){
+            bits.push(name + ' submitted ' + data.submitted + ' employee-created work order' + (data.submitted === 1 ? '' : 's') + ' in ' + monthLabel(month) + ', completing ' + data.completed + ' for a ' + (data.workOrderPct == null ? 'tracked' : (data.workOrderPct + '%')) + ' close rate.');
+          } else {
+            bits.push(name + ' did not create any employee work orders in ' + monthLabel(month) + ', so the report leans more heavily on resident service, compliance, and meeting follow-through.');
+          }
+          if(data.residentSubmitted > 0){
+            bits.push('Resident service shows ' + data.residentCompleted + ' of ' + data.residentSubmitted + ' resident-origin requests completed' + (data.agingCount ? (', with ' + data.agingCount + ' aging past 7 days') : '') + '.');
+          } else {
+            bits.push('No resident-origin work orders were attributed in the selected scope for this month.');
+          }
+          if(data.complianceAssignedCount > 0){
+            bits.push('Compliance coverage is ' + (data.compliancePct == null ? 'not yet scored' : (data.compliancePct + '%')) + ' across assigned communities.');
+          }
+          if(data.boardMeetingCount > 0){
+            bits.push('Board meeting follow-through shows ' + data.boardHeldCount + ' of ' + data.boardMeetingCount + ' meetings held, ' + data.boardAgendaOnTimeCount + ' agendas on time, and ' + data.boardMinutesApprovedCount + ' minutes approved.');
+          }
+          executiveSummary.textContent = bits.join(' ');
+          var chips = [];
+          chips.push({icon:'◎', text:'Overall grade: ' + (data.overallGrade || '—') + (data.overallScore != null ? (' · scored from ' + Math.round(data.overallScore) + ' points') : '') + '.'});
+          chips.push({icon:'↗', text:(data.workOrderPct == null ? 'No employee work order completion score yet.' : ('Work order completion is ' + data.workOrderPct + '% with ' + data.activeNow + ' currently active and ' + data.sentToVendor + ' sent to vendor.'))});
+          chips.push({icon:'✓', text:(data.complianceAssignedCount > 0 ? (data.complianceCompletedCount + ' of ' + data.complianceAssignedCount + ' assigned communities marked compliance complete.') : 'Assigned community compliance coverage is not available yet.')});
+          chips.push({icon:'🗂', text:(data.boardMeetingCount > 0 ? ('Board meetings: ' + data.boardHeldCount + '/' + data.boardMeetingCount + ' held, ' + data.boardMinutesApprovedCount + ' minutes approved.') : 'No board meeting activity was recorded for the selected month.')});
+          executiveHighlights.innerHTML = chips.map(function(chip){
+            return '<div class="executive-chip"><span class="dot">' + chip.icon + '</span><div>' + chip.text + '</div></div>';
+          }).join('');
+        }
+
+        function findRankingPosition(rows, employee){
+          if(!Array.isArray(rows) || !rows.length || !employee) return '—';
+          var idx = rows.findIndex(function(row){
+            return employeeMatchesRow(employee, row);
+          });
+          return idx >= 0 ? ('#' + (idx + 1)) : '—';
+        }
+
+        function updatePreview(){
+          reportState.employee = getSelectedEmployee();
+          var employee = reportState.employee;
+          var currentMonth = String(monthSel.value || '').trim();
+          renderMonthOptions(employee, currentMonth);
+          var month = String(monthSel.value || '').trim();
+          reportState.month = month;
+          var hasEmployee = !!(employee && (employee.userId || employee.email || employee.name));
+          var name = hasEmployee ? (employee.name || safeNameFromEmail(employee.email || '')) : 'Choose employee';
+
+          if(!hasEmployee || !month){
+            resetMetric(name, month);
+            return;
+          }
+
+          var metrics = buildEmployeeMonthMetrics(employee, month);
+          var submitted = metrics.submitted;
+          var completed = metrics.completed;
+          var sentToVendor = metrics.sentToVendor;
+          var activeNow = metrics.activeNow;
+          var pct = metrics.workOrderPct;
+          var g = metrics.workOrderGrade;
+          var residentSubmitted = metrics.residentSubmitted;
+          var residentCompleted = metrics.residentCompleted;
+          var residentActive = metrics.residentActive;
+          var agingCount = metrics.agingCount;
+          var residentPct = metrics.residentPct;
+          var residentAvgCompletion = metrics.residentAvgCompletion;
+          var residentAvgVendor = metrics.residentAvgVendor;
+          var rg = metrics.residentGrade;
+          var residentScopeLabel = metrics.residentScopeLabel;
+          var overallScore = metrics.overallScore;
+          var overall = gradeInfo(overallScore);
+          var complianceCompletedCount = metrics.complianceCompletedCount;
+          var complianceAssignedCount = metrics.complianceAssignedCount;
+          var compliancePct = metrics.compliancePct;
+          var complianceItems = metrics.complianceItems;
+          var missingComplianceNames = metrics.missingComplianceNames || [];
+          var complianceTableMissing = metrics.complianceTableMissing;
+          var boardMeetingCountVal = metrics.boardMeetingCount;
+          var boardHeldCountVal = metrics.boardHeldCount;
+          var boardAgendaOnTimeCountVal = metrics.boardAgendaOnTimeCount;
+          var boardMinutesApprovedCountVal = metrics.boardMinutesApprovedCount;
+          var boardItems = metrics.boardItems || [];
+          var boardPct = metrics.boardPct;
+          var boardAgendaTableMissing = metrics.boardAgendaTableMissing;
+
+          if(summaryEmployee) summaryEmployee.textContent = name;
+          if(summaryMonth) summaryMonth.textContent = monthLabel(month);
+          if(coverName) coverName.textContent = name;
+          if(coverMonth) coverMonth.textContent = monthLabel(month);
+          byId('metricWorkOrdersSubmitted').textContent = String(submitted);
+          byId('metricWorkOrdersCompleted').textContent = String(completed);
+          byId('metricWorkOrdersPercent').textContent = pct == null ? '—' : (pct + '%');
+          byId('metricResidentSubmitted').textContent = String(residentSubmitted);
+          byId('metricResidentCompleted').textContent = String(residentCompleted);
+          byId('metricResidentPercent').textContent = residentPct == null ? '—' : (residentPct + '%');
+          byId('metricResidentAvgCompletion').textContent = fmtDays(residentAvgCompletion);
+          byId('metricResidentVendorResponse').textContent = fmtHours(residentAvgVendor);
+          byId('metricResidentAging').textContent = String(agingCount);
+
+          if(workOrdersGrade){
+            workOrdersGrade.textContent = g.grade;
+            workOrdersGrade.style.background = g.style;
+            workOrdersGrade.style.color = g.text;
+          }
+          if(residentGrade){
+            residentGrade.textContent = rg.grade;
+            residentGrade.style.background = rg.style;
+            residentGrade.style.color = rg.text;
+          }
+          if(overallGrade){
+            overallGrade.textContent = overallScore == null ? '—' : overall.grade;
+            overallGrade.style.background = overallScore == null ? '#dbeafe' : overall.style;
+            overallGrade.style.color = overallScore == null ? '#163451' : overall.text;
+          }
+          if(coverGrade) coverGrade.textContent = overallScore == null ? '—' : overall.grade;
+          if(coverSubline){
+            coverSubline.textContent = 'Supervisor-ready snapshot for ' + name + ' in ' + monthLabel(month) + '. This report blends employee work orders, resident service, compliance, and board meeting follow-through into one presentation-ready view.';
+          }
+          if(workOrdersFootnote){
+            var snapshotBits = [];
+            if(sentToVendor) snapshotBits.push(sentToVendor + ' sent to vendor');
+            if(activeNow) snapshotBits.push(activeNow + ' active');
+            workOrdersFootnote.textContent =
+              'Snapshot-backed work order metric for ' + name + ' · ' + monthLabel(month) + '. ' +
+              (submitted === 0
+                ? 'No submitted work orders for this month, so no grade is assigned.'
+                : ('Grade is based on ' + completed + ' completed out of ' + submitted + ' submitted.')) +
+              (snapshotBits.length ? ' Status snapshot: ' + snapshotBits.join(' · ') + '.' : '');
+          }
+          if(residentFootnote){
+            var residentBits = [];
+            if(residentActive) residentBits.push(residentActive + ' still active');
+            if(agingCount) residentBits.push(agingCount + ' aging past 7 days');
+            if(residentAvgVendor != null) residentBits.push('avg vendor acceptance ' + fmtHours(residentAvgVendor));
+            residentFootnote.textContent =
+              'Resident service metric for ' + name + ' · ' + monthLabel(month) + '. Scope: ' + residentScopeLabel + '. ' +
+              (residentSubmitted === 0
+                ? 'No resident-origin work orders were found for this month in the current scope.'
+                : ('Completed ' + residentCompleted + ' of ' + residentSubmitted + ' resident requests.')) +
+              (residentBits.length ? ' Service snapshot: ' + residentBits.join(' · ') + '.' : '');
+          }
+
+          renderCompliance({
+            completedCount: complianceCompletedCount,
+            assignedCount: complianceAssignedCount,
+            pct: compliancePct,
+            items: complianceItems,
+            tableMissing: complianceTableMissing
+          }, name, month);
+          renderBoardMeetings({
+            meetingCount: boardMeetingCountVal,
+            heldCount: boardHeldCountVal,
+            agendaOnTimeCount: boardAgendaOnTimeCountVal,
+            minutesApprovedCount: boardMinutesApprovedCountVal,
+            pct: boardPct,
+            items: boardItems,
+            tableMissing: boardAgendaTableMissing
+          }, name, month);
+
+          var insights = [];
+          if(pct != null && pct >= 80){
+            insights.push({ tone:'good', icon:'✓', text:'Strong completion rate for employee-created work orders this month.' });
+          } else if(pct != null && pct < 50){
+            insights.push({ tone:'bad', icon:'!', text:'Low completion rate on employee-created work orders this month.' });
+          }
+          if(submitted >= 5 && activeNow <= 2 && pct != null && pct >= 70){
+            insights.push({ tone:'good', icon:'★', text:'Handled a solid work-order load while keeping active carryover relatively low.' });
+          }
+          if(activeNow > 5){
+            insights.push({ tone:'warn', icon:'!', text:'High active workload. Supervisor may want to check capacity or vendor throughput.' });
+          }
+          if(sentToVendor > 3){
+            insights.push({ tone:'warn', icon:'↗', text:'Several items are still sitting in sent-to-vendor status and may need follow-up.' });
+          }
+          if(agingCount > 0){
+            insights.push({ tone:'bad', icon:'!', text:'Resident service has aging work orders past 7 days that need attention.' });
+          }
+          if(residentSubmitted > 0 && residentPct != null && residentPct < 50){
+            insights.push({ tone:'warn', icon:'!', text:'Resident requests are not being completed efficiently yet this month.' });
+          }
+          if(residentAvgVendor != null && residentAvgVendor <= 12){
+            insights.push({ tone:'good', icon:'✓', text:'Vendor acceptance speed is strong on resident-origin work orders.' });
+          } else if(residentAvgVendor != null && residentAvgVendor > 24){
+            insights.push({ tone:'warn', icon:'⏱', text:'Vendor response time is slow and may be affecting service speed.' });
+          }
+          if(complianceTableMissing){
+            insights.push({ tone:'warn', icon:'i', text:'Compliance completion tracking is not fully wired until the new mileage compliance table is created.' });
+          } else if(complianceAssignedCount > 0 && compliancePct != null && compliancePct >= 100){
+            insights.push({ tone:'good', icon:'✓', text:'Monthly compliance drives are complete across all assigned communities.' });
+          } else if(complianceAssignedCount > 0 && complianceCompletedCount === 0){
+            var missingAllText = missingComplianceNames.length ? (' Missing: ' + missingComplianceNames.slice(0,3).join(', ') + (missingComplianceNames.length > 3 ? ', +' + (missingComplianceNames.length - 3) + ' more.' : '.')) : '';
+            insights.push({ tone:'warn', icon:'!', text:'No assigned communities have been marked compliance complete yet this month.' + missingAllText });
+          } else if(complianceAssignedCount > 0 && compliancePct != null && compliancePct < 100){
+            var missingSomeText = missingComplianceNames.length ? (' Missing: ' + missingComplianceNames.slice(0,3).join(', ') + (missingComplianceNames.length > 3 ? ', +' + (missingComplianceNames.length - 3) + ' more.' : '.')) : '';
+            insights.push({ tone:'warn', icon:'↗', text:'Compliance drives are only partially complete across assigned communities this month.' + missingSomeText });
+          }
+          if(boardAgendaTableMissing){
+            insights.push({ tone:'warn', icon:'i', text:'Board agenda timing will become more precise once the board meeting agenda tracking table is created.' });
+          } else if(boardMeetingCountVal > 0 && boardAgendaOnTimeCountVal < boardMeetingCountVal){
+            insights.push({ tone:'warn', icon:'🗓', text:'One or more board meeting agendas were not sent at least 3 days before the meeting.' });
+          }
+          if(boardMeetingCountVal > 0 && boardHeldCountVal < boardMeetingCountVal){
+            insights.push({ tone:'warn', icon:'🏛', text:'One or more board meetings in this month do not show a recorded held/start event yet.' });
+          }
+          if(boardMeetingCountVal > 0 && boardMinutesApprovedCountVal < boardMeetingCountVal){
+            insights.push({ tone:'warn', icon:'📝', text:'Board meeting minutes are still missing approval for one or more meetings this month.' });
+          } else if(boardMeetingCountVal > 0 && boardMinutesApprovedCountVal === boardMeetingCountVal){
+            insights.push({ tone:'good', icon:'✓', text:'Board meeting minutes are fully approved for all recorded meetings this month.' });
+          }
+          if(!insights.length && submitted === 0 && residentSubmitted === 0 && boardMeetingCountVal === 0){
+            insights.push({ tone:'good', icon:'i', text:'No employee-created or resident-origin work orders were recorded for this month.' });
+          } else if(!insights.length){
+            insights.push({ tone:'good', icon:'i', text:'Performance signals are stable this month with no major risks triggered by current thresholds.' });
+          }
+          renderInsights(insights, 'Built from work-order completion, resident service, compliance coverage, and board meeting follow-through for ' + name + ' in ' + monthLabel(month) + '.');
+
+          var rankingRows = employeeList.map(function(employeeEmail){
+            return buildEmployeeMonthMetrics(buildEmployeeStateFromEmail(employeeEmail), month);
+          }).filter(function(row){
+            return row && (row.submitted > 0 || row.residentSubmitted > 0 || row.overallScore != null);
+          }).sort(function(a,b){
+            var aScore = a.overallScore == null ? -1 : a.overallScore;
+            var bScore = b.overallScore == null ? -1 : b.overallScore;
+            if(bScore !== aScore) return bScore - aScore;
+            if((b.completed || 0) !== (a.completed || 0)) return (b.completed || 0) - (a.completed || 0);
+            return (a.name || '').localeCompare(b.name || '');
+          });
+          renderRanking(rankingRows, employee, month);
+          if(coverRank) coverRank.textContent = findRankingPosition(rankingRows, employee);
+          setExecutiveSummary(name, month, {
+            submitted: submitted,
+            completed: completed,
+            sentToVendor: sentToVendor,
+            activeNow: activeNow,
+            workOrderPct: pct,
+            residentSubmitted: residentSubmitted,
+            residentCompleted: residentCompleted,
+            agingCount: agingCount,
+            complianceAssignedCount: complianceAssignedCount,
+            complianceCompletedCount: complianceCompletedCount,
+            compliancePct: compliancePct,
+            boardMeetingCount: boardMeetingCountVal,
+            boardHeldCount: boardHeldCountVal,
+            boardAgendaOnTimeCount: boardAgendaOnTimeCountVal,
+            boardMinutesApprovedCount: boardMinutesApprovedCountVal,
+            overallScore: overallScore,
+            overallGrade: overall.grade
+          });
+          try{ document.title = name + ' - ' + monthLabel(month) + ' - Employee Performance Report'; }catch(_e){}
+          buildPrintReport();
+        }
+
+        employeeSel.addEventListener('change', updatePreview);
+        monthSel.addEventListener('change', updatePreview);
+        updatePreview();
+      }
+
+      window.addEventListener('beforeprint', buildPrintReport);
+      document.addEventListener('DOMContentLoaded', initShell);
+  </script>
+
+
+<script id="supervisor-mileage-submission-runtime">
+(function(){
+  function selectedCommunityId(){
+    try{
+      var live = document.getElementById('zummeeCommunitySelect');
+      return String((live && live.value) || localStorage.getItem("zummee_selected_community_id") || localStorage.getItem("zummee_selected_community_v1") || "global").trim() || "global";
+    }catch(_e){
+      return "global";
+    }
+  }
+
+  function currentMonth(){
+    return new Date().toISOString().slice(0,7);
+  }
+
+  async function getSbForMileageSupervisor(){
+    try{
+      if(typeof getSb === 'function') return await getSb();
+    }catch(_e){}
+    try{
+      if(typeof ensureSupabase === 'function') return await ensureSupabase();
+    }catch(_e){}
+    try{
+      if(window.sb) return window.sb;
+      if(window.supabaseClient) return window.supabaseClient;
+    }catch(_e){}
+    return null;
+  }
+
+  function safeNameFromEmail(email){
+    try{
+      var base = String(email || '').split('@')[0];
+      return base.replace(/[._-]+/g, ' ').replace(/\b\w/g, function(m){ return m.toUpperCase(); });
+    }catch(_e){
+      return 'Employee';
+    }
+  }
+
+  async function fetchRowsFromDb(){
+    try{
+      var sb = await getSbForMileageSupervisor();
+      if(!sb) return null;
+      var cid = selectedCommunityId();
+      var month = currentMonth();
+
+      var q = await sb.from('mileage_submission_status')
+        .select('user_id, community_id, month, reminder_enabled, compliance_complete, total_miles, updated_at')
+        .eq('community_id', cid)
+        .eq('month', month)
+        .order('updated_at', { ascending: false });
+
+      if(!q || q.error){
+        return null;
+      }
+
+      var rows = Array.isArray(q.data) ? q.data.slice() : [];
+      if(!rows.length) return [];
+
+      var userIds = rows.map(function(r){ return String(r.user_id || '').trim(); }).filter(Boolean);
+      var namesById = {};
+
+      try{
+        var ud = await sb.from('userdirectory')
+          .select('auth_user_id, profile_name, profile_email')
+          .in('auth_user_id', userIds);
+        if(ud && !ud.error && Array.isArray(ud.data)){
+          ud.data.forEach(function(r){
+            var id = String(r.auth_user_id || '').trim();
+            if(!id) return;
+            namesById[id] = {
+              name: String(r.profile_name || '').trim() || safeNameFromEmail(String(r.profile_email || '').trim()),
+              email: String(r.profile_email || '').trim()
+            };
+          });
+        }
+      }catch(_e){}
+
+      return rows.map(function(r){
+        var id = String(r.user_id || '').trim();
+        var nm = namesById[id] || {};
+        return {
+          name: nm.name || ('Employee ' + id.slice(0,6)),
+          meta: (r.reminder_enabled ? 'Mileage reminder enabled' : 'Mileage reminder off') + (r.total_miles != null ? ' • ' + Math.round(Number(r.total_miles || 0)) + ' mi' : ''),
+          status: r.compliance_complete ? 'Submitted' : 'Pending',
+          complete: !!r.compliance_complete
+        };
+      });
+    }catch(_e){
+      return null;
+    }
+  }
+
+  function fetchRowsFromLocalFallback(){
+    try{
+      var cid = selectedCommunityId();
+      var month = currentMonth();
+      var byUser = {};
+      for(var i=0;i<localStorage.length;i++){
+        var key = localStorage.key(i);
+        if(!key) continue;
+        if(key.indexOf('zummee_mileage_compliance__user__') !== 0 && key.indexOf('zummee_mileage_reminder_enabled__user__') !== 0) continue;
+        var m = key.match(/__user__([^_]+)__community__([^_]+)(?:__month__([^_]+))?/);
+        if(!m) continue;
+        var uid = m[1], community = m[2], mth = m[3] || month;
+        if(community !== cid) continue;
+        byUser[uid] = byUser[uid] || { complete:false, reminder:false, uid:uid };
+        if(key.indexOf('zummee_mileage_reminder_enabled__user__') === 0){
+          byUser[uid].reminder = localStorage.getItem(key) === '1';
+        }
+        if(key.indexOf('zummee_mileage_compliance__user__') === 0 && mth === month){
+          byUser[uid].complete = localStorage.getItem(key) === '1';
+        }
+      }
+      var rows = Object.keys(byUser).map(function(uid){
+        var item = byUser[uid];
+        return {
+          name: 'Employee ' + uid.slice(0,6),
+          meta: item.reminder ? 'Mileage reminder enabled' : 'Mileage reminder off',
+          status: item.complete ? 'Submitted' : 'Pending',
+          complete: !!item.complete
+        };
+      });
+      return rows;
+    }catch(_e){
+      return [];
+    }
+  }
+
+  async function renderMileageSubmissionCard(){
+    try{
+      var mount = document.getElementById('mileageSubmissionList');
+      if(!mount) return;
+      var rows = await fetchRowsFromDb();
+      if(rows == null) rows = fetchRowsFromLocalFallback();
+      if(!rows || !rows.length){
+        rows = [{
+          name: 'No employee submissions yet',
+          meta: 'This card will populate as employees submit mileage for the selected community.',
+          status: 'Waiting',
+          complete: false
+        }];
+      }
+      mount.innerHTML = rows.map(function(row){
+        return ''
+          + '<div class="mileage-submission-row">'
+          +   '<div>'
+          +     '<div class="mileage-submission-row__name">' + row.name + '</div>'
+          +     '<div class="mileage-submission-row__meta">' + row.meta + '</div>'
+          +   '</div>'
+          +   '<div class="mileage-submission-row__status ' + (row.complete ? 'is-complete' : 'is-missing') + '">' + row.status + '</div>'
+          + '</div>';
+      }).join('');
+    }catch(_e){}
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(renderMileageSubmissionCard, 260);
+    setTimeout(renderMileageSubmissionCard, 920);
+  });
+  window.addEventListener('pageshow', function(){
+    setTimeout(renderMileageSubmissionCard, 220);
+  });
+  document.addEventListener('community:changed', function(){
+    setTimeout(renderMileageSubmissionCard, 220);
+  });
+  document.addEventListener('mileage-reminder:changed', function(){
+    setTimeout(renderMileageSubmissionCard, 120);
+  });
+  document.addEventListener('mileage-archive:changed', function(){
+    setTimeout(renderMileageSubmissionCard, 120);
+  });
+
+  window.__renderMileageSubmissionCard = renderMileageSubmissionCard;
+})();
+</script>
+
+<script src="company_logo_sync.js"></script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+</body>
+</html>

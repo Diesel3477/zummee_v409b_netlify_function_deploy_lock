@@ -1,0 +1,19 @@
+v64 secure vendor work order page
+
+What changed:
+- added new Edge Function: get-vendor-work-order
+- vendor_work_order.html now loads data through the secure function
+- the function validates:
+  - work_order_id
+  - vendor_email
+  - token
+- the page no longer queries resident_work_orders directly with a public client
+
+Deploy:
+1. Upload this build
+2. Deploy:
+   cd ~/Downloads/zummee_maintenance_workflow_v64_secure_vendor_work_order
+   supabase functions deploy assign-vendor-email --project-ref slcwuuwyrgnmlmxpcaim --no-verify-jwt
+   supabase functions deploy get-vendor-work-order --project-ref slcwuuwyrgnmlmxpcaim --no-verify-jwt
+3. Optional if your public page URL differs:
+   supabase secrets set VENDOR_WORK_ORDER_BASE_URL=https://zummee.net/vendor_work_order.html

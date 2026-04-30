@@ -1,0 +1,32 @@
+Resident Invite Flow Setup
+
+This build finishes the resident invite flow with a secure email-invite pattern.
+
+What is included:
+- resident_directory.html fixes:
+  - community dropdown now auto-loads from the active company / profile
+  - selected community now auto-loads residents
+  - manual add now uses the active community correctly
+- Edge Function source added:
+  - supabase/functions/import-resident-directory/index.ts
+  - supabase/functions/send-resident-invites/index.ts
+
+Important note:
+- This flow now uses Supabase Auth invite emails instead of emailing a temporary password.
+- That is safer and works better with the normal Supabase sign-up / password-creation flow.
+
+Deploy steps:
+1. Run resident_directory_setup.sql in the Supabase SQL editor.
+2. Deploy the functions:
+   supabase functions deploy import-resident-directory --project-ref slcwuuwyrgnmlmxpcaim --no-verify-jwt
+   supabase functions deploy send-resident-invites --project-ref slcwuuwyrgnmlmxpcaim --no-verify-jwt
+3. Recommended redirect URL:
+   supabase secrets set RESIDENT_REDIRECT_URL=https://zummee.net/login.html
+
+Expected flow:
+1. Manager selects community.
+2. Manager imports CSV or adds a resident manually.
+3. Manager selects residents and clicks Send Invites to Selected.
+4. Resident receives a secure invite email.
+5. Resident creates password from the invite link.
+6. resident_directory.invited_at is stamped after a successful invite.

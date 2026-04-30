@@ -1,0 +1,2442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>window.ZUMMEE_BUILD="2026-03-27-1";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Live Maintenance Updates</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="shared/supabase-client.js?v=2026-04-29-v337"></script>
+<script src="zummee_clean_bootstrap.js?v=clean-2026-04-28"></script>
+  <script src="shared/header.js?v=2026-04-08-2"></script>
+  <link rel="stylesheet" href="shared/header.css?v=2026-03-27-1">
+  <link rel="stylesheet" href="shared/zummee-design-system.css?v=2026-03-27-1">
+
+  <script id="zummee-internal-nav-auth-safe">
+  (function(){
+    try{
+      var params = new URLSearchParams(window.location.search || '');
+      if(params.get('from') === 'manager_hub'){
+        sessionStorage.setItem('zummee_manager_internal_entry','1');
+        sessionStorage.setItem('zummee_maintenance_manager_entry','1');
+        window.__ZUMMEE_INTERNAL_NAV__ = true;
+      }
+    }catch(_e){}
+  })();
+  </script>
+  <script id="zummeeStaffGuard">
+  (async () => {
+    if (window.__zummeeStaffGuardRan) return;
+    window.__zummeeStaffGuardRan = true;
+    async function getClient(){
+      try{ if(typeof ensureSupabase === 'function'){ const c = await ensureSupabase(); if(c && c.auth && typeof c.auth.getSession === 'function') return c; } }catch(_e){}
+      try{ if(window.supabaseClient && window.supabaseClient.auth && typeof window.supabaseClient.auth.getSession === 'function') return window.supabaseClient; }catch(_e){}
+      try{ if(window.sb && window.sb.auth && typeof window.sb.auth.getSession === 'function') return window.sb; }catch(_e){}
+      return null;
+    }
+    const isInternalManagerNav = () => {
+      try{
+        const params = new URLSearchParams(window.location.search || '');
+        return params.get('from') === 'manager_hub' || sessionStorage.getItem('zummee_manager_internal_entry') === '1' || sessionStorage.getItem('zummee_maintenance_manager_entry') === '1' || window.__ZUMMEE_INTERNAL_NAV__ === true;
+      }catch(_e){ return window.__ZUMMEE_INTERNAL_NAV__ === true; }
+    };
+    const go = (target) => {
+      if(String(target||'').indexOf('login.html') !== -1 && isInternalManagerNav()){
+        console.warn('[Zummee auth-safe] Blocked login redirect during Manager Hub internal navigation.');
+        return;
+      }
+      try{ window.location.replace(target); }catch(_e){ window.location.href = target; }
+    };
+    const sb = await getClient();
+    if(!sb){ go('login.html'); return; }
+    let sessionRes = null;
+    for(let i=0;i<8;i++){
+      try{ sessionRes = await sb.auth.getSession(); }catch(_e){}
+      if(sessionRes && sessionRes.data && sessionRes.data.session && sessionRes.data.session.user) break;
+      await new Promise(r => setTimeout(r, 180));
+    }
+    const user = sessionRes && sessionRes.data && sessionRes.data.session ? sessionRes.data.session.user : null;
+    if(!user){ go('login.html'); return; }
+    const ud = await sb
+      .from('userdirectory')
+      .select('role')
+      .eq('auth_user_id', user.id)
+      .single();
+    const role = String((ud && ud.data && ud.data.role) || '').trim();
+    if(role === 'Resident'){ go('resident_portal.html'); return; }
+    document.documentElement.setAttribute('data-staff-role', role || '');
+  })();
+  </script>
+
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <style>
+    :root{
+      --brand:#0f3554;
+      --bg:#f4f6fa;
+      --card:#ffffff;
+      --muted:#5d6b7a;
+      --border:#d9e1ea;
+      --info:#dbeafe;
+      --warning:#fff1c9;
+      --success:#d9f2e3;
+      --danger:#fee2e2;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:#17324c}
+    #zummeeHeaderMount{display:block}
+    .wrap{max-width:1180px;margin:26px auto;padding:0 16px 40px}
+    .card{background:var(--card);border:2px solid var(--brand);border-radius:26px;padding:22px;box-shadow:0 12px 28px rgba(15,53,84,.08)}
+    .card.zummee-section-card{border:none;box-shadow:none;color:#17324c}
+    .card.zummee-section-card .sub,.card.zummee-section-card .muted,.card.zummee-section-card .tiny{color:#4d6580}
+    .card.zummee-section-card .tableWrap,.card.zummee-section-card .noteBox{background:rgba(255,255,255,.28);border-color:rgba(255,255,255,.36)}
+    .card.zummee-section-card th{background:rgba(255,255,255,.16);color:#48637f}
+    .card.zummee-section-card td{border-bottom:1px solid rgba(255,255,255,.18)}
+    .card.zummee-section-card .btn{background:#fff;color:#17324c;border-color:rgba(23,50,77,.16)}
+    .card.zummee-section-card .btn.primary{background:#234f80;color:#fff;border-color:#234f80}
+    .card.zummee-section-card .field input,.card.zummee-section-card .field select{background:rgba(255,255,255,.84);border-color:rgba(255,255,255,.32)}
+    .stack{display:grid;gap:22px}
+    .headRow{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap}
+    .sub{color:var(--muted);font-size:14px}
+    .btnRow{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:11px 18px;border-radius:999px;border:2px solid var(--brand);background:#fff;color:var(--brand);text-decoration:none;font-size:15px;font-weight:800;cursor:pointer}
+    .btn.primary{background:var(--brand);color:#fff}
+    .filters{display:grid;grid-template-columns:1.1fr 190px 180px;gap:12px;margin-top:16px}
+    .field label{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;font-weight:800}
+    .field input,.field select{width:100%;border:1.5px solid var(--border);border-radius:16px;padding:12px 14px;font-size:16px;background:#fff;color:#17324c}
+    .statusLine{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;margin:16px 0 10px}
+    .statusSummary{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:4px 0 14px}
+    .statusSummaryChip{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:16px;border:1px solid rgba(15,53,84,.10);background:rgba(255,255,255,.72);box-shadow:0 8px 18px rgba(15,53,84,.06)}
+    .statusSummaryChip .dot{width:10px;height:10px;border-radius:999px;display:inline-block;flex:0 0 auto}
+    .statusSummaryChip .label{font-size:12px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#45607a}
+    .statusSummaryChip .count{font-size:20px;font-weight:900;color:#17324c;line-height:1}
+    .statusSummaryChip.submitted{background:linear-gradient(180deg,rgba(239,68,68,.14),rgba(255,255,255,.92));border-color:rgba(220,38,38,.16)}
+    .statusSummaryChip.submitted .dot{background:#dc2626}
+    .statusSummaryChip.submitted .count{color:#991b1b}
+    .statusSummaryChip.sent{background:linear-gradient(180deg,rgba(251,191,36,.16),rgba(255,255,255,.88));border-color:rgba(217,119,6,.18)}
+    .statusSummaryChip.sent .dot{background:#d97706}
+    .statusSummaryChip.sent .count{color:#8a4b00}
+    .statusSummaryChip.active{background:linear-gradient(180deg,rgba(34,197,94,.16),rgba(255,255,255,.9));border-color:rgba(22,163,74,.18)}
+    .statusSummaryChip.active .dot{background:#16a34a;box-shadow:0 0 0 0 rgba(22,163,74,.35);animation:livePulse 1.8s infinite}
+    .statusSummaryChip.active .count{color:#146534}
+    .statusSummaryChip.progress{background:linear-gradient(180deg,rgba(59,130,246,.14),rgba(255,255,255,.9));border-color:rgba(37,99,235,.16)}
+    .statusSummaryChip.progress .dot{background:#2563eb}
+    .statusSummaryChip.progress .count{color:#1d4ed8}
+    .tableWrap{overflow:auto;border:1px solid rgba(15,53,84,.12);border-radius:18px;background:#fff}
+    table{width:100%;border-collapse:collapse;min-width:860px}
+    th,td{padding:15px 16px;border-bottom:1px solid rgba(15,53,84,.08);text-align:left;vertical-align:top}
+    th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:900;background:#f8fafc}
+    .reqTitle{font-weight:900;color:var(--brand);margin-bottom:4px}
+    .reqSub{font-size:13px;color:var(--muted)}
+    .updatesTableBody tr[data-open-id]{cursor:pointer;transition:background .15s ease, transform .15s ease, box-shadow .15s ease;border-left:4px solid transparent}
+    .updatesTableBody tr[data-open-id]:hover{background:rgba(255,255,255,.45);box-shadow:inset 0 0 0 1px rgba(35,79,128,.12)}
+    .updatesTableBody tr.status-submitted{border-left-color:#dc2626}
+    .updatesTableBody tr.status-sent{border-left-color:#d97706}
+    .updatesTableBody tr.status-active{border-left-color:#16a34a}
+    .updatesTableBody tr.status-progress{border-left-color:#2563eb}
+    .updatesTableBody tr[data-open-id]:focus-within{outline:2px solid rgba(35,79,128,.28);outline-offset:-2px}
+    .openRecordBtn{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 14px;border-radius:999px;border:1.5px solid rgba(35,79,128,.16);background:rgba(255,255,255,.9);color:#17324c;font-size:13px;font-weight:900;text-decoration:none;cursor:pointer;transition:transform .15s ease, box-shadow .15s ease, background .15s ease}
+    .openRecordBtn:hover,.openRecordBtn:focus-visible{background:#fff;transform:translateY(-1px);box-shadow:0 8px 16px rgba(15,53,84,.12)}
+    .noteBox{padding:10px 12px;background:#f8fafc;border:1px solid rgba(15,53,84,.08);border-radius:12px;line-height:1.45}
+    .pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:900;white-space:nowrap}
+    .pill.sent{background:linear-gradient(180deg,rgba(251,191,36,.24),rgba(255,243,205,.95));color:#8a4b00;border:1px solid rgba(217,119,6,.18)}
+    .pill.active{background:linear-gradient(180deg,rgba(34,197,94,.22),rgba(220,252,231,.96));color:#146534;position:relative;border:1px solid rgba(22,163,74,.18)}
+    .pill.active::after{content:"";display:inline-block;width:8px;height:8px;border-radius:999px;background:#16a34a;margin-left:8px;box-shadow:0 0 0 0 rgba(22,163,74,.45);animation:livePulse 1.8s infinite}
+    .pill.progress{background:linear-gradient(180deg,rgba(59,130,246,.18),rgba(219,234,254,.96));color:#1d4ed8;border:1px solid rgba(37,99,235,.16)}
+    .pill.scheduled{background:rgba(245,158,11,.16);color:#8a5a00}
+    .pill.pending{background:var(--warning);color:#7b5b00}
+    .pill.completed{background:var(--success);color:#11653a}
+    .pill.error{background:var(--danger);color:#8c1d18}
+    @keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.45)}70%{box-shadow:0 0 0 8px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
+    .muted{color:var(--muted)}
+    .tiny{font-size:12px}
+    .empty{padding:22px;color:var(--muted)}
+    .timeline{position:relative;padding-left:10px}
+    .event{position:relative;padding:0 0 16px 22px;margin-left:4px}
+    .event:not(:last-child){border-left:2px solid rgba(15,53,84,.10)}
+    .eventDot{position:absolute;left:-8px;top:4px;width:14px;height:14px;border-radius:999px;background:var(--brand);border:3px solid #fff;box-shadow:0 0 0 1px rgba(15,53,84,.12)}
+    .eventTime{font-size:12px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+    .eventMsg{font-size:18px;font-weight:900;color:var(--brand);margin-top:4px;line-height:1.3}
+    .eventMeta{font-size:13px;color:var(--muted);margin-top:4px}
+    @media (max-width: 860px){
+      .wrap{padding:0 12px 30px}
+      .card{padding:16px;border-radius:20px}
+      .filters{grid-template-columns:minmax(0,1fr) 180px 150px;align-items:end}
+      .btnRow{width:100%}
+      .btnRow .btn{flex:1}
+      table{min-width:700px}
+    }
+    @media (max-width: 640px){
+      .filters{grid-template-columns:1fr}
+    }
+
+    .detailOverlay{position:fixed;inset:0;background:rgba(15,23,42,.38);backdrop-filter:blur(3px);display:none;align-items:flex-end;justify-content:center;z-index:1200;padding:18px}
+    .detailOverlay.is-open{display:flex}
+    .detailSheet{width:min(760px,100%);max-height:min(88vh,920px);background:#fff;border:1px solid rgba(15,53,84,.10);border-radius:26px 26px 20px 20px;box-shadow:0 28px 80px rgba(15,23,42,.24);overflow:hidden;transform:translateY(24px);opacity:0;transition:transform .2s ease, opacity .2s ease}
+    .detailOverlay.is-open .detailSheet{transform:translateY(0);opacity:1}
+    .detailSheetHead{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:20px 22px;border-bottom:1px solid rgba(15,53,84,.08);background:linear-gradient(180deg,#f8fbff 0%,#fff 100%)}
+    .detailSheetTitle{font-size:24px;font-weight:900;color:var(--brand);line-height:1.2;margin:0}
+    .detailSheetSub{margin-top:6px;font-size:13px;color:var(--muted)}
+    .detailCloseBtn{min-width:44px;min-height:44px;border-radius:999px;border:1.5px solid rgba(15,53,84,.12);background:#fff;color:#17324c;font-size:24px;line-height:1;cursor:pointer;font-weight:400}
+    .detailSheetBody{padding:20px 22px 24px;overflow:auto;max-height:calc(88vh - 86px)}
+    .detailGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:16px}
+    .detailTile{padding:14px 16px;border:1px solid rgba(15,53,84,.08);border-radius:18px;background:#f8fbff}
+    .detailLabel{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:900;margin-bottom:6px}
+    .detailValue{font-size:16px;color:#17324c;font-weight:800;line-height:1.4;word-break:break-word}
+    .detailValue.muted{font-weight:600}
+    .detailLong{padding:16px 18px;border:1px solid rgba(15,53,84,.08);border-radius:18px;background:#fff;margin-bottom:14px}
+    .detailLong .detailValue{font-size:15px;font-weight:600;white-space:pre-wrap}
+    .detailAssignBlock{margin:16px 0 4px;padding:16px 18px;border:1px solid rgba(15,53,84,.08);border-radius:20px;background:linear-gradient(180deg,#f8fbff 0%,#ffffff 100%)}
+    .detailAssignLabel{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:900;margin-bottom:10px}
+    .detailAssignRow{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+    .detailAssignSelect{width:100%;min-height:52px;padding:14px 48px 14px 16px;border:1.5px solid rgba(15,53,84,.12);border-radius:16px;background-color:#fff;color:#17324c;font-size:16px;font-weight:700;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5L10 12.5L15 7.5' stroke='%2317324c' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 16px center;background-size:18px 18px;box-shadow:0 6px 14px rgba(15,53,84,.04)}
+    .detailAssignSelect:focus{outline:none;border-color:rgba(35,79,128,.45);box-shadow:0 0 0 4px rgba(35,79,128,.12)}
+    .detailAssignBtn{width:100%;min-height:52px;border-radius:16px;background:#234f80 !important;color:#fff !important;border-color:#234f80 !important;box-shadow:0 12px 24px rgba(35,79,128,.16)}
+    .detailAssignBtn:hover,.detailAssignBtn:focus-visible{transform:translateY(-1px);box-shadow:0 16px 28px rgba(35,79,128,.22)}
+    .detailActions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+    .detailActions .btn{min-height:48px}
+    .detailCompleteBtn{background:#234f80;color:#fff;border-color:#234f80}
+    .detailCompleteBtn[disabled]{opacity:.65;cursor:wait}
+    .detailMsg{margin-top:14px;font-size:14px;font-weight:700;min-height:20px}
+    .detailMsg.error{color:#8c1d18}
+    .detailMsg.success{color:#11653a}
+    @media (max-width: 640px){
+      .detailOverlay{padding:0}
+      .detailSheet{width:100%;max-height:92vh;border-radius:24px 24px 0 0}
+      .detailSheetHead,.detailSheetBody{padding-left:16px;padding-right:16px}
+      .detailGrid{grid-template-columns:1fr}
+      .detailSheetTitle{font-size:22px}
+    }
+  
+    .miniConfirmOverlay{position:fixed;inset:0;background:rgba(15,23,42,.28);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;z-index:1300;padding:20px}
+    .miniConfirmOverlay.is-open{display:flex}
+    .miniConfirmCard{width:min(420px,92vw);background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:22px;box-shadow:0 24px 80px rgba(15,23,42,.18);padding:20px}
+    .miniConfirmTitle{font-size:18px;font-weight:700;color:#15314b;margin:0 0 8px}
+    .miniConfirmText{font-size:14px;line-height:1.5;color:#425466;margin:0 0 16px}
+    .miniConfirmActions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+    .miniConfirmActions .btn{min-width:110px}
+
+  
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+
+.mh2-actions .mh2-btn--ghost{display:none !important;}
+
+/* v26: refresh button removed; keep header controls aligned */
+.maintenance-feed-actions{justify-content:flex-end !important;}
+.maintenance-inline-controls{width:100% !important;}
+</style>
+<style>
+/* 🔒 Maintenance Updates header override */
+.zm-communityLabel {
+  display: none !important;
+}
+#zummeeCommunitySelect {
+  width: 260px !important;
+  max-width: 260px !important;
+  min-width: 260px !important;
+}
+.zm-communityRow {
+  gap: 8px !important;
+}
+@media (max-width: 1024px) {
+  #zummeeCommunitySelect {
+    width: 220px !important;
+  }
+}
+
+/* Live Maintenance Updates - move dropdown and Hub up */
+body[data-header-mode="subpage"] header.zm-header .zm-header__right {
+  transform: translateX(0) translateY(2px) !important;
+}
+
+/* Live Maintenance Updates - reduce logo size ~30% on this page only */
+body[data-header-mode="subpage"][data-device="desktop"] header.zm-header .zm-header__logo img,
+body[data-header-mode="subpage"][data-device="tablet"] header.zm-header .zm-header__logo img{
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
+  width: auto !important;
+}
+body[data-header-mode="subpage"][data-device="mobile"] header.zm-header .zm-header__logo img{
+  height: 39px !important;
+  min-height: 39px !important;
+  max-height: 39px !important;
+  width: auto !important;
+}
+
+
+/* Live Maintenance Updates - Maintenance Status Feed gold card */
+.maintenance-feed-card{
+  position:relative;
+  background:#d4af37 !important;
+  border:1px solid rgba(0,0,0,.08) !important;
+  box-shadow:0 8px 20px rgba(0,0,0,.25) !important;
+  overflow:hidden;
+}
+.maintenance-feed-card::before,
+.maintenance-feed-card::after{
+  content:none !important;
+  display:none !important;
+}
+.maintenance-feed-card .sub,
+.maintenance-feed-card .muted,
+.maintenance-feed-card .tiny,
+.maintenance-feed-card #feedState,
+.maintenance-feed-card #communityState,
+.maintenance-feed-card .field label,
+.maintenance-feed-card .reqSub,
+.maintenance-feed-card .noteBox{
+  color:rgba(52,39,3,.78) !important;
+}
+.maintenance-feed-card .headRow > div:first-child > div:first-child,
+.maintenance-feed-card .empty,
+.maintenance-feed-card .reqTitle,
+.maintenance-feed-card th,
+.maintenance-feed-card td{
+  color:#1f2a37 !important;
+}
+.maintenance-feed-card .field input,
+.maintenance-feed-card .field select,
+.maintenance-feed-card .btn{
+  background:rgba(255,255,255,.86) !important;
+  border-color:rgba(31,42,55,.10) !important;
+  color:#17324c !important;
+}
+.maintenance-feed-card .btn.primary{
+  background:#234f80 !important;
+  color:#fff !important;
+  border-color:#234f80 !important;
+}
+.maintenance-feed-card .tableWrap{
+  background:rgba(255,255,255,.64) !important;
+  border:1px solid rgba(255,255,255,.55) !important;
+}
+.maintenance-feed-card th{
+  background:rgba(255,255,255,.22) !important;
+}
+.maintenance-feed-card td{
+  border-bottom:1px solid rgba(31,42,55,.10) !important;
+}
+
+/* Live Maintenance Updates - Recent Activity flat vivid gold card */
+.recent-activity-card{
+  position:relative;
+  background:#d4af37 !important;
+  border:1px solid rgba(0,0,0,.08) !important;
+  box-shadow:0 8px 20px rgba(0,0,0,.25) !important;
+  overflow:hidden;
+}
+.recent-activity-card::before,
+.recent-activity-card::after{
+  content:none !important;
+  display:none !important;
+}
+.recent-activity-card .sub,
+.recent-activity-card .muted,
+.recent-activity-card .tiny,
+.recent-activity-card #activityState,
+.recent-activity-card .eventMeta,
+.recent-activity-card .eventTime{
+  color:rgba(52,39,3,.78) !important;
+}
+.recent-activity-card .eventMsg,
+.recent-activity-card .headRow > div:first-child > div:first-child,
+.recent-activity-card .empty{
+  color:#1f2a37 !important;
+}
+.recent-activity-card .event:not(:last-child){
+  border-left:2px solid rgba(31,42,55,.16) !important;
+}
+.recent-activity-card .eventDot{
+  background:#1f2a37 !important;
+  border:3px solid rgba(255,255,255,.72) !important;
+  box-shadow:0 0 0 1px rgba(31,42,55,.16) !important;
+}
+
+
+
+    .miniConfirmOverlay{position:fixed;inset:0;background:rgba(15,23,42,.28);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;z-index:1300;padding:20px}
+    .miniConfirmOverlay.is-open{display:flex}
+    .miniConfirmCard{width:min(420px,92vw);background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:22px;box-shadow:0 24px 80px rgba(15,23,42,.18);padding:20px}
+    .miniConfirmTitle{font-size:18px;font-weight:700;color:#15314b;margin:0 0 8px}
+    .miniConfirmText{font-size:14px;line-height:1.5;color:#425466;margin:0 0 16px}
+    .miniConfirmActions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+    .miniConfirmActions .btn{min-width:110px}
+
+  
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+  <script src="community_state_stable.js"></script>
+<style>
+/* FORCE white text in Status & Details section */
+#boardSubmittedItemsSection,
+#boardSubmittedItemsSection *:not(button),
+#boardMemberHubStatus,
+#boardMemberHubStatus *:not(button),
+#annualMeetingApprovals,
+#annualMeetingApprovals *:not(button) {
+  color: #ffffff !important;
+}
+
+/* Secondary text (slightly dimmed white) */
+#boardSubmittedItemsSection .muted,
+#boardMemberHubStatus .muted,
+#annualMeetingApprovals .muted {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+<style>
+/* HARD OVERRIDE — force white text in dark section */
+.hub-zone:last-of-type,
+.hub-zone:last-of-type *:not(button):not(.badge):not(.pill) {
+  color: #ffffff !important;
+}
+
+/* Slightly softer for secondary text */
+.hub-zone:last-of-type .muted,
+.hub-zone:last-of-type p,
+.hub-zone:last-of-type span {
+  color: rgba(255,255,255,0.75) !important;
+}
+
+/* DARK MODE — MANAGER ACTIONS FINAL */
+body.dark-mode .mh2-stat-box,
+body.dark-mode .mh2-kpi,
+body.dark-mode .mh2-mini-stat {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .mh2-stat-value,
+body.dark-mode .mh2-card-value,
+body.dark-mode .mh2-kpi-value {
+  color: #0b0f14 !important;
+  font-weight: 700;
+}
+body.dark-mode .mh2-stat-label,
+body.dark-mode .mh2-card-label {
+  color: #4b5563 !important;
+}
+body.dark-mode .mh2-stat-box {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+
+<style id="live-maintenance-new-design-v21">
+/* Zummee v21 — Live Maintenance Updates rebuilt to match refreshed Board Member Hub */
+body{
+  background:linear-gradient(180deg,#f7fbff 0%,#eef6ff 46%,#f9fbff 100%) !important;
+  color:#17324c !important;
+}
+.wrap{
+  max-width:980px !important;
+  margin:26px auto 48px !important;
+  padding:0 24px 44px !important;
+}
+.stack{gap:24px !important;}
+.card.zummee-section-card.maintenance-feed-card,
+.card.zummee-section-card.recent-activity-card{
+  background:rgba(255,255,255,.86) !important;
+  border:1.5px solid rgba(142,190,255,.72) !important;
+  border-radius:32px !important;
+  box-shadow:0 18px 42px rgba(60,126,220,.14), inset 0 1px 0 rgba(255,255,255,.96) !important;
+  color:#17324c !important;
+  padding:26px 28px !important;
+  overflow:hidden !important;
+}
+.card.zummee-section-card.maintenance-feed-card::before,
+.card.zummee-section-card.recent-activity-card::before{
+  content:"" !important;
+  position:absolute !important;
+  inset:0 !important;
+  pointer-events:none !important;
+  background:radial-gradient(circle at 12% 0%,rgba(255,255,255,.9),transparent 32%),linear-gradient(135deg,rgba(255,255,255,.65),rgba(255,255,255,0) 46%) !important;
+  display:block !important;
+  opacity:.8 !important;
+}
+.card.zummee-section-card.maintenance-feed-card > *,
+.card.zummee-section-card.recent-activity-card > *{position:relative;z-index:1;}
+.card.zummee-section-card .headRow{align-items:center !important;margin-bottom:14px !important;}
+.card.zummee-section-card .headRow > div:first-child > div:first-child{
+  color:#17324c !important;
+  font-size:26px !important;
+  font-weight:900 !important;
+  letter-spacing:-.02em !important;
+}
+.card.zummee-section-card .sub{display:none !important;}
+.btnRow{justify-content:flex-end !important;}
+.btn{
+  border:1.5px solid rgba(23,50,76,.12) !important;
+  background:rgba(255,255,255,.9) !important;
+  color:#17324c !important;
+  box-shadow:0 8px 18px rgba(15,53,84,.08) !important;
+}
+.btn.primary{
+  background:#214b79 !important;
+  border-color:#214b79 !important;
+  color:#fff !important;
+}
+.filters{
+  grid-template-columns:minmax(0,1.4fr) minmax(160px,.8fr) minmax(140px,.6fr) !important;
+  gap:12px !important;
+  margin:18px 0 14px !important;
+}
+.field label{
+  color:#536b85 !important;
+  font-size:11px !important;
+  letter-spacing:.07em !important;
+}
+.field input,.field select{
+  min-height:48px !important;
+  border-radius:18px !important;
+  border:1.5px solid rgba(178,207,244,.75) !important;
+  background:#fff !important;
+  color:#17324c !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.75) !important;
+}
+.statusLine{margin:10px 0 8px !important;}
+#feedState,#communityState,#activityState,.muted,.tiny,
+.maintenance-feed-card .reqSub,.recent-activity-card .eventMeta,.recent-activity-card .eventTime{
+  color:#60758d !important;
+}
+.statusSummary{
+  gap:10px !important;
+  margin:8px 0 16px !important;
+}
+.statusSummaryChip{
+  border-radius:999px !important;
+  padding:9px 13px !important;
+  background:rgba(255,255,255,.92) !important;
+  border:1px solid rgba(178,207,244,.8) !important;
+  box-shadow:0 8px 18px rgba(15,53,84,.07) !important;
+}
+.statusSummaryChip .label{font-size:11px !important;color:#445d78 !important;}
+.statusSummaryChip .count{font-size:16px !important;color:#17324c !important;}
+.tableWrap{
+  border:1.5px solid rgba(178,207,244,.8) !important;
+  border-radius:22px !important;
+  background:rgba(255,255,255,.72) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.8) !important;
+}
+table{min-width:820px !important;}
+th{
+  background:rgba(247,251,255,.9) !important;
+  color:#536b85 !important;
+  border-bottom:1px solid rgba(178,207,244,.65) !important;
+  padding:14px 16px !important;
+}
+td{
+  background:rgba(255,255,255,.68) !important;
+  color:#17324c !important;
+  border-bottom:1px solid rgba(178,207,244,.55) !important;
+  padding:16px !important;
+}
+tr:last-child td{border-bottom:none !important;}
+.reqTitle{color:#17324c !important;font-size:16px !important;font-weight:900 !important;}
+.noteBox{
+  background:#fff !important;
+  border:1px solid rgba(178,207,244,.65) !important;
+  color:#17324c !important;
+  border-radius:14px !important;
+}
+.openRecordBtn{
+  background:#fff !important;
+  border-color:rgba(178,207,244,.8) !important;
+  color:#17324c !important;
+}
+.pill{
+  border-radius:999px !important;
+  padding:7px 12px !important;
+  font-size:12px !important;
+  font-weight:900 !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5) !important;
+}
+.pill.completed{background:#dcfce7 !important;color:#166534 !important;border:1px solid rgba(22,101,52,.13) !important;}
+.pill.sent{background:#fef3c7 !important;color:#92400e !important;border:1px solid rgba(146,64,14,.14) !important;}
+.pill.active{background:#dcfce7 !important;color:#166534 !important;border:1px solid rgba(22,101,52,.13) !important;}
+.pill.progress{background:#dbeafe !important;color:#1d4ed8 !important;border:1px solid rgba(29,78,216,.13) !important;}
+.pill.pending,.pill.scheduled{background:#fef3c7 !important;color:#92400e !important;border:1px solid rgba(146,64,14,.14) !important;}
+.pill.error{background:#fee2e2 !important;color:#991b1b !important;border:1px solid rgba(153,27,27,.14) !important;}
+.timeline{padding-left:0 !important;margin-top:8px !important;}
+.event{
+  border-left:none !important;
+  margin:10px 0 0 !important;
+  padding:14px 16px !important;
+  border:1.5px solid rgba(178,207,244,.75) !important;
+  border-radius:20px !important;
+  background:rgba(255,255,255,.82) !important;
+}
+.eventDot{display:none !important;}
+.eventMsg{font-size:16px !important;color:#17324c !important;}
+.empty{
+  color:#60758d !important;
+  background:transparent !important;
+}
+@media (max-width:860px){
+  .wrap{padding:0 22px 36px !important;max-width:100% !important;}
+  .card.zummee-section-card.maintenance-feed-card,
+  .card.zummee-section-card.recent-activity-card{padding:24px 22px !important;border-radius:30px !important;}
+  .filters{grid-template-columns:1fr !important;}
+  .btnRow{width:auto !important;}
+  .btnRow .btn{flex:0 0 auto !important;}
+  table{min-width:760px !important;}
+}
+@media (max-width:640px){
+  .wrap{padding:0 14px 28px !important;}
+  .card.zummee-section-card .headRow{align-items:flex-start !important;}
+  .btnRow{width:100% !important;}
+  .btnRow .btn{flex:1 !important;}
+}
+</style>
+
+
+<style id="live-maintenance-controls-in-card-v22">
+body.live-maintenance-controls-moved header.zm-header .zm-header__right{display:none!important;}
+body.live-maintenance-controls-moved header.zm-header .zm-header__left{width:100%!important;max-width:none!important;}
+.maintenance-feed-header-row{align-items:flex-start!important;gap:16px!important;}
+.maintenance-feed-actions{align-items:center!important;justify-content:flex-end!important;gap:10px!important;flex-wrap:wrap!important;}
+.maintenance-inline-controls{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:10px!important;flex-wrap:wrap!important;}
+.maintenance-inline-controls .zm-communityRow{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:0!important;width:auto!important;min-width:0!important;max-width:none!important;}
+.maintenance-inline-controls .zm-communityLabel,.maintenance-inline-controls #zummeeCommunitySwatch{display:none!important;}
+.maintenance-inline-controls #zummeeCommunitySelect{width:260px!important;min-width:260px!important;max-width:260px!important;height:52px!important;border-radius:20px!important;padding:0 18px!important;background:#f1f5f9!important;border:1.5px solid rgba(178,207,244,.75)!important;color:#17324c!important;font-size:16px!important;font-weight:800!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.86)!important;}
+.maintenance-inline-controls .zm-actionsRow{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:10px!important;width:auto!important;}
+.maintenance-inline-controls #zummeeHdrHub{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:116px!important;width:auto!important;height:52px!important;padding:0 22px!important;border-radius:999px!important;background:#f1f5f9!important;color:#17324c!important;border:1.5px solid rgba(178,207,244,.75)!important;box-shadow:0 8px 18px rgba(15,53,84,.07)!important;font-size:16px!important;font-weight:900!important;text-decoration:none!important;}
+.maintenance-inline-controls #zummeeHdrProfile,.maintenance-inline-controls #zummeeSignOut{display:none!important;}
+@media(max-width:860px){.maintenance-feed-header-row{flex-direction:column!important;align-items:stretch!important}.maintenance-feed-actions{width:100%!important;justify-content:stretch!important}.maintenance-inline-controls{width:100%!important;justify-content:stretch!important}.maintenance-inline-controls .zm-communityRow{flex:1 1 260px!important;justify-content:stretch!important}.maintenance-inline-controls #zummeeCommunitySelect{width:100%!important;min-width:0!important;max-width:none!important}.maintenance-inline-controls #zummeeHdrHub,.maintenance-feed-actions #refreshBtn{flex:1 1 120px!important}}
+@media(max-width:560px){.maintenance-feed-actions,.maintenance-inline-controls{flex-direction:column!important;align-items:stretch!important}.maintenance-inline-controls .zm-communityRow,.maintenance-inline-controls #zummeeHdrHub,.maintenance-feed-actions #refreshBtn{width:100%!important;flex:1 1 auto!important}}
+</style>
+<style id="live-maintenance-remove-blue-header-v23-actual">
+body.live-maintenance-no-blue-header #zummeeHeaderMount,
+body.live-maintenance-no-blue-header header.zm-header,
+body.live-maintenance-no-blue-header .zm-header{
+  display:none !important;
+  visibility:hidden !important;
+  height:0 !important;
+  min-height:0 !important;
+  max-height:0 !important;
+  margin:0 !important;
+  padding:0 !important;
+  overflow:hidden !important;
+}
+body.live-maintenance-no-blue-header .wrap{margin-top:18px !important;}
+body.live-maintenance-no-blue-header .maintenance-feed-card{margin-top:0 !important;}
+.maintenance-title-block{display:flex !important;flex-direction:column !important;gap:4px !important;align-items:flex-start !important;}
+.maintenance-page-title{font-size:30px !important;line-height:1.12 !important;font-weight:950 !important;color:#17324c !important;letter-spacing:-.03em !important;}
+.maintenance-feed-title{font-size:18px !important;line-height:1.2 !important;font-weight:850 !important;color:#506985 !important;}
+@media(max-width:860px){body.live-maintenance-no-blue-header .wrap{margin-top:12px!important;padding-left:10px!important;padding-right:10px!important;}.maintenance-page-title{font-size:28px!important;text-align:left!important;}.maintenance-feed-title{font-size:17px!important;}}
+</style>
+
+<style id="live-maintenance-title-logo-v24">
+/* v24 — left title + manager-hub company logo placement */
+body.live-maintenance-no-blue-header .maintenance-feed-header-row{
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:stretch !important;
+  gap:18px !important;
+  margin-bottom:18px !important;
+}
+.maintenance-title-brand-row{
+  width:100% !important;
+  display:flex !important;
+  align-items:flex-start !important;
+  justify-content:space-between !important;
+  gap:18px !important;
+}
+.maintenance-title-block{
+  flex:1 1 auto !important;
+  align-items:flex-start !important;
+  text-align:left !important;
+  min-width:0 !important;
+}
+.maintenance-page-title,.maintenance-feed-title{
+  text-align:left !important;
+}
+.maintenance-brand-slot{
+  flex:0 0 auto !important;
+  display:flex !important;
+  align-items:flex-start !important;
+  justify-content:flex-end !important;
+  min-width:130px !important;
+  min-height:54px !important;
+  padding-top:2px !important;
+}
+.maintenance-company-logo{
+  display:none !important;
+  width:auto !important;
+  height:54px !important;
+  max-width:210px !important;
+  object-fit:contain !important;
+  object-position:right center !important;
+  border:0 !important;
+  background:transparent !important;
+  opacity:0 !important;
+  transition:opacity .12s ease !important;
+}
+.maintenance-company-logo.logo-ready{
+  display:block !important;
+  opacity:1 !important;
+}
+.maintenance-company-logo:not(.logo-ready){display:none !important;}
+body.live-maintenance-no-blue-header .maintenance-feed-actions{
+  width:100% !important;
+  justify-content:stretch !important;
+}
+body.live-maintenance-no-blue-header .maintenance-inline-controls{
+  flex:1 1 auto !important;
+}
+body.live-maintenance-no-blue-header .maintenance-inline-controls .zm-communityRow{
+  flex:1 1 auto !important;
+}
+body.live-maintenance-no-blue-header .maintenance-inline-controls #zummeeCommunitySelect{
+  width:100% !important;
+  min-width:0 !important;
+  max-width:none !important;
+}
+body.live-maintenance-no-blue-header .maintenance-inline-controls #zummeeHdrHub{
+  min-width:128px !important;
+}
+@media(max-width:760px){
+  .maintenance-title-brand-row{align-items:center !important;}
+  .maintenance-page-title{font-size:27px !important;}
+  .maintenance-feed-title{font-size:17px !important;}
+  .maintenance-company-logo{height:48px !important;max-width:176px !important;}
+  .maintenance-brand-slot{min-width:110px !important;min-height:48px !important;}
+}
+@media(max-width:520px){
+  .maintenance-title-brand-row{gap:10px !important;}
+  .maintenance-page-title{font-size:23px !important;}
+  .maintenance-feed-title{font-size:15px !important;}
+  .maintenance-company-logo{height:40px !important;max-width:140px !important;}
+  .maintenance-brand-slot{min-width:84px !important;min-height:40px !important;}
+}
+</style>
+<style id="live-maintenance-archive-v29">
+.maintenance-archive-card .headRow{margin-bottom:10px !important;}.maintenanceArchive{display:grid !important;gap:12px !important;}.archiveMonth{border:1.5px solid rgba(178,207,244,.78) !important;border-radius:20px !important;background:rgba(255,255,255,.82) !important;overflow:hidden !important;}.archiveMonth summary{list-style:none !important;cursor:pointer !important;display:flex !important;align-items:center !important;justify-content:space-between !important;gap:12px !important;padding:14px 16px !important;font-weight:900 !important;color:#17324c !important;}.archiveMonth summary::-webkit-details-marker{display:none !important;}.archiveMonth summary::after{content:'›';font-size:24px;line-height:1;transition:transform .18s ease;color:#60758d;}.archiveMonth[open] summary::after{transform:rotate(90deg);}.archiveMonthBody{display:grid;gap:10px;padding:0 12px 12px !important;}.archiveRecord{display:flex !important;align-items:center !important;justify-content:space-between !important;gap:12px !important;padding:14px 16px !important;border:1px solid rgba(221,183,62,.38) !important;border-radius:18px !important;background:linear-gradient(135deg,rgba(255,248,214,.96),rgba(255,255,255,.88)) !important;box-shadow:0 8px 18px rgba(212,175,55,.12) !important;}.archiveRecord:hover{transform:translateY(-1px);box-shadow:0 12px 24px rgba(212,175,55,.18) !important;}.archiveTitle{font-size:16px;font-weight:900;color:#17324c;}.archiveMeta{font-size:13px;font-weight:700;color:#60758d;margin-top:4px;}@media(max-width:720px){.archiveRecord{align-items:flex-start !important;flex-direction:column !important;}.archiveMonth summary{font-size:15px !important;}}
+</style>
+
+</head>
+<body data-header-mode="subpage" class="live-maintenance-no-blue-header">
+  <div id="zummeeHeaderMount"></div>
+  <main class="wrap">
+    <div class="stack">
+      <section class="card zummee-section-card zummee-section-card--blue maintenance-feed-card">
+        <div class="headRow maintenance-feed-header-row">
+          <div class="maintenance-title-brand-row">
+            <div class="maintenance-title-block">
+              <div class="maintenance-page-title">Live Maintenance Updates</div>
+              <div class="maintenance-feed-title">Maintenance Status Feed</div>
+            </div>
+            <div class="maintenance-brand-slot" aria-label="Management company logo">
+              <img id="maintenanceCompanyLogo" class="maintenance-company-logo" alt="Management company logo" loading="eager" decoding="async" hidden>
+            </div>
+          </div>
+          <div class="btnRow maintenance-feed-actions" id="maintenancePageControls">
+            <div class="maintenance-inline-controls" id="maintenanceInlineControls" aria-label="Live maintenance page controls"></div>
+          </div>
+        </div>
+        <div class="filters">
+          <div class="field">
+            <label for="searchBox">Search Requests</label>
+            <input id="searchBox" type="text" placeholder="Search subject, vendor, notes…" />
+          </div>
+          <div class="field">
+            <label for="statusFilter">Status Filter</label>
+            <select id="statusFilter">
+              <option value="">All statuses</option>
+              <option value="submitted">Submitted</option>
+              <option value="sent_to_vendor">Sent to Vendor</option>
+              <option value="active">Active (Accepted)</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="limitSelect">Show</label>
+            <select id="limitSelect">
+              <option value="10">10 rows</option>
+              <option value="25" selected>25 rows</option>
+              <option value="50">50 rows</option>
+            </select>
+          </div>
+        </div>
+        <div class="statusLine">
+          <div class="sub" id="feedState">Loading maintenance updates…</div>
+          <div class="tiny muted" id="communityState"></div>
+        </div>
+        <div class="statusSummary" id="statusSummary" aria-label="Live maintenance status summary"></div>
+        <div class="tableWrap">
+          <table aria-label="Live maintenance updates">
+            <thead>
+              <tr>
+                <th>Request</th>
+                <th>Vendor</th>
+                <th>Status</th>
+                <th>Last Update</th>
+                <th>Vendor Notes</th>
+              </tr>
+            </thead>
+            <tbody id="updatesTableBody">
+              <tr><td colspan="5" class="empty">Loading maintenance updates…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="card zummee-section-card zummee-section-card--blue recent-activity-card maintenance-archive-card">
+        <div class="headRow">
+          <div>
+            <div style="font-size:24px;font-weight:900;color:var(--brand);">Maintenance Archive</div>
+          </div>
+          <div class="tiny muted" id="activityState">Loading archive…</div>
+        </div>
+        <div id="activityFeed" class="timeline maintenanceArchive" style="margin-top:16px;">
+          <div class="empty">Loading archive…</div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+
+  <div class="miniConfirmOverlay" id="miniConfirmOverlay" aria-hidden="true">
+    <div class="miniConfirmCard" role="dialog" aria-modal="true" aria-labelledby="miniConfirmTitle">
+      <div class="miniConfirmTitle" id="miniConfirmTitle">Confirm action</div>
+      <p class="miniConfirmText" id="miniConfirmText">Are you sure?</p>
+      <div class="miniConfirmActions">
+        <button class="btn" id="miniConfirmCancelBtn" type="button">Cancel</button>
+        <button class="btn btn-primary" id="miniConfirmOkBtn" type="button">Yes</button>
+      </div>
+    </div>
+  </div>
+  <div class="detailOverlay" id="detailOverlay" aria-hidden="true">
+    <section class="detailSheet" role="dialog" aria-modal="true" aria-labelledby="detailSheetTitle">
+      <div class="detailSheetHead">
+        <div>
+          <h2 class="detailSheetTitle" id="detailSheetTitle">Maintenance Request</h2>
+          <div class="detailSheetSub" id="detailSheetSub">Review the live update and take action without leaving this page.</div>
+        </div>
+        <button class="detailCloseBtn" id="detailCloseBtn" type="button" aria-label="Close details">×</button>
+      </div>
+      <div class="detailSheetBody">
+        <div class="detailGrid" id="detailGrid"></div>
+        <div class="detailLong">
+          <div class="detailLabel">Description</div>
+          <div class="detailValue muted" id="detailDescription">—</div>
+        </div>
+        <div class="detailLong">
+          <div class="detailLabel">Vendor Notes</div>
+          <div class="detailValue muted" id="detailVendorNotes">—</div>
+        </div>
+        <div class="detailAssignBlock">
+          <div class="detailAssignLabel">Assign Vendor</div>
+          <div class="detailAssignRow">
+            <select id="detailVendorSelect" class="detailAssignSelect" aria-label="Assign vendor">
+              <option value="">Select vendor…</option>
+            </select>
+            <button class="btn detailAssignBtn" id="detailAssignVendorBtn" type="button">Assign Vendor</button>
+          </div>
+        </div>
+        <div class="detailActions">
+                    <button class="btn" id="detailInProgressBtn" type="button">Mark In Progress</button>
+          <button class="btn detailCompleteBtn" id="detailCompleteBtn" type="button">Mark Complete</button>
+          <button class="btn" id="detailOpenFullBtn" type="button">Open Full Record</button>
+        </div>
+        <div class="detailMsg" id="detailMsg"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
+    const SUPABASE_ANON_KEY = 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
+    let sb = null;
+    let currentRows = [];
+    let currentArchiveRows = [];
+    let currentEvents = [];
+    let requestChannel = null;
+    let eventChannel = null;
+    let loadUpdatesToken = 0;
+    let loadEventsToken = 0;
+    let autoRefreshTimer = null;
+    let activityRefreshTimer = null;
+    function esc(s){
+      return String(s == null ? "" : s)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;");
+    }
+    function normalizeLiveStatus(row){
+      const raw = String(row?.status || "").trim().toLowerCase();
+      const vendorResponse = String(row?.vendor_response_status || "").trim().toLowerCase();
+      const vendorDispatch = String(row?.vendor_dispatch_status || "").trim().toLowerCase();
+      const vendorAccepted =
+        vendorResponse === "accepted" ||
+        vendorDispatch === "accepted" ||
+        !!row?.vendor_accepted_at;
+
+      if (raw === "completed" || raw === "closed" || raw === "done") return "completed";
+
+      if (
+        raw === "in_progress" ||
+        raw === "in progress" ||
+        vendorResponse === "in_progress" ||
+        vendorResponse === "in progress"
+      ) return "in_progress";
+
+      if (
+        raw === "scheduled" ||
+        vendorResponse === "scheduled" ||
+        vendorDispatch === "scheduled"
+      ) return "scheduled";
+
+      if (
+        vendorAccepted ||
+        raw === "active" ||
+        raw === "accepted"
+      ) return "active";
+
+      if (
+        raw === "sent_to_vendor" ||
+        raw === "sent to vendor" ||
+        raw === "assigned" ||
+        raw === "vendor_notified" ||
+        raw === "awaiting_vendor" ||
+        vendorDispatch === "sent" ||
+        vendorDispatch === "assigned"
+      ) return "sent_to_vendor";
+
+      if (
+        !raw ||
+        raw === "submitted" ||
+        raw === "new" ||
+        raw === "open" ||
+        raw === "pending" ||
+        raw === "awaiting_review" ||
+        raw === "awaiting review"
+      ) return "submitted";
+
+      return "submitted";
+    }
+    function fmtStatus(status){
+      const s = String(status || "").toLowerCase();
+      if (s === "sent_to_vendor") return "Sent to Vendor";
+      if (s === "active") return "Active";
+      if (s === "scheduled") return "Scheduled";
+      if (s === "in_progress") return "In Progress";
+      if (s === "submitted") return "Submitted";
+      if (s === "completed") return "Completed";
+      return String(status || "submitted").replaceAll("_"," ").replace(/\b\w/g, m => m.toUpperCase());
+    }
+    function statusClass(status){
+      const s = String(status || "").toLowerCase();
+      if (s === "completed") return "completed";
+      if (s === "in_progress") return "progress";
+      if (s === "scheduled") return "scheduled";
+      if (s === "active") return "active";
+      if (s === "sent_to_vendor") return "sent";
+      if (s === "submitted") return "submitted";
+      return "submitted";
+    }
+    function prettifyEventMessage(ev){
+      const type = String(ev?.event_type || "").toLowerCase();
+      const msg = String(ev?.message || "").trim();
+      const lower = msg.toLowerCase();
+      if (type.includes("received") || lower.includes("marked request received")) return "Vendor marked RECEIVED";
+      if (type.includes("scheduled") || lower.includes("marked request scheduled")) return "Vendor marked SCHEDULED";
+      if (type.includes("in_progress") || lower.includes("marked request in progress")) return "Vendor marked IN PROGRESS";
+      if (type.includes("completed") || lower.includes("marked request completed")) return "Vendor marked COMPLETED";
+      if (lower.includes("accepted") || type.includes("accepted")) return "Vendor accepted the request";
+      if (lower.includes("sent to vendor") || lower.includes("vendor notified") || type.includes("dispatch")) return "Request sent to vendor";
+      return msg || "Maintenance activity recorded";
+    }
+    function fmtWhen(dt){
+      try{
+        if(!dt) return "—";
+        const d = new Date(dt);
+        return d.toLocaleDateString() + " " + d.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
+      }catch(_e){
+        return dt || "—";
+      }
+    }
+    function latestTs(){
+      const vals = Array.from(arguments).filter(Boolean).map(v => {
+        const t = new Date(v).getTime();
+        return Number.isFinite(t) ? t : 0;
+      }).filter(Boolean);
+      if(!vals.length) return "";
+      return new Date(Math.max.apply(null, vals)).toISOString();
+    }
+    function getPageActiveCommunityId(){
+      try{
+        const headerSelect = document.getElementById("zummeeCommunitySelect");
+        if (headerSelect && headerSelect.value) return String(headerSelect.value || "").trim();
+        if (typeof window.currentCommunityId === "string" && window.currentCommunityId) return String(window.currentCommunityId).trim();
+        if (typeof window.getActiveCommunityId === "function") {
+          return String(window.getActiveCommunityId() || '').trim();
+        }
+        return String(
+          localStorage.getItem("zummee_selected_community_id") ||
+          localStorage.getItem("activeCommunityId") ||
+          localStorage.getItem("zummeeActiveCommunityId") ||
+          localStorage.getItem("currentCommunityId") ||
+          localStorage.getItem("zummee_community_id") ||
+          ""
+        ).trim();
+      }catch(_e){
+        return "";
+      }
+    }
+    function setPageActiveCommunityId(id){
+      const v = String(id || '').trim();
+      try{
+        window.currentCommunityId = v;
+        localStorage.setItem("activeCommunityId", v);
+        localStorage.setItem("zummeeActiveCommunityId", v);
+        localStorage.setItem("currentCommunityId", v);
+        localStorage.setItem("zummee_selected_community_id", v);
+      }catch(_e){}
+      const headerSelect = document.getElementById("zummeeCommunitySelect");
+      if (headerSelect && v && headerSelect.value !== v) {
+        try{ headerSelect.value = v; }catch(_e){}
+      }
+      return v;
+    }
+    function getCommunityNameForId(id){
+      const cid = String(id || '').trim();
+      if(!cid) return '';
+      try{
+        const headerSelect = document.getElementById('zummeeCommunitySelect');
+        if(headerSelect && headerSelect.options){
+          const match = Array.from(headerSelect.options).find(opt => String(opt.value || '').trim() === cid);
+          if(match){
+            const label = String(match.textContent || '').trim();
+            if(label && !/^select community/i.test(label)) return label;
+          }
+        }
+      }catch(_e){}
+      try{
+        const raw = localStorage.getItem('zummee_header_communities') || localStorage.getItem('communities') || '';
+        if(raw){
+          const parsed = JSON.parse(raw);
+          const arr = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.communities) ? parsed.communities : []);
+          const match = arr.find(c => String(c?.id || '').trim() === cid);
+          if(match && match.name) return String(match.name).trim();
+        }
+      }catch(_e){}
+      try{
+        const activeId = getPageActiveCommunityId();
+        const activeName = String(localStorage.getItem('activeCommunityName') || localStorage.getItem('zummeeActiveCommunityName') || '').trim();
+        if(activeName && activeId === cid) return activeName;
+      }catch(_e){}
+      return cid;
+    }
+    function getRecordCommunityDisplay(record){
+      return getCommunityNameForId(record?.community_id || '');
+    }
+    function showMiniConfirm(message, title){
+      const overlay = document.getElementById('miniConfirmOverlay');
+      const textEl = document.getElementById('miniConfirmText');
+      const titleEl = document.getElementById('miniConfirmTitle');
+      const okBtn = document.getElementById('miniConfirmOkBtn');
+      const cancelBtn = document.getElementById('miniConfirmCancelBtn');
+      if(!overlay || !textEl || !titleEl || !okBtn || !cancelBtn){
+        return Promise.resolve(window.confirm(String(message || 'Are you sure?')));
+      }
+      textEl.textContent = String(message || 'Are you sure?');
+      titleEl.textContent = String(title || 'Confirm action');
+      overlay.classList.add('is-open');
+      overlay.setAttribute('aria-hidden','false');
+      return new Promise(resolve => {
+        let done = false;
+        const finish = (value) => {
+          if(done) return;
+          done = true;
+          overlay.classList.remove('is-open');
+          overlay.setAttribute('aria-hidden','true');
+          okBtn.removeEventListener('click', onOk);
+          cancelBtn.removeEventListener('click', onCancel);
+          overlay.removeEventListener('click', onOverlay);
+          document.removeEventListener('keydown', onKey);
+          resolve(!!value);
+        };
+        const onOk = () => finish(true);
+        const onCancel = () => finish(false);
+        const onOverlay = (e) => { if(e.target === overlay) finish(false); };
+        const onKey = (e) => { if(e.key === 'Escape') finish(false); };
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+        overlay.addEventListener('click', onOverlay);
+        document.addEventListener('keydown', onKey);
+        okBtn.focus();
+      });
+    }
+    function extractVendorFromSubject(subject){
+      const raw = String(subject || '').trim();
+      if(!raw) return '';
+      const parts = raw.split(/\s+-\s+/);
+      if(parts.length < 2) return '';
+      return String(parts.slice(1).join(' - ') || '').trim();
+    }
+    function vendorDisplay(row){
+      return String(
+        row?.vendor_name ||
+        row?.vendor_email ||
+        extractVendorFromSubject(row?.subject) ||
+        'Unassigned'
+      ).trim();
+    }
+    function getSearchText(row){
+      return [
+        row.subject || "",
+        row.vendor_name || "",
+        row.vendor_email || "",
+        extractVendorFromSubject(row?.subject) || "",
+        row.employee_email || ""
+      ].join(" ").toLowerCase();
+    }
+    function getVendorCacheForCommunity(communityId){
+      try{
+        const key = 'daily_ops_vendors_cache_v1::' + String(communityId || '').trim();
+        const raw = localStorage.getItem(key);
+        if(!raw) return [];
+        const parsed = JSON.parse(raw);
+        const vendors = Array.isArray(parsed?.vendors) ? parsed.vendors : [];
+        return vendors.map(v => ({
+          name: String(v?.name || '').trim(),
+          email: String(v?.email || '').trim(),
+          phone: String(v?.phone || '').trim(),
+          type: String(v?.type || '').trim()
+        })).filter(v => v.name);
+      }catch(_e){
+        return [];
+      }
+    }
+    function getDetailSelectedVendor(){
+      const select = document.getElementById('detailVendorSelect');
+      return String(select && select.value ? select.value : '').trim();
+    }
+    function hasDetailAssignedVendor(record){
+      const storedVendor = String(record?.vendor_name || '').trim();
+      const selectedVendor = getDetailSelectedVendor();
+      return !!(storedVendor || selectedVendor);
+    }
+    function populateDetailVendorSelect(record){
+      const select = document.getElementById('detailVendorSelect');
+      const button = document.getElementById('detailAssignVendorBtn');
+      if(!select) return;
+      const currentVendor = String(record?.vendor_name || '').trim();
+      const currentEmail = String(record?.vendor_email || '').trim();
+      const communityId = String(record?.community_id || getPageActiveCommunityId() || '').trim();
+      const vendors = getVendorCacheForCommunity(communityId);
+      const options = [];
+      const seen = new Set();
+      if(currentVendor){
+        options.push({ name: currentVendor, email: currentEmail, type: '' });
+        seen.add(currentVendor.toLowerCase());
+      }
+      vendors.forEach(v => {
+        const key = String(v.name || '').trim().toLowerCase();
+        if(!key || seen.has(key)) return;
+        seen.add(key);
+        options.push(v);
+      });
+      select.innerHTML = '<option value="">Select vendor…</option>' + options.map(v => {
+        const label = v.type ? `${esc(v.name)} — ${esc(v.type)}` : esc(v.name);
+        return `<option value="${esc(v.name)}" data-email="${esc(v.email || '')}">${label}</option>`;
+      }).join('');
+      if(currentVendor){
+        select.value = currentVendor;
+      }
+      select.disabled = detailLoading;
+      if(button) button.disabled = detailLoading || !select.value;
+    }
+    function requestTitleById(id){
+      const match = currentRows.find(r => String(r.id || "") === String(id || ""));
+      return match ? (match.subject || "Maintenance Request") : "Maintenance Request";
+    }
+    function openMaintenanceRecord(id){
+      const rid = String(id || '').trim();
+      if(!rid) return;
+      try{
+        window.location.href = `resident_work_orders.html?request_id=${encodeURIComponent(rid)}`;
+      }catch(_e){
+        window.location.assign(`resident_work_orders.html?request_id=${encodeURIComponent(rid)}`);
+      }
+    }
+
+    let detailRecord = null;
+    let detailLoading = false;
+    function detailField(label, value, muted){
+      return `
+        <div class="detailTile">
+          <div class="detailLabel">${esc(label || '')}</div>
+          <div class="detailValue${muted ? ' muted' : ''}">${esc(value || '—')}</div>
+        </div>
+      `;
+    }
+    function setDetailMsg(message, ok){
+      const el = document.getElementById('detailMsg');
+      if(!el) return;
+      el.textContent = String(message || '');
+      el.className = 'detailMsg' + (message ? (ok ? ' success' : ' error') : '');
+    }
+    function renderDetailSheet(record){
+      const grid = document.getElementById('detailGrid');
+      const title = document.getElementById('detailSheetTitle');
+      const sub = document.getElementById('detailSheetSub');
+      const desc = document.getElementById('detailDescription');
+      const notes = document.getElementById('detailVendorNotes');
+      const completeBtn = document.getElementById('detailCompleteBtn');
+      const inProgressBtn = document.getElementById('detailInProgressBtn');
+      const assignVendorBtn = document.getElementById('detailAssignVendorBtn');
+      const assignVendorSelect = document.getElementById('detailVendorSelect');
+      if(!grid || !title || !sub || !desc || !notes || !completeBtn || !inProgressBtn || !assignVendorBtn || !assignVendorSelect) return;
+      const status = normalizeLiveStatus(record || {});
+      const rid = String(record?.id || '').trim();
+      title.textContent = String(record?.subject || 'Maintenance Request');
+      sub.textContent = rid ? `Request ID: ${rid}` : 'Live maintenance record';
+      grid.innerHTML = [
+        detailField('Status', fmtStatus(status), false),
+        detailField('Community', getRecordCommunityDisplay(record || {}) || '—', true),
+        detailField('Vendor', vendorDisplay(record), true),
+        detailField('Resident', String(record?.resident_name || '—'), true),
+        detailField('Unit', String(record?.unit_number || '—'), true),
+        detailField('Last Update', fmtWhen(record?.last_update_at || record?.updated_at || record?.submitted_at || ''), true),
+      ].join('');
+      desc.textContent = String(record?.description || 'No description provided.');
+      notes.textContent = String((record && Object.prototype.hasOwnProperty.call(record, 'vendor_notes') && record.vendor_notes) ? record.vendor_notes : 'No vendor notes yet.');
+      const isCompleted = status === 'completed';
+      const isSent = status === 'sent_to_vendor';
+      const isInProgress = status === 'in_progress';
+      completeBtn.disabled = isCompleted || detailLoading;
+      completeBtn.textContent = isCompleted ? 'Already Completed' : 'Mark Complete';
+      populateDetailVendorSelect(record);
+      const hasAssignedVendor = hasDetailAssignedVendor(record);
+      inProgressBtn.disabled = detailLoading || isCompleted || isInProgress;
+      inProgressBtn.textContent = isInProgress ? 'Already In Progress' : 'Mark In Progress';
+      assignVendorSelect.disabled = detailLoading || isCompleted || isSent;
+      assignVendorBtn.disabled = detailLoading || isCompleted || isSent || !String(assignVendorSelect.value || '').trim();
+      assignVendorBtn.textContent = isSent ? 'Vendor Emailed' : (hasAssignedVendor ? 'Assign Vendor & Email' : 'Assign Vendor');
+      setDetailMsg('', true);
+    }
+    async function fetchDetailRecord(id){
+      const rid = String(id || '').trim();
+      if(!rid) return null;
+      const existing = currentRows.find(r => String(r.id || '').trim() === rid);
+      const client = await ensureSupabase();
+      const res = await client
+        .from('resident_work_orders')
+        .select('id, community_id, subject, description, status, vendor_name, vendor_email, vendor_response_status, vendor_dispatch_status, vendor_accepted_at, resident_name, unit_number, submitted_at, updated_at')
+        .eq('id', rid)
+        .maybeSingle();
+      if(res.error) throw res.error;
+      const merged = Object.assign({}, existing || {}, res.data || {});
+      merged.status = normalizeLiveStatus(merged);
+      merged.last_update_at = latestTs(merged.updated_at, merged.vendor_accepted_at, merged.submitted_at, existing?.last_update_at || '');
+      return merged;
+    }
+    async function openDetailSheet(id){
+      const overlay = document.getElementById('detailOverlay');
+      if(!overlay) return;
+      const rid = String(id || '').trim();
+      if(!rid) return;
+      overlay.classList.add('is-open');
+      overlay.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      detailRecord = Object.assign({}, currentRows.find(r => String(r.id || '').trim() === rid) || { id: rid, subject: 'Loading…' });
+      renderDetailSheet(detailRecord);
+      setDetailMsg('Loading record details…', true);
+      try{
+        detailRecord = await fetchDetailRecord(rid);
+        renderDetailSheet(detailRecord);
+      }catch(err){
+        console.warn('Live Maintenance detail load failed', err);
+        setDetailMsg(err?.message || 'Unable to load full record details.', false);
+      }
+      const closeBtn = document.getElementById('detailCloseBtn');
+      if(closeBtn) closeBtn.focus();
+    }
+    function closeDetailSheet(){
+      const overlay = document.getElementById('detailOverlay');
+      if(!overlay) return;
+      overlay.classList.remove('is-open');
+      overlay.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+      detailLoading = false;
+    }
+    async function updateDetailStatus(nextStatus, successMessage){
+      if(!detailRecord || !detailRecord.id || detailLoading) return;
+      const allowed = new Set(['sent_to_vendor','in_progress','completed']);
+      const target = String(nextStatus || '').trim().toLowerCase();
+      if(!allowed.has(target)) return;
+      detailLoading = true;
+      renderDetailSheet(detailRecord);
+      setDetailMsg(successMessage ? successMessage.replace(/\.$/, '…') : 'Updating status…', true);
+      try{
+        const client = await ensureSupabase();
+        const patch = await client
+          .from('resident_work_orders')
+          .update({ status: target, updated_at: new Date().toISOString() })
+          .eq('id', String(detailRecord.id))
+          .select('id, community_id, subject, description, status, vendor_name, vendor_email, vendor_response_status, vendor_dispatch_status, vendor_accepted_at, resident_name, unit_number, submitted_at, updated_at')
+          .maybeSingle();
+        if(patch.error) throw patch.error;
+        detailRecord = Object.assign({}, detailRecord, patch.data || {}, { status: target });
+        renderDetailSheet(detailRecord);
+        setDetailMsg(successMessage || 'Status updated.', true);
+        await loadUpdates();
+        if(target === 'completed'){
+          setTimeout(closeDetailSheet, 550);
+        }
+      }catch(err){
+        console.warn('Live Maintenance status update failed', err);
+        setDetailMsg(err?.message || 'Unable to update status.', false);
+      }finally{
+        detailLoading = false;
+        renderDetailSheet(detailRecord);
+      }
+    }
+    async function markDetailSentToVendor(){
+      if(!detailRecord || !detailRecord.id || detailLoading) return;
+      const selectedVendor = getDetailSelectedVendor();
+      const vendorName = String(selectedVendor || detailRecord?.vendor_name || '').trim();
+      const vendorEmail = String(detailRecord?.vendor_email || '').trim();
+      if(!vendorName){
+        setDetailMsg('Please assign a vendor before sending.', false);
+        return;
+      }
+      if(!vendorEmail){
+        setDetailMsg('The selected vendor does not have an email address.', false);
+        return;
+      }
+      const prompt = `Send this work order to ${vendorName}?`;
+      const confirmed = await showMiniConfirm(prompt, 'Send to Vendor');
+      if(!confirmed) return;
+      detailLoading = true;
+      renderDetailSheet(detailRecord);
+      setDetailMsg('Sending vendor email…', true);
+      try{
+        const communityName = String(localStorage.getItem('activeCommunityName') || localStorage.getItem('zummeeActiveCommunityName') || '').trim();
+        const emailResult = await invokeVendorDispatchEmail({
+          work_order_id: detailRecord.id || null,
+          vendor_email: vendorEmail || null,
+          vendor_name: vendorName || '',
+          manager_name: getCurrentManagerName(),
+          manager_phone: getCurrentManagerPhone(),
+          company_name: getCurrentCompanyName(),
+          vendor_note: detailRecord?.vendor_notes || '',
+          community_name: communityName || '',
+          community_id: detailRecord?.community_id || getPageActiveCommunityId() || null,
+          resident_name: detailRecord?.resident_name || '',
+          resident_email: detailRecord?.resident_email || '',
+          resident_phone: detailRecord?.resident_phone || '',
+          unit_number: detailRecord?.unit_number || '',
+          subject: detailRecord?.subject || 'Resident Work Order',
+          description: detailRecord?.description || '',
+          priority: detailRecord?.priority || '',
+          status: detailRecord?.status || 'submitted'
+        });
+        const client = await ensureSupabase();
+        const patch = await client
+          .from('resident_work_orders')
+          .update({
+            status: 'sent_to_vendor',
+            vendor_dispatch_status: 'sent',
+            vendor_dispatched_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', String(detailRecord.id))
+          .select('id, community_id, subject, description, status, vendor_name, vendor_email, vendor_response_status, vendor_dispatch_status, vendor_accepted_at, resident_name, unit_number, submitted_at, updated_at')
+          .maybeSingle();
+        if(patch.error) throw patch.error;
+        detailRecord = Object.assign({}, detailRecord, patch.data || {}, {
+          status: 'sent_to_vendor',
+          vendor_dispatch_status: 'sent'
+        });
+        renderDetailSheet(detailRecord);
+        if(emailResult && emailResult.warning){
+          setDetailMsg('Vendor email sent with warning: ' + String(emailResult.warning), true);
+        } else {
+          setDetailMsg('Vendor emailed and record sent to vendor.', true);
+        }
+        await loadUpdates();
+      }catch(err){
+        console.warn('Live Maintenance vendor email send failed', err);
+        setDetailMsg(err?.message || 'Unable to send vendor email.', false);
+      }finally{
+        detailLoading = false;
+        renderDetailSheet(detailRecord);
+      }
+    }
+    async function markDetailInProgress(){
+      return updateDetailStatus('in_progress', 'Record marked in progress.');
+    }
+    async function markDetailComplete(){
+      return updateDetailStatus('completed', 'Record marked complete.');
+    }
+    async function assignDetailVendor(){
+      if(!detailRecord || !detailRecord.id || detailLoading) return;
+      const select = document.getElementById('detailVendorSelect');
+      if(!select) return;
+      const vendorName = String(select.value || '').trim();
+      if(!vendorName){
+        setDetailMsg('Select a vendor first.', false);
+        return;
+      }
+      const chosen = select.selectedOptions && select.selectedOptions[0] ? select.selectedOptions[0] : null;
+      const vendorEmail = String((chosen && chosen.dataset && chosen.dataset.email) || detailRecord.vendor_email || '').trim();
+      if(!vendorEmail){
+        setDetailMsg('The selected vendor does not have an email address.', false);
+        return;
+      }
+      const confirmed = await showMiniConfirm(`Assign ${vendorName} and email this work order to the vendor?`, 'Assign Vendor');
+      if(!confirmed) return;
+      detailLoading = true;
+      renderDetailSheet(detailRecord);
+      setDetailMsg('Assigning vendor and sending email…', true);
+      try{
+        const communityName = getRecordCommunityDisplay(detailRecord || {}) || String(localStorage.getItem('activeCommunityName') || localStorage.getItem('zummeeActiveCommunityName') || '').trim();
+        const emailResult = await invokeVendorDispatchEmail({
+          work_order_id: detailRecord.id || null,
+          vendor_email: vendorEmail || null,
+          vendor_name: vendorName || '',
+          manager_name: getCurrentManagerName(),
+          manager_phone: getCurrentManagerPhone(),
+          company_name: getCurrentCompanyName(),
+          vendor_note: detailRecord?.vendor_notes || '',
+          community_name: communityName || '',
+          community_id: detailRecord?.community_id || getPageActiveCommunityId() || null,
+          resident_name: detailRecord?.resident_name || '',
+          resident_email: detailRecord?.resident_email || '',
+          resident_phone: detailRecord?.resident_phone || '',
+          unit_number: detailRecord?.unit_number || '',
+          subject: detailRecord?.subject || 'Resident Work Order',
+          description: detailRecord?.description || '',
+          priority: detailRecord?.priority || '',
+          status: 'sent_to_vendor'
+        });
+        const client = await ensureSupabase();
+        const patch = await client
+          .from('resident_work_orders')
+          .update({
+            vendor_name: vendorName,
+            vendor_email: vendorEmail || null,
+            status: 'sent_to_vendor',
+            vendor_dispatch_status: 'sent',
+            vendor_dispatched_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', String(detailRecord.id))
+          .select('id, community_id, subject, description, status, vendor_name, vendor_email, vendor_response_status, vendor_dispatch_status, vendor_accepted_at, resident_name, unit_number, submitted_at, updated_at')
+          .maybeSingle();
+        if(patch.error) throw patch.error;
+        detailRecord = Object.assign({}, detailRecord, patch.data || {}, {
+          vendor_name: vendorName,
+          vendor_email: vendorEmail || null,
+          status: 'sent_to_vendor',
+          vendor_dispatch_status: 'sent'
+        });
+        renderDetailSheet(detailRecord);
+        if(emailResult && emailResult.warning){
+          setDetailMsg('Vendor assigned and emailed with warning: ' + String(emailResult.warning), true);
+        } else {
+          setDetailMsg('Vendor assigned and emailed successfully.', true);
+        }
+        await loadUpdates();
+      }catch(err){
+        console.warn('Live Maintenance vendor assign/email failed', err);
+        setDetailMsg(err?.message || 'Unable to assign and email vendor.', false);
+      }finally{
+        detailLoading = false;
+        renderDetailSheet(detailRecord);
+      }
+    }
+    function getVisibleRows(){
+      const search = (document.getElementById("searchBox").value || "").trim().toLowerCase();
+      const status = document.getElementById("statusFilter").value || "";
+      let rows = currentRows.filter(r => {
+        const s = String(r.status || "").toLowerCase();
+        return s === "submitted" || s === "active" || s === "sent_to_vendor" || s === "scheduled" || s === "in_progress";
+      });
+      if(status){
+        rows = currentRows.filter(r => String(r.status || "").toLowerCase() === String(status || "").toLowerCase());
+      }
+      if(search){
+        rows = rows.filter(r => getSearchText(r).includes(search));
+      }
+      return rows;
+    }
+    function renderStatusSummary(rows){
+      const host = document.getElementById('statusSummary');
+      if(!host) return;
+      const safeRows = Array.isArray(rows) ? rows : [];
+      const counts = { submitted: 0, sent: 0, active: 0, progress: 0 };
+      safeRows.forEach(r => {
+        const cls = statusClass(r.status);
+        if(cls === 'submitted') counts.submitted += 1;
+        else if(cls === 'sent') counts.sent += 1;
+        else if(cls === 'active') counts.active += 1;
+        else if(cls === 'progress') counts.progress += 1;
+      });
+      host.innerHTML = `
+        <div class="statusSummaryChip submitted"><span class="dot"></span><span class="label">New</span><span class="count">${counts.submitted}</span></div>
+        <div class="statusSummaryChip sent"><span class="dot"></span><span class="label">Sent to Vendor</span><span class="count">${counts.sent}</span></div>
+        <div class="statusSummaryChip active"><span class="dot"></span><span class="label">Active</span><span class="count">${counts.active}</span></div>
+        <div class="statusSummaryChip progress"><span class="dot"></span><span class="label">In Progress</span><span class="count">${counts.progress}</span></div>
+      `;
+    }
+    function renderRows(){
+      const body = document.getElementById("updatesTableBody");
+      const rows = getVisibleRows();
+      renderStatusSummary(rows);
+      if(!rows.length){
+        body.innerHTML = '<tr><td colspan="5" class="empty">No matching maintenance updates found.</td></tr>';
+        return;
+      }
+      body.innerHTML = rows.map(r => {
+        const rid = esc(r.id || "");
+        const rowClass = `status-${esc(statusClass(r.status))}`;
+        return `
+          <tr class="${rowClass}" data-open-id="${rid}" tabindex="0" aria-label="Open maintenance record ${esc(r.subject || "Maintenance Request")}">
+            <td>
+              <div class="reqTitle">${esc(r.subject || "Maintenance Request")}</div>
+              
+            </td>
+            <td>${esc(vendorDisplay(r) || "Unassigned")}</td>
+            <td><span class="pill ${esc(statusClass(r.status))}">${esc(fmtStatus(r.status))}</span></td>
+            <td>${esc(fmtWhen(r.last_update_at || r.created_at))}</td>
+            <td><button type="button" class="openRecordBtn" data-open-id="${rid}">View Details</button></td>
+          </tr>
+        `;
+      }).join("");
+    }
+    function archiveMonthKey(row){
+      const raw = row.last_update_at || row.updated_at || row.submitted_at || row.created_at || new Date().toISOString();
+      const d = new Date(raw);
+      if(Number.isNaN(d.getTime())) return 'Unknown Month';
+      return d.toLocaleDateString(undefined, { month:'long', year:'numeric' });
+    }
+
+    // Archive collapse state must survive auto-refresh/realtime rerenders.
+    // Default is collapsed; employees control when a month opens.
+    function archiveCollapseStorageKey(){
+      return 'zummee_live_maintenance_archive_open_months_v1::' + (getPageActiveCommunityId() || 'global');
+    }
+    function readArchiveOpenMonths(){
+      try{
+        const raw = localStorage.getItem(archiveCollapseStorageKey());
+        const parsed = raw ? JSON.parse(raw) : {};
+        return parsed && typeof parsed === 'object' ? parsed : {};
+      }catch(_e){ return {}; }
+    }
+    function writeArchiveOpenMonths(map){
+      try{ localStorage.setItem(archiveCollapseStorageKey(), JSON.stringify(map || {})); }catch(_e){}
+    }
+    function bindArchiveCollapseState(){
+      const host = document.getElementById("activityFeed");
+      if(!host) return;
+      host.querySelectorAll('details.archiveMonth').forEach(details => {
+        details.addEventListener('toggle', function(){
+          const month = String(details.getAttribute('data-archive-month') || '').trim();
+          if(!month) return;
+          const map = readArchiveOpenMonths();
+          map[month] = !!details.open;
+          writeArchiveOpenMonths(map);
+        });
+      });
+    }
+
+    function renderMaintenanceArchive(){
+      const host = document.getElementById("activityFeed");
+      const state = document.getElementById("activityState");
+      if(!host || !state) return;
+      const rows = (currentArchiveRows || []).filter(r => String(r.status || '').toLowerCase() === 'completed');
+      if(!rows.length){
+        host.innerHTML = '<div class="empty">No completed work orders archived yet.</div>';
+        state.textContent = 'No archive yet.';
+        return;
+      }
+      const groups = {};
+      rows.forEach(r => { const key = archiveMonthKey(r); if(!groups[key]) groups[key] = []; groups[key].push(r); });
+      const openMonths = readArchiveOpenMonths();
+      host.innerHTML = Object.keys(groups).map((month) => {
+        const items = groups[month];
+        const openAttr = openMonths[month] === true ? ' open' : '';
+        const itemHtml = items.map(r => {
+          const rid = esc(r.id || '');
+          return `<div class="archiveRecord" data-open-id="${rid}" tabindex="0" aria-label="Open archived maintenance record ${esc(r.subject || 'Maintenance Request')}"><div><div class="archiveTitle">${esc(r.subject || 'Maintenance Request')}</div><div class="archiveMeta">${esc(fmtWhen(r.last_update_at || r.updated_at || r.submitted_at || r.created_at))} • ${esc(vendorDisplay(r) || 'Unassigned')}</div></div><span class="pill completed">Completed</span></div>`;
+        }).join('');
+        return `<details class="archiveMonth" data-archive-month="${esc(month)}"${openAttr}><summary><span>${esc(month)}</span><span>${items.length} completed</span></summary><div class="archiveMonthBody">${itemHtml}</div></details>`;
+      }).join('');
+      bindArchiveCollapseState();
+      state.textContent = rows.length + ' archived completed work order' + (rows.length === 1 ? '' : 's') + '.';
+    }
+    function renderEvents(){ renderMaintenanceArchive(); }
+    async function ensureSupabase(){
+      // v337: use the canonical shared Supabase client and restore the persisted session
+      // before any resident_work_orders queries run. The previous local client was created
+      // without shared auth storage, so iPad/internal navigation could query as anon.
+      if(sb && sb.auth && typeof sb.from === 'function'){
+        try{ if(window.zummeeRestoreSupabaseSession) await window.zummeeRestoreSupabaseSession(); }catch(_e){}
+        return sb;
+      }
+
+      try{
+        if(window.supabaseClient && window.supabaseClient.auth && typeof window.supabaseClient.from === 'function'){
+          sb = window.supabaseClient;
+          try{ if(window.zummeeRestoreSupabaseSession) await window.zummeeRestoreSupabaseSession(); }catch(_e){}
+          return sb;
+        }
+      }catch(_e){}
+
+      try{
+        if(typeof window.ensureSupabaseSync === 'function'){
+          const shared = window.ensureSupabaseSync();
+          if(shared && shared.auth && typeof shared.from === 'function'){
+            sb = shared;
+            try{ if(window.zummeeRestoreSupabaseSession) await window.zummeeRestoreSupabaseSession(); }catch(_e){}
+            return sb;
+          }
+        }
+      }catch(_e){}
+
+      const key = SUPABASE_ANON_KEY || localStorage.getItem("sb_publishable_key") || "";
+      if(!key){
+        throw new Error("Missing Supabase anon key. Add it inside maintenance_updates.html.");
+      }
+      sb = window.supabase.createClient(SUPABASE_URL, key, {
+        auth: {
+          storageKey: 'sb-zummee-auth',
+          storage: window.localStorage,
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true
+        }
+      });
+      window.supabaseClient = sb;
+      window.sb = sb;
+      try{ if(window.zummeeRestoreSupabaseSession) await window.zummeeRestoreSupabaseSession(); }catch(_e){}
+      return sb;
+    }
+
+    async function ensureMaintenanceSession(){
+      const client = await ensureSupabase();
+      if(!client || !client.auth) return null;
+      try{
+        let current = await client.auth.getSession();
+        if(current && current.data && current.data.session) return current.data.session;
+      }catch(_e){}
+      try{ if(window.zummeeRestoreSupabaseSession) await window.zummeeRestoreSupabaseSession(); }catch(_e){}
+      for(let i=0;i<8;i++){
+        try{
+          const check = await client.auth.getSession();
+          if(check && check.data && check.data.session) return check.data.session;
+        }catch(_e){}
+        await new Promise(r => setTimeout(r, 180));
+      }
+      return null;
+    }
+
+    function getZummeeAuth(){
+      try{
+        return JSON.parse(localStorage.getItem('sb-zummee-auth') || '{}') || {};
+      }catch(_e){
+        return {};
+      }
+    }
+    function getCurrentManagerName(){
+      try{
+        const auth = getZummeeAuth();
+        const name = String(auth?.user?.user_metadata?.name || auth?.user?.name || '').trim();
+        if(name) return name;
+      }catch(_e){}
+      try{
+        const sess = JSON.parse(localStorage.getItem('zummee_session_v1') || '{}');
+        const name = String(sess?.name || sess?.email || '').trim();
+        if(name) return name;
+      }catch(_e){}
+      return 'Property Management';
+    }
+    function getCurrentManagerPhone(){
+      try{
+        const auth = getZummeeAuth();
+        const phone = String(auth?.user?.user_metadata?.phone || auth?.user?.phone || '').trim();
+        if(phone) return phone;
+      }catch(_e){}
+      return '';
+    }
+    function getCurrentCompanyName(){
+      try{
+        const auth = getZummeeAuth();
+        const company = String(auth?.user?.user_metadata?.company || localStorage.getItem('zummee_company') || '').trim();
+        if(company) return company;
+      }catch(_e){}
+      return String(localStorage.getItem('zummee_company') || '').trim() || 'Property Management';
+    }
+    async function invokeVendorDispatchEmail(payload){
+      const client = await ensureSupabase();
+      const result = await client.functions.invoke('assign-vendor-email', { body: payload });
+      if(result && result.error) throw result.error;
+      return result ? result.data : null;
+    }
+    function isPrivilegedRole(role){
+      const r = String(role || '').trim().toLowerCase();
+      return r.includes('admin') || r.includes('supervisor') || r === 'companyadmin' || r === 'company admin';
+    }
+    function getZummeeLocalUserId(){
+      try{
+        const raw = localStorage.getItem('zummee_user_id_v1') || localStorage.getItem('zummeeUserId') || localStorage.getItem('zummee_user_id') || '';
+        if(raw) return String(raw).trim();
+      }catch(_e){}
+      try{
+        const auth = getZummeeAuth();
+        const id = String(auth?.user?.id || auth?.user?.user_metadata?.id || '').trim();
+        if(id) return id;
+      }catch(_e){}
+      return '';
+    }
+    async function getCurrentProfile(){
+      const client = await ensureSupabase();
+      let uid = getZummeeLocalUserId();
+      if(!uid){
+        try{
+          const userRes = await client.auth.getUser();
+          uid = String(userRes && userRes.data && userRes.data.user && userRes.data.user.id || '').trim();
+        }catch(_e){}
+      }
+      if(!uid) return null;
+      try{
+        const q = await client
+          .from('profiles')
+          .select('id, company, company_id, selected_community_id, role, disabled, deleted')
+          .eq('id', uid)
+          .maybeSingle();
+        if(q.error) throw q.error;
+        const d = q.data || {};
+        return {
+          uid,
+          auth_user_id: uid,
+          company_id: String(d.company_id || '').trim(),
+          company_name: String(d.company || '').trim(),
+          selected_community_id: String(d.selected_community_id || '').trim(),
+          role: String(d.role || '').trim(),
+          disabled: !!d.disabled,
+          deleted: !!d.deleted
+        };
+      }catch(profileErr){
+        console.warn('Live Updates: profiles read failed', profileErr);
+        return { uid, auth_user_id: uid, company_id: '', company_name: '', role: '' };
+      }
+    }
+
+    async function loadAssignedRowsForCurrentUser(sb, ctx){
+      ctx = ctx || {};
+      var ids = [];
+      var emails = [];
+      function addId(v){ v = String(v || '').trim(); if(v && ids.indexOf(v) === -1) ids.push(v); }
+      function addEmail(v){ v = String(v || '').trim().toLowerCase(); if(v && emails.indexOf(v) === -1) emails.push(v); }
+      addId(ctx.uid);
+      try{
+        var au = await sb.auth.getUser();
+        var user = au && au.data && au.data.user;
+        if(user){ addId(user.id); addEmail(user.email); }
+      }catch(_authErr){}
+      try{
+        var sess = JSON.parse(localStorage.getItem('zummee_session_v1') || '{}') || {};
+        addId(sess.userId || sess.id); addEmail(sess.email || sess.user_email);
+      }catch(_sessErr){}
+      try{
+        var prof = JSON.parse(localStorage.getItem('zummee_profile_v1') || '{}') || {};
+        addId(prof.id || prof.userId || prof.employee_id); addEmail(prof.email || prof.employee_email);
+      }catch(_profErr){}
+
+      var rows = [];
+      var seen = {};
+      async function run(col, value){
+        if(!value) return;
+        try{
+          var r = await sb.from('community_assignments')
+            .select('community_id,community_name,company_id,employee_id,employee_name,employee_email,assistant_name,assistant_email')
+            .eq(col, value)
+            .order('community_name',{ascending:true});
+          if(r && r.error) throw r.error;
+          (Array.isArray(r.data) ? r.data : []).forEach(function(row){
+            var key = String(row.id || row.community_id || '') + '|' + String(row.community_name || '');
+            if(!seen[key]){ seen[key] = true; rows.push(row); }
+          });
+        }catch(e){ try{ console.warn('[Zummee] assignment lookup skipped', col, value, e); }catch(_w){} }
+      }
+      for(var i=0;i<ids.length;i++){
+        await run('employee_id', ids[i]);
+        await run('employee_user_id', ids[i]);
+        await run('user_id', ids[i]);
+      }
+      for(var j=0;j<emails.length;j++){
+        await run('employee_email', emails[j]);
+      }
+      try{ console.info('[Zummee] assignment identity candidates', { ids:ids, emails:emails, rows:rows.length }); }catch(_log){}
+      return rows;
+    }
+
+    async function listAccessibleCommunities(){
+      const client = await ensureSupabase();
+      const profile = await getCurrentProfile();
+      if(!profile) return [];
+      const uid = String(profile.uid || profile.auth_user_id || '').trim();
+      const companyId = String(profile.company_id || '').trim();
+      const companyName = String(profile.company_name || '').trim();
+      const role = String(profile.role || '').trim().toLowerCase();
+      const isEmployeeScoped = role === 'employee' || role === 'manager' || !/admin|supervisor/.test(role);
+
+      if(isEmployeeScoped){
+        let assignedRows = [];
+        try{
+          assignedRows = await loadAssignedRowsForCurrentUser(client, { uid: uid, role: role, company_id: companyId });
+        }catch(err){
+          console.warn('Live Updates: strict community_assignments read failed', err);
+          assignedRows = [];
+        }
+        const seenIds = new Set();
+        const seenNames = new Set();
+        const mapped = [];
+        assignedRows.forEach(r => {
+          const id = String(r && r.community_id || '').trim();
+          const name = String(r && r.community_name || '').replace(/\s+/g,' ').trim();
+          if(!id || !name) return;
+          const nk = name.toLowerCase();
+          if(seenIds.has(id) || seenNames.has(nk)) return;
+          seenIds.add(id); seenNames.add(nk);
+          mapped.push({ id, name, company_id:String(r.company_id || companyId || '').trim(), company:companyName });
+        });
+        mapped.sort((a,b) => String(a.name||'').localeCompare(String(b.name||'')));
+        try{ console.info('Live Updates: STRICT assigned communities count=', mapped.length, mapped); }catch(_e){}
+        return mapped;
+      }
+
+      let qc = client.from('PropertyCommunities').select('id,name,company_id,company');
+      if(companyId) qc = qc.eq('company_id', companyId);
+      else if(companyName) qc = qc.eq('company', companyName);
+      const communitiesRes = await qc.order('name', { ascending:true });
+      const rows = Array.isArray(communitiesRes && communitiesRes.data) ? communitiesRes.data : [];
+      return rows.map(r => ({ id:String(r.id || '').trim(), name:String(r.name || '').trim(), company_id:String(r.company_id || '').trim(), company:String(r.company || '').trim() })).filter(r => r.id && r.name);
+    }
+    async function populateHeaderCommunities(){
+      const select = document.getElementById('zummeeCommunitySelect');
+      if(!select) return;
+      try{
+        const communities = await listAccessibleCommunities();
+        const current = getPageActiveCommunityId();
+        select.innerHTML = '';
+        communities.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = String(c.id || '').trim();
+          opt.textContent = String(c.name || c.id || '').trim();
+          select.appendChild(opt);
+        });
+        if (!communities.length) {
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = 'No communities';
+          select.appendChild(opt);
+          select.value = '';
+          return;
+        }
+        const fallback = communities[0] ? String(communities[0].id || '').trim() : '';
+        const selected = communities.some(c => String(c.id || '').trim() === current) ? current : fallback;
+        select.value = selected;
+        try{
+          setPageActiveCommunityId(selected);
+          const picked = communities.find(c => String(c.id || '').trim() === selected);
+          if (picked) {
+            localStorage.setItem('activeCommunityName', String(picked.name || '').trim());
+            localStorage.setItem('zummeeActiveCommunityName', String(picked.name || '').trim());
+          }
+        }catch(_e){}
+      }catch(err){
+        console.warn('Live Updates: header community population failed', err);
+      }
+    }
+    async function loadUpdates(){
+      const myToken = ++loadUpdatesToken;
+      const state = document.getElementById("feedState");
+      const communityEl = document.getElementById("communityState");
+      const cid = getPageActiveCommunityId();
+      communityEl.textContent = cid ? `Community: ${getCommunityNameForId(cid)}` : "No active community selected";
+      if(!cid){
+        currentRows = [];
+        currentArchiveRows = [];
+        renderRows();
+        renderMaintenanceArchive();
+        state.textContent = "Select a community to view live updates.";
+        return;
+      }
+
+      state.textContent = "Loading maintenance updates…";
+      try{
+        const client = await ensureSupabase();
+        const limit = parseInt(document.getElementById("limitSelect").value || "25", 10);
+        // v338: use the same readable maintenance event feed that Manager Hub counts.
+        // This avoids the blocked/mis-shaped resident_work_orders and maintenance_request_events
+        // queries keeping the page stuck on Loading.
+        const res = await client
+          .from("notification_events")
+          .select("id,event_type,title,status,source_table,source_id,metadata,created_at")
+          .eq("community_id", cid)
+          .or("event_type.eq.new_work_order,event_type.eq.maintenance_update")
+          .order("created_at", { ascending:false })
+          .limit(limit);
+        if(res.error) throw res.error;
+        if (myToken !== loadUpdatesToken) return;
+
+        const seen = new Set();
+        // v339: Match Manager Hub maintenance smart-card filter.
+        // Only show real maintenance notification rows with a request subject,
+        // excluding explicit vendor_assigned=false draft/test rows.
+        currentRows = (res.data || [])
+          .filter(ev => {
+            const meta = ev && ev.metadata && typeof ev.metadata === 'object' ? ev.metadata : {};
+            if(!meta.subject) return false;
+            if(meta.vendor_assigned === false || meta.vendor_assigned === 'false') return false;
+            return true;
+          })
+          .map(ev => {
+            const meta = ev && ev.metadata && typeof ev.metadata === 'object' ? ev.metadata : {};
+            const rid = String(meta.work_order_id || meta.order_id || ev.source_id || ev.id || '').trim();
+            const rawStatus = String(meta.status || meta.vendor_status || ev.status || '').toLowerCase();
+            let status = 'submitted';
+            if(rawStatus.includes('completed') || rawStatus.includes('closed') || rawStatus.includes('archived')) status = 'completed';
+            else if(rawStatus.includes('progress')) status = 'in_progress';
+            else if(rawStatus.includes('active') || rawStatus.includes('accepted')) status = 'active';
+            else if(rawStatus.includes('sent') || rawStatus.includes('vendor') || meta.vendor_assigned === true || meta.vendor_assigned === 'true') status = 'sent_to_vendor';
+            return {
+              id: rid || String(ev.id || ''),
+              source_event_id: ev.id,
+              created_at: ev.created_at || null,
+              submitted_at: meta.submitted_at || ev.created_at || null,
+              updated_at: meta.updated_at || ev.created_at || null,
+              last_update_at: ev.created_at || meta.updated_at || meta.submitted_at || null,
+              subject: meta.subject || meta.title || ev.title || 'Maintenance Request',
+              description: meta.description || meta.message || '',
+              status,
+              vendor_name: meta.vendor_name || meta.vendor || meta.vendor_assigned_name || (meta.vendor_assigned && meta.vendor_assigned !== true ? meta.vendor_assigned : '') || '',
+              vendor_email: meta.vendor_email || '',
+              vendor_response_status: meta.vendor_response_status || meta.vendor_status || '',
+              vendor_dispatch_status: meta.vendor_dispatch_status || '',
+              community_id: cid,
+              raw_event: ev
+            };
+          })
+          .filter(r => {
+            const key = String(r.id || r.source_event_id || '').trim();
+            if(!key || seen.has(key)) return false;
+            seen.add(key);
+            const s = String(r.status || '').toLowerCase();
+            return s !== 'completed' && s !== 'archived';
+          });
+
+        currentArchiveRows = [];
+        renderRows();
+        renderMaintenanceArchive();
+        const liveCount = currentRows.length;
+        state.textContent = liveCount ? "Live updates active." : "No maintenance updates for this community yet.";
+        // Keep the separate activity table non-blocking; it may not exist/be readable yet.
+        try{ await loadEvents(); }catch(_e){}
+        if (myToken !== loadUpdatesToken) return;
+      }catch(err){
+        if (myToken !== loadUpdatesToken) return;
+        currentRows = [];
+        currentArchiveRows = [];
+        renderRows();
+        document.getElementById("activityFeed").innerHTML = '<div class="empty">Unable to load archive.</div>';
+        document.getElementById("activityState").textContent = "Load failed.";
+        state.textContent = "Unable to load maintenance updates.";
+        console.warn("Maintenance updates page load failed", err);
+      }
+    }
+    async function loadEvents(){
+      const myToken = ++loadEventsToken;
+      const state = document.getElementById("activityState");
+      const liveRows = currentRows.filter(r => {
+        const status = String(r.status || "").toLowerCase();
+        return status === "active" || status === "sent_to_vendor";
+      });
+      if(!liveRows.length){
+        currentEvents = [];
+        renderEvents();
+        return;
+      }
+      state.textContent = "Loading activity…";
+      try{
+        const client = await ensureSupabase();
+        const ids = liveRows.map(r => r.id).filter(Boolean);
+        const res = await client
+          .from("maintenance_request_events")
+          .select("id,request_id,event_type,message,actor,created_at")
+          .in("request_id", ids)
+          .order("created_at", { ascending:false })
+          .limit(30);
+        if(res.error) throw res.error;
+        if (myToken !== loadEventsToken) return;
+        currentEvents = res.data || [];
+        if(currentEvents.length && currentRows.length){
+          const latestByRequest = {};
+          currentEvents.forEach(ev => {
+            const rid = String(ev.request_id || "").trim();
+            if(!rid) return;
+            const ts = String(ev.created_at || "").trim();
+            if(!ts) return;
+            if(!latestByRequest[rid] || new Date(ts).getTime() > new Date(latestByRequest[rid]).getTime()){
+              latestByRequest[rid] = ts;
+            }
+          });
+          currentRows = currentRows.map(r => {
+            const rid = String(r.id || "").trim();
+            return Object.assign({}, r, {
+              last_update_at: latestTs(r.last_update_at, latestByRequest[rid], r.updated_at, r.vendor_accepted_at, r.created_at)
+            });
+          });
+          renderRows();
+        }
+        renderEvents();
+      }catch(err){
+        if (myToken !== loadEventsToken) return;
+        currentEvents = [];
+        document.getElementById("activityFeed").innerHTML = '<div class="empty">Activity feed not available yet. Add the maintenance_request_events table to enable it.</div>';
+        state.textContent = "Activity table not ready.";
+        console.warn("Activity feed load failed", err);
+      }
+    }
+    function isDetailSheetOpen(){
+      const overlay = document.getElementById('detailOverlay');
+      return !!(overlay && overlay.classList.contains('is-open'));
+    }
+    function stopAutoRefresh(){
+      if(autoRefreshTimer){
+        clearInterval(autoRefreshTimer);
+        autoRefreshTimer = null;
+      }
+      if(activityRefreshTimer){
+        clearInterval(activityRefreshTimer);
+        activityRefreshTimer = null;
+      }
+    }
+    function startAutoRefresh(){
+      stopAutoRefresh();
+      autoRefreshTimer = setInterval(function(){
+        if(document.hidden || isDetailSheetOpen() || detailLoading) return;
+        loadUpdates();
+      }, 15000);
+      activityRefreshTimer = setInterval(function(){
+        if(document.hidden || isDetailSheetOpen() || detailLoading) return;
+        loadEvents();
+      }, 18000);
+    }
+    async function subscribeRealtime(){
+      try{
+        const client = await ensureSupabase();
+        const cid = getPageActiveCommunityId();
+        if(!cid) return;
+        if(requestChannel){
+          try{ client.removeChannel(requestChannel); }catch(_e){}
+          requestChannel = null;
+        }
+        if(eventChannel){
+          try{ client.removeChannel(eventChannel); }catch(_e){}
+          eventChannel = null;
+        }
+        requestChannel = client
+          .channel("maintenance-requests-page-" + cid)
+          .on("postgres_changes", {
+            event:"*",
+            schema:"public",
+            table:"resident_work_orders",
+            filter:"community_id=eq." + cid
+          }, function(){
+            loadUpdates();
+          })
+          .subscribe();
+        eventChannel = client
+          .channel("maintenance-events-page-" + cid)
+          .on("postgres_changes", {
+            event:"*",
+            schema:"public",
+            table:"maintenance_request_events"
+          }, function(){
+            loadUpdates();
+          })
+          .subscribe();
+      }catch(err){
+        console.warn("Realtime subscribe failed", err);
+      }
+    }
+
+    function parseLiveMaintenanceLogoRef(raw){
+      raw = String(raw || '').trim();
+      if(!raw) return null;
+      if(/^https?:\/\//i.test(raw)) return { url: raw };
+      return { bucket:'company_logos', path: raw };
+    }
+    function setMaintenanceCompanyLogo(url, alt, isCompany){
+      const logo = document.getElementById('maintenanceCompanyLogo');
+      if(!logo) return;
+      const finalUrl = String(url || '').trim();
+      logo.classList.remove('logo-ready','is-company-logo');
+      logo.hidden = true;
+      logo.removeAttribute('src');
+      if(!finalUrl) return;
+      logo.onload = function(){
+        logo.hidden = false;
+        logo.classList.add('logo-ready');
+      };
+      logo.onerror = function(){
+        logo.hidden = true;
+        logo.classList.remove('logo-ready','is-company-logo');
+        logo.removeAttribute('src');
+      };
+      logo.alt = String(alt || '').trim() || 'Management company logo';
+      logo.classList.toggle('is-company-logo', !!isCompany);
+      logo.src = finalUrl;
+    }
+    async function loadMaintenanceCompanyLogo(){
+      const logo = document.getElementById('maintenanceCompanyLogo');
+      if(!logo) return;
+      try{
+        const profile = await getCurrentProfile();
+        const companyId = String(profile && profile.company_id || '').trim();
+        if(!companyId) throw new Error('No company id');
+        const client = await ensureSupabase();
+        const res = await client.from('companies').select('logo_path,name').eq('id', companyId).maybeSingle();
+        if(res && res.error) throw res.error;
+        const row = (res && res.data) || {};
+        const ref = parseLiveMaintenanceLogoRef(row.logo_path);
+        if(!ref) throw new Error('No company logo');
+        let url = String(ref.url || '').trim();
+        if(!url && ref.bucket && ref.path && client.storage && client.storage.from){
+          const pub = client.storage.from(ref.bucket).getPublicUrl(ref.path);
+          url = String(pub && pub.data && pub.data.publicUrl || '').trim();
+        }
+        if(!url) throw new Error('No logo url');
+        setMaintenanceCompanyLogo(url, String(row.name || 'Management company logo'), true);
+      }catch(err){
+        setMaintenanceCompanyLogo('', 'Management company logo', false);
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", async function(){
+      const refreshBtn = document.getElementById("refreshBtn");
+      if(refreshBtn) refreshBtn.addEventListener("click", loadUpdates);
+      document.getElementById("searchBox").addEventListener("input", renderRows);
+      document.getElementById("statusFilter").addEventListener("change", renderRows);
+      document.getElementById("limitSelect").addEventListener("change", loadUpdates);
+      const updatesTableBody = document.getElementById("updatesTableBody");
+      if (updatesTableBody) {
+        updatesTableBody.addEventListener("click", function(e){
+          const target = e.target && e.target.closest ? e.target.closest("[data-open-id]") : null;
+          if(!target) return;
+          const rid = String(target.getAttribute("data-open-id") || '').trim();
+          if(!rid) return;
+          openDetailSheet(rid);
+        });
+        updatesTableBody.addEventListener("keydown", function(e){
+          const row = e.target && e.target.closest ? e.target.closest("tr[data-open-id]") : null;
+          if(!row) return;
+          if(e.key === "Enter" || e.key === " "){
+            e.preventDefault();
+            const rid = String(row.getAttribute("data-open-id") || '').trim();
+            if(!rid) return;
+            openDetailSheet(rid);
+          }
+        });
+      }
+      const detailOverlay = document.getElementById('detailOverlay');
+      const detailCloseBtn = document.getElementById('detailCloseBtn');
+      const detailSendVendorBtn = document.getElementById('detailSendVendorBtn');
+      const detailInProgressBtn = document.getElementById('detailInProgressBtn');
+      const detailCompleteBtn = document.getElementById('detailCompleteBtn');
+      const detailAssignVendorBtn = document.getElementById('detailAssignVendorBtn');
+      const detailVendorSelect = document.getElementById('detailVendorSelect');
+      const detailOpenFullBtn = document.getElementById('detailOpenFullBtn');
+      if(detailCloseBtn) detailCloseBtn.addEventListener('click', closeDetailSheet);
+      if(detailOverlay) detailOverlay.addEventListener('click', function(e){
+        if(e.target === detailOverlay) closeDetailSheet();
+      });
+      if(detailSendVendorBtn) detailSendVendorBtn.addEventListener('click', markDetailSentToVendor);
+      if(detailInProgressBtn) detailInProgressBtn.addEventListener('click', markDetailInProgress);
+      if(detailCompleteBtn) detailCompleteBtn.addEventListener('click', markDetailComplete);
+      if(detailAssignVendorBtn) detailAssignVendorBtn.addEventListener('click', assignDetailVendor);
+      if(detailVendorSelect) detailVendorSelect.addEventListener('change', function(){
+        const assignBtn = document.getElementById('detailAssignVendorBtn');
+        const sendBtn = document.getElementById('detailSendVendorBtn');
+        const selectedVendor = String(this.value || '').trim();
+        if(assignBtn) assignBtn.disabled = detailLoading || !selectedVendor;
+        if(sendBtn){
+          const normalizedStatus = normalizeLiveStatus(detailRecord || {});
+          const isCompleted = normalizedStatus === 'completed';
+          const isSent = normalizedStatus === 'sent_to_vendor';
+          const hasAssignedVendor = !!(selectedVendor || String(detailRecord?.vendor_name || '').trim());
+          sendBtn.disabled = detailLoading || isCompleted || isSent || !hasAssignedVendor;
+        }
+      });
+      if(detailOpenFullBtn) detailOpenFullBtn.addEventListener('click', function(){
+        if(detailRecord && detailRecord.id) openMaintenanceRecord(detailRecord.id);
+      });
+      document.addEventListener('keydown', function(e){
+        const overlay = document.getElementById('detailOverlay');
+        if(!overlay || !overlay.classList.contains('is-open')) return;
+        if(e.key === 'Escape') closeDetailSheet();
+      });
+      setPageActiveCommunityId(getPageActiveCommunityId());
+      await populateHeaderCommunities();
+      loadMaintenanceCompanyLogo();
+      loadUpdates();
+      subscribeRealtime();
+      startAutoRefresh();
+      document.addEventListener('visibilitychange', function(){
+        if(document.hidden){
+          stopAutoRefresh();
+          return;
+        }
+        startAutoRefresh();
+        if(!isDetailSheetOpen() && !detailLoading){
+          loadUpdates();
+        }
+      });
+      document.addEventListener("change", function(e){
+        if(e && e.target && (e.target.id === "zummeeCommunitySelect" || e.target.id === "communitySelect")){
+          try{
+            if (e.target.id === 'zummeeCommunitySelect') {
+              setPageActiveCommunityId(String(e.target.value || ''));
+            }
+          }catch(_e){}
+          setTimeout(function(){
+            loadUpdates();
+            subscribeRealtime();
+          }, 50);
+        }
+      });
+    });
+  
+
+// 🔒 Remove Profile + Sign Out (page-specific override)
+(function forceHeaderButtonCleanup(){
+  const removeBtns = () => {
+    document.querySelectorAll("button, a, .btn, [role='button']").forEach(el => {
+      const txt = (el.textContent || "").trim().toLowerCase();
+      if (txt === "profile" || txt.includes("profile") || txt === "sign out" || txt.includes("sign out")) {
+        el.remove();
+      }
+    });
+  };
+  removeBtns();
+  const cleanupTimer = setInterval(removeBtns, 250);
+  setTimeout(() => clearInterval(cleanupTimer), 5000);
+})();
+</script>
+
+<script id="live-maintenance-move-controls-v22">
+(function(){
+  function moveLiveMaintenanceControls(){
+    try{
+      var target=document.getElementById('maintenanceInlineControls');
+      var select=document.getElementById('zummeeCommunitySelect');
+      var hub=document.getElementById('zummeeHdrHub');
+      if(!target||!select||!hub)return false;
+      var communityRow=select.closest('.zm-communityRow')||select;
+      var actionsRow=hub.closest('.zm-actionsRow')||hub;
+      if(!target.contains(communityRow))target.appendChild(communityRow);
+      if(!target.contains(actionsRow))target.appendChild(actionsRow);
+      document.body.classList.add('live-maintenance-controls-moved');
+      return true;
+    }catch(err){console.warn('Live Maintenance controls move failed',err);return false;}
+  }
+  function scheduleMove(){
+    moveLiveMaintenanceControls();
+    setTimeout(moveLiveMaintenanceControls,80);
+    setTimeout(moveLiveMaintenanceControls,250);
+    setTimeout(moveLiveMaintenanceControls,800);
+    setTimeout(moveLiveMaintenanceControls,1500);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',scheduleMove);else scheduleMove();
+  window.addEventListener('load',scheduleMove);
+})();
+</script>
+<script src="company_logo_sync.js"></script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+
+<script id="zummee-v5-page-lock-maintenance_updates">
+(function(){
+  var PAGE='maintenance_updates';
+  var IDS=['zummeeCommunitySelect','communitySelect'];
+  var GOOD_KEY='zummee_v5_good_community_state';
+  var OPTIONS_KEY='zummee_v5_good_community_options_html_'+PAGE;
+  function isUuid(v){return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||'').trim());}
+  function sel(){for(var i=0;i<IDS.length;i++){var x=document.getElementById(IDS[i]); if(x) return x;} return null;}
+  function opt(s){return s&&s.options&&s.selectedIndex>=0?s.options[s.selectedIndex]:null;}
+  function persist(id,name,zip){
+    if(!isUuid(id)) return;
+    ['zummee_selected_community_id','activeCommunityId','zummeeActiveCommunityId','currentCommunityId','zummee_community_id'].forEach(function(k){try{localStorage.setItem(k,id)}catch(_e){}});
+    if(name){['currentCommunityName','activeCommunityName','zummee_community'].forEach(function(k){try{localStorage.setItem(k,name)}catch(_e){}});}
+    if(zip){try{localStorage.setItem('mh2-weather-zip:'+id,zip); localStorage.setItem('mh2-last-weather-zip',zip)}catch(_e){}}
+    try{window.currentCommunityId=id; window.activeCommunityId=id; window.zummeeSelectedCommunityId=id;}catch(_e){}
+  }
+  function snapshot(){
+    var s=sel(); if(!s||!s.options||!s.options.length||!isUuid(s.value)) return false;
+    var o=opt(s), id=String(s.value||'').trim(), name=String(o&&o.textContent||'').trim(), zip=String(o&&o.getAttribute('data-zip')||'').replace(/\D+/g,'').slice(0,5);
+    persist(id,name,zip);
+    try{localStorage.setItem(GOOD_KEY,JSON.stringify({id:id,name:name,zip:zip,page:PAGE,at:Date.now()})); localStorage.setItem(OPTIONS_KEY,s.innerHTML)}catch(_e){}
+    window.__ZUMMEE_V5_COMMUNITY_LOCK__=true;
+    return true;
+  }
+  function restore(reason){
+    var s=sel(); if(!s) return false;
+    var state=null; try{state=JSON.parse(localStorage.getItem(GOOD_KEY)||'null')}catch(_e){}
+    var html=''; try{html=localStorage.getItem(OPTIONS_KEY)||localStorage.getItem('zummee_v5_good_community_options_html')||''}catch(_e){}
+    if((!s.options||!s.options.length)&&html) s.innerHTML=html;
+    var id=String((state&&state.id)||localStorage.getItem('zummee_selected_community_id')||'').trim();
+    if(isUuid(id)&&s.options&&s.options.length){
+      s.value=id;
+      s.disabled=false;
+      var o=opt(s), name=String(o&&o.textContent||state&&state.name||'').trim(), zip=String(o&&o.getAttribute('data-zip')||state&&state.zip||'').trim();
+      persist(id,name,zip);
+      try{console.warn('[Zummee v5 '+PAGE+'] restored locked community after '+reason,id,name)}catch(_e){}
+      return true;
+    }
+    return false;
+  }
+  function wrapRender(){
+    if(typeof window.renderCommunities!=='function'||window.renderCommunities.__v5Locked) return;
+    var original=window.renderCommunities;
+    window.renderCommunities=async function(){
+      var s=sel();
+      if(window.__ZUMMEE_V5_COMMUNITY_LOCK__&&s&&s.options&&s.options.length&&isUuid(s.value)){snapshot();return {locked:true};}
+      if(window.__ZUMMEE_V5_RENDER_IN_PROGRESS__) return {skipped:true};
+      window.__ZUMMEE_V5_RENDER_IN_PROGRESS__=true;
+      try{var out=await original.apply(this,arguments); if(!snapshot()) restore('empty-render'); return out;}
+      catch(e){restore('render-error'); throw e;}
+      finally{window.__ZUMMEE_V5_RENDER_IN_PROGRESS__=false;}
+    };
+    window.renderCommunities.__v5Locked=true;
+  }
+  function watchdog(){var s=sel(); if(s&&s.options&&s.options.length&&isUuid(s.value)) snapshot(); else restore('watchdog');}
+  wrapRender();
+  var t=setInterval(function(){wrapRender(); watchdog();},250); setTimeout(function(){try{clearInterval(t)}catch(_e){}},6000);
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(watchdog,120);setTimeout(watchdog,900);setTimeout(watchdog,2200)},{once:true}); else {setTimeout(watchdog,120);setTimeout(watchdog,900);setTimeout(watchdog,2200);}
+  window.addEventListener('pageshow',function(){setTimeout(watchdog,120);setTimeout(watchdog,900)});
+  document.addEventListener('change',function(e){if(e&&e.target&&IDS.indexOf(e.target.id)>=0){setTimeout(snapshot,20);setTimeout(watchdog,250)}},true);
+  try{console.info('[Zummee v5] '+PAGE+' page lock installed')}catch(_e){}
+})();
+</script>
+
+</body>
+</html>
+
+<style id="live-maintenance-gold-records-v28">
+/* V28: make maintenance update records pop with Board Member Hub style gold cards */
+#updatesTableBody tr[data-open-id] td{
+  background:linear-gradient(135deg, rgba(255,244,190,.96), rgba(255,255,255,.92)) !important;
+  border-top:1px solid rgba(214,168,38,.42) !important;
+  border-bottom:1px solid rgba(214,168,38,.42) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7) !important;
+}
+#updatesTableBody tr[data-open-id] td:first-child{
+  border-left:1px solid rgba(214,168,38,.48) !important;
+  border-radius:18px 0 0 18px !important;
+}
+#updatesTableBody tr[data-open-id] td:last-child{
+  border-right:1px solid rgba(214,168,38,.48) !important;
+  border-radius:0 18px 18px 0 !important;
+}
+#updatesTableBody tr[data-open-id]{
+  border-left:0 !important;
+  filter:drop-shadow(0 8px 16px rgba(120,88,12,.08));
+}
+#updatesTableBody tr[data-open-id]:hover td,
+#updatesTableBody tr[data-open-id]:focus-within td{
+  background:linear-gradient(135deg, rgba(255,236,154,.98), rgba(255,255,255,.96)) !important;
+  border-color:rgba(214,168,38,.68) !important;
+}
+#updatesTableBody tr[data-open-id] + tr[data-open-id] td{
+  border-top-width:1px !important;
+}
+#updatesTableBody .reqTitle{
+  color:#17324c !important;
+}
+</style>
