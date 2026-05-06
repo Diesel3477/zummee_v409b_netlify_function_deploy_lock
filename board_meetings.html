@@ -2,7 +2,7 @@
 
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-06-board-meetings-stable-dropdown-boardmembers-lock";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-06-v502-hof-community-scope-lock";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <script>
 // v840: ensureSupabase Promise shim (clean)
 function ensureSupabaseSync(){
@@ -4996,6 +4996,11 @@ body.dark-mode .mh2-stat-box {
       .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
   function uid(){ return (window.ZummeeMeetings && window.ZummeeMeetings.getCurrentId && window.ZummeeMeetings.getCurrentId()) || localStorage.getItem('zummee_selected_community_id') || 'pending'; }
+  function communityId(){
+    var sel = $('zummeeCommunitySelect');
+    var id = (sel && sel.value) || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('board_member_hub_selected_community_id') || localStorage.getItem('mh2_selected_community_id') || 'pending';
+    return String(id || 'pending').trim() || 'pending';
+  }
   function key(prefix){ return prefix + '__' + uid(); }
   function read(keyName, fallback){ try{ var raw = localStorage.getItem(keyName); return raw ? JSON.parse(raw) : fallback; }catch(e){ return fallback; } }
   function write(keyName, value){ try{ localStorage.setItem(keyName, JSON.stringify(value || [])); }catch(e){} }
@@ -5004,7 +5009,7 @@ body.dark-mode .mh2-stat-box {
   function showStatus(id, msg){ var el=$(id); if(!el) return; el.textContent=msg||''; if('style' in el) el.style.display=msg ? '' : 'none'; }
   function updateMinutesSourceSignal(){ try{ window.dispatchEvent(new CustomEvent('zummee:minutes-source-changed')); }catch(e){} }
 
-  function hofKey(){ return key('zummee_board_meeting_homeowner_forum_v2'); }
+  function hofKey(){ return 'zummee_board_meeting_homeowner_forum_v2__community__' + communityId(); }
   function hofRead(){ return read(hofKey(), []); }
   function hofWrite(items){ write(hofKey(), items); updateMinutesSourceSignal(); }
   function hofCollectFromDom(){
@@ -5049,6 +5054,17 @@ body.dark-mode .mh2-stat-box {
       list.addEventListener('click', function(e){ var btn=e.target && e.target.closest && e.target.closest('[data-hof-remove]'); if(!btn) return; e.preventDefault(); var id=btn.getAttribute('data-hof-remove'); var items=hofCollectFromDom().filter(function(x){ return String(x.id)!==String(id); }); hofWrite(items); hofRender(items); });
       list.addEventListener('input', function(){ hofWrite(hofCollectFromDom()); });
       list.addEventListener('change', function(){ hofWrite(hofCollectFromDom()); });
+    }
+    if(!window.__BMHofCommunityScopeLockV502){
+      window.__BMHofCommunityScopeLockV502 = true;
+      function reloadHomeownerForumForCommunity(){ hofRender(hofRead()); updateMinutesSourceSignal(); }
+      document.addEventListener('community:changed', reloadHomeownerForumForCommunity);
+      window.addEventListener('zummee:community-changed', reloadHomeownerForumForCommunity);
+      var communitySelect = $('zummeeCommunitySelect');
+      if(communitySelect && !communitySelect.dataset.hofCommunityBound){
+        communitySelect.dataset.hofCommunityBound = '1';
+        communitySelect.addEventListener('change', reloadHomeownerForumForCommunity, true);
+      }
     }
     hofRender(hofRead());
   }
