@@ -3172,20 +3172,22 @@ body.dark-mode .mh2-stat-box {
     }
 
 
-    /* v97 LOCKED: Vendors are Supabase-backed.
-       Source of truth: public.ops_vendors.
-       Local storage/daily_ops_state must not be used for vendor save/load/delete anymore. */
+    /* v513 LOCKED: Vendors are Supabase-backed using ONE canonical table: public."Vendors".
+       - Supabase is the only persistent source of truth.
+       - localStorage dailyOpsV2:vendors:* is migration-only backup.
+       - Board Meetings and Operations Portal now read the same rows. */
     function normalizeVendorRow(row){
       row = row || {};
       return {
         id: String(row.id || '').trim(),
         name: String(row.name || '').trim(),
-        category: String(row.category || '').trim(),
+        category: String(row.type || row.category || '').trim(),
+        type: String(row.type || row.category || '').trim(),
         phone: String(row.phone || '').trim(),
         email: String(row.email || '').trim(),
         contact_name: String(row.contact_name || row.contact || row.vendor_contact || '').trim(),
         community_id: String(row.community_id || Store.activeCommunityId || '').trim(),
-        created_by: String(row.created_by || '').trim(),
+        user_id: String(row.user_id || row.created_by || '').trim(),
         created_at: row.created_at || row.createdAt || '',
         updated_at: row.updated_at || row.updatedAt || ''
       };
@@ -3198,17 +3200,70 @@ body.dark-mode .mh2-stat-box {
       if(typeof ensureUser === 'function') await ensureUser();
       return !!getVendorClient();
     }
+    function legacyVendorStorageKey(){
+      return `dailyOpsV2:vendors:${Store.activeCommunityId || ('name:' + (Store.activeCommunityName || 'unknown').toLowerCase())}`;
+    }
+    function readLegacyVendorRows(){
+      try{
+        const raw = localStorage.getItem(legacyVendorStorageKey()) || '[]';
+        const arr = safeJson(raw, []);
+        return Array.isArray(arr) ? arr.map(normalizeVendorRow).filter(v => v.name) : [];
+      }catch(_e){ return []; }
+    }
+    function vendorIdentity(v){
+      v = normalizeVendorRow(v);
+      return [v.name, v.category, v.phone, v.email].map(x => String(x || '').trim().toLowerCase()).join('|');
+    }
+    async function migrateLegacyVendorsToSupabase(existingRows){
+      const client = getVendorClient();
+      const communityId = String(Store.activeCommunityId || '').trim();
+      if(!client || !communityId) return false;
+      const legacyRows = readLegacyVendorRows();
+      if(!legacyRows.length) return false;
+      const existingKeys = new Set((existingRows || []).map(vendorIdentity));
+      const toInsert = legacyRows.filter(v => v.name && !existingKeys.has(vendorIdentity(v))).map(v => ({
+        company: String(Store.activeCompanyName || readCurrentCompanyName() || '').trim() || null,
+        community_id: communityId,
+        name: v.name,
+        type: v.category || null,
+        contact_name: v.contact_name || null,
+        phone: v.phone || null,
+        email: v.email || null,
+        user_id: String(Store.userId || readCurrentUserId() || '').trim() || null,
+        updated_at: new Date().toISOString()
+      }));
+      if(!toInsert.length) return false;
+      const res = await client.from('Vendors').insert(toInsert).select('*');
+      if(res.error){
+        console.warn('[Daily Ops v513 Vendors] legacy migration failed', res.error);
+        return false;
+      }
+      try{ localStorage.setItem(`dailyOpsV2:vendorsMigrated:${communityId}:v513`, new Date().toISOString()); }catch(_e){}
+      console.log('[Daily Ops v513 Vendors] migrated legacy vendors to Supabase', toInsert.length);
+      return true;
+    }
     async function fetchVendorRows(){
       const client = getVendorClient();
       const communityId = String(Store.activeCommunityId || '').trim();
       if(!client || !communityId) return { rows:[], error: client ? null : new Error('Supabase client unavailable') };
-      const res = await client
-        .from('ops_vendors')
+      let res = await client
+        .from('Vendors')
         .select('*')
         .eq('community_id', communityId)
-        .order('created_at', { ascending:false });
+        .order('name', { ascending:true });
       if(res.error) return { rows:[], error:res.error };
-      return { rows:(res.data || []).map(normalizeVendorRow), error:null };
+      let rows = (res.data || []).map(normalizeVendorRow);
+      const migrated = await migrateLegacyVendorsToSupabase(rows);
+      if(migrated){
+        res = await client
+          .from('Vendors')
+          .select('*')
+          .eq('community_id', communityId)
+          .order('name', { ascending:true });
+        if(res.error) return { rows:[], error:res.error };
+        rows = (res.data || []).map(normalizeVendorRow);
+      }
+      return { rows, error:null };
     }
     async function upsertVendorRow(row){
       await ensureVendorAuth();
@@ -3216,23 +3271,27 @@ body.dark-mode .mh2-stat-box {
       const communityId = String(Store.activeCommunityId || '').trim();
       if(!client || !communityId) throw new Error('Missing Supabase client or active community.');
       const payload = {
+        company: String(Store.activeCompanyName || readCurrentCompanyName() || '').trim() || null,
         name: String(row.name || '').trim(),
-        category: String(row.category || '').trim() || null,
+        type: String(row.category || row.type || '').trim() || null,
+        contact_name: String(row.contact_name || '').trim() || null,
         phone: String(row.phone || '').trim() || null,
         email: String(row.email || '').trim() || null,
-        contact_name: String(row.contact_name || '').trim() || null,
         community_id: communityId,
-        created_by: String(Store.userId || readCurrentUserId() || '').trim() || null
+        user_id: String(Store.userId || readCurrentUserId() || '').trim() || null,
+        updated_at: new Date().toISOString()
       };
       if(String(row.id || '').trim()){
         const res = await client
-          .from('ops_vendors')
+          .from('Vendors')
           .update({
+            company: payload.company,
             name: payload.name,
-            category: payload.category,
+            type: payload.type,
+            contact_name: payload.contact_name,
             phone: payload.phone,
             email: payload.email,
-            contact_name: payload.contact_name
+            updated_at: payload.updated_at
           })
           .eq('id', String(row.id).trim())
           .eq('community_id', communityId)
@@ -3242,7 +3301,7 @@ body.dark-mode .mh2-stat-box {
         return res.data;
       }
       const res = await client
-        .from('ops_vendors')
+        .from('Vendors')
         .insert(payload)
         .select('*')
         .single();
@@ -3255,7 +3314,7 @@ body.dark-mode .mh2-stat-box {
       const communityId = String(Store.activeCommunityId || '').trim();
       if(!client || !communityId) throw new Error('Missing Supabase client or active community.');
       const res = await client
-        .from('ops_vendors')
+        .from('Vendors')
         .delete()
         .eq('id', String(id || '').trim())
         .eq('community_id', communityId);
@@ -3333,7 +3392,7 @@ body.dark-mode .mh2-stat-box {
           await loadVendorsModule();
         }catch(err){
           console.error('Vendor delete failed', err);
-          alert('Vendor delete failed. Check Supabase permissions and ops_vendors policies.');
+          alert('Vendor delete failed. Check Supabase permissions and Vendors policies.');
           btn.disabled = false;
         }
       }));
@@ -3345,10 +3404,10 @@ body.dark-mode .mh2-stat-box {
       mount.textContent = 'Loading vendors…';
       const result = await fetchVendorRows();
       if(result.error){
-        console.error('Vendor load failed from ops_vendors', result.error);
+        console.error('Vendor load failed from Vendors', result.error);
         setMetric('vendorsMetric', 0);
         byId('vendorsCountPill').textContent = '0';
-        mountEmpty(mount, 'Vendor records could not load from Supabase. Confirm ops_vendors table and RLS policies.');
+        mountEmpty(mount, 'Vendor records could not load from Supabase. Confirm Vendors table and RLS policies.');
         return;
       }
       renderVendors(result.rows);
@@ -3410,7 +3469,7 @@ body.dark-mode .mh2-stat-box {
           await loadVendorsModule();
         }catch(err){
           console.error('Vendor save failed', err);
-          alert('Vendor save failed. Check Supabase permissions and ops_vendors policies.');
+          alert('Vendor save failed. Check Supabase permissions and Vendors policies.');
         }finally{
           btn.disabled = false;
           if(!Store.editingVendorId) btn.textContent = 'Save vendor';
