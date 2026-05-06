@@ -5624,7 +5624,7 @@ function buildSmartAlertsState(data){
       badge: (approvals.overdue || 0) > 0 ? `${approvals.overdue} OVERDUE` : ((approvals.open || 0) > 0 ? 'OPEN' : 'CLEAR'),
       copy: (approvals.overdue || 0) > 0
         ? `${approvals.overdue} annual meeting approval item${approvals.overdue === 1 ? '' : 's'} over 2 days old`
-        : ((approvals.open || 0) > 0 ? `${approvals.open} pending approvals` : 'Annual meeting approval queue is clear.')
+        : ((approvals.open || 0) > 0 ? `${approvals.open} pending approvals` : 'No active items')
     }
   };
 }
@@ -6263,7 +6263,7 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     var badge = overdueCount>0 ? (String(overdueCount)+' OVERDUE') : (openCount>0 ? (String(openCount)+' OPEN') : 'CLEAR');
     var copy = overdueCount>0
       ? (String(overdueCount)+' annual meeting approval item'+(overdueCount===1?' has':'s have')+' been open more than 2 days for '+(ctx.name||'the selected community')+'.')
-      : (openCount>0 ? (String(openCount)+' annual meeting approval item'+(openCount===1?' is':'s are')+' still in progress for '+(ctx.name||'the selected community')+'.') : ('Annual meeting approval queue is clear for '+(ctx.name||'the selected community')+'.'));
+      : (openCount>0 ? (String(openCount)+' annual meeting approval item'+(openCount===1?' is':'s are')+' still in progress for '+(ctx.name||'the selected community')+'.') : 'No active items');
     el.innerHTML = '<div class="mh2-alert-top"><div class="mh2-alert-title">Annual meeting approvals</div><div class="mh2-alert-badge">'+esc(badge)+'</div></div><div class="mh2-alert-copy">'+esc(copy)+'</div>';
     try{ window.__mh2AnnualApprovalAlertDebug={community:ctx,open:openCount,overdue:overdueCount,paintedAt:new Date().toISOString()}; }catch(e){}
   }
@@ -6805,83 +6805,6 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     window.addEventListener('pageshow', function(){ setTimeout(beginCycle,80); });
   }
 
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
-  else boot();
-})();
-</script>
-
-
-
-<style id="zummee-v525-annual-alert-text-flash-lock-css">
-  /* v525: keep Annual Approval card copy visually stable while legacy writers settle. */
-  #mh2AlertApprovals .mh2-alert-copy{ min-height:18px !important; }
-</style>
-<script id="zummee-v525-annual-alert-text-flash-lock">
-(function(){
-  'use strict';
-  if(window.__ZUMMEE_V525_ANNUAL_TEXT_FLASH_LOCK__) return;
-  window.__ZUMMEE_V525_ANNUAL_TEXT_FLASH_LOCK__ = true;
-
-  var CARD_ID='mh2AlertApprovals';
-  var bootAt=Date.now();
-  var lastStableHtml='';
-  var lastStableClass='';
-  var lastStableHref='';
-  var suppressing=false;
-
-  function card(){ return document.getElementById(CARD_ID); }
-  function isNoActiveText(txt){
-    txt=String(txt||'').toLowerCase();
-    return txt.indexOf('no active')>-1 && txt.indexOf('annual')>-1 || txt.trim()==='no active items';
-  }
-  function isGoodStable(el){
-    if(!el) return false;
-    var txt=String(el.textContent||'');
-    if(!txt.trim()) return false;
-    if(isNoActiveText(txt)) return false;
-    if(txt.toLowerCase().indexOf('loading')>-1) return false;
-    return true;
-  }
-  function capture(){
-    var el=card();
-    if(!isGoodStable(el)) return;
-    lastStableHtml=el.innerHTML;
-    lastStableClass=el.className;
-    lastStableHref=el.getAttribute('href')||'';
-  }
-  function replaceNoActive(){
-    var el=card();
-    if(!el || suppressing) return;
-    var txt=String(el.textContent||'');
-    if(!isNoActiveText(txt)) { capture(); return; }
-
-    suppressing=true;
-    try{
-      if(lastStableHtml && Date.now()-bootAt < 7000){
-        if(lastStableClass) el.className=lastStableClass;
-        if(lastStableHref) el.setAttribute('href', lastStableHref);
-        el.innerHTML=lastStableHtml;
-      }else{
-        el.classList.remove('is-urgent','is-attention');
-        el.classList.add('is-good');
-        var href=(typeof getAnnualMeetingSmartHref==='function') ? getAnnualMeetingSmartHref() : (window.mh2IsPrivileged ? 'annual_meeting_approvals.html' : 'annual_meeting_status.html');
-        el.setAttribute('href', href);
-        el.innerHTML='<div class="mh2-alert-top"><div class="mh2-alert-title">Annual meeting approvals</div><div class="mh2-alert-badge">CLEAR</div></div><div class="mh2-alert-copy">Annual meeting approval queue is clear.</div>';
-      }
-    }catch(e){}
-    suppressing=false;
-  }
-  function boot(){
-    var el=card();
-    if(!el) return setTimeout(boot,80);
-    capture();
-    replaceNoActive();
-    try{
-      new MutationObserver(function(){ setTimeout(replaceNoActive,0); }).observe(el,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class','href']});
-    }catch(e){}
-    var sel=document.getElementById('zummeeCommunitySelect');
-    if(sel) sel.addEventListener('change', function(){ bootAt=Date.now(); lastStableHtml=''; setTimeout(capture,800); }, true);
-  }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
   else boot();
 })();
