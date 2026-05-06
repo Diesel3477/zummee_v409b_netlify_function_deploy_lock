@@ -2,7 +2,7 @@
 
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-06-v511-hof-single-owner-stable-refresh-lock";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-06-v512-new-business-vendors-lock";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <script>
 // v840: ensureSupabase Promise shim (clean)
 function ensureSupabaseSync(){
@@ -4987,7 +4987,7 @@ body.dark-mode .mh2-stat-box {
 <script id="bmHofNewBusinessRuntimeV1">
 (function(){
   if (window.BMHofNewBusinessRuntime && window.BMHofNewBusinessRuntime.version === 'v509-hof-keyboard-stability-lock') return;
-  window.BMHofNewBusinessRuntime = { version: 'v509-hof-keyboard-stability-lock' };
+  window.BMHofNewBusinessRuntime = { version: 'v512-new-business-vendors-lock' };
 
   function $(id){ return document.getElementById(id); }
   function esc(s){
@@ -5029,7 +5029,71 @@ body.dark-mode .mh2-stat-box {
     if($('nbOpenPill')){ $('nbOpenPill').style.display='inline-flex'; $('nbOpenPill').textContent=openItems.length+' open'; }
     if($('nbClosedPill')){ $('nbClosedPill').style.display='inline-flex'; $('nbClosedPill').textContent=closedItems.length+' closed'; }
   }
-  function selectedVendorEmails(){ return ['nbBcc1','nbBcc2','nbBcc3'].map(function(id){ var el=$(id); return el && el.value ? el.value : ''; }).filter(Boolean); }
+  var nbVendorLoadToken = 0;
+  var nbVendorCacheByCommunity = {};
+  function nbSetVendorOptions(vendors){
+    vendors = Array.isArray(vendors) ? vendors : [];
+    ['nbBcc1','nbBcc2','nbBcc3'].forEach(function(id, idx){
+      var el = $(id);
+      if(!el) return;
+      var previous = el.value || '';
+      var html = '<option value="">Select vendor '+(idx+1)+'</option>';
+      html += vendors.map(function(v){
+        var email = text(v.email || '');
+        var label = text(v.name || 'Vendor') + (v.type ? ' — ' + text(v.type) : '') + (email ? ' (' + email + ')' : '');
+        return '<option value="'+esc(email)+'" data-vendor-id="'+esc(v.id||'')+'" data-vendor-name="'+esc(v.name||'')+'" data-vendor-type="'+esc(v.type||'')+'">'+esc(label)+'</option>';
+      }).join('');
+      el.innerHTML = html;
+      if(previous && Array.from(el.options).some(function(o){ return o.value === previous; })) el.value = previous;
+      else el.value = '';
+    });
+  }
+  async function nbLoadVendors(reason){
+    var sb = window.supabaseClient || window.sb || window.supabase;
+    var cid = communityId();
+    var token = ++nbVendorLoadToken;
+    if(!cid || cid === 'pending'){
+      nbSetVendorOptions([]);
+      showStatus('nbMsg','Select a community to load vendors.');
+      return [];
+    }
+    if(!sb || !sb.from){
+      console.warn('[BM v512 Vendors] Supabase client not ready');
+      nbSetVendorOptions([]);
+      return [];
+    }
+    try{
+      var res = await sb
+        .from('Vendors')
+        .select('id, name, type, phone, email, community_id')
+        .eq('community_id', cid)
+        .order('name', { ascending: true });
+      if(token !== nbVendorLoadToken) return [];
+      if(res.error){
+        console.warn('[BM v512 Vendors] load failed', res.error);
+        nbSetVendorOptions([]);
+        return [];
+      }
+      var vendors = (res.data || []).filter(function(v){ return text(v.email); });
+      nbVendorCacheByCommunity[cid] = vendors;
+      nbSetVendorOptions(vendors);
+      console.log('[BM v512 Vendors] loaded', cid, vendors.length, reason || '');
+      return vendors;
+    }catch(e){
+      if(token !== nbVendorLoadToken) return [];
+      console.warn('[BM v512 Vendors] unexpected load error', e);
+      nbSetVendorOptions([]);
+      return [];
+    }
+  }
+  function selectedVendorEmails(){
+    var seen = {};
+    return ['nbBcc1','nbBcc2','nbBcc3'].map(function(id){ var el=$(id); return el && el.value ? text(el.value) : ''; }).filter(function(email){
+      if(!email || seen[email.toLowerCase()]) return false;
+      seen[email.toLowerCase()] = true;
+      return true;
+    });
+  }
   function nbEmailVendors(note){ var bcc=selectedVendorEmails(); var href='mailto:?subject='+encodeURIComponent('New Business Item')+'&body='+encodeURIComponent(note||nbNote()||'New business item added.'); if(bcc.length) href+='&bcc='+encodeURIComponent(bcc.join(',')); try{ window.location.href=href; }catch(e){} }
   function nbAdd(opts){ opts=opts||{}; var note=nbNote(); if(!note){ showStatus('nbMsg','Enter a note before adding a new business item.'); return false; } var items=nbRead(); items.unshift({id:nowId('nb'),note:note,status:'open',createdAt:new Date().toISOString(),emailVendors:!!opts.emailVendors}); nbWrite(items); nbRender(items); nbClearForm(); showStatus('nbMsg','Added to open items.'); setTimeout(function(){ showStatus('nbMsg',''); },1600); if(opts.emailVendors) nbEmailVendors(note); return true; }
   function nbSetStatus(id,status){ var items=nbRead().map(function(x){ if(String(x.id)===String(id)) x.status=status; return x; }); nbWrite(items); nbRender(items); }
@@ -5044,10 +5108,21 @@ body.dark-mode .mh2-stat-box {
     ['nbOpen','nbClosed'].forEach(function(id){ var list=$(id); if(list && !list.dataset.nbBound){ list.dataset.nbBound='1'; list.addEventListener('click', function(e){ var t=e.target; var close=t.closest&&t.closest('[data-nb-close]'); var reopen=t.closest&&t.closest('[data-nb-reopen]'); var del=t.closest&&t.closest('[data-nb-delete]'); if(close){ e.preventDefault(); nbSetStatus(close.getAttribute('data-nb-close'),'closed'); } if(reopen){ e.preventDefault(); nbSetStatus(reopen.getAttribute('data-nb-reopen'),'open'); } if(del){ e.preventDefault(); nbDelete(del.getAttribute('data-nb-delete')); } }); } });
     if(photos && !photos.dataset.nbBound){ photos.dataset.nbBound='1'; photos.addEventListener('change', function(){ var prev=$('nbPreview'); if(!prev) return; var files=Array.from(photos.files||[]); prev.innerHTML=files.map(function(f){ return '<span class="pill">'+esc(f.name)+'</span>'; }).join(''); }); }
     nbRender(nbRead());
+    nbLoadVendors('nbBind');
   }
-  function bindAll(){ hofBind(); nbBind(); }
+  function bindAll(){ if(typeof hofBind === 'function') hofBind(); nbBind(); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bindAll); else bindAll();
   window.addEventListener('zummee:meeting-changed', function(){ setTimeout(bindAll, 30); });
+  var bmCommunitySelectForVendors = $('zummeeCommunitySelect');
+  if(bmCommunitySelectForVendors && !bmCommunitySelectForVendors.dataset.nbVendorBound){
+    bmCommunitySelectForVendors.dataset.nbVendorBound = '1';
+    bmCommunitySelectForVendors.addEventListener('change', function(){
+      ['nbBcc1','nbBcc2','nbBcc3'].forEach(function(id){ if($(id)) $(id).value=''; });
+      nbLoadVendors('community-change');
+    });
+  }
+  window.addEventListener('community:changed', function(){ setTimeout(function(){ nbLoadVendors('community-event'); }, 30); });
+  window.addEventListener('zummee:community-changed', function(){ setTimeout(function(){ nbLoadVendors('zummee-community-event'); }, 30); });
   window.BMHofNewBusinessRuntime.refresh=bindAll;
 })();
 </script>
