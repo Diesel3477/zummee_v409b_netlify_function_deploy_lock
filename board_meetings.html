@@ -2,7 +2,7 @@
 
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-06-v504-hof-table-name-lock";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-06-v505-hof-buttons-supabase-owner";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <script>
 // v840: ensureSupabase Promise shim (clean)
 function ensureSupabaseSync(){
@@ -5586,6 +5586,201 @@ body.dark-mode .mh2-stat-box {
 })();
 </script>
 
+
+
+
+<script id="bm-v505-hof-single-owner-supabase-buttons">
+(function(){
+  if (window.__BMV505HofSingleOwnerInstalled) return;
+  window.__BMV505HofSingleOwnerInstalled = true;
+
+  const TABLE = 'board_meeting_homeowner_forum';
+  let loadToken = 0;
+  let saveTimer = null;
+  let booted = false;
+
+  function $(id){ return document.getElementById(id); }
+  function esc(v){
+    return String(v == null ? '' : v)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;')
+      .replace(/'/g,'&#39;');
+  }
+  function text(v){ return String(v == null ? '' : v).trim(); }
+  function sb(){ return window.supabaseClient || window.sb || null; }
+  function communityId(){
+    const select = $('zummeeCommunitySelect');
+    return String((select && select.value) || localStorage.getItem('zummee_selected_community_id') || '').trim();
+  }
+  function status(msg, isError){
+    const el = $('hofStatus');
+    if (!el) return;
+    el.textContent = msg || '';
+    el.style.color = isError ? '#b91c1c' : '';
+  }
+  function countPill(items){
+    const pill = $('hofUpdated');
+    if (!pill) return;
+    if (!items || !items.length){ pill.style.display = 'none'; pill.textContent = ''; return; }
+    pill.style.display = 'inline-flex';
+    pill.textContent = items.length + ' forum item' + (items.length === 1 ? '' : 's');
+  }
+  async function currentUserId(){
+    try{
+      const client = sb();
+      const res = client && client.auth && await client.auth.getUser();
+      if (res && res.data && res.data.user && res.data.user.id) return res.data.user.id;
+    }catch(_e){}
+    return localStorage.getItem('zummee_user_id_v1') || localStorage.getItem('zummee_user_id') || '';
+  }
+  function normalizeRows(rows){
+    return (Array.isArray(rows) ? rows : []).map(function(r){
+      r = r || {};
+      return {
+        id: String(r.id || ('temp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,7))),
+        name: text(r.name || r.homeowner_name || ''),
+        topic: text(r.topic || ''),
+        notes: text(r.notes || '')
+      };
+    });
+  }
+  function render(items){
+    const list = $('hofEntries');
+    if (!list) return;
+    items = normalizeRows(items);
+    countPill(items.filter(i => i.name || i.topic || i.notes));
+    if (!items.length){
+      list.innerHTML = '<div class="sub" style="margin:0;color:#0f2f4a;font-weight:700;">No homeowner entries yet. Click Add Homeowner to create one.</div>';
+      return;
+    }
+    list.innerHTML = items.map(function(item, idx){
+      return '<div class="hof-item" data-hof-id="'+esc(item.id)+'" style="background:#fff;border:1px solid #d7e3ef;border-radius:16px;padding:14px;box-shadow:0 8px 18px rgba(15,47,74,.05);">'
+        + '<div class="lockrow" style="margin-bottom:10px;align-items:center;"><div style="font-weight:900;color:#0f2f4a;">Homeowner '+(idx+1)+'</div><button class="btn" type="button" data-hof-remove="'+esc(item.id)+'">Remove</button></div>'
+        + '<div class="grid2" style="grid-template-columns:1fr 1fr;gap:10px;"><div><label>Homeowner Name</label><input data-hof-field="name" value="'+esc(item.name)+'" placeholder="Name" /></div><div><label>Topic</label><input data-hof-field="topic" value="'+esc(item.topic)+'" placeholder="Topic or concern" /></div></div>'
+        + '<div style="margin-top:10px;"><label>Forum Notes</label><textarea data-hof-field="notes" style="width:100%;min-height:82px;padding:10px;border-radius:12px;border:1px solid #d7e3ef;resize:vertical;" placeholder="Summarize comments, requests, or follow-up items…">'+esc(item.notes)+'</textarea></div>'
+        + '</div>';
+    }).join('');
+  }
+  function collect(){
+    const list = $('hofEntries');
+    if (!list) return [];
+    return Array.from(list.querySelectorAll('.hof-item')).map(function(card){
+      const get = (field) => text((card.querySelector('[data-hof-field="'+field+'"]') || {}).value);
+      return {
+        id: card.getAttribute('data-hof-id') || '',
+        name: get('name'),
+        topic: get('topic'),
+        notes: get('notes')
+      };
+    }).filter(function(item){ return item.name || item.topic || item.notes || String(item.id || '').startsWith('temp_'); });
+  }
+  async function load(reason){
+    const client = sb();
+    const cid = communityId();
+    const token = ++loadToken;
+    if (!client || !cid){ render([]); status(!client ? 'Supabase client not ready.' : 'Select a community.', true); return; }
+    status('Loading homeowner forum…');
+    const res = await client
+      .from(TABLE)
+      .select('id, name, topic, notes, community_id, created_at')
+      .eq('community_id', cid)
+      .order('created_at', { ascending: true });
+    if (token !== loadToken || cid !== communityId()) return;
+    if (res.error){
+      console.error('[BM v505 HOF] load failed:', res.error);
+      status('Homeowner forum could not load.', true);
+      render([]);
+      return;
+    }
+    render(res.data || []);
+    status('');
+    console.log('[BM v505 HOF] loaded', cid, (res.data || []).length, reason || '');
+  }
+  async function save(){
+    const client = sb();
+    const cid = communityId();
+    if (!client || !cid){ status(!client ? 'Supabase client not ready.' : 'Select a community.', true); return; }
+    const userId = await currentUserId();
+    if (!userId){ status('No signed-in user found. Please log out and back in.', true); return; }
+    const items = collect().filter(function(item){ return item.name || item.topic || item.notes; });
+    status('Saving…');
+    const del = await client.from(TABLE).delete().eq('community_id', cid);
+    if (del.error){ console.error('[BM v505 HOF] delete failed:', del.error); status('Save failed while clearing old entries.', true); return; }
+    if (items.length){
+      const rows = items.map(function(item){ return {
+        community_id: cid,
+        created_by: userId,
+        name: item.name || '',
+        topic: item.topic || '',
+        notes: item.notes || ''
+      };});
+      const ins = await client.from(TABLE).insert(rows).select('id, name, topic, notes, community_id, created_at');
+      if (ins.error){ console.error('[BM v505 HOF] insert failed:', ins.error); status('Save failed while adding entries.', true); return; }
+      render(ins.data || items);
+    } else {
+      render([]);
+    }
+    status('Saved.');
+    setTimeout(function(){ status(''); }, 1500);
+    try{ window.dispatchEvent(new CustomEvent('zummee:minutes-source-changed')); }catch(_e){}
+  }
+  function scheduleSave(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(save, 650);
+  }
+  function addEntry(){
+    const items = collect().filter(function(item){ return item.name || item.topic || item.notes; });
+    items.push({ id:'temp_' + Date.now().toString(36), name:'', topic:'', notes:'' });
+    render(items);
+    setTimeout(function(){
+      const cards = $('hofEntries') && $('hofEntries').querySelectorAll('.hof-item');
+      const last = cards && cards[cards.length - 1];
+      const input = last && last.querySelector('[data-hof-field="name"]');
+      if (input) input.focus();
+    }, 30);
+  }
+  async function clearAll(){
+    if (!confirm('Clear all homeowner forum entries for this community?')) return;
+    render([]);
+    await save();
+  }
+  function bind(){
+    if (booted) return;
+    booted = true;
+    const add = $('hofAddEntry');
+    const saveBtn = $('hofSaveAll');
+    const clear = $('hofClearAll');
+    const list = $('hofEntries');
+    const select = $('zummeeCommunitySelect');
+
+    if (add) add.addEventListener('click', function(e){ e.preventDefault(); e.stopImmediatePropagation(); addEntry(); }, true);
+    if (saveBtn) saveBtn.addEventListener('click', function(e){ e.preventDefault(); e.stopImmediatePropagation(); save(); }, true);
+    if (clear) clear.addEventListener('click', function(e){ e.preventDefault(); e.stopImmediatePropagation(); clearAll(); }, true);
+    if (list){
+      list.addEventListener('click', function(e){
+        const btn = e.target && e.target.closest && e.target.closest('[data-hof-remove]');
+        if (!btn) return;
+        e.preventDefault(); e.stopImmediatePropagation();
+        const id = btn.getAttribute('data-hof-remove');
+        render(collect().filter(function(item){ return String(item.id) !== String(id); }));
+        scheduleSave();
+      }, true);
+      list.addEventListener('input', scheduleSave, true);
+      list.addEventListener('change', scheduleSave, true);
+    }
+    if (select) select.addEventListener('change', function(){ load('community-change'); }, true);
+    window.addEventListener('zummee:community-changed', function(){ load('community-event'); });
+    document.addEventListener('community:changed', function(){ load('community-event'); });
+    setTimeout(function(){ load('initial'); }, 150);
+    setTimeout(function(){ load('settled'); }, 1000);
+    window.BMHomeownerForumV505 = { load, save, collect, render };
+    console.log('[BM v505 HOF] single-owner Supabase buttons installed');
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind, { once:true }); else bind();
+})();
+</script>
 
 <script id="zummee-production-auth-guard">
 (function(){
