@@ -2,7 +2,7 @@
 
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-06-v508-hof-production-lock";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-06-v509-hof-keyboard-stability-lock";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <script>
 // v840: ensureSupabase Promise shim (clean)
 function ensureSupabaseSync(){
@@ -4986,8 +4986,8 @@ body.dark-mode .mh2-stat-box {
 
 <script id="bmHofNewBusinessRuntimeV1">
 (function(){
-  if (window.BMHofNewBusinessRuntime && window.BMHofNewBusinessRuntime.version === 'v508-hof-production-lock') return;
-  window.BMHofNewBusinessRuntime = { version: 'v508-hof-production-lock' };
+  if (window.BMHofNewBusinessRuntime && window.BMHofNewBusinessRuntime.version === 'v509-hof-keyboard-stability-lock') return;
+  window.BMHofNewBusinessRuntime = { version: 'v509-hof-keyboard-stability-lock' };
 
   function $(id){ return document.getElementById(id); }
   function esc(s){
@@ -5223,16 +5223,21 @@ body.dark-mode .mh2-stat-box {
     }).join('');
     showStatus('hofUpdated', items.length + ' forum item' + (items.length===1?'':'s'));
   }
-  function hofUpdateDraftFromDom(){
+  function hofUpdateDraftFromDom(opts){
+    // v509 keyboard stability lock:
+    // While a user is typing, update memory only. Do NOT write localStorage,
+    // dispatch minutes-change events, or render. Those side effects can cause
+    // iPad Safari to drop focus and hide the keyboard.
+    opts = opts || {};
     hofDraft = hofCollectFromDom();
-    hofWriteLocalBackup(hofDraft);
-    updateMinutesSourceSignal();
+    if(opts.backup) hofWriteLocalBackup(hofDraft);
+    if(opts.signal) updateMinutesSourceSignal();
   }
   async function hofSave(){
     var save = $('hofSaveAll');
     if(save && save.dataset.saving === '1') return;
     var cid = communityId();
-    hofUpdateDraftFromDom();
+    hofUpdateDraftFromDom({ backup:true, signal:true });
     var draft = normalizeHofItems(hofDraft);
     hofWriteLocalBackup(draft);
 
@@ -5259,7 +5264,7 @@ body.dark-mode .mh2-stat-box {
     }
   }
   function hofAdd(){
-    hofUpdateDraftFromDom();
+    hofUpdateDraftFromDom({ backup:true, signal:false });
     hofDraft.push({ client_id: nowId('hof'), id: nowId('hof'), name:'', topic:'', notes:'' });
     hofWriteLocalBackup(hofDraft);
     hofRender(hofDraft);
@@ -5291,15 +5296,15 @@ body.dark-mode .mh2-stat-box {
         var btn=e.target && e.target.closest && e.target.closest('[data-hof-remove]');
         if(!btn) return;
         e.preventDefault();
-        hofUpdateDraftFromDom();
+        hofUpdateDraftFromDom({ backup:true, signal:true });
         var id=btn.getAttribute('data-hof-remove');
         hofDraft = hofDraft.filter(function(x){ return String(x.client_id || x.id)!==String(id); });
         hofWriteLocalBackup(hofDraft);
         hofRender(hofDraft);
       });
       // Draft-only updates. Do not render while typing; do not save until Save is clicked.
-      list.addEventListener('input', function(){ hofUpdateDraftFromDom(); });
-      list.addEventListener('change', function(){ hofUpdateDraftFromDom(); });
+      list.addEventListener('input', function(){ hofUpdateDraftFromDom({ backup:false, signal:false }); });
+      list.addEventListener('change', function(){ hofUpdateDraftFromDom({ backup:false, signal:false }); });
     }
     if(!hofBound){
       hofBound = true;
