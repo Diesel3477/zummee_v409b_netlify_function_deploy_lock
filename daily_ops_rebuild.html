@@ -3303,17 +3303,27 @@ body.dark-mode .mh2-stat-box {
       const client = getVendorClient();
       const communityId = String(getDailyOpsSelectedCommunityId() || '').trim();
       if(!client || !communityId) throw new Error('Missing Supabase client or active community.');
+
+      let authUserId = '';
+      try{
+        const userRes = client.auth && client.auth.getUser ? await client.auth.getUser() : null;
+        authUserId = String(userRes && userRes.data && userRes.data.user && userRes.data.user.id || '').trim();
+      }catch(_e){}
+
       const payload = {
-        company: String(Store.activeCompanyName || readCurrentCompanyName() || '').trim() || null,
+        company: String(Store.activeCompanyName || readCurrentCompanyName() || '').trim() || 'Sixes Management Group',
         name: String(row.name || '').trim(),
         type: String(row.category || row.type || '').trim() || null,
         contact_name: String(row.contact_name || '').trim() || null,
         phone: String(row.phone || '').trim() || null,
         email: String(row.email || '').trim() || null,
         community_id: communityId,
-        user_id: String(Store.userId || readCurrentUserId() || '').trim() || null,
+        user_id: authUserId || String(Store.userId || readCurrentUserId() || '').trim() || null,
         updated_at: new Date().toISOString()
       };
+
+      if(!payload.name) throw new Error('Vendor name is required.');
+
       if(String(row.id || '').trim()){
         const res = await client
           .from('Vendors')
@@ -3331,15 +3341,16 @@ body.dark-mode .mh2-stat-box {
           .select('*')
           .maybeSingle();
         if(res.error) throw res.error;
-        return res.data;
+        return res.data || { id:String(row.id).trim(), ...payload };
       }
+
       const res = await client
         .from('Vendors')
-        .insert(payload)
+        .insert([payload])
         .select('*')
-        .single();
+        .maybeSingle();
       if(res.error) throw res.error;
-      return res.data;
+      return res.data || payload;
     }
     async function deleteVendorRow(id){
       await ensureVendorAuth();
@@ -3497,16 +3508,25 @@ body.dark-mode .mh2-stat-box {
         try{
           btn.disabled = true;
           btn.textContent = Store.editingVendorId ? 'Updating…' : 'Saving…';
-          await upsertVendorRow({ id:Store.editingVendorId, name, category, contact_name, phone, email });
+          const savedRow = await upsertVendorRow({ id:Store.editingVendorId, name, category, contact_name, phone, email });
+          console.log('[Daily Ops v516 Vendors] saved', savedRow);
           resetVendorForm();
           await loadVendorsModule();
+          btn.textContent = 'Saved ✓';
+          setTimeout(() => {
+            btn.textContent = 'Save vendor';
+            btn.disabled = false;
+          }, 1200);
+          return;
         }catch(err){
           console.error('Vendor save failed', err);
           alert('Vendor save failed: ' + (err && (err.message || err.details || err.code) || 'Check Supabase permissions and Vendors policies.'));
         }finally{
-          btn.disabled = false;
-          if(!Store.editingVendorId) btn.textContent = 'Save vendor';
-          else btn.textContent = original || 'Update vendor';
+          if(btn.textContent !== 'Saved ✓'){
+            btn.disabled = false;
+            if(!Store.editingVendorId) btn.textContent = 'Save vendor';
+            else btn.textContent = original || 'Update vendor';
+          }
         }
       });
     }
