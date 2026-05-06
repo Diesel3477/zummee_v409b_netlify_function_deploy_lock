@@ -1272,6 +1272,7 @@ body.dark-mode .mh2-stat-box {
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
 </script>
 <script src="shared/supabase-client.js?v=2026-05-06-v500-production-auth"></script>
+<script src="shared/community-selection.js?v=2026-05-06-v514-community-selection-lock"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
 
@@ -4997,8 +4998,7 @@ body.dark-mode .mh2-stat-box {
   }
   function uid(){ return (window.ZummeeMeetings && window.ZummeeMeetings.getCurrentId && window.ZummeeMeetings.getCurrentId()) || localStorage.getItem('zummee_selected_community_id') || 'pending'; }
   function communityId(){
-    var sel = $('zummeeCommunitySelect');
-    var id = (sel && sel.value) || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('board_member_hub_selected_community_id') || localStorage.getItem('mh2_selected_community_id') || 'pending';
+    var id = (window.ZummeeCommunity && window.ZummeeCommunity.getSelectedCommunityId('zummeeCommunitySelect')) || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('board_member_hub_selected_community_id') || localStorage.getItem('mh2_selected_community_id') || 'pending';
     return String(id || 'pending').trim() || 'pending';
   }
   function key(prefix){ return prefix + '__' + uid(); }
@@ -5191,6 +5191,8 @@ body.dark-mode .mh2-stat-box {
   function getLocal(k){ try{return String(localStorage.getItem(k)||'').trim();}catch(e){return '';} }
   function setLocal(k,v){ try{ localStorage.setItem(k, String(v||'')); }catch(e){} }
   function selectedId(){
+    var helperId = window.ZummeeCommunity && window.ZummeeCommunity.getSelectedCommunityId('zummeeCommunitySelect');
+    if(helperId) return String(helperId).trim();
     var sel=$('zummeeCommunitySelect');
     if(sel && sel.value) return String(sel.value).trim();
     var keys=['zummee_selected_community_id','board_member_hub_selected_community_id','mh2_selected_community_id','zummee_selected_community_v1'];
@@ -5548,7 +5550,7 @@ body.dark-mode .mh2-stat-box {
   function text(v){ return String(v == null ? '' : v).trim(); }
   function esc(v){ return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
   function sb(){ return window.supabaseClient || window.sb || null; }
-  function communityId(){ const select = $('zummeeCommunitySelect'); return String((select && select.value) || localStorage.getItem('zummee_selected_community_id') || '').trim(); }
+  function communityId(){ return String((window.ZummeeCommunity && window.ZummeeCommunity.getSelectedCommunityId('zummeeCommunitySelect')) || localStorage.getItem('zummee_selected_community_id') || '').trim(); }
   function isUuid(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v||'')); }
   async function currentUserId(){ try{ const client = sb(); const res = client && client.auth && await client.auth.getUser(); if (res && res.data && res.data.user && res.data.user.id) return res.data.user.id; }catch(_e){} return localStorage.getItem('zummee_user_id_v1') || localStorage.getItem('zummee_user_id') || ''; }
   function status(msg, isError){ const el = $('hofStatus'); if (!el) return; el.textContent = msg || ''; el.style.display = msg ? '' : 'none'; el.style.color = isError ? '#b91c1c' : ''; }
