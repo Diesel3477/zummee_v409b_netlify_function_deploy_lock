@@ -2,7 +2,7 @@
 
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-06-v503-hof-supabase-lock";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-06-v504-hof-table-name-lock";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <script>
 // v840: ensureSupabase Promise shim (clean)
 function ensureSupabaseSync(){
@@ -5010,7 +5010,7 @@ body.dark-mode .mh2-stat-box {
   function updateMinutesSourceSignal(){ try{ window.dispatchEvent(new CustomEvent('zummee:minutes-source-changed')); }catch(e){} }
 
   // v503: Homeowner Open Forum long-term persistence lock.
-  // Source of truth: Supabase BoardMeetingHomeownerForum by selected community_id.
+  // Source of truth: Supabase board_meeting_homeowner_forum by selected community_id.
   // LocalStorage is retained only as a backup/migration source.
   var hofCache = [];
   var hofLoadedCommunity = '';
@@ -5065,8 +5065,8 @@ body.dark-mode .mh2-stat-box {
     var sb = getSupabase();
     if(!sb || !cid || cid === 'pending') return [];
     var res = await sb
-      .from('BoardMeetingHomeownerForum')
-      .select('id, client_id, homeowner_name, topic, notes, community_id, updated_at, created_at')
+      .from('board_meeting_homeowner_forum')
+      .select('id, name, topic, notes, community_id, created_at')
       .eq('community_id', cid)
       .order('created_at', { ascending: true });
     if(res.error){
@@ -5081,21 +5081,19 @@ body.dark-mode .mh2-stat-box {
     var normalized = normalizeHofItems(items);
     var token = ++hofSyncToken;
     try{
-      var del = await sb.from('BoardMeetingHomeownerForum').delete().eq('community_id', cid);
+      var del = await sb.from('board_meeting_homeowner_forum').delete().eq('community_id', cid);
       if(token !== hofSyncToken) return;
       if(del.error){ console.warn('[BM v503 HOF] delete failed:', del.error); return; }
       if(!normalized.length) return;
       var userId = getCurrentUserId();
       var rows = normalized.map(function(item){ return {
         community_id: cid,
-        client_id: String(item.id || nowId('hof')),
-        homeowner_name: item.name || '',
+        name: item.name || '',
         topic: item.topic || '',
         notes: item.notes || '',
-        created_by: userId || null,
-        updated_by: userId || null
+        created_by: userId || null
       };});
-      var ins = await sb.from('BoardMeetingHomeownerForum').insert(rows);
+      var ins = await sb.from('board_meeting_homeowner_forum').insert(rows);
       if(ins.error) console.warn('[BM v503 HOF] insert failed:', ins.error);
     }catch(e){ console.warn('[BM v503 HOF] sync failed:', e); }
   }
