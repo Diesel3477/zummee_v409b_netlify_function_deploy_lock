@@ -4893,130 +4893,7 @@ body.dark-mode .mh2-stat-box {
 </style>
 
 
-<script id="bmAttendanceNoFlickerServiceLockV2">
-(function(){
-  window.__bmAttendanceServiceRoleFinalLock = true;
-  window.__bmAttendanceNoFlickerV2 = true;
-  var state = window.__bmAttendanceStateV2 || (window.__bmAttendanceStateV2 = { rows:null, cid:'', sig:'', loading:false, lastGoodHtml:'', lastPresentText:'' });
-
-  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-  function safeParse(raw){ try{return JSON.parse(raw||'');}catch(e){return null;} }
-  function getLocal(k){ try{return String(localStorage.getItem(k)||'').trim();}catch(e){return '';} }
-  function currentCommunityId(){
-    var sel=document.getElementById('zummeeCommunitySelect');
-    if(sel && sel.value) return String(sel.value).trim();
-    var keys=['zummee_selected_community_id','board_member_hub_selected_community_id','mh2_selected_community_id','zummee_selected_community_v1'];
-    for(var i=0;i<keys.length;i++){
-      var raw=getLocal(keys[i]); if(!raw) continue;
-      var obj=safeParse(raw);
-      if(obj && (obj.id || obj.community_id)) return String(obj.id || obj.community_id).trim();
-      if(raw[0] !== '{') return raw;
-    }
-    return '';
-  }
-  function uid(){ try{ var ses=safeParse(sessionStorage.getItem('zummee_session_v1') || localStorage.getItem('zummee_session_v1') || ''); if(ses && ses.userId) return String(ses.userId); }catch(e){} return getLocal('zummee_user_id_v1') || 'anon'; }
-  function meetingId(){ try{ if(window.ZummeeMeetings && window.ZummeeMeetings.getCurrentId) return window.ZummeeMeetings.getCurrentId(); }catch(e){} var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
-  function attKey(){ return 'zummee_board_meeting_attendance_v2__user__'+uid()+'__meeting__'+meetingId(); }
-  function readAtt(){ var obj=safeParse(localStorage.getItem(attKey())||''); return obj && typeof obj==='object' ? obj : {}; }
-  function writeAtt(obj){ try{ localStorage.setItem(attKey(), JSON.stringify(obj||{})); }catch(e){} }
-  async function fetchMembers(cid){
-    var res = await fetch('/.netlify/functions/get-board-members?community_id=' + encodeURIComponent(cid), { headers:{ 'accept':'application/json' }});
-    var txt = await res.text();
-    var json = safeParse(txt) || { error: txt };
-    if(!res.ok) throw new Error(json.error || json.message || ('Board member function failed: '+res.status));
-    return Array.isArray(json.data) ? json.data : [];
-  }
-  function setEmpty(msg, preserveList){
-    var list=document.getElementById('bmAttendanceList');
-    var empty=document.getElementById('bmAttendanceEmpty');
-    var pill=document.getElementById('bmAttendancePill');
-    if(list && !preserveList) list.innerHTML='';
-    if(empty){ empty.classList.toggle('bm-force-hide', !!preserveList); empty.style.display=preserveList?'none':'block'; empty.textContent=msg || ''; }
-    if(pill && !preserveList) pill.style.display='none';
-  }
-  function render(rows){
-    var list=document.getElementById('bmAttendanceList');
-    var empty=document.getElementById('bmAttendanceEmpty');
-    var pill=document.getElementById('bmAttendancePill');
-    if(!list || !empty) return;
-    rows=(rows||[]).filter(function(r){ return r && r.name; });
-    state.rows = rows;
-    if(!rows.length){ state.lastGoodHtml=''; setEmpty('No board members found for this community. Add them in Operations Portal, then return here.', false); return; }
-    var att=readAtt();
-    var present=0;
-    var html=rows.map(function(r){
-      var id=String(r.id || r.name);
-      var on=!!att[id];
-      if(on) present++;
-      var pos=r.position ? '<span class="bm-att-sub">'+esc(r.position)+'</span>' : '';
-      return '<div class="bm-att-item '+(on?'is-present':'')+'" data-bm-att-id="'+esc(id)+'" data-bm-att-name="'+esc(r.name)+'" data-present="'+(on?'1':'0')+'" role="button" tabindex="0" aria-pressed="'+(on?'true':'false')+'"><span class="bm-att-name">'+esc(r.name)+pos+'</span></div>';
-    }).join('');
-    if(list.innerHTML !== html) list.innerHTML = html;
-    list.classList.remove('is-loading');
-    state.lastGoodHtml = html;
-    if(empty){ empty.classList.add('bm-force-hide'); empty.style.display='none'; }
-    if(pill){ pill.style.display='inline-flex'; pill.textContent=present+' / '+rows.length+' present'; state.lastPresentText=pill.textContent; }
-    var all=document.getElementById('bmAttendanceAllBtn');
-    if(all){ all.disabled=false; all.classList.toggle('is-active', present===rows.length); }
-    window.__bmBoardMembersForAttendance = rows;
-  }
-  async function load(opts){
-    opts=opts||{};
-    var cid=currentCommunityId();
-    if(!cid){ setEmpty('Select a community to load board members.', false); return; }
-    var sig=cid+'|'+meetingId();
-    var list=document.getElementById('bmAttendanceList');
-    if(state.loading) return;
-    if(!opts.force && state.sig===sig && state.rows && state.rows.length){ render(state.rows); return; }
-    state.sig=sig; state.cid=cid; state.loading=true;
-    try{
-      if(list && !list.children.length && !state.lastGoodHtml){ list.classList.add('is-loading'); setEmpty('Loading board members…', false); }
-      else if(list){ list.classList.add('is-loading'); setEmpty('', true); }
-      var rows=await fetchMembers(cid);
-      rows.sort(function(a,b){ return String(a.position||'').localeCompare(String(b.position||'')) || String(a.name||'').localeCompare(String(b.name||'')); });
-      render(rows);
-    }catch(e){
-      console.error('Board Meetings attendance no-flicker loader:', e);
-      if(state.rows && state.rows.length) render(state.rows);
-      else setEmpty('Board members could not load. Check the get-board-members Netlify function.', false);
-    }finally{ state.loading=false; if(list) list.classList.remove('is-loading'); }
-  }
-  function bind(){
-    var list=document.getElementById('bmAttendanceList');
-    if(list && !list.__bmNoFlickerBound){
-      list.__bmNoFlickerBound=true;
-      list.addEventListener('click', function(e){
-        var item=e.target && e.target.closest ? e.target.closest('.bm-att-item') : null;
-        if(!item) return;
-        e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation();
-        var id=item.getAttribute('data-bm-att-id') || item.getAttribute('data-bm-att-name');
-        var att=readAtt(); att[id]=!(item.getAttribute('data-present')==='1'); writeAtt(att); render(state.rows || window.__bmBoardMembersForAttendance || []);
-      }, true);
-      list.addEventListener('keydown', function(e){ if((e.key==='Enter'||e.key===' ') && e.target && e.target.click){ e.preventDefault(); e.target.click(); } }, true);
-      if(window.MutationObserver){
-        new MutationObserver(function(){
-          if(state.rows && state.rows.length && !list.querySelector('.bm-att-item')) setTimeout(function(){ render(state.rows); }, 20);
-        }).observe(list,{childList:true,subtree:false});
-      }
-    }
-    var all=document.getElementById('bmAttendanceAllBtn');
-    if(all && !all.__bmNoFlickerBound){
-      all.__bmNoFlickerBound=true;
-      all.addEventListener('click', function(e){
-        e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation();
-        var rows=state.rows || window.__bmBoardMembersForAttendance || [];
-        var att={}; rows.forEach(function(r){ att[String(r.id || r.name)] = true; });
-        writeAtt(att); render(rows);
-      }, true);
-    }
-  }
-  function start(){ bind(); load({force:true}); }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', start); else start();
-  window.addEventListener('zummee:community-changed', function(){ state.sig=''; state.rows=null; setTimeout(function(){ load({force:true}); },100); });
-  document.addEventListener('community:changed', function(){ state.sig=''; state.rows=null; setTimeout(function(){ load({force:true}); },100); });
-  window.BMAttendanceLoad = function(){ return load({force:true}); };
-})();
-</script>
+<!-- v501: removed legacy get-board-members attendance loader; stable BoardMembers loader owns attendance. -->
 
 
 <style id="bmAttendanceFinalLayoutLockV3">
@@ -5306,19 +5183,16 @@ body.dark-mode .mh2-stat-box {
 
 
 
+
 <script id="bmStableDropdownBoardMembersLock_FINAL_20260506">
 (function(){
   "use strict";
-  window.__BM_STABLE_DROPDOWN_BOARDMEMBERS_LOCK__ = true;
+  window.__BM_STABLE_DROPDOWN_BOARDMEMBERS_LOCK__ = "v501-single-owner";
 
-  var state = {
-    communities: [],
-    communitySig: "",
-    renderingSelect: false,
-    members: [],
-    memberSig: "",
-    loadingMembers: false
-  };
+  var state = window.__BMStableBoardMeetingsV501 || (window.__BMStableBoardMeetingsV501 = {
+    communities: [], communitySig: "", membersByCommunity: Object.create(null), currentCid: "",
+    loadingToken: 0, renderingSelect: false, selectedBound: false, attendanceBound: false
+  });
 
   function $(id){ return document.getElementById(id); }
   function esc(s){ return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#39;"); }
@@ -5327,312 +5201,249 @@ body.dark-mode .mh2-stat-box {
   function setLocal(k,v){ try{ localStorage.setItem(k, String(v || "")); }catch(e){} }
 
   async function waitForSupabase(){
-    if(window.supabaseClient) return window.supabaseClient;
-    if(window.sb) return window.sb;
-    if(window.supabase && typeof window.supabase.from === "function") return window.supabase;
+    if(window.supabaseClient && window.supabaseClient.from) return window.supabaseClient;
+    if(window.sb && window.sb.from) return window.sb;
+    if(window.supabase && window.supabase.from) return window.supabase;
     if(typeof window.ensureSupabase === "function"){
-      try{ var c = await window.ensureSupabase(); if(c) return c; }catch(e){}
+      try{ var c = await window.ensureSupabase(); if(c && c.from) return c; }catch(e){}
     }
     return await new Promise(function(resolve){
       var started = Date.now();
-      var timer = setInterval(function(){
-        var c = window.supabaseClient || window.sb || ((window.supabase && typeof window.supabase.from === "function") ? window.supabase : null);
-        if(c || Date.now() - started > 5000){ clearInterval(timer); resolve(c || null); }
+      var t = setInterval(function(){
+        var c = (window.supabaseClient && window.supabaseClient.from) ? window.supabaseClient : ((window.sb && window.sb.from) ? window.sb : ((window.supabase && window.supabase.from) ? window.supabase : null));
+        if(c || Date.now() - started > 6000){ clearInterval(t); resolve(c || null); }
       }, 50);
     });
   }
 
   async function getUserId(sb){
     try{
-      if(window.zummeeGetAuthUserId){
-        var zid = await window.zummeeGetAuthUserId({ redirect:false });
-        if(zid) return String(zid);
-      }
-    }catch(e){}
-    try{
-      if(sb && sb.auth && typeof sb.auth.getSession === "function"){
+      if(sb && sb.auth && sb.auth.getSession){
         var res = await sb.auth.getSession();
         var id = res && res.data && res.data.session && res.data.session.user && res.data.session.user.id;
         if(id) return String(id);
       }
     }catch(e){}
-    console.warn("Board Meetings stable lock: no Supabase auth session available.");
-    return "";
-  }
-
-  function selectedCommunityId(){
-    var sel = $("zummeeCommunitySelect");
-    if(sel && sel.value) return String(sel.value).trim();
-    var keys = ["zummee_selected_community_id","board_member_hub_selected_community_id","mh2_selected_community_id","zummee_selected_community_v1"];
-    for(var i=0;i<keys.length;i++){
-      var raw = getLocal(keys[i]);
-      if(!raw) continue;
-      var obj = safeParse(raw);
-      if(obj && (obj.id || obj.community_id)) return String(obj.id || obj.community_id).trim();
-      if(raw[0] !== "{") return raw;
-    }
-    return "";
-  }
-
-  function saveSelectedCommunity(id){
-    id = String(id || "").trim();
-    setLocal("zummee_selected_community_id", id);
-    setLocal("board_member_hub_selected_community_id", id);
-    setLocal("mh2_selected_community_id", id);
-    setLocal("zummee_selected_community_v1", id);
+    try{
+      if(window.zummeeGetAuthUserId){
+        var zid = await window.zummeeGetAuthUserId({ redirect:false });
+        if(zid) return String(zid);
+      }
+    }catch(e){}
+    return getLocal("zummee_user_id_v1") || getLocal("zummee_user_id") || "";
   }
 
   function normalizeCommunities(rows){
     var seen = Object.create(null);
     return (rows || []).map(function(r){
-      return {
-        id: String(r.community_id || r.id || "").trim(),
-        name: String(r.community_name || r.name || "").trim()
-      };
-    }).filter(function(c){
-      if(!c.id || seen[c.id]) return false;
-      seen[c.id] = true;
-      if(!c.name) c.name = "Selected community";
-      return true;
-    }).sort(function(a,b){ return a.name.localeCompare(b.name); });
+      return { id:String(r.community_id || r.id || "").trim(), name:String(r.community_name || r.name || "").trim() };
+    }).filter(function(c){ if(!c.id || seen[c.id]) return false; seen[c.id]=true; if(!c.name) c.name="Selected community"; return true; })
+      .sort(function(a,b){ return a.name.localeCompare(b.name); });
   }
-
-  function communitySignature(list){
-    return (list || []).map(function(c){ return c.id + "=" + c.name; }).join("|");
+  function selectedCommunityId(){
+    var sel = $("zummeeCommunitySelect");
+    if(sel && sel.value) return String(sel.value).trim();
+    var keys=["zummee_selected_community_id","board_member_hub_selected_community_id","mh2_selected_community_id","zummee_selected_community_v1"];
+    for(var i=0;i<keys.length;i++){ var raw=getLocal(keys[i]); if(!raw) continue; var obj=safeParse(raw); if(obj && (obj.id || obj.community_id)) return String(obj.id || obj.community_id).trim(); if(raw[0] !== "{") return raw; }
+    return "";
   }
+  function saveSelectedCommunity(id){
+    id=String(id||"").trim();
+    setLocal("zummee_selected_community_id", id);
+    setLocal("board_member_hub_selected_community_id", id);
+    setLocal("mh2_selected_community_id", id);
+    setLocal("zummee_selected_community_v1", id);
+  }
+  function communitySignature(list){ return (list||[]).map(function(c){ return c.id+"="+c.name; }).join("|"); }
 
   function installCleanSelect(){
-    var sel = $("zummeeCommunitySelect");
+    var sel=$("zummeeCommunitySelect");
     if(!sel) return null;
-    if(sel.__bmStableCleanSelect) return sel;
-    var clone = sel.cloneNode(false);
-    clone.id = sel.id;
-    clone.className = sel.className;
+    if(sel.__bmV501CleanSelect) return sel;
+    var clone=sel.cloneNode(false);
+    clone.id=sel.id;
+    clone.className=sel.className;
     clone.setAttribute("aria-label", sel.getAttribute("aria-label") || "Select community");
-    try{ clone.removeAttribute("onchange"); clone.onchange = null; }catch(e){}
     sel.parentNode.replaceChild(clone, sel);
-    clone.__bmStableCleanSelect = true;
+    clone.__bmV501CleanSelect=true;
     clone.addEventListener("change", function(){
-      var id = String(clone.value || "").trim();
+      var id=String(clone.value||"").trim();
+      state.currentCid=id;
       saveSelectedCommunity(id);
-      state.memberSig = "";
-      try{ document.dispatchEvent(new CustomEvent("community:changed", { detail:{ community_id:id } })); }catch(e){}
-      try{ window.dispatchEvent(new CustomEvent("zummee:community-changed", { detail:{ community_id:id } })); }catch(e){}
-      setTimeout(function(){ loadBoardMembers({ force:true }); }, 30);
-    });
+      loadBoardMembers({ force:true, reason:"select-change" });
+      // Dispatch after our own state is locked so other sections can react without owning attendance.
+      setTimeout(function(){
+        try{ document.dispatchEvent(new CustomEvent("community:changed", { detail:{ community_id:id } })); }catch(e){}
+        try{ window.dispatchEvent(new CustomEvent("zummee:community-changed", { detail:{ community_id:id } })); }catch(e){}
+      }, 0);
+    }, true);
     return clone;
   }
 
   function renderCommunities(list, preferredId){
-    var sel = installCleanSelect();
-    if(!sel) return;
-    list = normalizeCommunities(list);
-    state.communities = list;
-    state.communitySig = communitySignature(list);
-    var selected = String(preferredId || selectedCommunityId() || "").trim();
-    if(selected && !list.some(function(c){ return c.id === selected; })) selected = "";
-    if(!selected && list.length) selected = list[0].id;
-
-    state.renderingSelect = true;
-    sel.innerHTML = "";
-    if(!list.length){
-      var empty = document.createElement("option");
-      empty.value = "";
-      empty.textContent = "No assigned communities";
-      sel.appendChild(empty);
-    }else{
-      list.forEach(function(c){
-        var opt = document.createElement("option");
-        opt.value = c.id;
-        opt.textContent = c.name;
-        sel.appendChild(opt);
-      });
-    }
-    sel.value = selected || "";
-    sel.disabled = false;
-    state.renderingSelect = false;
-    if(selected) saveSelectedCommunity(selected);
+    var sel=installCleanSelect(); if(!sel) return;
+    list=normalizeCommunities(list);
+    state.communities=list;
+    state.communitySig=communitySignature(list);
+    var selected=String(preferredId || selectedCommunityId() || "").trim();
+    if(selected && !list.some(function(c){ return c.id===selected; })) selected="";
+    if(!selected && list.length) selected=list[0].id;
+    state.renderingSelect=true;
+    sel.innerHTML="";
+    if(!list.length){ var opt=document.createElement("option"); opt.value=""; opt.textContent="No assigned communities"; sel.appendChild(opt); }
+    else list.forEach(function(c){ var opt=document.createElement("option"); opt.value=c.id; opt.textContent=c.name; sel.appendChild(opt); });
+    sel.value=selected || "";
+    sel.disabled=false;
+    state.renderingSelect=false;
+    if(selected){ state.currentCid=selected; saveSelectedCommunity(selected); }
   }
 
   async function loadAssignedCommunities(){
-    var sb = await waitForSupabase();
-    if(!sb){ console.error("Board Meetings stable lock: Supabase client unavailable."); return []; }
-    var uid = await getUserId(sb);
-    if(!uid){ console.error("Board Meetings stable lock: user id unavailable."); return []; }
-    var res = await sb
-      .from("community_assignments")
-      .select("community_id, community_name")
-      .eq("employee_id", uid)
-      .order("community_name", { ascending:true });
-    if(res.error){ console.error("Board Meetings stable lock assignments error:", res.error); return []; }
+    var sb=await waitForSupabase();
+    if(!sb){ console.error("[BM v501] Supabase client unavailable"); return []; }
+    var uid=await getUserId(sb);
+    if(!uid){ console.error("[BM v501] user id unavailable"); return []; }
+    var res=await sb.from("community_assignments").select("community_id, community_name").eq("employee_id", uid).order("community_name", { ascending:true });
+    if(res.error){ console.error("[BM v501] assignments error", res.error); return []; }
     return normalizeCommunities(res.data || []);
   }
 
   async function reloadCommunities(){
-    var before = selectedCommunityId();
-    var rows = await loadAssignedCommunities();
+    var before=selectedCommunityId();
+    var rows=await loadAssignedCommunities();
     renderCommunities(rows, before);
-    await loadBoardMembers({ force:true });
+    await loadBoardMembers({ force:true, reason:"reload-communities" });
     return rows;
   }
 
   function installSelectGuard(){
-    var sel = $("zummeeCommunitySelect");
-    if(!sel || sel.__bmStableGuarded) return;
-    sel.__bmStableGuarded = true;
-    if(!window.MutationObserver) return;
-    var obs = new MutationObserver(function(){
+    var sel=$("zummeeCommunitySelect"); if(!sel || sel.__bmV501Guarded || !window.MutationObserver) return;
+    sel.__bmV501Guarded=true;
+    new MutationObserver(function(){
       if(state.renderingSelect) return;
-      var currentSig = Array.prototype.slice.call(sel.options || []).map(function(o){ return o.value + "=" + o.textContent.trim(); }).join("|");
-      if(state.communitySig && currentSig !== state.communitySig){
-        setTimeout(function(){ renderCommunities(state.communities, selectedCommunityId()); }, 10);
-      }
-    });
-    obs.observe(sel, { childList:true, subtree:true, characterData:true });
+      var sig=Array.prototype.slice.call(sel.options||[]).map(function(o){ return o.value+"="+o.textContent.trim(); }).join("|");
+      if(state.communitySig && sig!==state.communitySig) setTimeout(function(){ renderCommunities(state.communities, selectedCommunityId()); }, 10);
+    }).observe(sel,{ childList:true, subtree:true, characterData:true });
   }
 
   function meetingId(){
     try{ if(window.ZummeeMeetings && window.ZummeeMeetings.getCurrentId) return String(window.ZummeeMeetings.getCurrentId() || ""); }catch(e){}
-    var d = new Date();
-    return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+    var d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
   }
   function attendanceKey(){ return "zummee_board_meeting_attendance_v2__community__"+selectedCommunityId()+"__meeting__"+meetingId(); }
-  function readAttendance(){ var obj=safeParse(localStorage.getItem(attendanceKey()) || ""); return obj && typeof obj === "object" ? obj : {}; }
+  function readAttendance(){ var obj=safeParse(localStorage.getItem(attendanceKey()) || ""); return obj && typeof obj==="object" ? obj : {}; }
   function writeAttendance(obj){ try{ localStorage.setItem(attendanceKey(), JSON.stringify(obj || {})); }catch(e){} }
 
-  function installCleanAttendanceControls(){
-    var list = $("bmAttendanceList");
-    if(list && !list.__bmStableCleanList){
-      var clone = list.cloneNode(false);
-      clone.id = list.id;
-      clone.className = list.className;
-      list.parentNode.replaceChild(clone, list);
-      list = clone;
-      list.__bmStableCleanList = true;
+  function installAttendanceGuards(){
+    var list=$("bmAttendanceList");
+    if(list && !list.__bmV501Bound){
+      var clone=list.cloneNode(false); clone.id=list.id; clone.className=list.className; list.parentNode.replaceChild(clone, list); list=clone;
+      list.__bmV501Bound=true;
       list.addEventListener("click", function(e){
-        var item = e.target && e.target.closest ? e.target.closest(".bm-att-item") : null;
+        var item=e.target && e.target.closest ? e.target.closest(".bm-att-item") : null;
         if(!item) return;
         e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation();
-        var id = item.getAttribute("data-bm-att-id") || item.getAttribute("data-bm-att-name") || "";
-        var att = readAttendance();
-        att[id] = !(item.getAttribute("data-present") === "1");
-        writeAttendance(att);
-        renderBoardMembers(state.members || []);
+        var id=item.getAttribute("data-bm-att-id") || item.getAttribute("data-bm-att-name") || "";
+        var att=readAttendance(); att[id]=!(item.getAttribute("data-present")==="1"); writeAttendance(att);
+        renderBoardMembers(state.membersByCommunity[selectedCommunityId()] || []);
       }, true);
+      if(window.MutationObserver){
+        new MutationObserver(function(){
+          var cid=selectedCommunityId(); var cached=state.membersByCommunity[cid] || [];
+          if(cached.length && !list.querySelector(".bm-att-item")) setTimeout(function(){ renderBoardMembers(cached); }, 20);
+        }).observe(list,{ childList:true, subtree:false });
+      }
     }
-    var all = $("bmAttendanceAllBtn");
-    if(all && !all.__bmStableCleanAll){
-      var aclone = all.cloneNode(true);
-      aclone.id = all.id;
-      all.parentNode.replaceChild(aclone, all);
-      all = aclone;
-      all.__bmStableCleanAll = true;
+    var all=$("bmAttendanceAllBtn");
+    if(all && !all.__bmV501Bound){
+      var aclone=all.cloneNode(true); aclone.id=all.id; all.parentNode.replaceChild(aclone, all); all=aclone;
+      all.__bmV501Bound=true;
       all.addEventListener("click", function(e){
         e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation();
-        var rows = state.members || [];
-        var att = {};
-        rows.forEach(function(r){ att[String(r.id || r.name)] = true; });
-        writeAttendance(att);
-        renderBoardMembers(rows);
+        var rows=state.membersByCommunity[selectedCommunityId()] || [];
+        var att={}; rows.forEach(function(r){ att[String(r.id || r.name)] = true; }); writeAttendance(att); renderBoardMembers(rows);
       }, true);
     }
   }
 
   function renderBoardMembers(rows){
-    installCleanAttendanceControls();
-    var list = $("bmAttendanceList");
-    var empty = $("bmAttendanceEmpty");
-    var pill = $("bmAttendancePill");
-    var all = $("bmAttendanceAllBtn");
+    installAttendanceGuards();
+    var cid=selectedCommunityId();
+    var list=$("bmAttendanceList"), empty=$("bmAttendanceEmpty"), pill=$("bmAttendancePill"), all=$("bmAttendanceAllBtn");
     if(!list) return;
-    rows = (rows || []).filter(function(r){ return r && r.name; });
-    state.members = rows;
-    window.__bmBoardMembersForAttendance = rows;
-
+    rows=(rows||[]).filter(function(r){ return r && r.name; });
+    state.membersByCommunity[cid]=rows;
+    window.__bmBoardMembersForAttendance=rows;
     if(!rows.length){
-      list.innerHTML = "";
-      if(empty){ empty.classList.remove("bm-force-hide"); empty.style.display = "block"; empty.textContent = "No active board members found for this community."; }
-      if(pill) pill.style.display = "none";
-      if(all) all.disabled = true;
+      list.innerHTML="";
+      if(empty){ empty.classList.remove("bm-force-hide"); empty.style.display="block"; empty.textContent="No active board members found for this community."; }
+      if(pill) pill.style.display="none";
+      if(all) all.disabled=true;
       return;
     }
-
-    var att = readAttendance();
-    var present = 0;
-    list.innerHTML = rows.map(function(r){
-      var id = String(r.id || r.name);
-      var on = !!att[id];
-      if(on) present++;
+    var att=readAttendance(), present=0;
+    var html=rows.map(function(r){
+      var id=String(r.id || r.name); var on=!!att[id]; if(on) present++;
       return '<div class="bm-att-item '+(on?'is-present':'')+'" data-bm-att-id="'+esc(id)+'" data-bm-att-name="'+esc(r.name)+'" data-present="'+(on?'1':'0')+'" role="button" tabindex="0" aria-pressed="'+(on?'true':'false')+'"><span class="bm-att-name">'+esc(r.name)+'</span></div>';
     }).join("");
-    if(empty){ empty.classList.add("bm-force-hide"); empty.style.display = "none"; }
-    if(pill){ pill.style.display = "inline-flex"; pill.textContent = present + " / " + rows.length + " present"; }
-    if(all){ all.disabled = false; all.classList.toggle("is-active", present === rows.length); }
+    if(list.innerHTML !== html) list.innerHTML=html;
+    if(empty){ empty.classList.add("bm-force-hide"); empty.style.display="none"; }
+    if(pill){ pill.style.display="inline-flex"; pill.textContent=present+" / "+rows.length+" present"; }
+    if(all){ all.disabled=false; all.classList.toggle("is-active", present===rows.length); }
+  }
+
+  async function queryBoardMembers(cid, retry){
+    var sb=await waitForSupabase(); if(!sb) throw new Error("Supabase client unavailable");
+    var res=await sb.from("BoardMembers").select("id, name, is_active, community_id").eq("community_id", cid).eq("is_active", true).order("name", { ascending:true });
+    if(res.error) throw res.error;
+    var rows=(res.data||[]).map(function(r){ return { id:r.id, name:r.name, community_id:r.community_id, is_active:r.is_active }; });
+    if(!rows.length && retry){
+      await new Promise(function(r){ setTimeout(r, 250); });
+      return queryBoardMembers(cid, false);
+    }
+    return rows;
   }
 
   async function loadBoardMembers(opts){
-    opts = opts || {};
-    var cid = selectedCommunityId();
+    opts=opts||{};
+    var cid=selectedCommunityId();
     if(!cid){ renderBoardMembers([]); return []; }
-    var sig = cid + "|" + meetingId();
-    if(!opts.force && state.memberSig === sig && state.members && state.members.length){ renderBoardMembers(state.members); return state.members; }
-    if(state.loadingMembers) return state.members || [];
-    state.loadingMembers = true;
-    state.memberSig = sig;
-    var empty = $("bmAttendanceEmpty");
-    if(empty && !(state.members && state.members.length)){ empty.style.display="block"; empty.textContent="Loading board members…"; }
+    state.currentCid=cid;
+    var token=++state.loadingToken;
+    var cached=state.membersByCommunity[cid] || [];
+    var empty=$("bmAttendanceEmpty");
+    if(!cached.length && empty){ empty.style.display="block"; empty.textContent="Loading board members…"; }
     try{
-      var sb = await waitForSupabase();
-      if(!sb) throw new Error("Supabase client unavailable");
-      var res = await sb
-        .from("BoardMembers")
-        .select("id, name, is_active, community_id")
-        .eq("community_id", cid)
-        .eq("is_active", true)
-        .order("name", { ascending:true });
-      if(res.error) throw res.error;
-      var rows = (res.data || []).map(function(r){ return { id:r.id, name:r.name, community_id:r.community_id, is_active:r.is_active }; });
+      var rows=await queryBoardMembers(cid, true);
+      if(token !== state.loadingToken || cid !== selectedCommunityId()) return state.membersByCommunity[selectedCommunityId()] || [];
       renderBoardMembers(rows);
+      console.log("[BM v501] BoardMembers loaded", cid, rows.length, opts.reason || "");
       return rows;
     }catch(e){
-      console.error("Board Meetings stable lock BoardMembers error:", e);
-      if(!(state.members && state.members.length)){
-        renderBoardMembers([]);
-        if(empty){ empty.style.display="block"; empty.textContent="Board members could not load from BoardMembers."; }
-      }
-      return state.members || [];
-    }finally{
-      state.loadingMembers = false;
+      console.error("[BM v501] BoardMembers error", e);
+      if(cached.length) renderBoardMembers(cached);
+      else { renderBoardMembers([]); if(empty){ empty.style.display="block"; empty.textContent="Board members could not load from BoardMembers."; } }
+      return cached;
     }
   }
 
-  function exposeLocks(){
-    window.BMStableDropdownBoardMembersLock = {
-      reloadCommunities: reloadCommunities,
-      loadBoardMembers: function(){ return loadBoardMembers({ force:true }); },
-      getCommunities: function(){ return state.communities.slice(); },
-      getMembers: function(){ return state.members.slice(); }
-    };
-    window.BMAttendanceLoad = function(){ return loadBoardMembers({ force:true }); };
-    window.BMCommunityDropdownServiceLabelLock = window.BMCommunityDropdownServiceLabelLock || {};
-    window.BMCommunityDropdownServiceLabelLock.reload = reloadCommunities;
+  function expose(){
+    window.BMStableDropdownBoardMembersLock={ reloadCommunities:reloadCommunities, loadBoardMembers:function(){ return loadBoardMembers({ force:true, reason:"manual" }); }, getCommunities:function(){ return state.communities.slice(); }, getMembers:function(){ return (state.membersByCommunity[selectedCommunityId()] || []).slice(); } };
+    window.BMAttendanceLoad=function(){ return loadBoardMembers({ force:true, reason:"legacy-manual" }); };
+    window.BMCommunityDropdownServiceLabelLock=window.BMCommunityDropdownServiceLabelLock || {};
+    window.BMCommunityDropdownServiceLabelLock.reload=reloadCommunities;
   }
 
   async function start(){
-    exposeLocks();
-    installCleanSelect();
-    installCleanAttendanceControls();
-    installSelectGuard();
+    expose(); installCleanSelect(); installAttendanceGuards(); installSelectGuard();
     await reloadCommunities();
     installSelectGuard();
-    // Re-assert after older page loaders finish their delayed runs.
-    setTimeout(reloadCommunities, 450);
-    setTimeout(reloadCommunities, 1100);
+    // Reassert once after old page boot tasks, without clearing existing good rows.
+    setTimeout(function(){ reloadCommunities(); }, 900);
   }
 
-  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
-  else start();
-  document.addEventListener("visibilitychange", function(){ if(!document.hidden) setTimeout(reloadCommunities, 100); });
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", start, { once:true }); else start();
+  document.addEventListener("visibilitychange", function(){ if(!document.hidden) setTimeout(function(){ loadBoardMembers({ force:true, reason:"visible" }); }, 100); });
 })();
 </script>
 
