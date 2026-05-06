@@ -9,7 +9,7 @@
   <script src="shared/data-layer-v409.js?v=2026-04-30-v409-server-board-photo-upload"></script>
   
   <script>
-window.ZUMMEE_BUILD = "2026-05-06-v520-vendor-simple-single-save-reset";
+window.ZUMMEE_BUILD = "2026-05-06-v521-vendor-ipad-undo-stability-lock";
     (function(){
       try{
         var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
@@ -3505,6 +3505,18 @@ body.dark-mode .mh2-stat-box {
       }
     }
 
+    function blurActiveVendorFieldForIPad(){
+      try{
+        const active = document.activeElement;
+        if(active && active.closest && active.closest('#vendorsCard')){
+          active.blur();
+        }
+      }catch(_e){}
+    }
+    function waitForVendorKeyboardCommit(){
+      return new Promise(resolve => setTimeout(resolve, 140));
+    }
+
     function attachVendorsModule(){
       setupVendorInputPolish();
       const oldBtn = byId('saveVendorBtn');
@@ -3519,6 +3531,12 @@ body.dark-mode .mh2-stat-box {
       btn.addEventListener('click', async function(ev){
         try{ ev.preventDefault(); ev.stopImmediatePropagation(); }catch(_e){}
         if(window.__ZUMMEE_VENDOR_SAVE_IN_PROGRESS) return false;
+
+        // v521 iPad stability: commit the focused input before any async save/list render.
+        // This prevents Safari's "Undo Typing" popover caused by programmatic DOM work
+        // while an input still owns the keyboard session.
+        blurActiveVendorFieldForIPad();
+        await waitForVendorKeyboardCommit();
 
         const client = getVendorClient();
         const communityId = String(getDailyOpsSelectedCommunityId() || '').trim();
@@ -3593,21 +3611,25 @@ body.dark-mode .mh2-stat-box {
 
           if(result && result.error){
             if(String(result.error.code || '') === '23505'){
-              console.warn('[Daily Ops v520 Vendors] duplicate blocked by DB; treating as saved', result.error);
+              console.warn('[Daily Ops v521 Vendors] duplicate blocked by DB; treating as saved', result.error);
             }else{
               throw result.error;
             }
           }
 
-          console.log('[Daily Ops v520 Vendors] saved', result?.data || payload);
-          await loadVendorsModule();
+          console.log('[Daily Ops v521 Vendors] saved', result?.data || payload);
           btn.textContent = 'Saved ✓';
+
+          // v521: reload the vendor list after the focused field has fully blurred.
+          // Do not reset or clear the form here; that avoids iPad Safari's Undo Typing prompt.
+          setTimeout(() => { loadVendorsModule().catch(err => console.warn('[Daily Ops v521 Vendors] post-save reload failed', err)); }, 260);
+
           setTimeout(() => {
             btn.textContent = Store.editingVendorId ? 'Update vendor' : 'Save vendor';
             btn.disabled = false;
           }, 1200);
         }catch(err){
-          console.error('[Daily Ops v520 Vendors] save failed', err);
+          console.error('[Daily Ops v521 Vendors] save failed', err);
           btn.textContent = 'Save failed';
           setTimeout(() => {
             btn.textContent = Store.editingVendorId ? 'Update vendor' : 'Save vendor';
@@ -5580,7 +5602,7 @@ function normalizeAccessCodeRow(row){
   width: 100% !important;
 }
 #remindersCard #reminderDate::-webkit-datetime-edit,
-#remindersCard #reminderDate::-webkit-datetime-edit-fields-wrapper
+#remindersCard #reminderDate::-webkit-datetime-edit-fields-wrapper,
 #remindersCard #reminderDate::-webkit-datetime-edit-text,
 #remindersCard #reminderDate::-webkit-datetime-edit-month-field,
 #remindersCard #reminderDate::-webkit-datetime-edit-day-field,
