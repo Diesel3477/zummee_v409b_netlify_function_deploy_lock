@@ -9,7 +9,7 @@
   <script src="shared/data-layer-v409.js?v=2026-04-30-v409-server-board-photo-upload"></script>
   
   <script>
-window.ZUMMEE_BUILD = "2026-05-06-v517-vendor-single-owner-no-legacy";
+window.ZUMMEE_BUILD = "2026-05-06-v518-vendor-dedupe-upsert-lock";
     (function(){
       try{
         var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
@@ -3302,10 +3302,12 @@ body.dark-mode .mh2-stat-box {
         authUserId = String(userRes && userRes.data && userRes.data.user && userRes.data.user.id || '').trim();
       }catch(_e){}
 
+      const norm = (value) => String(value || '').trim().toLowerCase();
       const payload = {
         company: String(Store.activeCompanyName || readCurrentCompanyName() || '').trim() || 'Sixes Management Group',
         name: String(row.name || '').trim(),
         type: String(row.category || row.type || '').trim() || null,
+        contact_name: String(row.contact_name || row.contact || '').trim() || null,
         phone: String(row.phone || '').trim() || null,
         email: String(row.email || '').trim() || null,
         community_id: communityId,
@@ -3314,22 +3316,44 @@ body.dark-mode .mh2-stat-box {
 
       if(!payload.name) throw new Error('Vendor name is required.');
 
-      if(String(row.id || '').trim()){
+      const updatePayload = {
+        company: payload.company,
+        name: payload.name,
+        type: payload.type,
+        contact_name: payload.contact_name,
+        phone: payload.phone,
+        email: payload.email,
+        user_id: payload.user_id
+      };
+
+      // v518: single-owner duplicate guard. Before inserting, find an existing vendor
+      // in this community with the same normalized name/category/email/phone and update it.
+      let targetId = String(row.id || '').trim();
+      if(!targetId){
+        const existing = await client
+          .from('Vendors')
+          .select('id,name,type,phone,email')
+          .eq('community_id', communityId);
+        if(existing.error) throw existing.error;
+        const match = (existing.data || []).find(v =>
+          norm(v.name) === norm(payload.name) &&
+          norm(v.type) === norm(payload.type) &&
+          norm(v.email) === norm(payload.email) &&
+          norm(v.phone) === norm(payload.phone)
+        );
+        if(match && match.id) targetId = String(match.id);
+      }
+
+      if(targetId){
         const res = await client
           .from('Vendors')
-          .update({
-            company: payload.company,
-            name: payload.name,
-            type: payload.type,
-            phone: payload.phone,
-            email: payload.email
-          })
-          .eq('id', String(row.id).trim())
+          .update(updatePayload)
+          .eq('id', targetId)
           .eq('community_id', communityId)
           .select('*')
           .maybeSingle();
         if(res.error) throw res.error;
-        return res.data || { id:String(row.id).trim(), ...payload };
+        return res.data || { id:targetId, ...payload };
       }
 
       const res = await client
@@ -3489,6 +3513,10 @@ body.dark-mode .mh2-stat-box {
       existingBtn.parentNode.replaceChild(cleanBtn, existingBtn);
       cleanBtn.addEventListener('click', async () => {
         const btn = cleanBtn;
+        if(window.__ZUMMEE_VENDOR_SAVE_IN_PROGRESS){
+          console.warn('[Daily Ops v518 Vendors] duplicate save click blocked');
+          return;
+        }
         const name = String(byId('vendorNameInput').value || '').trim();
         const category = String(byId('vendorCategoryInput').value || '').trim();
         const contact_name = String(byId('vendorContactInput').value || '').trim();
@@ -3498,6 +3526,7 @@ body.dark-mode .mh2-stat-box {
         if(email && !vendorEmailLooksValid(email)){ alert('Enter a valid vendor email address.'); byId('vendorEmailInput').focus(); return; }
         const original = btn.textContent;
         try{
+          window.__ZUMMEE_VENDOR_SAVE_IN_PROGRESS = true;
           btn.disabled = true;
           btn.textContent = Store.editingVendorId ? 'Updating…' : 'Saving…';
           const savedRow = await upsertVendorRow({ id:Store.editingVendorId, name, category, contact_name, phone, email });
@@ -3515,6 +3544,7 @@ body.dark-mode .mh2-stat-box {
           alert('Vendor save failed: ' + (err && (err.message || err.details || err.code) || 'Check Supabase permissions and Vendors policies.'));
           console.warn('[Daily Ops v517 Vendors] save failed payload uses only existing Vendors columns: community_id,user_id,company,name,type,phone,email');
         }finally{
+          window.__ZUMMEE_VENDOR_SAVE_IN_PROGRESS = false;
           if(btn.textContent !== 'Saved ✓'){
             btn.disabled = false;
             if(!Store.editingVendorId) btn.textContent = 'Save vendor';
