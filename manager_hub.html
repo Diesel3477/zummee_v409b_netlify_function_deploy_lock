@@ -42,6 +42,13 @@
 
   </style>
 
+  
+<style id="zummee-v522-smart-alert-stability-css">
+  #smartAlertStrip .mh2-alert{min-height:112px!important;contain:layout style;}
+  html:not([data-zummee-smart-alerts-v426-ready="1"]) #smartAlertStrip .mh2-alert{visibility:hidden!important;opacity:0!important;}
+  html[data-zummee-smart-alerts-v426-ready="1"] #smartAlertStrip .mh2-alert{visibility:visible!important;opacity:1!important;transition:opacity .16s ease;}
+</style>
+
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Zummee Manager Hub</title>
@@ -66,7 +73,7 @@
     })();
   </script>
   <script>
-window.__MH_VERSION = 'v482_site_auth_lock';
+window.__MH_VERSION = 'v522_smart_alert_stability_lock';
 
     (function(){
       try{
@@ -78,6 +85,183 @@ window.__MH_VERSION = 'v482_site_auth_lock';
       }
     })();
 </script>
+
+  <script id="zummee-v522-smart-alert-stability-controller">
+  (function(){
+    'use strict';
+    if(window.__ZUMMEE_V522_SMART_ALERT_STABILITY__) return;
+
+    var READY_ATTR = 'data-zummee-smart-alerts-v426-ready';
+    var IDS = ['mh2AlertBoard','mh2AlertActivity','mh2AlertApprovals'];
+    var state = window.__ZUMMEE_V522_SMART_ALERT_STABILITY__ = {
+      version: 'v522-smart-alert-stability-lock',
+      allowReady: false,
+      pendingReady: false,
+      suppress: false,
+      startedAt: Date.now(),
+      lastStable: {},
+      readyTimer: null,
+      observer: null
+    };
+
+    var originalSetAttribute = Element.prototype.setAttribute;
+    var originalRemoveAttribute = Element.prototype.removeAttribute;
+
+    // Block older scripts from making the cards visible before all three cards settle.
+    Element.prototype.setAttribute = function(name, value){
+      try{
+        if(this === document.documentElement && String(name) === READY_ATTR && String(value) === '1' && !state.allowReady){
+          state.pendingReady = true;
+          scheduleReadyCheck(220);
+          return;
+        }
+      }catch(_e){}
+      return originalSetAttribute.apply(this, arguments);
+    };
+
+    function $(id){ return document.getElementById(id); }
+    function text(el, sel){ var node = el && el.querySelector(sel); return node ? String(node.textContent || '').trim() : ''; }
+    function ctxKey(){
+      var id = '';
+      try{
+        var sel = $('zummeeCommunitySelect') || $('communitySelect');
+        if(sel && sel.value) id = String(sel.value || '').trim();
+      }catch(_e){}
+      if(!id){
+        try{ id = String(localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('zummeeActiveCommunityId') || localStorage.getItem('activeCommunityId') || localStorage.getItem('currentCommunityId') || '').trim(); }catch(_e2){}
+      }
+      return id || 'default';
+    }
+    function cacheKey(){ return 'zummee_manager_smart_alerts_stable_v522:' + ctxKey(); }
+    function toneOf(el){
+      if(!el) return 'good';
+      if(el.classList.contains('is-urgent')) return 'urgent';
+      if(el.classList.contains('is-attention')) return 'attention';
+      return 'good';
+    }
+    function isPlaceholderSnapshot(s){
+      if(!s) return true;
+      var joined = [s.title, s.badge, s.copy].join(' ').toLowerCase();
+      return /loading|checking|refreshing|please wait|will appear here after refresh/.test(joined);
+    }
+    function isEmptySnapshot(s){
+      if(!s) return false;
+      var joined = [s.badge, s.copy].join(' ').toLowerCase();
+      return /^(stable|clear|quiet)$/.test(String(s.badge || '').trim().toLowerCase()) || /no open|no active|no current|no approval|no maintenance/.test(joined);
+    }
+    function captureCard(id){
+      var el = $(id);
+      if(!el) return null;
+      return {
+        id: id,
+        tone: toneOf(el),
+        href: el.getAttribute('href') || '',
+        title: text(el, '.mh2-alert-title'),
+        badge: text(el, '.mh2-alert-badge'),
+        copy: text(el, '.mh2-alert-copy')
+      };
+    }
+    function renderCard(snap){
+      if(!snap || !snap.id) return;
+      var el = $(snap.id);
+      if(!el) return;
+      state.suppress = true;
+      try{
+        el.classList.remove('is-good','is-attention','is-urgent');
+        el.classList.add(snap.tone === 'urgent' ? 'is-urgent' : (snap.tone === 'attention' ? 'is-attention' : 'is-good'));
+        if(snap.href) el.setAttribute('href', snap.href);
+        var title = el.querySelector('.mh2-alert-title');
+        var badge = el.querySelector('.mh2-alert-badge');
+        var copy = el.querySelector('.mh2-alert-copy');
+        if(title) title.textContent = snap.title || '';
+        if(badge) badge.textContent = snap.badge || '';
+        if(copy) copy.textContent = snap.copy || '';
+      }catch(_e){} finally{
+        setTimeout(function(){ state.suppress = false; }, 0);
+      }
+    }
+    function readCache(){
+      try{ return JSON.parse(sessionStorage.getItem(cacheKey()) || localStorage.getItem(cacheKey()) || '{}') || {}; }catch(_e){ return {}; }
+    }
+    function writeCache(payload){
+      try{ sessionStorage.setItem(cacheKey(), JSON.stringify(payload || {})); }catch(_e){}
+      try{ localStorage.setItem(cacheKey(), JSON.stringify(payload || {})); }catch(_e2){}
+    }
+    function restoreCachedCards(){
+      var cached = readCache();
+      IDS.forEach(function(id){
+        if(cached[id] && !isPlaceholderSnapshot(cached[id])){
+          state.lastStable[id] = cached[id];
+          renderCard(cached[id]);
+        }
+      });
+    }
+    function captureStableCards(){
+      var cached = readCache();
+      var changed = false;
+      IDS.forEach(function(id){
+        var snap = captureCard(id);
+        if(!snap) return;
+        var prev = state.lastStable[id] || cached[id];
+
+        // Never store loading/checking states.
+        if(isPlaceholderSnapshot(snap)){
+          if(prev && !isPlaceholderSnapshot(prev)) renderCard(prev);
+          return;
+        }
+
+        // During the initial settle window, do not let a late legacy writer flash a populated card to empty.
+        if(Date.now() - state.startedAt < 4200 && prev && !isEmptySnapshot(prev) && isEmptySnapshot(snap)){
+          renderCard(prev);
+          return;
+        }
+
+        state.lastStable[id] = snap;
+        cached[id] = snap;
+        changed = true;
+      });
+      if(changed) writeCache(cached);
+    }
+    function markReady(){
+      captureStableCards();
+      state.allowReady = true;
+      try{ originalSetAttribute.call(document.documentElement, READY_ATTR, '1'); }catch(_e){}
+      try{ console.info('[v522 smart alerts] stable render ready', state.lastStable); }catch(_e2){}
+    }
+    function scheduleReadyCheck(delay){
+      clearTimeout(state.readyTimer);
+      state.readyTimer = setTimeout(function(){ markReady(); }, delay || 360);
+    }
+    function observe(){
+      var strip = $('smartAlertStrip');
+      if(!strip || state.observer) return;
+      state.observer = new MutationObserver(function(){
+        if(state.suppress) return;
+        scheduleReadyCheck(320);
+      });
+      state.observer.observe(strip, {subtree:true, childList:true, characterData:true, attributes:true, attributeFilter:['class','href']});
+    }
+    function resetForCommunityChange(){
+      state.allowReady = false;
+      state.startedAt = Date.now();
+      try{ originalRemoveAttribute.call(document.documentElement, READY_ATTR); }catch(_e){}
+      restoreCachedCards();
+      scheduleReadyCheck(650);
+    }
+    function init(){
+      try{ originalRemoveAttribute.call(document.documentElement, READY_ATTR); }catch(_e){}
+      restoreCachedCards();
+      observe();
+      scheduleReadyCheck(900);
+      setTimeout(markReady, 2800);
+    }
+
+    document.addEventListener('DOMContentLoaded', init, {once:true});
+    window.addEventListener('pageshow', function(){ setTimeout(init, 0); });
+    document.addEventListener('community:changed', resetForCommunityChange);
+    window.addEventListener('zummee:community-changed', resetForCommunityChange);
+  })();
+  
 
   <script>
     (function(){
