@@ -2,7 +2,7 @@
 
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-06-v509-hof-keyboard-stability-lock";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-06-v510-hof-no-render-while-typing-lock";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <script>
 // v840: ensureSupabase Promise shim (clean)
 function ensureSupabaseSync(){
@@ -5717,14 +5717,13 @@ body.dark-mode .mh2-stat-box {
 
 
 
-<script id="bm-v505-hof-single-owner-supabase-buttons">
+<script id="bm-v510-hof-no-render-while-typing-lock">
 (function(){
   if (window.__BMV505HofSingleOwnerInstalled) return;
   window.__BMV505HofSingleOwnerInstalled = true;
 
   const TABLE = 'board_meeting_homeowner_forum';
   let loadToken = 0;
-  let saveTimer = null;
   let booted = false;
 
   function $(id){ return document.getElementById(id); }
@@ -5774,6 +5773,11 @@ body.dark-mode .mh2-stat-box {
       };
     });
   }
+  function isEditing(){
+    const list = $('hofEntries');
+    const active = document.activeElement;
+    return !!(list && active && list.contains(active) && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName));
+  }
   function render(items){
     const list = $('hofEntries');
     if (!list) return;
@@ -5822,9 +5826,14 @@ body.dark-mode .mh2-stat-box {
       render([]);
       return;
     }
+    if (isEditing()){
+      console.warn('[BM v510 HOF] load render blocked while editing', reason || '');
+      status('');
+      return;
+    }
     render(res.data || []);
     status('');
-    console.log('[BM v505 HOF] loaded', cid, (res.data || []).length, reason || '');
+    console.log('[BM v510 HOF] loaded', cid, (res.data || []).length, reason || '');
   }
   async function save(){
     const client = sb();
@@ -5832,10 +5841,12 @@ body.dark-mode .mh2-stat-box {
     if (!client || !cid){ status(!client ? 'Supabase client not ready.' : 'Select a community.', true); return; }
     const userId = await currentUserId();
     if (!userId){ status('No signed-in user found. Please log out and back in.', true); return; }
+    const saveBtn = $('hofSaveAll');
     const items = collect().filter(function(item){ return item.name || item.topic || item.notes; });
+    if (saveBtn) saveBtn.disabled = true;
     status('Saving…');
     const del = await client.from(TABLE).delete().eq('community_id', cid);
-    if (del.error){ console.error('[BM v505 HOF] delete failed:', del.error); status('Save failed while clearing old entries.', true); return; }
+    if (del.error){ console.error('[BM v510 HOF] delete failed:', del.error); status('Save failed while clearing old entries.', true); if (saveBtn) saveBtn.disabled = false; return; }
     if (items.length){
       const rows = items.map(function(item){ return {
         community_id: cid,
@@ -5845,18 +5856,14 @@ body.dark-mode .mh2-stat-box {
         notes: item.notes || ''
       };});
       const ins = await client.from(TABLE).insert(rows).select('id, name, topic, notes, community_id, created_at');
-      if (ins.error){ console.error('[BM v505 HOF] insert failed:', ins.error); status('Save failed while adding entries.', true); return; }
-      render(ins.data || items);
-    } else {
-      render([]);
+      if (ins.error){ console.error('[BM v510 HOF] insert failed:', ins.error); status('Save failed while adding entries.', true); if (saveBtn) saveBtn.disabled = false; return; }
     }
+    // Do not render after save. Re-rendering while an input is focused closes the iPad keyboard.
+    countPill(items);
+    if (saveBtn) saveBtn.disabled = false;
     status('Saved.');
     setTimeout(function(){ status(''); }, 1500);
     try{ window.dispatchEvent(new CustomEvent('zummee:minutes-source-changed')); }catch(_e){}
-  }
-  function scheduleSave(){
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(save, 650);
   }
   function addEntry(){
     const items = collect().filter(function(item){ return item.name || item.topic || item.notes; });
@@ -5893,18 +5900,14 @@ body.dark-mode .mh2-stat-box {
         e.preventDefault(); e.stopImmediatePropagation();
         const id = btn.getAttribute('data-hof-remove');
         render(collect().filter(function(item){ return String(item.id) !== String(id); }));
-        scheduleSave();
       }, true);
-      list.addEventListener('input', scheduleSave, true);
-      list.addEventListener('change', scheduleSave, true);
     }
     if (select) select.addEventListener('change', function(){ load('community-change'); }, true);
     window.addEventListener('zummee:community-changed', function(){ load('community-event'); });
     document.addEventListener('community:changed', function(){ load('community-event'); });
     setTimeout(function(){ load('initial'); }, 150);
-    setTimeout(function(){ load('settled'); }, 1000);
-    window.BMHomeownerForumV505 = { load, save, collect, render };
-    console.log('[BM v505 HOF] single-owner Supabase buttons installed');
+    window.BMHomeownerForumV510 = { load, save, collect, render, isEditing };
+    console.log('[BM v510 HOF] no-render-while-typing lock installed');
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind, { once:true }); else bind();
 })();
