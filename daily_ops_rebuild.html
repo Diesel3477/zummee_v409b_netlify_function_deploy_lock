@@ -7,6 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="shared/supabase-client.js?v=2026-04-29-v327"></script>
   <script src="shared/data-layer-v409.js?v=2026-04-30-v409-server-board-photo-upload"></script>
+  <script src="shared/community-selection.js?v=2026-05-06-v514-community-selection-lock"></script>
   
   <script>
     (function(){
@@ -2220,17 +2221,21 @@ body.dark-mode .mh2-stat-box {
       Store.activeCommunityId = match.id || '';
       Store.activeCommunityName = match.name || '';
       select.innerHTML = Store.communities.map(c => {
-        const value = encodeURIComponent(JSON.stringify(c));
-        const selected = ((c.id && c.id === Store.activeCommunityId) || ((!c.id || !Store.activeCommunityId) && c.name === Store.activeCommunityName)) ? ' selected' : '';
-        return `<option value="${value}"${selected}>${escapeHtml(c.name || c.id || 'Community')}</option>`;
+        const id = String(c.id || '').trim();
+        const name = String(c.name || c.id || 'Community').trim();
+        const selected = ((id && id === Store.activeCommunityId) || ((!id || !Store.activeCommunityId) && name === Store.activeCommunityName)) ? ' selected' : '';
+        return `<option value="${escapeHtml(id)}" data-community-id="${escapeHtml(id)}" data-community-name="${escapeHtml(name)}"${selected}>${escapeHtml(name)}</option>`;
       }).join('');
+      if(window.ZummeeCommunity) window.ZummeeCommunity.normalizeSelectOptions('communitySelect');
       syncCommunityToStorage();
     }
     function attachCommunitySelect(){
       byId('communitySelect').addEventListener('change', async (e) => {
-        const obj = safeJson(decodeURIComponent(e.target.value), {});
-        Store.activeCommunityId = String(obj.id || '').trim();
-        Store.activeCommunityName = String(obj.name || '').trim();
+        const ctx = window.ZummeeCommunity
+          ? window.ZummeeCommunity.syncSelectedCommunityStorage('communitySelect')
+          : { id: String(e.target.value || '').trim(), name: String(e.target.selectedOptions && e.target.selectedOptions[0] ? e.target.selectedOptions[0].textContent : '').trim() };
+        Store.activeCommunityId = String(ctx.id || '').trim();
+        Store.activeCommunityName = String(ctx.name || '').trim();
         syncCommunityToStorage();
         await loadDailyOpsCompanyLogo();
         await loadModules();
@@ -3216,7 +3221,8 @@ body.dark-mode .mh2-stat-box {
     }
     async function migrateLegacyVendorsToSupabase(existingRows){
       const client = getVendorClient();
-      const communityId = String(Store.activeCommunityId || '').trim();
+      const communityId = String((window.ZummeeCommunity && window.ZummeeCommunity.getSelectedCommunityId('communitySelect')) || Store.activeCommunityId || '').trim();
+      Store.activeCommunityId = communityId || Store.activeCommunityId;
       if(!client || !communityId) return false;
       const legacyRows = readLegacyVendorRows();
       if(!legacyRows.length) return false;
@@ -3244,7 +3250,8 @@ body.dark-mode .mh2-stat-box {
     }
     async function fetchVendorRows(){
       const client = getVendorClient();
-      const communityId = String(Store.activeCommunityId || '').trim();
+      const communityId = String((window.ZummeeCommunity && window.ZummeeCommunity.getSelectedCommunityId('communitySelect')) || Store.activeCommunityId || '').trim();
+      Store.activeCommunityId = communityId || Store.activeCommunityId;
       if(!client || !communityId) return { rows:[], error: client ? null : new Error('Supabase client unavailable') };
       let res = await client
         .from('Vendors')
@@ -3268,7 +3275,8 @@ body.dark-mode .mh2-stat-box {
     async function upsertVendorRow(row){
       await ensureVendorAuth();
       const client = getVendorClient();
-      const communityId = String(Store.activeCommunityId || '').trim();
+      const communityId = String((window.ZummeeCommunity && window.ZummeeCommunity.getSelectedCommunityId('communitySelect')) || Store.activeCommunityId || '').trim();
+      Store.activeCommunityId = communityId || Store.activeCommunityId;
       if(!client || !communityId) throw new Error('Missing Supabase client or active community.');
       const payload = {
         company: String(Store.activeCompanyName || readCurrentCompanyName() || '').trim() || null,
@@ -3311,7 +3319,8 @@ body.dark-mode .mh2-stat-box {
     async function deleteVendorRow(id){
       await ensureVendorAuth();
       const client = getVendorClient();
-      const communityId = String(Store.activeCommunityId || '').trim();
+      const communityId = String((window.ZummeeCommunity && window.ZummeeCommunity.getSelectedCommunityId('communitySelect')) || Store.activeCommunityId || '').trim();
+      Store.activeCommunityId = communityId || Store.activeCommunityId;
       if(!client || !communityId) throw new Error('Missing Supabase client or active community.');
       const res = await client
         .from('Vendors')
