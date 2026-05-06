@@ -9,6 +9,7 @@
   <script src="shared/data-layer-v409.js?v=2026-04-30-v409-server-board-photo-upload"></script>
   
   <script>
+window.ZUMMEE_BUILD = "2026-05-06-v517-vendor-single-owner-no-legacy";
     (function(){
       try{
         var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
@@ -3172,6 +3173,7 @@ body.dark-mode .mh2-stat-box {
     }
 
 
+    console.log('[Daily Ops v517 Vendors] single-owner Supabase save installed');
     /* v513 LOCKED: Vendors are Supabase-backed using ONE canonical table: public."Vendors".
        - Supabase is the only persistent source of truth.
        - localStorage dailyOpsV2:vendors:* is migration-only backup.
@@ -3259,11 +3261,9 @@ body.dark-mode .mh2-stat-box {
         community_id: communityId,
         name: v.name,
         type: v.category || null,
-        contact_name: v.contact_name || null,
         phone: v.phone || null,
         email: v.email || null,
-        user_id: String(Store.userId || readCurrentUserId() || '').trim() || null,
-        updated_at: new Date().toISOString()
+        user_id: String(Store.userId || readCurrentUserId() || '').trim() || null
       }));
       if(!toInsert.length) return false;
       const res = await client.from('Vendors').insert(toInsert).select('*');
@@ -3286,16 +3286,8 @@ body.dark-mode .mh2-stat-box {
         .order('name', { ascending:true });
       if(res.error) return { rows:[], error:res.error };
       let rows = (res.data || []).map(normalizeVendorRow);
-      const migrated = await migrateLegacyVendorsToSupabase(rows);
-      if(migrated){
-        res = await client
-          .from('Vendors')
-          .select('*')
-          .eq('community_id', communityId)
-          .order('name', { ascending:true });
-        if(res.error) return { rows:[], error:res.error };
-        rows = (res.data || []).map(normalizeVendorRow);
-      }
+      // v517: legacy localStorage migration disabled from the live loader.
+      // Vendors display is Supabase-only; migration should not run during normal page load/save.
       return { rows, error:null };
     }
     async function upsertVendorRow(row){
@@ -3314,12 +3306,10 @@ body.dark-mode .mh2-stat-box {
         company: String(Store.activeCompanyName || readCurrentCompanyName() || '').trim() || 'Sixes Management Group',
         name: String(row.name || '').trim(),
         type: String(row.category || row.type || '').trim() || null,
-        contact_name: String(row.contact_name || '').trim() || null,
         phone: String(row.phone || '').trim() || null,
         email: String(row.email || '').trim() || null,
         community_id: communityId,
-        user_id: authUserId || String(Store.userId || readCurrentUserId() || '').trim() || null,
-        updated_at: new Date().toISOString()
+        user_id: authUserId || String(Store.userId || readCurrentUserId() || '').trim() || null
       };
 
       if(!payload.name) throw new Error('Vendor name is required.');
@@ -3331,10 +3321,8 @@ body.dark-mode .mh2-stat-box {
             company: payload.company,
             name: payload.name,
             type: payload.type,
-            contact_name: payload.contact_name,
             phone: payload.phone,
-            email: payload.email,
-            updated_at: payload.updated_at
+            email: payload.email
           })
           .eq('id', String(row.id).trim())
           .eq('community_id', communityId)
@@ -3495,8 +3483,12 @@ body.dark-mode .mh2-stat-box {
 
     function attachVendorsModule(){
       setupVendorInputPolish();
-      byId('saveVendorBtn').addEventListener('click', async () => {
-        const btn = byId('saveVendorBtn');
+      const existingBtn = byId('saveVendorBtn');
+      if(!existingBtn) return;
+      const cleanBtn = existingBtn.cloneNode(true);
+      existingBtn.parentNode.replaceChild(cleanBtn, existingBtn);
+      cleanBtn.addEventListener('click', async () => {
+        const btn = cleanBtn;
         const name = String(byId('vendorNameInput').value || '').trim();
         const category = String(byId('vendorCategoryInput').value || '').trim();
         const contact_name = String(byId('vendorContactInput').value || '').trim();
@@ -3521,6 +3513,7 @@ body.dark-mode .mh2-stat-box {
         }catch(err){
           console.error('Vendor save failed', err);
           alert('Vendor save failed: ' + (err && (err.message || err.details || err.code) || 'Check Supabase permissions and Vendors policies.'));
+          console.warn('[Daily Ops v517 Vendors] save failed payload uses only existing Vendors columns: community_id,user_id,company,name,type,phone,email');
         }finally{
           if(btn.textContent !== 'Saved ✓'){
             btn.disabled = false;
