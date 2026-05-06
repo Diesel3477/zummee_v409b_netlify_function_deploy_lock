@@ -2,7 +2,7 @@
 
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-06-v506-hof-save-single-owner";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-06-v508-hof-production-lock";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <script>
 // v840: ensureSupabase Promise shim (clean)
 function ensureSupabaseSync(){
@@ -4986,8 +4986,8 @@ body.dark-mode .mh2-stat-box {
 
 <script id="bmHofNewBusinessRuntimeV1">
 (function(){
-  if (window.BMHofNewBusinessRuntime && window.BMHofNewBusinessRuntime.version === 'v506-hof-save-single-owner') return;
-  window.BMHofNewBusinessRuntime = { version: 'v506-hof-save-single-owner' };
+  if (window.BMHofNewBusinessRuntime && window.BMHofNewBusinessRuntime.version === 'v508-hof-production-lock') return;
+  window.BMHofNewBusinessRuntime = { version: 'v508-hof-production-lock' };
 
   function $(id){ return document.getElementById(id); }
   function esc(s){
@@ -5009,17 +5009,18 @@ body.dark-mode .mh2-stat-box {
   function showStatus(id, msg){ var el=$(id); if(!el) return; el.textContent=msg||''; if('style' in el) el.style.display=msg ? '' : 'none'; }
   function updateMinutesSourceSignal(){ try{ window.dispatchEvent(new CustomEvent('zummee:minutes-source-changed')); }catch(e){} }
 
-  // v503: Homeowner Open Forum long-term persistence lock.
-  // Source of truth: Supabase board_meeting_homeowner_forum by selected community_id.
-  // LocalStorage is retained only as a backup/migration source.
-  var hofCache = [];
+  // v508: Homeowner Open Forum production lock.
+  // Source of truth: Supabase board_meeting_homeowner_forum scoped by community_id + client_id.
+  // UI uses a local draft while editing. Supabase writes happen only when Save is clicked.
+  var hofDraft = [];
   var hofLoadedCommunity = '';
-  var hofSyncTimer = null;
-  var hofSyncToken = 0;
+  var hofLoadToken = 0;
+  var hofSaveToken = 0;
+  var hofRemoteClientIds = [];
+  var hofBound = false;
 
   function hofKey(){ return 'zummee_board_meeting_homeowner_forum_v2__community__' + communityId(); }
   function hofLocalRead(){ return read(hofKey(), []); }
-  function hofRead(){ return Array.isArray(hofCache) ? hofCache.slice() : []; }
   function hofWriteLocalBackup(items){ write(hofKey(), items || []); }
   function getSupabase(){ return window.supabaseClient || window.sb || null; }
   function getCurrentUserId(){
@@ -5029,25 +5030,52 @@ body.dark-mode .mh2-stat-box {
     }catch(e){}
     return localStorage.getItem('zummee_user_id_v1') || localStorage.getItem('zummee_user_id') || '';
   }
+  async function getAuthUserId(){
+    var sb = getSupabase();
+    try{
+      if(sb && sb.auth && sb.auth.getUser){
+        var u = await sb.auth.getUser();
+        return ((u.data || {}).user || {}).id || getCurrentUserId();
+      }
+    }catch(_e){}
+    return getCurrentUserId();
+  }
   function normalizeHofRow(row){
     row = row || {};
+    var cid = row.client_id || row.clientId || row.id || nowId('hof');
     return {
-      id: row.client_id || row.id || nowId('hof'),
+      client_id: String(cid),
+      id: String(cid),
+      db_id: row.id || '',
       name: text(row.homeowner_name || row.name || ''),
       topic: text(row.topic || ''),
       notes: text(row.notes || '')
     };
   }
-  function normalizeHofItems(items){
+  function normalizeHofItems(items, opts){
+    opts = opts || {};
+    var keepEmpty = !!opts.keepEmpty;
+    var seen = {};
     return (Array.isArray(items) ? items : [])
-      .map(function(item){ item = item || {}; return {
-        id: String(item.id || item.client_id || nowId('hof')),
-        name: text(item.name || item.homeowner_name || ''),
-        topic: text(item.topic || ''),
-        notes: text(item.notes || '')
-      };})
-      .filter(function(item){ return item.name || item.topic || item.notes; });
+      .map(function(item){
+        item = item || {};
+        var cid = String(item.client_id || item.clientId || item.id || nowId('hof'));
+        return {
+          client_id: cid,
+          id: cid,
+          db_id: item.db_id || '',
+          name: text(item.name || item.homeowner_name || ''),
+          topic: text(item.topic || ''),
+          notes: text(item.notes || '')
+        };
+      })
+      .filter(function(item){
+        if(seen[item.client_id]) return false;
+        seen[item.client_id] = true;
+        return keepEmpty || item.name || item.topic || item.notes;
+      });
   }
+  function hofRead(){ return normalizeHofItems(hofDraft, { keepEmpty:true }); }
   function hofLegacyMeetingItems(){
     var userId = getCurrentUserId();
     var prefix = 'zummee_board_meeting_open_forum_v1__user__' + userId;
@@ -5066,77 +5094,103 @@ body.dark-mode .mh2-stat-box {
     if(!sb || !cid || cid === 'pending') return [];
     var res = await sb
       .from('board_meeting_homeowner_forum')
-      .select('id, name, topic, notes, community_id, created_at')
+      .select('id, client_id, name, topic, notes, community_id, created_at, updated_at')
       .eq('community_id', cid)
       .order('created_at', { ascending: true });
     if(res.error){
-      console.warn('[BM v503 HOF] Supabase read failed, using local backup:', res.error);
+      console.warn('[BM v508 HOF] Supabase read failed, using local backup:', res.error);
       return null;
     }
     return (res.data || []).map(normalizeHofRow);
   }
-  async function hofReplaceRemote(cid, items){
+  async function hofSaveRemote(cid, items){
     var sb = getSupabase();
     if(!sb || !cid || cid === 'pending') return { ok:false, error:{ message:'Missing Supabase client or community.' } };
     var normalized = normalizeHofItems(items);
-    var token = ++hofSyncToken;
+    var token = ++hofSaveToken;
     try{
-      var del = await sb.from('board_meeting_homeowner_forum').delete().eq('community_id', cid);
-      if(token !== hofSyncToken) return { ok:false, stale:true };
-      if(del.error){ console.warn('[BM v506 HOF] delete failed:', del.error); return { ok:false, error:del.error }; }
-      if(!normalized.length) return { ok:true, data:[] };
-      var authUserId = '';
-      try{ authUserId = ((await sb.auth.getUser()).data.user || {}).id || ''; }catch(_e){}
-      var userId = authUserId || getCurrentUserId();
-      var rows = normalized.map(function(item){ return {
-        community_id: cid,
-        name: item.name || '',
-        topic: item.topic || '',
-        notes: item.notes || '',
-        created_by: userId || null
-      };});
-      var ins = await sb.from('board_meeting_homeowner_forum').insert(rows).select('id, name, topic, notes, community_id, created_at');
-      if(ins.error){ console.warn('[BM v506 HOF] insert failed:', ins.error); return { ok:false, error:ins.error }; }
-      return { ok:true, data:(ins.data || []).map(normalizeHofRow) };
-    }catch(e){ console.warn('[BM v506 HOF] sync failed:', e); return { ok:false, error:e }; }
-  }
-  function hofWrite(items){
-    var cid = communityId();
-    hofCache = normalizeHofItems(items);
-    hofLoadedCommunity = cid;
-    hofWriteLocalBackup(hofCache);
-    updateMinutesSourceSignal();
-    // v506: local/UI update only. Supabase writes are owned by the Save button.
-    // This prevents input/change/add events from repeatedly inserting duplicates.
-    clearTimeout(hofSyncTimer);
+      var authUserId = await getAuthUserId();
+      var currentClientIds = normalized.map(function(item){ return String(item.client_id); }).filter(Boolean);
+      var removed = hofRemoteClientIds.filter(function(id){ return currentClientIds.indexOf(String(id)) === -1; });
+
+      if(removed.length){
+        var del = await sb
+          .from('board_meeting_homeowner_forum')
+          .delete()
+          .eq('community_id', cid)
+          .in('client_id', removed);
+        if(token !== hofSaveToken) return { ok:false, stale:true };
+        if(del.error){ console.warn('[BM v508 HOF] delete removed failed:', del.error); return { ok:false, error:del.error }; }
+      }
+
+      if(normalized.length){
+        var rows = normalized.map(function(item){ return {
+          client_id: String(item.client_id),
+          community_id: cid,
+          name: item.name || '',
+          topic: item.topic || '',
+          notes: item.notes || '',
+          created_by: authUserId || null,
+          updated_at: new Date().toISOString()
+        };});
+        var up = await sb
+          .from('board_meeting_homeowner_forum')
+          .upsert(rows, { onConflict: 'community_id,client_id' })
+          .select('id, client_id, name, topic, notes, community_id, created_at, updated_at');
+        if(token !== hofSaveToken) return { ok:false, stale:true };
+        if(up.error){ console.warn('[BM v508 HOF] upsert failed:', up.error); return { ok:false, error:up.error }; }
+      }
+
+      var fresh = await hofFetchRemote(cid);
+      if(token !== hofSaveToken) return { ok:false, stale:true };
+      return { ok:true, data: Array.isArray(fresh) ? fresh : normalized };
+    }catch(e){
+      console.warn('[BM v508 HOF] save failed:', e);
+      return { ok:false, error:e };
+    }
   }
   async function hofLoadForCommunity(reason){
     var cid = communityId();
+    var token = ++hofLoadToken;
     hofLoadedCommunity = cid;
-    hofCache = [];
+    hofDraft = [];
+    hofRemoteClientIds = [];
     hofRender([]);
+    showStatus('hofStatus','Loading…');
+
     var remote = await hofFetchRemote(cid);
-    if(cid !== communityId()) return; // community changed while request was in flight
+    if(token !== hofLoadToken || cid !== communityId()) return;
+
     if(remote === null){
-      hofCache = normalizeHofItems(hofLocalRead());
-      hofRender(hofCache);
+      hofDraft = normalizeHofItems(hofLocalRead(), { keepEmpty:true });
+      hofRemoteClientIds = [];
+      hofRender(hofDraft);
+      showStatus('hofStatus','Offline backup loaded.');
+      setTimeout(function(){ showStatus('hofStatus',''); }, 1600);
       return;
     }
+
     if(remote.length){
-      hofCache = remote;
-      hofWriteLocalBackup(hofCache);
-      hofRender(hofCache);
-      console.log('[BM v506 HOF] loaded from Supabase —', cid, hofCache.length, reason || '');
+      hofDraft = normalizeHofItems(remote, { keepEmpty:true });
+      hofRemoteClientIds = hofDraft.map(function(x){ return String(x.client_id); });
+      hofWriteLocalBackup(hofDraft);
+      hofRender(hofDraft);
+      showStatus('hofStatus','');
+      console.log('[BM v508 HOF] loaded from Supabase —', cid, hofDraft.length, reason || '');
       return;
     }
-    // One-time migration path from local community key, then older meeting key if needed.
-    // It renders locally, but does NOT auto-save to Supabase until Save is clicked.
-    var localItems = normalizeHofItems(hofLocalRead());
+
+    // One-time migration display. Save once to send these legacy/local records to Supabase.
+    var localItems = normalizeHofItems(hofLocalRead(), { keepEmpty:true });
     if(!localItems.length) localItems = hofLegacyMeetingItems();
-    hofCache = localItems;
-    hofRender(hofCache);
+    hofDraft = localItems;
+    hofRemoteClientIds = [];
+    hofRender(hofDraft);
     if(localItems.length){
-      console.log('[BM v506 HOF] local forum items available for manual Save —', cid, localItems.length);
+      showStatus('hofStatus','Local items loaded. Click Save to migrate.');
+      console.log('[BM v508 HOF] local forum items available for migration —', cid, localItems.length);
+    } else {
+      showStatus('hofStatus','');
     }
   }
   function hofCollectFromDom(){
@@ -5144,67 +5198,87 @@ body.dark-mode .mh2-stat-box {
     if(!list) return hofRead();
     var items = [];
     list.querySelectorAll('.hof-item').forEach(function(card){
-      var item = {
-        id: card.getAttribute('data-hof-id') || nowId('hof'),
+      var cid = card.getAttribute('data-hof-client-id') || card.getAttribute('data-hof-id') || nowId('hof');
+      items.push({
+        client_id: cid,
+        id: cid,
         name: text((card.querySelector('[data-hof-field="name"]')||{}).value),
         topic: text((card.querySelector('[data-hof-field="topic"]')||{}).value),
         notes: text((card.querySelector('[data-hof-field="notes"]')||{}).value)
-      };
-      if(item.name || item.topic || item.notes) items.push(item);
+      });
     });
-    return items;
+    return normalizeHofItems(items, { keepEmpty:true });
   }
   function hofRender(items){
     var list = $('hofEntries'); if(!list) return;
-    items = normalizeHofItems(items);
+    items = normalizeHofItems(items, { keepEmpty:true });
     if(!items.length){ list.innerHTML = ''; showStatus('hofUpdated',''); return; }
     list.innerHTML = items.map(function(item, idx){
-      item = item || {}; var id = item.id || nowId('hof');
-      return '<div class="hof-item" data-hof-entry="1" data-hof-id="'+esc(id)+'" style="background:#fff;border:1px solid #d7e3ef;border-radius:16px;padding:14px;box-shadow:0 8px 18px rgba(15,47,74,.05);">'
-        + '<div class="lockrow" style="margin-bottom:10px;align-items:center;"><div style="font-weight:900;color:#0f2f4a;">Homeowner '+(idx+1)+'</div><button class="btn hofRemove" type="button" data-hof-remove="'+esc(id)+'">Remove</button></div>'
+      item = item || {}; var cid = item.client_id || item.id || nowId('hof');
+      return '<div class="hof-item" data-hof-entry="1" data-hof-client-id="'+esc(cid)+'" data-hof-id="'+esc(cid)+'" style="background:#fff;border:1px solid #d7e3ef;border-radius:16px;padding:14px;box-shadow:0 8px 18px rgba(15,47,74,.05);">'
+        + '<div class="lockrow" style="margin-bottom:10px;align-items:center;"><div style="font-weight:900;color:#0f2f4a;">Homeowner '+(idx+1)+'</div><button class="btn hofRemove" type="button" data-hof-remove="'+esc(cid)+'">Remove</button></div>'
         + '<div class="grid2" style="grid-template-columns:1fr 1fr;gap:10px;"><div><label>Homeowner Name</label><input data-hof-field="name" value="'+esc(item.name||'')+'" placeholder="Name" /></div><div><label>Topic</label><input data-hof-field="topic" value="'+esc(item.topic||'')+'" placeholder="Topic or concern" /></div></div>'
         + '<div style="margin-top:10px;"><label>Forum Notes</label><textarea data-hof-field="notes" style="width:100%;min-height:82px;padding:10px;border-radius:12px;border:1px solid #d7e3ef;resize:vertical;" placeholder="Summarize comments, requests, or follow-up items…">'+esc(item.notes||'')+'</textarea></div>'
         + '</div>';
     }).join('');
     showStatus('hofUpdated', items.length + ' forum item' + (items.length===1?'':'s'));
   }
+  function hofUpdateDraftFromDom(){
+    hofDraft = hofCollectFromDom();
+    hofWriteLocalBackup(hofDraft);
+    updateMinutesSourceSignal();
+  }
   async function hofSave(){
     var save = $('hofSaveAll');
     if(save && save.dataset.saving === '1') return;
     var cid = communityId();
-    var items = hofCollectFromDom();
-    hofCache = normalizeHofItems(items);
-    hofWriteLocalBackup(hofCache);
+    hofUpdateDraftFromDom();
+    var draft = normalizeHofItems(hofDraft);
+    hofWriteLocalBackup(draft);
+
     if(save){ save.dataset.saving = '1'; save.disabled = true; }
     showStatus('hofStatus','Saving…');
-    var result = await hofReplaceRemote(cid, hofCache);
+
+    var result = await hofSaveRemote(cid, draft);
+
     if(save){ save.dataset.saving = ''; save.disabled = false; }
+
     if(!result || !result.ok){
-      console.error('[BM v506 HOF] Save failed:', result && result.error);
+      console.error('[BM v508 HOF] Save failed:', result && result.error);
       showStatus('hofStatus','Save failed. Check console.');
       return;
     }
-    var fresh = await hofFetchRemote(cid);
-    if(cid === communityId() && Array.isArray(fresh)){
-      hofCache = fresh;
-      hofWriteLocalBackup(hofCache);
-      hofRender(hofCache);
-    } else {
-      hofRender(hofCache);
+
+    if(cid === communityId()){
+      hofDraft = normalizeHofItems(result.data || draft, { keepEmpty:true });
+      hofRemoteClientIds = hofDraft.map(function(x){ return String(x.client_id); });
+      hofWriteLocalBackup(hofDraft);
+      hofRender(hofDraft);
+      showStatus('hofStatus','Saved.');
+      setTimeout(function(){ showStatus('hofStatus',''); }, 1600);
     }
-    showStatus('hofStatus','Saved.');
-    setTimeout(function(){ showStatus('hofStatus',''); }, 1600);
   }
-  function hofAdd(){ var items = hofCollectFromDom(); items.push({ id: nowId('hof'), name:'', topic:'', notes:'' }); hofWrite(items); hofRender(items); setTimeout(function(){ var first = $('hofEntries') && $('hofEntries').querySelector('.hof-item:last-child input'); if(first) first.focus(); }, 20); }
+  function hofAdd(){
+    hofUpdateDraftFromDom();
+    hofDraft.push({ client_id: nowId('hof'), id: nowId('hof'), name:'', topic:'', notes:'' });
+    hofWriteLocalBackup(hofDraft);
+    hofRender(hofDraft);
+    setTimeout(function(){
+      var first = $('hofEntries') && $('hofEntries').querySelector('.hof-item:last-child input');
+      if(first) first.focus();
+    }, 20);
+  }
   async function hofClear(){
     if(!confirm('Clear all homeowner forum entries?')) return;
-    hofCache = [];
+    hofDraft = [];
     hofWriteLocalBackup([]);
     hofRender([]);
-    showStatus('hofStatus','Clearing…');
-    var result = await hofReplaceRemote(communityId(), []);
-    if(!result || !result.ok){ console.error('[BM v506 HOF] Clear failed:', result && result.error); showStatus('hofStatus','Clear failed. Check console.'); return; }
-    showStatus('hofStatus','Cleared.'); setTimeout(function(){ showStatus('hofStatus',''); }, 1600);
+    showStatus('hofStatus','Saving…');
+    var result = await hofSaveRemote(communityId(), []);
+    if(!result || !result.ok){ console.error('[BM v508 HOF] Clear failed:', result && result.error); showStatus('hofStatus','Clear failed. Check console.'); return; }
+    hofRemoteClientIds = [];
+    showStatus('hofStatus','Cleared.');
+    setTimeout(function(){ showStatus('hofStatus',''); }, 1600);
   }
   function hofBind(){
     var add=$('hofAddEntry'), save=$('hofSaveAll'), clear=$('hofClearAll'), list=$('hofEntries');
@@ -5213,18 +5287,28 @@ body.dark-mode .mh2-stat-box {
     if(clear && !clear.dataset.hofBound){ clear.dataset.hofBound='1'; clear.addEventListener('click', function(e){ e.preventDefault(); hofClear(); }); }
     if(list && !list.dataset.hofBound){
       list.dataset.hofBound='1';
-      list.addEventListener('click', function(e){ var btn=e.target && e.target.closest && e.target.closest('[data-hof-remove]'); if(!btn) return; e.preventDefault(); var id=btn.getAttribute('data-hof-remove'); var items=hofCollectFromDom().filter(function(x){ return String(x.id)!==String(id); }); hofWrite(items); hofRender(items); });
-      list.addEventListener('input', function(){ hofWrite(hofCollectFromDom()); });
-      list.addEventListener('change', function(){ hofWrite(hofCollectFromDom()); });
+      list.addEventListener('click', function(e){
+        var btn=e.target && e.target.closest && e.target.closest('[data-hof-remove]');
+        if(!btn) return;
+        e.preventDefault();
+        hofUpdateDraftFromDom();
+        var id=btn.getAttribute('data-hof-remove');
+        hofDraft = hofDraft.filter(function(x){ return String(x.client_id || x.id)!==String(id); });
+        hofWriteLocalBackup(hofDraft);
+        hofRender(hofDraft);
+      });
+      // Draft-only updates. Do not render while typing; do not save until Save is clicked.
+      list.addEventListener('input', function(){ hofUpdateDraftFromDom(); });
+      list.addEventListener('change', function(){ hofUpdateDraftFromDom(); });
     }
-    if(!window.__BMHofCommunityScopeLockV506){
-      window.__BMHofCommunityScopeLockV506 = true;
+    if(!hofBound){
+      hofBound = true;
       function reloadHomeownerForumForCommunity(){ hofLoadForCommunity('community-change'); updateMinutesSourceSignal(); }
       document.addEventListener('community:changed', reloadHomeownerForumForCommunity);
       window.addEventListener('zummee:community-changed', reloadHomeownerForumForCommunity);
       var communitySelect = $('zummeeCommunitySelect');
-      if(communitySelect && !communitySelect.dataset.hofCommunityBoundV506){
-        communitySelect.dataset.hofCommunityBoundV506 = '1';
+      if(communitySelect && !communitySelect.dataset.hofCommunityBoundV508){
+        communitySelect.dataset.hofCommunityBoundV508 = '1';
         communitySelect.addEventListener('change', reloadHomeownerForumForCommunity, true);
       }
     }
