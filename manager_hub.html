@@ -6505,7 +6505,11 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     try{ console.info('[MH v405] URL community authority applied after '+reason, id, name); }catch(e){}
     return true;
   }
-  function schedule(){ [0,80,250,700,1500,3000].forEach(function(ms){setTimeout(function(){apply('timer-'+ms);},ms);}); }
+  function schedule(){
+    // v529: remove legacy delayed 1500/3000ms authority re-applies.
+    // Those late timers were re-triggering Smart Alert writers after the first stable render.
+    [0,80,250,700].forEach(function(ms){setTimeout(function(){apply('timer-'+ms);},ms);});
+  }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', schedule, {once:true}); else schedule();
   window.addEventListener('pageshow', schedule);
 })();
