@@ -7,7 +7,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="shared/supabase-client.js?v=2026-04-29-v327"></script>
   <script src="shared/data-layer-v409.js?v=2026-04-30-v409-server-board-photo-upload"></script>
-  <script src="shared/community-selection.js?v=2026-05-06-v514-community-selection-lock"></script>
   
   <script>
     (function(){
@@ -2221,21 +2220,17 @@ body.dark-mode .mh2-stat-box {
       Store.activeCommunityId = match.id || '';
       Store.activeCommunityName = match.name || '';
       select.innerHTML = Store.communities.map(c => {
-        const id = String(c.id || '').trim();
-        const name = String(c.name || c.id || 'Community').trim();
-        const selected = ((id && id === Store.activeCommunityId) || ((!id || !Store.activeCommunityId) && name === Store.activeCommunityName)) ? ' selected' : '';
-        return `<option value="${escapeHtml(id)}" data-community-id="${escapeHtml(id)}" data-community-name="${escapeHtml(name)}"${selected}>${escapeHtml(name)}</option>`;
+        const value = encodeURIComponent(JSON.stringify(c));
+        const selected = ((c.id && c.id === Store.activeCommunityId) || ((!c.id || !Store.activeCommunityId) && c.name === Store.activeCommunityName)) ? ' selected' : '';
+        return `<option value="${value}"${selected}>${escapeHtml(c.name || c.id || 'Community')}</option>`;
       }).join('');
-      if(window.ZummeeCommunity) window.ZummeeCommunity.normalizeSelectOptions('communitySelect');
       syncCommunityToStorage();
     }
     function attachCommunitySelect(){
       byId('communitySelect').addEventListener('change', async (e) => {
-        const ctx = window.ZummeeCommunity
-          ? window.ZummeeCommunity.syncSelectedCommunityStorage('communitySelect')
-          : { id: String(e.target.value || '').trim(), name: String(e.target.selectedOptions && e.target.selectedOptions[0] ? e.target.selectedOptions[0].textContent : '').trim() };
-        Store.activeCommunityId = String(ctx.id || '').trim();
-        Store.activeCommunityName = String(ctx.name || '').trim();
+        const obj = safeJson(decodeURIComponent(e.target.value), {});
+        Store.activeCommunityId = String(obj.id || '').trim();
+        Store.activeCommunityName = String(obj.name || '').trim();
         syncCommunityToStorage();
         await loadDailyOpsCompanyLogo();
         await loadModules();
@@ -3191,7 +3186,7 @@ body.dark-mode .mh2-stat-box {
         phone: String(row.phone || '').trim(),
         email: String(row.email || '').trim(),
         contact_name: String(row.contact_name || row.contact || row.vendor_contact || '').trim(),
-        community_id: String(row.community_id || Store.activeCommunityId || '').trim(),
+        community_id: String(row.community_id || getDailyOpsSelectedCommunityId() || '').trim(),
         user_id: String(row.user_id || row.created_by || '').trim(),
         created_at: row.created_at || row.createdAt || '',
         updated_at: row.updated_at || row.updatedAt || ''
@@ -3200,13 +3195,46 @@ body.dark-mode .mh2-stat-box {
     function getVendorClient(){
       return sb || window.supabaseClient || window.sb || window.supabase || null;
     }
+
+    // v515: Operations Portal community selection can be raw UUID or encoded JSON.
+    // Vendors must always use a canonical UUID from the live dropdown, then sync Store.
+    function getDailyOpsSelectedCommunity(){
+      const select = byId('communitySelect') || document.getElementById('zummeeCommunitySelect');
+      let raw = String(select && select.value || '').trim();
+      let id = raw;
+      let name = String(select && select.selectedOptions && select.selectedOptions[0] ? select.selectedOptions[0].textContent : '').trim();
+      if(raw){
+        try{
+          const decoded = decodeURIComponent(raw);
+          const obj = JSON.parse(decoded);
+          id = String(obj.id || obj.community_id || obj.communityId || raw).trim();
+          name = String(obj.name || obj.community_name || obj.communityName || name || '').trim();
+        }catch(_e){}
+      }
+      if(id){
+        Store.activeCommunityId = id;
+        try{ localStorage.setItem('activeCommunityId', id); }catch(_e){}
+        try{ localStorage.setItem('currentCommunityId', id); }catch(_e){}
+        try{ localStorage.setItem('zummee_community_id', id); }catch(_e){}
+        try{ localStorage.setItem('zummee_selected_community_id', id); }catch(_e){}
+      }
+      if(name){
+        Store.activeCommunityName = name;
+        try{ localStorage.setItem('activeCommunityName', name); }catch(_e){}
+        try{ localStorage.setItem('currentCommunityName', name); }catch(_e){}
+      }
+      return { id, name };
+    }
+    function getDailyOpsSelectedCommunityId(){
+      return getDailyOpsSelectedCommunity().id || String(Store.activeCommunityId || '').trim();
+    }
     async function ensureVendorAuth(){
       if(typeof restoreSupabaseSessionFromStorage === 'function') await restoreSupabaseSessionFromStorage();
       if(typeof ensureUser === 'function') await ensureUser();
       return !!getVendorClient();
     }
     function legacyVendorStorageKey(){
-      return `dailyOpsV2:vendors:${Store.activeCommunityId || ('name:' + (Store.activeCommunityName || 'unknown').toLowerCase())}`;
+      return `dailyOpsV2:vendors:${getDailyOpsSelectedCommunityId() || ('name:' + (Store.activeCommunityName || 'unknown').toLowerCase())}`;
     }
     function readLegacyVendorRows(){
       try{
@@ -3221,8 +3249,7 @@ body.dark-mode .mh2-stat-box {
     }
     async function migrateLegacyVendorsToSupabase(existingRows){
       const client = getVendorClient();
-      const communityId = String((window.ZummeeCommunity && window.ZummeeCommunity.getSelectedCommunityId('communitySelect')) || Store.activeCommunityId || '').trim();
-      Store.activeCommunityId = communityId || Store.activeCommunityId;
+      const communityId = String(getDailyOpsSelectedCommunityId() || '').trim();
       if(!client || !communityId) return false;
       const legacyRows = readLegacyVendorRows();
       if(!legacyRows.length) return false;
@@ -3250,8 +3277,7 @@ body.dark-mode .mh2-stat-box {
     }
     async function fetchVendorRows(){
       const client = getVendorClient();
-      const communityId = String((window.ZummeeCommunity && window.ZummeeCommunity.getSelectedCommunityId('communitySelect')) || Store.activeCommunityId || '').trim();
-      Store.activeCommunityId = communityId || Store.activeCommunityId;
+      const communityId = String(getDailyOpsSelectedCommunityId() || '').trim();
       if(!client || !communityId) return { rows:[], error: client ? null : new Error('Supabase client unavailable') };
       let res = await client
         .from('Vendors')
@@ -3275,8 +3301,7 @@ body.dark-mode .mh2-stat-box {
     async function upsertVendorRow(row){
       await ensureVendorAuth();
       const client = getVendorClient();
-      const communityId = String((window.ZummeeCommunity && window.ZummeeCommunity.getSelectedCommunityId('communitySelect')) || Store.activeCommunityId || '').trim();
-      Store.activeCommunityId = communityId || Store.activeCommunityId;
+      const communityId = String(getDailyOpsSelectedCommunityId() || '').trim();
       if(!client || !communityId) throw new Error('Missing Supabase client or active community.');
       const payload = {
         company: String(Store.activeCompanyName || readCurrentCompanyName() || '').trim() || null,
@@ -3319,8 +3344,7 @@ body.dark-mode .mh2-stat-box {
     async function deleteVendorRow(id){
       await ensureVendorAuth();
       const client = getVendorClient();
-      const communityId = String((window.ZummeeCommunity && window.ZummeeCommunity.getSelectedCommunityId('communitySelect')) || Store.activeCommunityId || '').trim();
-      Store.activeCommunityId = communityId || Store.activeCommunityId;
+      const communityId = String(getDailyOpsSelectedCommunityId() || '').trim();
       if(!client || !communityId) throw new Error('Missing Supabase client or active community.');
       const res = await client
         .from('Vendors')
@@ -3408,7 +3432,7 @@ body.dark-mode .mh2-stat-box {
     }
     async function loadVendorsModule(){
       const mount = byId('vendorsMount');
-      if(!Store.activeCommunityId){ mountEmpty(mount, 'Choose a community to load vendors.'); setMetric('vendorsMetric', 0); byId('vendorsCountPill').textContent = '0'; return; }
+      if(!getDailyOpsSelectedCommunityId()){ mountEmpty(mount, 'Choose a community to load vendors.'); setMetric('vendorsMetric', 0); byId('vendorsCountPill').textContent = '0'; return; }
       mount.className = 'loader';
       mount.textContent = 'Loading vendors…';
       const result = await fetchVendorRows();
@@ -3478,7 +3502,7 @@ body.dark-mode .mh2-stat-box {
           await loadVendorsModule();
         }catch(err){
           console.error('Vendor save failed', err);
-          alert('Vendor save failed. Check Supabase permissions and Vendors policies.');
+          alert('Vendor save failed: ' + (err && (err.message || err.details || err.code) || 'Check Supabase permissions and Vendors policies.'));
         }finally{
           btn.disabled = false;
           if(!Store.editingVendorId) btn.textContent = 'Save vendor';
