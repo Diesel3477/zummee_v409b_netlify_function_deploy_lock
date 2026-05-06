@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Operations Portal</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="shared/supabase-client.js?v=2026-04-29-v327"></script>
+  <script src="shared/data-layer-v409.js?v=2026-04-30-v409-server-board-photo-upload"></script>
   
   <script>
     (function(){
@@ -273,10 +275,10 @@ body.dark-mode .mh2-stat-box {
 /* v37 actual Daily Ops new-layout rebuild */
 .shell{max-width:1240px;margin:0 auto;padding:16px 18px 44px;}
 .hero.dailyOpsMainCard{margin:0 0 28px 0 !important;padding:32px 34px 30px !important;border-radius:28px !important;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(250,252,255,.96)) !important;border:2px solid rgba(141,190,255,.72) !important;box-shadow:0 18px 42px rgba(35,91,143,.10) !important;}
-.dailyOpsTitleRow{display:flex;align-items:flex-start;justify-content:space-between;gap:22px;margin-bottom:26px;}
+.dailyOpsTitleRow{display:flex;align-items:center;justify-content:space-between;gap:22px;margin-bottom:26px;}
 .dailyOpsTitleBlock{min-width:0;}
 .dailyOpsTitle{display:block !important;margin:0 !important;color:#17324d !important;font-size:28px !important;line-height:1.08 !important;font-weight:800 !important;letter-spacing:-.02em !important;text-align:left !important;}
-.dailyOpsCompanyLogo{height:64px;max-width:190px;object-fit:contain;display:block;}
+.dailyOpsCompanyLogo{height:56px;max-width:190px;object-fit:contain;display:block;flex:0 0 auto;}
 .dailyOpsCompanyLogo[hidden]{display:none !important;}
 .dailyOpsControlsRow{display:grid;grid-template-columns:minmax(0,1fr) 190px;gap:18px;align-items:center;margin-bottom:22px;}
 .dailyOpsCommunityControl{padding:0 !important;background:transparent !important;border:0 !important;box-shadow:none !important;max-width:none !important;min-width:0 !important;margin:0 !important;}
@@ -646,6 +648,888 @@ body.dark-mode .mh2-stat-box {
   #testSupervisorDbSaveBtn,
   #supervisorCommsDebugStatus { display:none !important; }
 </style>
+
+<style id="supervisor-comms-polished-archive-v95">
+  .supervisorArchiveShell{
+    margin-top:18px;
+    border:1.5px solid rgba(141,190,255,.46);
+    background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(247,251,255,.92));
+    border-radius:22px;
+    box-shadow:0 10px 24px rgba(18,42,67,.055);
+    overflow:hidden;
+  }
+  .supervisorArchiveToggle{
+    width:100%;
+    min-height:58px;
+    border:0;
+    background:transparent;
+    color:#17324d;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    padding:14px 16px;
+    text-align:left;
+  }
+  .supervisorArchiveTitleWrap{display:flex;align-items:center;gap:10px;min-width:0;}
+  .supervisorArchiveTitle{font-size:17px;font-weight:950;letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .supervisorArchiveBadge{
+    min-width:34px;
+    height:30px;
+    padding:0 10px;
+    border-radius:999px;
+    background:#f3f7fb;
+    border:1px solid rgba(141,190,255,.64);
+    color:#17324d;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size:13px;
+    font-weight:950;
+    flex:0 0 auto;
+  }
+  .supervisorArchiveAction{display:flex;align-items:center;gap:8px;color:#2f5b8f;font-size:13px;font-weight:950;white-space:nowrap;}
+  .supervisorArchiveChevron{display:inline-block;transition:transform .18s ease;font-size:18px;line-height:1;}
+  .supervisorArchiveShell.is-open .supervisorArchiveChevron{transform:rotate(180deg);}
+  .supervisorArchiveBody{
+    max-height:0;
+    overflow:hidden;
+    opacity:.0;
+    transition:max-height .28s ease, opacity .2s ease, padding .22s ease;
+    padding:0 14px;
+  }
+  .supervisorArchiveShell.is-open .supervisorArchiveBody{
+    max-height:1400px;
+    opacity:1;
+    padding:0 14px 14px;
+  }
+  .supervisorArchiveMonth{
+    border:1px solid rgba(141,190,255,.40);
+    border-radius:18px;
+    background:rgba(255,255,255,.86);
+    overflow:hidden;
+    margin-top:10px;
+  }
+  .supervisorArchiveMonth summary{
+    list-style:none;
+    cursor:pointer;
+    padding:13px 14px;
+    font-weight:950;
+    color:#17324d;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+  }
+  .supervisorArchiveMonth summary::-webkit-details-marker{display:none;}
+  .supervisorArchiveMonthCount{
+    font-size:12px;
+    font-weight:950;
+    color:#5b7187;
+    background:#f7fafc;
+    border:1px solid rgba(23,50,77,.08);
+    border-radius:999px;
+    padding:5px 9px;
+    white-space:nowrap;
+  }
+  .supervisorArchiveMonthBody{display:grid;gap:12px;padding:0 12px 12px;}
+  .supervisorArchiveBody .supervisor-record{box-shadow:none !important;}
+</style>
+
+<style id="ops-vendors-premium-v99">
+  #vendorsCard{
+    background:linear-gradient(135deg, rgba(255,255,255,.99) 0%, rgba(246,251,255,.98) 52%, rgba(232,243,255,.96) 100%) !important;
+    border-color:rgba(141,190,255,.88) !important;
+    position:relative;
+    overflow:hidden;
+  }
+  #vendorsCard:before{
+    content:'';
+    position:absolute;
+    inset:-90px -120px auto auto;
+    width:280px;
+    height:280px;
+    border-radius:999px;
+    background:radial-gradient(circle, rgba(47,91,143,.16), rgba(47,91,143,0) 70%);
+    pointer-events:none;
+  }
+  #vendorsCard .sectionHeader{position:relative;z-index:1;}
+  #vendorsCard .sectionTitle{display:flex;align-items:center;gap:12px;}
+  #vendorsCard .sectionTitle:before{
+    content:'🏢';
+    display:grid;
+    place-items:center;
+    width:46px;
+    height:46px;
+    border-radius:16px;
+    background:linear-gradient(135deg,#fff8d8,#f6d66c);
+    border:1.5px solid rgba(230,190,78,.70);
+    box-shadow:0 10px 22px rgba(143,112,20,.10);
+    font-size:22px;
+  }
+  #vendorsCard .tableWrap{
+    position:relative;
+    z-index:1;
+    padding:18px !important;
+    border-radius:24px !important;
+    background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,252,255,.96)) !important;
+    border:1.75px solid rgba(141,190,255,.62) !important;
+    box-shadow:0 16px 34px rgba(35,91,143,.08) !important;
+  }
+  #vendorsCard .tableWrap > div{
+    grid-template-columns:1.1fr .9fr !important;
+    gap:14px !important;
+  }
+  #vendorsCard input,#vendorsCard select{
+    height:54px !important;
+    border-radius:18px !important;
+    border:1.75px solid rgba(141,190,255,.46) !important;
+    background:rgba(255,255,255,.94) !important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.92), 0 8px 18px rgba(23,50,77,.045) !important;
+  }
+  #vendorsCard #saveVendorBtn{
+    height:54px !important;
+    min-width:168px;
+    border-radius:18px !important;
+    background:linear-gradient(180deg,#285f9f,#17365f) !important;
+    box-shadow:0 14px 28px rgba(23,54,95,.20) !important;
+  }
+  .vendorCardsGrid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:16px;
+    margin-top:18px;
+  }
+  .vendorCardPremium{
+    position:relative;
+    overflow:hidden;
+    min-height:184px;
+    border-radius:26px;
+    padding:20px;
+    background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(247,251,255,.96));
+    border:1.75px solid rgba(141,190,255,.64);
+    box-shadow:0 16px 36px rgba(23,54,95,.09), inset 0 1px 0 rgba(255,255,255,.92);
+  }
+  .vendorCardPremium:before{
+    content:'';
+    position:absolute;
+    top:-70px;
+    right:-70px;
+    width:170px;
+    height:170px;
+    border-radius:999px;
+    background:radial-gradient(circle, rgba(246,214,108,.28), rgba(246,214,108,0) 72%);
+  }
+  .vendorTopRow{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;position:relative;z-index:1;}
+  .vendorAvatar{
+    width:52px;
+    height:52px;
+    border-radius:18px;
+    display:grid;
+    place-items:center;
+    flex:0 0 auto;
+    background:linear-gradient(135deg,#17365f,#2f6fb9);
+    color:#fff;
+    font-size:20px;
+    font-weight:950;
+    box-shadow:0 12px 24px rgba(23,54,95,.18);
+  }
+  .vendorNameBlock{min-width:0;flex:1;}
+  .vendorNamePremium{
+    font-size:22px;
+    line-height:1.08;
+    font-weight:950;
+    letter-spacing:-.025em;
+    color:#17324d;
+    overflow-wrap:anywhere;
+  }
+  .vendorCategoryPremium{
+    display:inline-flex;
+    align-items:center;
+    margin-top:9px;
+    min-height:30px;
+    padding:0 12px;
+    border-radius:999px;
+    background:linear-gradient(135deg,#fff8d8,#fff2b8);
+    border:1px solid rgba(230,190,78,.58);
+    color:#6d5511;
+    font-size:12px;
+    font-weight:950;
+    text-transform:uppercase;
+    letter-spacing:.07em;
+  }
+  .vendorInfoGrid{
+    position:relative;
+    z-index:1;
+    display:grid;
+    gap:10px;
+    margin-top:18px;
+  }
+  .vendorInfoPill{
+    min-height:42px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:9px 12px;
+    border-radius:16px;
+    background:rgba(255,255,255,.86);
+    border:1px solid rgba(141,190,255,.36);
+    color:#35516e;
+    font-size:14px;
+    font-weight:850;
+    overflow-wrap:anywhere;
+  }
+  .vendorInfoPill .icon{font-size:15px;opacity:.86;}
+  .vendorActionsPremium{
+    position:relative;
+    z-index:1;
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:18px;
+  }
+  .vendorActionsPremium .btn{height:44px !important;border-radius:16px !important;padding:0 16px !important;}
+  .vendorActionsPremium .vendor-load{background:#eef4fb !important;color:#17365f !important;}
+  .vendorActionsPremium .vendor-delete{background:#fff !important;color:#17365f !important;border:1.5px solid rgba(141,190,255,.55) !important;}
+  @media(max-width:900px){
+    .vendorCardsGrid{grid-template-columns:1fr;}
+    #vendorsCard .tableWrap > div{grid-template-columns:1fr !important;}
+    #vendorsCard #saveVendorBtn{width:100%;}
+  }
+</style>
+
+<style id="ops-vendors-compact-clickable-v100">
+  /* v100: compact premium vendor layout, iPad-friendly and clickable contact rows */
+  #vendorsCard{padding:22px !important;}
+  #vendorsCard .sectionHeader{margin-bottom:8px !important;}
+  #vendorsCard .sectionTitle{font-size:30px !important;}
+  #vendorsCard .sectionTitle:before{width:42px !important;height:42px !important;border-radius:15px !important;font-size:20px !important;}
+  #vendorsCard .tableWrap{padding:14px !important;border-radius:22px !important;margin-top:12px !important;}
+  #vendorsCard .tableWrap > div{display:grid !important;grid-template-columns:1.15fr .85fr .8fr 1fr auto !important;gap:10px !important;align-items:end !important;}
+  #vendorsCard input,#vendorsCard select{height:44px !important;border-radius:14px !important;font-size:15px !important;padding:0 12px !important;}
+  #vendorsCard #saveVendorBtn{height:44px !important;min-width:132px !important;border-radius:14px !important;padding:0 18px !important;}
+  #vendorsCard .label{font-size:10px !important;margin-bottom:5px !important;}
+  .vendorCardsGrid{grid-template-columns:1fr !important;gap:10px !important;margin-top:12px !important;}
+  .vendorCardPremium{min-height:0 !important;padding:14px 16px !important;border-radius:22px !important;display:grid !important;grid-template-columns:auto minmax(0,1fr) auto !important;gap:12px !important;align-items:center !important;}
+  .vendorCardPremium:before{width:130px !important;height:130px !important;top:-75px !important;right:-60px !important;}
+  .vendorTopRow{display:flex !important;align-items:center !important;gap:12px !important;min-width:0 !important;}
+  .vendorAvatar{width:44px !important;height:44px !important;border-radius:15px !important;font-size:18px !important;}
+  .vendorNamePremium{font-size:21px !important;line-height:1.05 !important;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;}
+  .vendorCategoryPremium{margin-top:6px !important;min-height:26px !important;padding:0 10px !important;font-size:11px !important;}
+  .vendorInfoGrid{margin-top:0 !important;display:flex !important;gap:8px !important;align-items:center !important;flex-wrap:wrap !important;}
+  .vendorInfoPill{min-height:34px !important;padding:7px 10px !important;border-radius:999px !important;font-size:13px !important;text-decoration:none !important;color:#17365f !important;background:rgba(255,255,255,.92) !important;}
+  .vendorInfoPill:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(23,54,95,.08);}
+  .vendorActionsPremium{margin-top:0 !important;display:flex !important;gap:8px !important;justify-content:flex-end !important;align-items:center !important;}
+  .vendorActionsPremium .btn{height:38px !important;border-radius:14px !important;padding:0 14px !important;font-size:13px !important;}
+  @media(max-width:900px){
+    #vendorsCard .tableWrap > div{grid-template-columns:1fr 1fr !important;}
+    #vendorsCard .tableWrap > div > div:nth-child(1),#vendorsCard .tableWrap > div > div:nth-child(4){grid-column:1 / -1 !important;}
+    #vendorsCard .tableWrap > div > div:last-child{grid-column:1 / -1 !important;}
+    #vendorsCard #saveVendorBtn{width:100% !important;}
+    .vendorCardPremium{grid-template-columns:1fr !important;align-items:start !important;}
+    .vendorInfoGrid{width:100% !important;}
+    .vendorInfoPill{width:100% !important;justify-content:flex-start !important;}
+    .vendorActionsPremium{width:100% !important;justify-content:flex-end !important;}
+  }
+</style>
+
+
+<style id="ops-vendors-density-v101">
+  /* v101: compact directory layout with vendor/contact rows locked */
+  #vendorsCard .tableWrap{padding:14px !important;}
+  #vendorsCard .tableWrap > div{
+    display:grid !important;
+    grid-template-columns:1.35fr .95fr 1fr 1fr 1.2fr !important;
+    gap:10px 12px !important;
+    align-items:end !important;
+  }
+  #vendorsCard .tableWrap > div > div:nth-child(1){grid-column:1 / span 3 !important;}
+  #vendorsCard .tableWrap > div > div:nth-child(2){grid-column:4 / span 2 !important;}
+  #vendorsCard .tableWrap > div > div:nth-child(3){grid-column:1 / span 1 !important;}
+  #vendorsCard .tableWrap > div > div:nth-child(4){grid-column:2 / span 2 !important;}
+  #vendorsCard .tableWrap > div > div:nth-child(5){grid-column:4 / span 2 !important;}
+  #vendorsCard .tableWrap > div > div:last-child{grid-column:1 / -1 !important;display:flex !important;justify-content:flex-end !important;}
+  #vendorsCard #saveVendorBtn{min-width:180px !important;}
+  .vendorCardPremium{grid-template-columns:minmax(0,1fr) auto !important;padding:13px 15px !important;}
+  .vendorTopRow{grid-column:1 / -1 !important;display:flex !important;align-items:center !important;gap:12px !important;}
+  .vendorNameBlock{display:flex !important;align-items:center !important;gap:10px !important;flex-wrap:wrap !important;}
+  .vendorCategoryPremium{margin-top:0 !important;}
+  .vendorInfoGrid{grid-column:1 / -1 !important;display:flex !important;align-items:center !important;gap:8px !important;flex-wrap:nowrap !important;margin-top:4px !important;min-width:0 !important;}
+  .vendorInfoPill{min-width:0 !important;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;}
+  .vendorInfoPill span:last-child{overflow:hidden !important;text-overflow:ellipsis !important;}
+  .vendorActionsPremium{grid-column:1 / -1 !important;justify-content:flex-end !important;margin-top:2px !important;}
+  @media (max-width:760px){
+    #vendorsCard .tableWrap > div{grid-template-columns:1fr 1fr !important;}
+    #vendorsCard .tableWrap > div > div:nth-child(1),
+    #vendorsCard .tableWrap > div > div:nth-child(2),
+    #vendorsCard .tableWrap > div > div:nth-child(3),
+    #vendorsCard .tableWrap > div > div:nth-child(4),
+    #vendorsCard .tableWrap > div > div:nth-child(5),
+    #vendorsCard .tableWrap > div > div:last-child{grid-column:auto !important;}
+    #vendorsCard .tableWrap > div > div:nth-child(1),
+    #vendorsCard .tableWrap > div > div:nth-child(2),
+    #vendorsCard .tableWrap > div > div:last-child{grid-column:1 / -1 !important;}
+    #vendorsCard #saveVendorBtn{width:100% !important;}
+    .vendorInfoGrid{flex-wrap:wrap !important;}
+    .vendorInfoPill{width:auto !important;max-width:100% !important;}
+  }
+</style>
+
+<style id="ops-vendors-layout-polish-v102">
+  /* v102: vendor form density + validation polish */
+  #vendorsCard .tableWrap{padding:14px 16px 16px !important;}
+  #vendorsCard .tableWrap > div{
+    display:grid !important;
+    grid-template-columns:repeat(6,minmax(0,1fr)) !important;
+    gap:10px 12px !important;
+    align-items:end !important;
+  }
+  #vendorsCard .tableWrap > div > div{min-width:0 !important;}
+  #vendorsCard .tableWrap > div > div:nth-child(1){grid-column:1 / span 4 !important;}
+  #vendorsCard .tableWrap > div > div:nth-child(2){grid-column:5 / span 2 !important;}
+  #vendorsCard .tableWrap > div > div:nth-child(3){grid-column:1 / span 2 !important;}
+  #vendorsCard .tableWrap > div > div:nth-child(4){grid-column:3 / span 2 !important;}
+  #vendorsCard .tableWrap > div > div:nth-child(5){grid-column:5 / span 2 !important;}
+  #vendorsCard .tableWrap + div,
+  #vendorsCard .tableWrap > div + div{margin-top:10px !important;}
+  #vendorsCard #saveVendorBtn{height:46px !important;min-width:190px !important;border-radius:16px !important;}
+  #vendorPhoneInput,#vendorEmailInput,#vendorContactInput,#vendorNameInput,#vendorCategoryInput{transition:border-color .16s ease, box-shadow .16s ease, background .16s ease, transform .16s ease;}
+  #vendorPhoneInput:focus,#vendorEmailInput:focus,#vendorContactInput:focus,#vendorNameInput:focus,#vendorCategoryInput:focus{box-shadow:0 0 0 4px rgba(141,190,255,.20) !important;outline:none !important;}
+  #vendorEmailInput.vendor-email-valid{border-color:rgba(34,197,94,.55) !important;box-shadow:0 0 0 3px rgba(34,197,94,.12) !important;}
+  #vendorEmailInput.vendor-email-invalid{border-color:rgba(220,38,38,.45) !important;box-shadow:0 0 0 3px rgba(220,38,38,.10) !important;}
+  .vendorCardPremium{padding:12px 14px !important;border-radius:22px !important;}
+  .vendorInfoGrid{display:grid !important;grid-template-columns:minmax(120px,.85fr) minmax(140px,.75fr) minmax(220px,1.25fr) !important;gap:8px !important;width:100% !important;}
+  .vendorInfoPill{display:flex !important;align-items:center !important;justify-content:flex-start !important;min-width:0 !important;max-width:100% !important;}
+  .vendorInfoPill .icon{flex:0 0 auto !important;}
+  .vendorInfoPill span:last-child{min-width:0 !important;overflow:hidden !important;text-overflow:ellipsis !important;white-space:nowrap !important;}
+  .vendorInfoPill[href^="tel:"],.vendorInfoPill[href^="mailto:"]{cursor:pointer;}
+  .vendorInfoPill[href^="tel:"]:active,.vendorInfoPill[href^="mailto:"]:active{transform:scale(.985);}
+  @media (max-width:900px){
+    #vendorsCard .tableWrap > div{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+    #vendorsCard .tableWrap > div > div:nth-child(1),
+    #vendorsCard .tableWrap > div > div:nth-child(2),
+    #vendorsCard .tableWrap > div > div:nth-child(3),
+    #vendorsCard .tableWrap > div > div:nth-child(4),
+    #vendorsCard .tableWrap > div > div:nth-child(5){grid-column:auto !important;}
+    #vendorsCard .tableWrap > div > div:nth-child(1),
+    #vendorsCard .tableWrap > div > div:nth-child(2){grid-column:1 / -1 !important;}
+    .vendorInfoGrid{grid-template-columns:1fr !important;}
+  }
+</style>
+
+
+<style id="ops-vendors-final-grid-lock-v103">
+  /* v103: final iPad grid lock — name/category stay on row 1; contact/phone/email stay on row 2 */
+  @media (min-width:700px){
+    #vendorsCard .tableWrap{padding:14px 16px 16px !important;}
+    #vendorsCard .tableWrap > div{
+      display:grid !important;
+      grid-template-columns:repeat(6,minmax(0,1fr)) !important;
+      gap:10px 14px !important;
+      align-items:end !important;
+    }
+    #vendorsCard .tableWrap > div > div:nth-child(1){grid-column:1 / span 4 !important;}
+    #vendorsCard .tableWrap > div > div:nth-child(2){grid-column:5 / span 2 !important;}
+    #vendorsCard .tableWrap > div > div:nth-child(3){grid-column:1 / span 2 !important;}
+    #vendorsCard .tableWrap > div > div:nth-child(4){grid-column:3 / span 2 !important;}
+    #vendorsCard .tableWrap > div > div:nth-child(5){grid-column:5 / span 2 !important;}
+    #vendorsCard .tableWrap > div + div{
+      margin-top:12px !important;
+      display:flex !important;
+      justify-content:flex-end !important;
+    }
+    #vendorsCard #saveVendorBtn{width:auto !important;min-width:190px !important;}
+    .vendorInfoGrid{
+      display:grid !important;
+      grid-template-columns:minmax(140px,.9fr) minmax(150px,.8fr) minmax(230px,1.3fr) !important;
+      gap:8px !important;
+      align-items:center !important;
+      width:100% !important;
+    }
+  }
+  @media (max-width:699px){
+    #vendorsCard .tableWrap > div{grid-template-columns:1fr !important;}
+    #vendorsCard .tableWrap > div > div{grid-column:1 / -1 !important;}
+    #vendorsCard #saveVendorBtn{width:100% !important;}
+    .vendorInfoGrid{grid-template-columns:1fr !important;}
+  }
+  .vendorInfoPill[href^="tel:"], .vendorInfoPill[href^="mailto:"]{
+    text-decoration:none !important;
+    -webkit-tap-highlight-color:rgba(47,91,143,.12);
+  }
+</style>
+
+
+<style id="ops-vendors-email-row-lock-v104">
+  /* v104: email gets proper width in the form and display card; contact/phone/email stay on one clean row */
+  @media (min-width:700px){
+    #vendorsCard .tableWrap > div{
+      display:grid !important;
+      grid-template-columns:repeat(12,minmax(0,1fr)) !important;
+      gap:10px 14px !important;
+      align-items:end !important;
+    }
+    #vendorsCard .tableWrap > div > div:nth-child(1){grid-column:1 / span 7 !important;}
+    #vendorsCard .tableWrap > div > div:nth-child(2){grid-column:8 / span 5 !important;}
+    #vendorsCard .tableWrap > div > div:nth-child(3){grid-column:1 / span 3 !important;}
+    #vendorsCard .tableWrap > div > div:nth-child(4){grid-column:4 / span 3 !important;}
+    #vendorsCard .tableWrap > div > div:nth-child(5){grid-column:7 / span 6 !important;}
+    #vendorsCard .tableWrap > div + div{
+      margin-top:12px !important;
+      display:flex !important;
+      justify-content:flex-end !important;
+    }
+    #vendorsCard #saveVendorBtn{width:auto !important;min-width:190px !important;}
+  }
+  @media (max-width:699px){
+    #vendorsCard .tableWrap > div{grid-template-columns:1fr !important;}
+    #vendorsCard .tableWrap > div > div{grid-column:1 / -1 !important;}
+    #vendorsCard #saveVendorBtn{width:100% !important;}
+  }
+  .vendorInfoGrid{
+    width:100% !important;
+    display:grid !important;
+    gap:8px 10px !important;
+    align-items:center !important;
+  }
+  .vendorInfoGrid.hasVendorContact{
+    grid-template-columns:minmax(150px,.8fr) minmax(175px,.75fr) minmax(300px,1.45fr) !important;
+  }
+  .vendorInfoGrid.noVendorContact{
+    grid-template-columns:minmax(190px,.42fr) minmax(360px,1fr) !important;
+  }
+  .vendorInfoPill{min-width:0 !important;}
+  .vendorEmailPill span:last-child{
+    white-space:nowrap !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+  }
+  .vendorEmailPill{min-width:0 !important;}
+  @media (max-width:900px){
+    .vendorInfoGrid.hasVendorContact,
+    .vendorInfoGrid.noVendorContact{grid-template-columns:1fr !important;}
+    .vendorInfoPill span:last-child{overflow:hidden !important;text-overflow:ellipsis !important;}
+  }
+</style>
+
+
+<style id="ops-vendors-contact-row-standard-v105">
+  /* v105 LONG-TERM STANDARD: compact contact row component for directory cards.
+     Vendor cards use one contact row on iPad/desktop: contact, phone, email.
+     Only very narrow phone screens are allowed to stack. */
+  .vendorInfoGrid,
+  .vendorInfoGrid.hasVendorContact,
+  .vendorInfoGrid.noVendorContact{
+    display:flex !important;
+    align-items:center !important;
+    gap:10px !important;
+    flex-wrap:nowrap !important;
+    width:100% !important;
+    min-width:0 !important;
+    margin-top:6px !important;
+    overflow:hidden !important;
+    grid-template-columns:none !important;
+  }
+  .vendorInfoPill{
+    height:38px !important;
+    min-height:38px !important;
+    display:inline-flex !important;
+    align-items:center !important;
+    gap:8px !important;
+    padding:0 14px !important;
+    border-radius:999px !important;
+    background:rgba(255,255,255,.92) !important;
+    border:1.5px solid rgba(141,190,255,.42) !important;
+    color:#17365f !important;
+    font-size:14px !important;
+    font-weight:900 !important;
+    line-height:38px !important;
+    text-decoration:none !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+    box-shadow:0 6px 14px rgba(23,54,95,.045) !important;
+    transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease !important;
+  }
+  .vendorInfoPill:hover{
+    transform:translateY(-1px) !important;
+    box-shadow:0 10px 20px rgba(23,54,95,.085) !important;
+    border-color:rgba(141,190,255,.68) !important;
+  }
+  .vendorInfoPill .icon{
+    flex:0 0 auto !important;
+    font-size:15px !important;
+    opacity:.9 !important;
+  }
+  .vendorInfoPill span:last-child{
+    min-width:0 !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+    white-space:nowrap !important;
+  }
+  .vendorContactPill{flex:0 1 210px !important;max-width:240px !important;}
+  .vendorPhonePill{flex:0 0 190px !important;}
+  .vendorEmailPill{flex:1 1 340px !important;min-width:240px !important;}
+  .vendorInfoGrid.noVendorContact .vendorPhonePill{flex:0 0 210px !important;}
+  .vendorInfoGrid.noVendorContact .vendorEmailPill{flex:1 1 420px !important;min-width:280px !important;}
+  .vendorCardPremium{row-gap:8px !important;}
+  @media (max-width:699px){
+    .vendorInfoGrid,
+    .vendorInfoGrid.hasVendorContact,
+    .vendorInfoGrid.noVendorContact{
+      flex-wrap:wrap !important;
+      overflow:visible !important;
+    }
+    .vendorContactPill,.vendorPhonePill,.vendorEmailPill,
+    .vendorInfoGrid.noVendorContact .vendorPhonePill,
+    .vendorInfoGrid.noVendorContact .vendorEmailPill{
+      flex:1 1 100% !important;
+      max-width:100% !important;
+      min-width:0 !important;
+    }
+  }
+</style>
+
+<style id="ops-vendors-contact-name-render-v106">
+  /* v106: contact name is now a first-class vendor field and always occupies the first slot. */
+  .vendorContactPill.vendorContactMissing{
+    color:#64748b !important;
+    background:rgba(248,250,252,.92) !important;
+    border-style:dashed !important;
+  }
+</style>
+
+<style id="operations-board-members-premium-v108">
+  /* v108: compact board member directory cards — term sits beside identity, contact actions stay on one line */
+  #boardCard #boardMount.boardMembersPremiumMount{
+    margin-top:18px !important;
+    display:grid !important;
+    gap:10px !important;
+    background:transparent !important;
+    border:0 !important;
+    box-shadow:none !important;
+    overflow:visible !important;
+  }
+  .boardMemberPremiumCard{
+    display:grid;
+    grid-template-columns:auto minmax(170px,.95fr) minmax(190px,.72fr) minmax(0,1.25fr) auto;
+    gap:12px;
+    align-items:center;
+    padding:14px 16px;
+    border-radius:22px;
+    border:1.5px solid rgba(76,154,108,.24);
+    background:linear-gradient(135deg, rgba(232,248,239,.95), rgba(255,255,255,.96) 58%, rgba(236,249,242,.88));
+    box-shadow:0 10px 24px rgba(23,50,77,.06), inset 0 1px 0 rgba(255,255,255,.82);
+  }
+  .boardMemberAvatar{
+    width:48px;
+    height:48px;
+    border-radius:17px;
+    display:grid;
+    place-items:center;
+    background:linear-gradient(180deg,#2f5b8f,#17365f);
+    color:white;
+    font-size:21px;
+    font-weight:950;
+    box-shadow:0 10px 20px rgba(47,91,143,.16);
+  }
+  .boardMemberIdentity{min-width:0;display:grid;gap:5px;}
+  .boardMemberName{font-size:21px;font-weight:950;letter-spacing:-.03em;color:#17324d;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .boardMemberPositionPill{
+    display:inline-flex;
+    width:max-content;
+    max-width:100%;
+    align-items:center;
+    border-radius:999px;
+    padding:6px 10px;
+    background:rgba(255,255,255,.82);
+    border:1px solid rgba(76,154,108,.22);
+    color:#245c3e;
+    font-size:11px;
+    font-weight:950;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .boardMemberTermBox{
+    display:grid;
+    gap:3px;
+    min-width:0;
+    padding:9px 11px;
+    border-radius:16px;
+    background:rgba(255,255,255,.78);
+    border:1px solid rgba(141,190,255,.45);
+  }
+  .boardMemberTermLabel{font-size:10px;font-weight:950;letter-spacing:.10em;text-transform:uppercase;color:#60758a;}
+  .boardMemberTermValue{font-size:13px;font-weight:950;color:#17324d;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .boardMemberTermBox.termWarning{
+    background:linear-gradient(180deg,rgba(255,246,246,.96),rgba(255,255,255,.88));
+    border-color:rgba(220,38,38,.52);
+    box-shadow:0 0 0 3px rgba(220,38,38,.07);
+  }
+  .boardMemberTermBox.termWarning .boardMemberTermLabel,
+  .boardMemberTermBox.termWarning .boardMemberTermValue{color:#b91c1c !important;}
+  .boardMemberContactRow{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    min-width:0;
+    flex-wrap:nowrap;
+    overflow:hidden;
+  }
+  .boardMemberContactPill{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    min-width:0;
+    height:36px;
+    padding:0 11px;
+    border-radius:999px;
+    background:rgba(255,255,255,.84);
+    border:1px solid rgba(141,190,255,.44);
+    color:#17324d;
+    text-decoration:none;
+    font-size:13px;
+    font-weight:900;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .boardMemberContactPill.email{flex:1 1 auto;}
+  .boardMemberContactPill.phone{flex:0 0 auto;}
+  .boardMemberContactPill.text{flex:0 0 auto;}
+  .boardMemberActions{display:flex;justify-content:flex-end;}
+  .boardMemberPremiumEdit{
+    min-height:40px;
+    border:0;
+    border-radius:16px;
+    padding:0 16px;
+    background:#eef3f8;
+    color:#17324d;
+    font-size:14px;
+    font-weight:950;
+    cursor:pointer;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.75);
+  }
+  .boardMemberPremiumEdit:hover{transform:translateY(-1px);}
+  @media(max-width:980px){
+    .boardMemberPremiumCard{
+      grid-template-columns:auto minmax(0,1fr) minmax(165px,.78fr) auto;
+      grid-template-areas:'avatar identity term edit' 'contact contact contact contact';
+      gap:10px;
+      padding:14px;
+    }
+    .boardMemberAvatar{grid-area:avatar;}
+    .boardMemberIdentity{grid-area:identity;}
+    .boardMemberTermBox{grid-area:term;}
+    .boardMemberContactRow{grid-area:contact;}
+    .boardMemberActions{grid-area:edit;}
+  }
+  @media(max-width:640px){
+    .boardMemberPremiumCard{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:'avatar identity edit' 'term term term' 'contact contact contact';}
+    .boardMemberAvatar{width:46px;height:46px;border-radius:16px;font-size:19px;}
+    .boardMemberName{font-size:20px;}
+    .boardMemberContactRow{flex-wrap:wrap;}
+    .boardMemberContactPill{width:100%;}
+    .boardMemberContactPill.email{flex:1 1 100%;}
+  }
+</style>
+
+<style id="important-dates-premium-v113">
+  #importantDatesCard{
+    background:linear-gradient(135deg, rgba(255,246,202,.98), rgba(255,255,255,.96) 54%, rgba(255,250,231,.95)) !important;
+    border-color:rgba(228,190,72,.82) !important;
+  }
+  #importantDatesCard .importantDatesFormGrid{
+    position:relative !important;
+    display:grid !important;
+    grid-template-columns:minmax(0, .72fr) minmax(0, 1fr) !important;
+    gap:12px 16px !important;
+    padding:18px !important;
+    border-radius:24px !important;
+    background:linear-gradient(180deg,rgba(255,255,255,.88),rgba(248,251,255,.76)) !important;
+    border:1.5px solid rgba(141,190,255,.58) !important;
+    box-shadow:0 16px 34px rgba(23,50,77,.08) !important;
+  }
+  #importantDatesCard .importantDatesFormGrid > div{min-width:0 !important;}
+  #importantDatesCard .importantDatesFormGrid [style*="grid-column"]{grid-column:1 / -1 !important;}
+  #importantDatesCard input,#importantDatesCard select{
+    height:48px !important;
+    border-radius:16px !important;
+    border:1.5px solid rgba(141,190,255,.42) !important;
+    background:rgba(255,255,255,.96) !important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.88) !important;
+  }
+  #importantDatesCard #saveImportantDateBtn{
+    min-width:220px !important;
+    height:52px !important;
+    border-radius:18px !important;
+    background:linear-gradient(180deg,#2e5f9b,#194b82) !important;
+    box-shadow:0 14px 26px rgba(25,75,130,.20) !important;
+  }
+  #importantDatesMount.importantDatesPremiumList{
+    display:grid !important;
+    gap:12px !important;
+    margin-top:18px !important;
+  }
+  .importantDateCard{
+    position:relative;
+    overflow:hidden;
+    border-radius:22px;
+    border:1.5px solid rgba(141,190,255,.58);
+    background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(247,251,255,.94));
+    box-shadow:0 12px 28px rgba(23,50,77,.07);
+    padding:16px 16px 14px;
+  }
+  .importantDateCard::before{
+    content:"";
+    position:absolute;
+    inset:0 auto 0 0;
+    width:7px;
+    background:#6fa8dc;
+  }
+  .importantDateCard.is-overdue{border-color:rgba(197,49,64,.38);background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(255,244,245,.96));}
+  .importantDateCard.is-overdue::before{background:#c53140;}
+  .importantDateCard.is-due-soon{border-color:rgba(225,184,57,.60);background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(255,249,226,.96));}
+  .importantDateCard.is-due-soon::before{background:#d9a928;}
+  .importantDateCard.is-upcoming::before{background:#2d9c67;}
+  .importantDateTop{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding-left:6px;}
+  .importantDateTitleRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .importantDateIcon{width:44px;height:44px;border-radius:15px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#fff4bc,#ffe082);border:1px solid rgba(197,154,32,.28);box-shadow:0 8px 18px rgba(122,93,14,.10);font-size:22px;flex:0 0 auto;}
+  .importantDateTitle{font-size:21px;font-weight:950;letter-spacing:-.025em;color:#17324d;line-height:1.05;}
+  .importantDateVendor{font-size:13px;font-weight:900;color:#526b85;margin-top:4px;}
+  .importantDateStatus{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:950;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;}
+  .importantDateStatus.overdue{background:#ffe6e8;color:#9f2334;border:1px solid rgba(159,35,52,.18);}
+  .importantDateStatus.due-soon{background:#fff4ce;color:#8d6500;border:1px solid rgba(148,98,0,.20);}
+  .importantDateStatus.upcoming{background:#e8f7ef;color:#1e7a4c;border:1px solid rgba(30,122,76,.18);}
+  .importantDateStatus.needs-review{background:#eef5ff;color:#2d5f9a;border:1px solid rgba(45,95,154,.18);}
+  .importantDateMetaRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding-left:6px;}
+  .importantDateMeta{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 12px;border-radius:999px;background:rgba(255,255,255,.82);border:1px solid rgba(141,190,255,.40);color:#17324d;font-weight:900;font-size:13px;white-space:nowrap;}
+  .importantDateDescription{margin:12px 0 0 6px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.66);border:1px dashed rgba(141,190,255,.45);color:#4f6780;font-weight:750;line-height:1.35;}
+  .importantDateActions{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:14px;}
+  .importantDateActions .btn{height:42px;border-radius:999px;padding:0 16px;}
+  @media (max-width:800px){
+    #importantDatesCard .importantDatesFormGrid{grid-template-columns:1fr !important;}
+    .importantDateTop{align-items:stretch;flex-direction:column;}
+    .importantDateStatus{width:max-content;}
+    .importantDateActions{justify-content:stretch;}
+    .importantDateActions .btn{flex:1;}
+  }
+</style>
+
+
+<style id="access-codes-premium-v116">
+  #accessCodesCard{
+    background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(246,250,255,.96) 58%,rgba(238,246,255,.94)) !important;
+  }
+  #accessCodesCard .sectionHeader{align-items:center !important;}
+  #accessCodesCard .sectionTitle{display:flex;align-items:center;gap:14px;}
+  #accessCodesCard .sectionTitle::before{
+    content:'🔐';
+    width:46px;height:46px;border-radius:14px;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,#fff0b8,#f7d45e);
+    border:1.5px solid rgba(206,159,36,.38);
+    box-shadow:0 12px 24px rgba(206,159,36,.16);
+    font-size:21px;
+  }
+  #accessCodesCard .tableWrap{
+    background:rgba(255,255,255,.80) !important;
+    border:1.5px solid rgba(141,190,255,.58) !important;
+    box-shadow:0 14px 34px rgba(35,91,143,.08) !important;
+  }
+  #accessCodesCard .accessCodesFormRow{
+    display:grid !important;
+    grid-template-columns:minmax(210px,1.2fr) minmax(120px,.46fr) minmax(260px,1.3fr) minmax(190px,.52fr) !important;
+    gap:12px !important;
+    align-items:end !important;
+  }
+  #accessCodesCard .accessCodesFormRow > div{min-width:0 !important;}
+  #accessCodesCard #accessCodeNameInput,
+  #accessCodesCard #accessCodeValueInput,
+  #accessCodesCard #accessCodeNotesInput{
+    height:50px !important;
+    border-radius:16px !important;
+    border:1.5px solid rgba(141,190,255,.42) !important;
+    background:rgba(255,255,255,.92) !important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.90), 0 8px 18px rgba(23,50,77,.035) !important;
+  }
+  #accessCodesCard #accessCodeValueInput{
+    text-align:center !important;
+    font-weight:900 !important;
+    letter-spacing:.10em !important;
+  }
+  #accessCodesCard #saveAccessCodeBtn{
+    width:100% !important;
+    height:50px !important;
+    border-radius:18px !important;
+    background:linear-gradient(180deg,#2f639a,#1f4f82) !important;
+    box-shadow:0 14px 24px rgba(31,79,130,.18) !important;
+  }
+  .accessPremiumList{display:grid;gap:12px;margin-top:16px;}
+  .accessSecureCard{
+    display:grid;
+    grid-template-columns:auto minmax(160px,1.05fr) auto minmax(180px,1.4fr) auto;
+    gap:14px;align-items:center;
+    padding:16px 18px;
+    border-radius:22px;
+    background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(246,250,255,.96));
+    border:1.5px solid rgba(141,190,255,.56);
+    box-shadow:0 14px 30px rgba(23,50,77,.07);
+  }
+  .accessSecureAvatar{
+    width:50px;height:50px;border-radius:16px;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,#2f639a,#173f6d);
+    color:#fff;font-size:22px;
+    box-shadow:0 14px 24px rgba(31,79,130,.18);
+  }
+  .accessSecureName{font-size:20px;font-weight:950;letter-spacing:-.03em;color:#17324d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .accessSecureSub{margin-top:4px;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.12em;color:#6a7e93;}
+  .accessCodePill{
+    appearance:none;border:none;cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    min-width:108px;height:42px;padding:0 16px;
+    border-radius:999px;
+    background:linear-gradient(180deg,rgba(255,245,204,.98),rgba(255,234,148,.88));
+    border:1.5px solid rgba(203,156,31,.34);
+    color:#17324d;font-size:18px;font-weight:950;letter-spacing:.10em;
+    box-shadow:0 10px 18px rgba(203,156,31,.10);
+  }
+  .accessNotePill{
+    min-width:0;height:42px;padding:0 16px;border-radius:999px;
+    display:flex;align-items:center;gap:8px;
+    background:rgba(255,255,255,.80);
+    border:1.5px solid rgba(141,190,255,.34);
+    color:#486178;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .accessPremiumActions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:nowrap;}
+  .accessPremiumBtn{
+    appearance:none;border:none;cursor:pointer;height:42px;padding:0 15px;border-radius:999px;
+    font-size:14px;font-weight:950;color:#17324d;background:#eef3f8;
+    border:1.5px solid rgba(141,190,255,.24);
+  }
+  .accessPremiumBtn.delete{background:#fff;color:#17324d;border-color:rgba(141,190,255,.52);}
+  .accessPremiumBtn:hover,.accessCodePill:hover{transform:translateY(-1px);}
+  .accessEmptyState{
+    padding:22px;border-radius:22px;background:rgba(255,255,255,.78);
+    border:1.5px dashed rgba(141,190,255,.50);
+    color:#5b7187;font-weight:850;display:flex;align-items:center;gap:12px;
+  }
+  @media (max-width:900px){
+    #accessCodesCard .accessCodesFormRow{grid-template-columns:1fr 112px 1fr !important;}
+    #accessCodesCard .accessCodesFormRow > div:last-child{grid-column:1 / -1 !important;}
+    .accessSecureCard{grid-template-columns:auto 1fr auto;gap:10px;}
+    .accessCodePill{justify-self:end;}
+    .accessNotePill{grid-column:1 / -1;}
+    .accessPremiumActions{grid-column:1 / -1;justify-content:flex-end;}
+  }
+</style>
+
 </head>
 <body>
   <div class="shell">
@@ -816,6 +1700,10 @@ body.dark-mode .mh2-stat-box {
               </select>
             </div>
             <div>
+              <label class="label" for="vendorContactInput">Contact name</label>
+              <input id="vendorContactInput" type="text" placeholder="Contact name" style="width:100%;height:46px;border-radius:14px;border:1px solid rgba(23,50,77,.10);padding:0 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;">
+            </div>
+            <div>
               <label class="label" for="vendorPhoneInput">Phone</label>
               <input id="vendorPhoneInput" type="text" placeholder="111-111-1111" style="width:100%;height:46px;border-radius:14px;border:1px solid rgba(23,50,77,.10);padding:0 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;">
             </div>
@@ -967,24 +1855,24 @@ body.dark-mode .mh2-stat-box {
       </div>
     </section>
 
-    <section class="sectionShell" id="quickNotesCard" style="margin-top:18px;">
-      <div class="sectionHeader">
-        <div class="sectionIdentity">
-          <div class="sectionKicker">Fresh module · community-specific local state</div>
-          <div class="sectionTitle">Quick Notes</div>
-          <div class="sectionSub">This v2 quick notes module is isolated from the live Daily Ops page. It saves per selected community and proves a lightweight note workflow in the new modular structure.</div>
+    <section class="sectionShell quickNotesPremiumShell" id="quickNotesCard" style="margin-top:18px;">
+      <div class="sectionHeader quickNotesHeaderRow">
+        <div class="quickNotesHeaderLeft">
+          <div class="quickNotesIconBadge">📝</div>
+          <div>
+            <div class="sectionTitle">Quick Notes</div>
+            <div class="quickNotesHeaderSub">Community-specific notes saved to Supabase.</div>
+          </div>
         </div>
         <div class="statusPill" id="quickNotesCountPill">0</div>
       </div>
-      <div class="sectionBody">
-        <div class="tableWrap" style="padding:16px;border-style:solid;">
-          <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;">
-            <div>
-              <label class="label" for="quickNoteInput">Quick note</label>
-              <textarea id="quickNoteInput" rows="3" placeholder="Add a quick note for this community" style="width:100%;min-height:88px;border-radius:14px;border:1px solid rgba(23,50,77,.10);padding:12px 14px;background:#fff;color:#17324d;font-size:15px;font-weight:700;resize:vertical;"></textarea>
-            </div>
-            <button class="btn primary" type="button" id="saveQuickNoteBtn">Save note</button>
+      <div class="sectionBody quickNotesBody">
+        <div class="quickNoteComposer">
+          <div class="quickNoteInputWrap">
+            <label class="label" for="quickNoteInput">Quick note</label>
+            <textarea id="quickNoteInput" rows="3" placeholder="Add a quick note for this community"></textarea>
           </div>
+          <button class="btn primary quickNoteSaveBtn" type="button" id="saveQuickNoteBtn">Save note</button>
         </div>
         <div id="quickNotesMount" class="loader">Loading quick notes…</div>
       </div>
@@ -1055,7 +1943,7 @@ body.dark-mode .mh2-stat-box {
       : null;
     window.sb = sb;
 
-    const AUTH_STORAGE_KEYS = ['sb-zummee-auth', 'sb-slcwuuwyrgnmlmxpcaim-auth-token', 'supabase.auth.token'];
+    const AUTH_STORAGE_KEYS = ['sb-zummee-auth', 'sb-slcwuuwyrgnmlmxpcaim-auth-token', 'supabase.auth.token', 'zummee_supabase_session'];
 
     function readAuthPayloadFromStorage(){
       for(const key of AUTH_STORAGE_KEYS){
@@ -1066,6 +1954,20 @@ body.dark-mode .mh2-stat-box {
           if(parsed) return parsed;
         }catch(_e){}
       }
+      try{
+        const access = localStorage.getItem('sb_access_token') || localStorage.getItem('supabase_access_token') || '';
+        const refresh = localStorage.getItem('sb_refresh_token') || localStorage.getItem('supabase_refresh_token') || '';
+        if(access && refresh) return { access_token:access, refresh_token:refresh };
+      }catch(_e){}
+      try{
+        for(let i=0;i<localStorage.length;i++){
+          const key = localStorage.key(i);
+          const raw = key ? localStorage.getItem(key) : '';
+          if(!raw || raw.indexOf('access_token') === -1 || raw.indexOf('refresh_token') === -1) continue;
+          const parsed = safeJson(raw, null);
+          if(parsed) return parsed;
+        }
+      }catch(_e){}
       return null;
     }
 
@@ -1226,57 +2128,83 @@ body.dark-mode .mh2-stat-box {
     async function fetchCommunitiesFromSupabase(){
       if(!sb) return [];
       await ensureUser();
-      const out = [];
-      const pushRows = (rows, target) => {
-        (rows||[]).forEach(row => target.push({
-          id: String((row && (row.id || row.community_id)) || '').trim(),
-          name: String((row && (row.name || row.community_name || row.community)) || '').trim()
-        }));
-      };
-
-      let role = String(Store.currentUserRole || '').trim().toLowerCase();
-      try{
-        if(!role && Store.userId){
-          const pr = await sb.from('profiles').select('role').eq('id', Store.userId).maybeSingle();
-          role = String((pr && pr.data && pr.data.role) || '').trim().toLowerCase();
-          if(role) Store.currentUserRole = role;
-        }
-      }catch(_e){}
 
       const assigned = [];
+      const pushRows = (rows, target) => {
+        (rows||[]).forEach(row => {
+          const id = String((row && (row.id || row.community_id || row.communityId)) || '').trim();
+          const name = String((row && (row.name || row.community_name || row.communityName || row.community)) || '').trim();
+          if(id || name) target.push({ id, name: name || id });
+        });
+      };
+      const uniqCommunities = (rows) => uniqBy((rows||[]).filter(x => x && (x.id || x.name)), x => (x.id || ('name:' + String(x.name||'').toLowerCase())));
+
+      // v96 LOCKED: Operations Portal dropdown must match Manager Hub / Board Hub.
+      // Assigned communities are the only source of truth. Do not seed from old company/local caches first.
       try{
-        const userId = Store.userId;
-        if(userId){
+        if(window.ZummeeDataLayer && typeof window.ZummeeDataLayer.getAssignedCommunities === 'function'){
+          const shared = await window.ZummeeDataLayer.getAssignedCommunities({ userId: Store.userId });
+          pushRows(shared, assigned);
+        }
+      }catch(e){ console.warn('[Operations Portal v96] shared assigned-community loader failed', e); }
+
+      try{
+        if(Store.userId){
           const q = await sb.from('community_assignments')
             .select('community_id, community_name, employee_id')
-            .eq('employee_id', userId)
+            .eq('employee_id', Store.userId)
             .limit(200);
           if(!q.error && q.data && q.data.length) pushRows(q.data, assigned);
+          else if(q && q.error) console.warn('[Operations Portal v96] community_assignments employee_id query failed', q.error);
         }
-      }catch(_e){}
+      }catch(e){ console.warn('[Operations Portal v96] community_assignments employee_id query crashed', e); }
 
-      // Production rule: employees are scoped only to community_assignments.
-      if(role === 'employee'){
-        return uniqBy(assigned.filter(x => x.id || x.name), x => (x.id || ('name:' + x.name.toLowerCase())));
-      }
-
-      pushRows(assigned, out);
+      // Optional schema-safe email fallback for older assignment rows. Never broadens to all communities.
       try{
-        const company = Store.companyId;
-        if(company){
-          for(const col of ['company_id','company_name']){
+        let email = '';
+        try{
+          const sess = await sb.auth.getSession();
+          email = String(sess && sess.data && sess.data.session && sess.data.session.user && sess.data.session.user.email || '').trim();
+        }catch(_e){}
+        if(email){
+          for(const col of ['employee_email','email','user_email']){
             try{
-              const q = await sb.from('company_communities').select('community_id, community_name').eq(col, company).limit(200);
-              if(!q.error && q.data?.length) pushRows(q.data, out);
+              const q = await sb.from('community_assignments')
+                .select('community_id, community_name,' + col)
+                .eq(col, email)
+                .limit(200);
+              if(!q.error && q.data && q.data.length) pushRows(q.data, assigned);
             }catch(_e){}
           }
         }
       }catch(_e){}
+
+      let rows = uniqCommunities(assigned);
+
+      // Hydrate missing names only for already-assigned ids. This does NOT add extra communities.
       try{
-        const q3 = await sb.from('communities').select('id,name,community_name').limit(200);
-        if(!q3.error) pushRows(q3.data, out);
+        const ids = rows.map(r => r.id).filter(Boolean);
+        if(ids.length && rows.some(r => !r.name || r.name === r.id)){
+          const names = await sb.from('PropertyCommunities').select('id,name,community_name,property_name,title').in('id', ids);
+          if(!names.error && Array.isArray(names.data)){
+            rows = rows.map(r => {
+              const hit = names.data.find(x => String(x.id||'') === String(r.id||''));
+              const nm = hit ? String(hit.name || hit.community_name || hit.property_name || hit.title || '').trim() : '';
+              return nm ? Object.assign({}, r, { name: nm }) : r;
+            });
+          }
+        }
       }catch(_e){}
-      return uniqBy(out.filter(x => x.id || x.name), x => (x.id || ('name:' + x.name.toLowerCase())));
+
+      // Last-resort usability fallback: use the route/current context only when assignment lookup returns nothing.
+      // This keeps the page usable without reintroducing stale one-community local cache as the primary source.
+      if(!rows.length){
+        const ctxId = String(Store.activeCommunityId || qp('community_id') || qp('cid') || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('activeCommunityId') || localStorage.getItem('currentCommunityId') || '').trim();
+        const ctxName = String(Store.activeCommunityName || decodeURIComponent(qp('community_name') || qp('name') || '') || localStorage.getItem('activeCommunityName') || localStorage.getItem('currentCommunityName') || '').trim();
+        if(ctxId || ctxName) rows = [{ id: ctxId, name: ctxName || ctxId }];
+      }
+
+      return uniqCommunities(rows).sort((a,b)=>String(a.name||a.id||'').localeCompare(String(b.name||b.id||'')));
     }
     function renderCommunityOptions(){
       const select = byId('communitySelect');
@@ -1304,6 +2232,7 @@ body.dark-mode .mh2-stat-box {
         Store.activeCommunityId = String(obj.id || '').trim();
         Store.activeCommunityName = String(obj.name || '').trim();
         syncCommunityToStorage();
+        await loadDailyOpsCompanyLogo();
         await loadModules();
       });
     }
@@ -1311,8 +2240,15 @@ body.dark-mode .mh2-stat-box {
     function mountEmpty(el, message){ el.innerHTML = `<div class="empty">${escapeHtml(message)}</div>`; }
 
     /* v79 Daily Ops Cloud State Guard: Supabase first, localStorage fallback. */
-    const OPS_CLOUD_SECTIONS = ['reminders', 'quickNotes', 'vendors', 'importantDates', 'accessCodes'];
-    Store.opsState = Store.opsState || { reminders:[], quickNotes:[], vendors:[], importantDates:[], accessCodes:[] };
+    // v118: Dedicated Supabase tables are the only source for migrated modules.
+    // Vendors -> public.ops_vendors
+    // Important Dates -> public.ops_important_dates
+    // Access Codes -> public.ops_access_codes
+    // Reminders -> public.ops_reminders
+    // Quick Notes -> public.ops_quick_notes
+    // Do NOT include migrated modules in daily_ops_state/localStorage, or stale rows can reappear after refresh.
+    const OPS_CLOUD_SECTIONS = [];
+    Store.opsState = Store.opsState || {};
     Store.opsStateLoadedFor = '';
     Store.opsCloudSaveTimer = null;
     Store.opsCloudLastError = '';
@@ -1326,13 +2262,42 @@ body.dark-mode .mh2-stat-box {
     function getOpsSectionRows(section, keyFn){ Store.opsState = normalizeOpsState(Store.opsState); const rows = Store.opsState[section]; if(Store.opsStateLoadedFor === opsCommunityKey() && Array.isArray(rows)) return rows; return localReadRows(keyFn); }
     function writeOpsSectionRows(section, keyFn, rows){ const cleanRows = Array.isArray(rows) ? rows : []; setOpsSectionRows(section, cleanRows); try{ localStorage.setItem(keyFn(), JSON.stringify(cleanRows)); }catch(_e){} scheduleOpsCloudSave(); }
     function mergeRowsById(cloudRows, localRows){ const map = new Map(); [...(Array.isArray(cloudRows)?cloudRows:[]), ...(Array.isArray(localRows)?localRows:[])].forEach(row => { if(!row || typeof row !== 'object') return; const id = String(row.id || row._id || '').trim() || ('row_' + Math.random().toString(36).slice(2)); const existing = map.get(id); const oldTime = existing ? Date.parse(existing.updatedAt || existing.updated_at || existing.createdAt || existing.created_at || 0) || 0 : -1; const newTime = Date.parse(row.updatedAt || row.updated_at || row.createdAt || row.created_at || 0) || 0; if(!existing || newTime >= oldTime) map.set(id, { ...row, id }); }); return Array.from(map.values()); }
-    async function loadOpsCloudState(){ await ensureUser(); const client = getOpsCloudClient(); const userId = getOpsCloudUserId(); const communityId = getOpsCloudCommunityId(); const communityKey = opsCommunityKey(); const fallback = { reminders: localReadRows(remindersStorageKey), quickNotes: localReadRows(quickNotesStorageKey), vendors: localReadRows(vendorsStorageKey), importantDates: localReadRows(importantDatesStorageKey), accessCodes: localReadRows(accessCodesStorageKey) }; Store.opsState = normalizeOpsState(fallback); if(!client || !userId || !communityId){ Store.opsStateLoadedFor = communityKey; return Store.opsState; } try{ const res = await readDailyOpsCloudRow(client, userId, communityId); if(res && res.error) throw res.error; const rawState = res && res.data ? (res.data.state || res.data.data || {}) : {}; const dbState = normalizeOpsState(rawState); OPS_CLOUD_SECTIONS.forEach(section => { const keyFn = { reminders:remindersStorageKey, quickNotes:quickNotesStorageKey, vendors:vendorsStorageKey, importantDates:importantDatesStorageKey, accessCodes:accessCodesStorageKey }[section]; const merged = mergeRowsById(dbState[section], fallback[section]); setOpsSectionRows(section, merged); try{ localStorage.setItem(keyFn(), JSON.stringify(merged)); }catch(_e){} }); Store.opsStateLoadedFor = communityKey; if(!res || !res.data) scheduleOpsCloudSave(50); }catch(err){ console.warn('Daily Ops cloud load failed; using local fallback', err); Store.opsCloudLastError = String(err && err.message || err || 'Cloud load failed'); Store.opsStateLoadedFor = communityKey; } return Store.opsState; }
+    async function loadOpsCloudState(){ await ensureUser(); const client = getOpsCloudClient(); const userId = getOpsCloudUserId(); const communityId = getOpsCloudCommunityId(); const communityKey = opsCommunityKey(); const fallback = { quickNotes: localReadRows(quickNotesStorageKey) }; Store.opsState = normalizeOpsState(fallback); if(!client || !userId || !communityId){ Store.opsStateLoadedFor = communityKey; return Store.opsState; } try{ const res = await readDailyOpsCloudRow(client, userId, communityId); if(res && res.error) throw res.error; const rawState = res && res.data ? (res.data.state || res.data.data || {}) : {}; const dbState = normalizeOpsState(rawState); OPS_CLOUD_SECTIONS.forEach(section => { const keyFn = { quickNotes:quickNotesStorageKey }[section]; const merged = mergeRowsById(dbState[section], fallback[section]); setOpsSectionRows(section, merged); try{ localStorage.setItem(keyFn(), JSON.stringify(merged)); }catch(_e){} }); Store.opsStateLoadedFor = communityKey; if(!res || !res.data) scheduleOpsCloudSave(50); }catch(err){ console.warn('Daily Ops cloud load failed; using local fallback', err); Store.opsCloudLastError = String(err && err.message || err || 'Cloud load failed'); Store.opsStateLoadedFor = communityKey; } return Store.opsState; }
     function isMissingCloudColumnError(err, column){ const msg = String(err && (err.message || err.details || err.hint || err.code) || '').toLowerCase(); return !!(msg && msg.includes(column.toLowerCase()) && (msg.includes('column') || msg.includes('schema cache') || msg.includes('does not exist'))); }
     async function readDailyOpsCloudRow(client, userId, communityId){ const preferred = Store.opsCloudColumn || 'state'; const fallbackColumn = preferred === 'state' ? 'data' : 'state'; let res = await client.from('daily_ops_state').select(preferred + ',updated_at').eq('user_id', userId).eq('community_id', communityId).maybeSingle(); if(res && res.error && isMissingCloudColumnError(res.error, preferred)){ Store.opsCloudColumn = fallbackColumn; res = await client.from('daily_ops_state').select(fallbackColumn + ',updated_at').eq('user_id', userId).eq('community_id', communityId).maybeSingle(); } else { Store.opsCloudColumn = preferred; } return res; }
     function scheduleOpsCloudSave(delay){ if(Store.opsCloudSaveTimer) clearTimeout(Store.opsCloudSaveTimer); Store.opsCloudSaveTimer = setTimeout(saveOpsCloudState, typeof delay === 'number' ? delay : 450); }
     async function saveDailyOpsCloudPayload(client, payload, column){ const body = { user_id:payload.user_id, community_id:payload.community_id, updated_at:payload.updated_at }; body[column] = payload.state; return client.from('daily_ops_state').upsert(body, { onConflict:'user_id,community_id' }).select('updated_at').maybeSingle(); }
     async function saveOpsCloudState(){ Store.opsCloudSaveTimer = null; await ensureUser(); const client = getOpsCloudClient(); const userId = getOpsCloudUserId(); const communityId = getOpsCloudCommunityId(); if(!client || !userId || !communityId) return false; try{ const payload = { user_id:userId, community_id:communityId, state:normalizeOpsState(Store.opsState), updated_at:new Date().toISOString() }; let column = Store.opsCloudColumn || 'state'; let res = await saveDailyOpsCloudPayload(client, payload, column); if(res && res.error && isMissingCloudColumnError(res.error, column)){ column = column === 'state' ? 'data' : 'state'; Store.opsCloudColumn = column; res = await saveDailyOpsCloudPayload(client, payload, column); } if(res && res.error) throw res.error; Store.opsCloudLastError = ''; try{ window.dispatchEvent(new CustomEvent('dailyops:state-saved', { detail:{ community_id:communityId }})); }catch(_e){} return true; }catch(err){ console.error('Daily Ops cloud save failed', err); Store.opsCloudLastError = String(err && err.message || err || 'Cloud save failed'); return false; } }
-    async function runDailyOpsSupabaseSectionTest(){ await ensureUser(); const client = getOpsCloudClient(); const userId = getOpsCloudUserId(); const communityId = getOpsCloudCommunityId(); if(!client || !userId || !communityId){ console.error('Daily Ops Supabase test cannot run without Supabase, user, and community.', { hasClient:!!client, userId, communityId }); return { ok:false, reason:'Missing Supabase client, signed-in user, or active community.' }; } const stamp = Date.now(); const before = normalizeOpsState(Store.opsState); const now = new Date().toISOString(); const today = now.slice(0,10); const testRows = { reminders:{ id:'test_rem_'+stamp, title:'Supabase test reminder', date:today, updatedAt:now }, quickNotes:{ id:'test_note_'+stamp, note:'Supabase test quick note', updatedAt:now }, vendors:{ id:'test_vendor_'+stamp, name:'Supabase Test Vendor', category:'General Contractor', phone:'111-111-1111', email:'test@example.com', updatedAt:now }, importantDates:{ id:'test_date_'+stamp, type:'Contract Renewal', vendor:'Supabase Test Vendor', description:'Supabase test important date', date:today, recurring:'yes', frequency:'Yearly', leadTime:'30', updatedAt:now }, accessCodes:{ id:'test_access_'+stamp, name:'Supabase Test Code', code:'1234', notes:'Supabase test access code', updatedAt:now } }; OPS_CLOUD_SECTIONS.forEach(section => setOpsSectionRows(section, [testRows[section], ...(Array.isArray(before[section]) ? before[section] : [])])); const saved = await saveOpsCloudState(); const read = await readDailyOpsCloudRow(client, userId, communityId); const raw = read && read.data ? (read.data.state || read.data.data || {}) : {}; const after = normalizeOpsState(raw); const results = OPS_CLOUD_SECTIONS.map(section => ({ section, ok: Array.isArray(after[section]) && after[section].some(row => row && row.id === testRows[section].id) })); Store.opsState = before; await saveOpsCloudState(); await loadOpsCloudState(); loadRemindersModule(); loadQuickNotesModule(); loadVendorsModule(); loadImportantDatesModule(); loadAccessCodesModule(); const ok = !!saved && !(read && read.error) && results.every(r => r.ok); const summary = { ok, column:Store.opsCloudColumn || 'state', saved, readError: read && read.error ? read.error.message || String(read.error) : '', results }; console.table(results); console.log('Daily Ops Supabase section test', summary); return summary; }
+    async function runDailyOpsSupabaseSectionTest(){
+      console.warn('v118: daily_ops_state test is intentionally limited to non-migrated sections. Vendors, Important Dates, Access Codes, and Reminders use dedicated Supabase tables only.');
+      await ensureUser();
+      const client = getOpsCloudClient();
+      const userId = getOpsCloudUserId();
+      const communityId = getOpsCloudCommunityId();
+      if(!client || !userId || !communityId){
+        console.error('Daily Ops Supabase test cannot run without Supabase, user, and community.', { hasClient:!!client, userId, communityId });
+        return { ok:false, reason:'Missing Supabase client, signed-in user, or active community.' };
+      }
+      const stamp = Date.now();
+      const before = normalizeOpsState(Store.opsState);
+      const now = new Date().toISOString();
+      const testRows = { quickNotes:{ id:'test_note_'+stamp, note:'Supabase test quick note', updatedAt:now } };
+      OPS_CLOUD_SECTIONS.forEach(section => setOpsSectionRows(section, [testRows[section], ...(Array.isArray(before[section]) ? before[section] : [])]));
+      const saved = await saveOpsCloudState();
+      const read = await readDailyOpsCloudRow(client, userId, communityId);
+      const raw = read && read.data ? (read.data.state || read.data.data || {}) : {};
+      const after = normalizeOpsState(raw);
+      const results = OPS_CLOUD_SECTIONS.map(section => ({ section, ok: Array.isArray(after[section]) && after[section].some(row => row && row.id === testRows[section].id) }));
+      Store.opsState = before;
+      await saveOpsCloudState();
+      await loadOpsCloudState();
+      loadQuickNotesModule();
+      const ok = !!saved && !(read && read.error) && results.every(r => r.ok);
+      const summary = { ok, column:Store.opsCloudColumn || 'state', saved, readError: read && read.error ? read.error.message || String(read.error) : '', results };
+      console.table(results);
+      console.log('Daily Ops Supabase section test', summary);
+      return summary;
+    }
     window.runDailyOpsSupabaseSectionTest = runDailyOpsSupabaseSectionTest;
 
     function formatZummeePhone(value){
@@ -1357,19 +2322,79 @@ body.dark-mode .mh2-stat-box {
       input.addEventListener('paste', () => { setTimeout(() => { input.value = formatZummeePhone(input.value); }, 0); });
     }
 
+    // LOCKED: Operations Portal Board Members use public."BoardMembers" as the only source of truth.
+    // company_id is always derived from PropertyCommunities for the selected community before save.
     function normalizeBoardMembers(rows){
       return (rows||[]).map(row => ({
         id: String(row?.id || '').trim(),
         community_id: String(row?.community_id || Store.activeCommunityId || '').trim(),
         name: String(row?.full_name || row?.name || '').trim(),
         position: String(row?.position || '').trim(),
-        term_begin: String(row?.term_begin || row?.termBegin || '').trim(),
+        term_begin: String(row?.term_start || row?.term_begin || row?.termBegin || '').trim(),
         term_end: String(row?.term_end || row?.termEnd || '').trim(),
         phone: formatZummeePhone(row?.phone || ''),
         email: String(row?.email || '').trim(),
         created_at: row?.created_at || ''
       })).filter(r => r.name || r.position || r.phone || r.email || r.term_begin || r.term_end);
     }
+    async function cleanupBoardMemberTestRows(){
+      if(!sb || !Store.activeCommunityId) return;
+      try{
+        await sb.from('BoardMembers')
+          .delete()
+          .eq('community_id', Store.activeCommunityId)
+          .eq('name', 'TEST MEMBER')
+          .eq('email', 'test@test.com');
+      }catch(_e){}
+    }
+
+    async function fetchLegacyBoardMemberDirectoryRows(){
+      if(!sb || !Store.activeCommunityId) return [];
+      try{
+        const q = await sb.from('board_member_directory')
+          .select('id,community_id,full_name,position,email,phone,term_begin,term_end,created_at')
+          .eq('community_id', Store.activeCommunityId)
+          .order('created_at', { ascending:true });
+        if(q.error) return [];
+        return normalizeBoardMembers(q.data || []);
+      }catch(_e){
+        return [];
+      }
+    }
+
+    function boardMemberDedupeKey(row){
+      return String((row.email || row.name || '') + '|' + (row.phone || '')).toLowerCase().trim();
+    }
+
+    async function migrateLegacyBoardMembersIfNeeded(existingRows, legacyRows){
+      if(!sb || !Store.activeCommunityId || !legacyRows.length) return;
+      const companyId = await deriveActiveCompanyIdFromCommunity();
+      if(!companyId) return;
+      const existingKeys = new Set((existingRows || []).map(boardMemberDedupeKey).filter(Boolean));
+      const toInsert = legacyRows.filter(row => {
+        const key = boardMemberDedupeKey(row);
+        return key && !existingKeys.has(key) && String(row.name || '').trim().toUpperCase() !== 'TEST MEMBER';
+      }).map(row => ({
+        company_id: companyId,
+        community_id: Store.activeCommunityId,
+        name: row.name || 'Board Member',
+        position: row.position || 'Board Member',
+        phone: formatZummeePhone(row.phone || ''),
+        email: row.email || '',
+        term_start: row.term_begin || null,
+        term_end: row.term_end || null,
+        is_active: true,
+        created_by: Store.userId || readCurrentUserId() || null
+      }));
+      if(!toInsert.length) return;
+      try{
+        const res = await sb.from('BoardMembers').insert(toInsert).select('*');
+        if(res.error) throw res.error;
+      }catch(err){
+        console.warn('Legacy board member migration skipped/failed', err);
+      }
+    }
+
     async function loadBoardMembersModule(){
       const mount = byId('boardMount');
       mount.className = 'loader';
@@ -1384,12 +2409,29 @@ body.dark-mode .mh2-stat-box {
         return;
       }
       try{
-        const q = await sb.from('board_member_directory')
-          .select('id,community_id,full_name,position,email,phone,term_begin,term_end,created_at')
+        await cleanupBoardMemberTestRows();
+        const q = await sb.from('BoardMembers')
+          .select('id,company_id,community_id,name,position,email,phone,term_start,term_end,is_active,created_at,updated_at,created_by')
           .eq('community_id', Store.activeCommunityId)
           .order('created_at', { ascending:true });
         if(q.error) throw q.error;
-        const rows = normalizeBoardMembers(q.data || []);
+        let rows = normalizeBoardMembers((q.data || []).filter(row => row && row.is_active !== false));
+
+        // LOCKED migration bridge: old Operations Portal builds used board_member_directory.
+        // Keep Supabase BoardMembers as the source of truth, but rescue/migrate legacy rows once.
+        const legacyRows = await fetchLegacyBoardMemberDirectoryRows();
+        await migrateLegacyBoardMembersIfNeeded(rows, legacyRows);
+        if(legacyRows.length){
+          const after = await sb.from('BoardMembers')
+            .select('id,company_id,community_id,name,position,email,phone,term_start,term_end,is_active,created_at,updated_at,created_by')
+            .eq('community_id', Store.activeCommunityId)
+            .order('created_at', { ascending:true });
+          if(!after.error){
+            rows = normalizeBoardMembers((after.data || []).filter(row => row && row.is_active !== false));
+          }
+          if(!rows.length) rows = legacyRows;
+        }
+
         Store.cache.board.set(cacheKey, rows);
         renderBoardMembers(rows);
       }catch(err){
@@ -1433,26 +2475,52 @@ body.dark-mode .mh2-stat-box {
       const modal = byId('boardMemberModal');
       if(modal){ modal.classList.remove('isOpen'); modal.setAttribute('aria-hidden','true'); }
     }
+    async function deriveActiveCompanyIdFromCommunity(){
+      const fallback = String(Store.companyId || localStorage.getItem('zummee_company_id') || localStorage.getItem('zummeeCompanyId') || localStorage.getItem('activeCompanyId') || localStorage.getItem('currentCompanyId') || '').trim();
+      if(!sb || !Store.activeCommunityId) return fallback;
+      try{
+        const res = await sb.from('PropertyCommunities')
+          .select('company_id')
+          .eq('id', Store.activeCommunityId)
+          .single();
+        const companyId = String(res && res.data && res.data.company_id || '').trim();
+        if(companyId){
+          Store.companyId = companyId;
+          try{ localStorage.setItem('zummee_company_id', companyId); }catch(_e){}
+          return companyId;
+        }
+      }catch(err){
+        console.warn('Unable to derive BoardMembers company_id from PropertyCommunities', err);
+      }
+      return fallback;
+    }
+
     async function saveBoardMemberFromModal(){
       if(!sb) return alert('Database is not ready yet.');
       if(!Store.activeCommunityId) return alert('Choose a community first.');
+      const companyId = await deriveActiveCompanyIdFromCommunity();
+      if(!companyId) return alert('Unable to determine company for this community. Please refresh and try again.');
+      const authUser = sb.auth && await sb.auth.getUser ? await sb.auth.getUser() : null;
+      const userId = String(authUser && authUser.data && authUser.data.user && authUser.data.user.id || Store.userId || readCurrentUserId() || '').trim() || null;
       const payload = {
+        company_id: companyId,
         community_id: Store.activeCommunityId,
-        full_name: byId('boardMemberNameInput').value.trim(),
+        name: byId('boardMemberNameInput').value.trim(),
         position: byId('boardMemberPositionInput').value.trim(),
         phone: formatZummeePhone(byId('boardMemberPhoneInput').value),
         email: byId('boardMemberEmailInput').value.trim(),
-        term_begin: byId('boardMemberTermBeginInput').value || null,
-        term_end: byId('boardMemberTermEndInput').value || null
+        term_start: byId('boardMemberTermBeginInput').value || null,
+        term_end: byId('boardMemberTermEndInput').value || null,
+        is_active: true
       };
-      if(!payload.full_name) return alert('Please enter a board member name.');
+      if(!payload.name) return alert('Please enter a board member name.');
       if(payload.phone && boardMemberDialDigits(payload.phone).length !== 10) return alert('Phone number must be in 111-111-1111 format.');
       try{
         let q;
         if(Store.editingBoardMemberId){
-          q = await sb.from('board_member_directory').update(payload).eq('id', Store.editingBoardMemberId);
+          q = await sb.from('BoardMembers').update(payload).eq('id', Store.editingBoardMemberId).select('*').maybeSingle();
         }else{
-          q = await sb.from('board_member_directory').insert(payload);
+          q = await sb.from('BoardMembers').insert({ ...payload, created_by:userId }).select('*').maybeSingle();
         }
         if(q.error) throw q.error;
         Store.cache.board.delete(Store.activeCommunityId || ('name:' + Store.activeCommunityName.toLowerCase()));
@@ -1476,6 +2544,28 @@ body.dark-mode .mh2-stat-box {
       const modal = byId('boardMemberModal');
       if(modal && !modal.dataset.bound){ modal.dataset.bound='1'; modal.addEventListener('click', (e) => { if(e.target === modal) closeBoardMemberModal(); }); }
     }
+    function boardMemberInitials(name){
+      const parts=String(name||'').trim().split(/\s+/).filter(Boolean);
+      if(!parts.length) return 'B';
+      return (parts[0][0] || 'B').toUpperCase();
+    }
+    function boardMemberTermText(row){
+      const start=String(row.term_begin || '').trim();
+      const end=String(row.term_end || '').trim();
+      if(start && end) return start + ' → ' + end;
+      if(start) return start + ' →';
+      if(end) return 'Through ' + end;
+      return 'Term not set';
+    }
+    function boardMemberTermIsExpiring(row){
+      const raw = String(row && row.term_end || '').trim();
+      if(!raw) return false;
+      const end = new Date(raw + 'T23:59:59');
+      if(Number.isNaN(end.getTime())) return false;
+      const now = new Date();
+      const days = Math.ceil((end.getTime() - now.getTime()) / 86400000);
+      return days <= 90;
+    }
     function renderBoardMembers(rows){
       const mount = byId('boardMount');
       rows = Array.isArray(rows) ? rows : [];
@@ -1483,21 +2573,33 @@ body.dark-mode .mh2-stat-box {
       byId('boardCountPill').textContent = String(rows.length);
       attachBoardMemberControls();
       if(!rows.length){ mountEmpty(mount, 'No board members found for this community yet.'); return; }
-      mount.className = 'tableWrap';
-      mount.innerHTML = `
-        <table>
-          <thead><tr><th>Name</th><th>Position</th><th>Term</th><th>Phone</th><th>Email</th></tr></thead>
-          <tbody>
-            ${rows.map(row => `
-              <tr class="boardMemberRecordGreen">
-                <td><div class="boardMemberNameLine"><strong>${escapeHtml(row.name || '—')}</strong><button class="boardEditBtn" type="button" data-id="${escapeHtml(row.id)}">Edit</button></div></td>
-                <td>${escapeHtml(row.position || '—')}</td>
-                <td>${escapeHtml((row.term_begin || '—') + (row.term_end ? (' → ' + row.term_end) : ''))}</td>
-                <td>${escapeHtml(formatZummeePhone(row.phone) || '-')}${row.phone ? `<div class="contactActions"><a class="mini" href="tel:${escapeHtml(boardMemberDialDigits(row.phone))}">Call</a><a class="mini" href="sms:${escapeHtml(boardMemberDialDigits(row.phone))}">Text</a></div>` : ''}</td>
-                <td>${escapeHtml(row.email || '—')}${row.email ? `<div class="contactActions"><a class="mini" href="mailto:${escapeHtml(row.email)}">Email</a></div>` : ''}</td>
-              </tr>`).join('')}
-          </tbody>
-        </table>`;
+      mount.className = 'boardMembersPremiumMount';
+      mount.innerHTML = rows.map(row => {
+        const name = row.name || row.full_name || 'Board Member';
+        const phoneDigits = boardMemberDialDigits(row.phone);
+        const phoneLabel = formatZummeePhone(row.phone) || 'Phone not set';
+        const email = String(row.email || '').trim();
+        const termWarning = boardMemberTermIsExpiring(row);
+        return `
+          <article class="boardMemberPremiumCard">
+            <div class="boardMemberAvatar">${escapeHtml(boardMemberInitials(name))}</div>
+            <div class="boardMemberIdentity">
+              <div class="boardMemberName">${escapeHtml(name)}</div>
+              <span class="boardMemberPositionPill">${escapeHtml(row.position || 'Position not set')}</span>
+            </div>
+            <div class="boardMemberTermBox ${termWarning ? 'termWarning' : ''}">
+              <div class="boardMemberTermLabel">Term</div>
+              <div class="boardMemberTermValue">${escapeHtml(boardMemberTermText(row))}</div>
+            </div>
+            <div class="boardMemberContactRow">
+              ${phoneDigits ? `<a class="boardMemberContactPill phone" href="tel:${escapeHtml(phoneDigits)}">📞 ${escapeHtml(phoneLabel)}</a><a class="boardMemberContactPill text" href="sms:${escapeHtml(phoneDigits)}">💬 Text</a>` : `<span class="boardMemberContactPill phone">📞 Phone not set</span>`}
+              ${email ? `<a class="boardMemberContactPill email" href="mailto:${escapeHtml(email)}">✉️ ${escapeHtml(email)}</a>` : `<span class="boardMemberContactPill email">✉️ Email not set</span>`}
+            </div>
+            <div class="boardMemberActions">
+              <button class="boardMemberPremiumEdit boardEditBtn" type="button" data-id="${escapeHtml(row.id)}">Edit</button>
+            </div>
+          </article>`;
+      }).join('');
       mount.querySelectorAll('.boardEditBtn').forEach(btn => btn.addEventListener('click', () => {
         const row = rows.find(r => String(r.id) === String(btn.dataset.id));
         if(row) openBoardMemberModal(row);
@@ -1576,10 +2678,149 @@ body.dark-mode .mh2-stat-box {
       return `dailyOpsV2:reminders:${Store.activeCommunityId || ('name:' + (Store.activeCommunityName || 'unknown').toLowerCase())}`;
     }
     function readReminderRows(){
-      return getOpsSectionRows('reminders', remindersStorageKey);
+      // LOCKED v117: Reminders no longer read from Daily Ops local/cloud state.
+      // Supabase table public.ops_reminders is the source of truth.
+      return [];
     }
     function writeReminderRows(rows){
-      writeOpsSectionRows('reminders', remindersStorageKey, rows);
+      // LOCKED v117: Reminders no longer write to Daily Ops local/cloud state.
+      // Supabase table public.ops_reminders is the source of truth.
+      return rows;
+    }
+    function getRemindersClient(){
+      return window.supabaseClient || window.sb || window.supabase || sb || null;
+    }
+    async function ensureRemindersAuth(){
+      const client = getRemindersClient();
+      if(!client) return false;
+      try{
+        if(typeof restoreSupabaseSessionFromStorage === 'function') await restoreSupabaseSessionFromStorage();
+        if(typeof ensureUser === 'function') await ensureUser();
+        if(client.auth && client.auth.getSession){
+          const session = await client.auth.getSession();
+          if(session && session.data && session.data.session && session.data.session.user && session.data.session.user.id) return true;
+        }
+      }catch(err){
+        console.warn('Reminders auth restore warning', err);
+      }
+      return true;
+    }
+    async function deriveRemindersCompanyId(client, communityId){
+      const fallback = String(Store.companyId || localStorage.getItem('zummee_company_id') || localStorage.getItem('zummeeCompanyId') || localStorage.getItem('activeCompanyId') || localStorage.getItem('currentCompanyId') || '').trim();
+      const cid = String(communityId || Store.activeCommunityId || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('zummeeActiveCommunityId') || '').trim();
+      if(!client || !cid) return fallback;
+      const res = await client
+        .from('PropertyCommunities')
+        .select('company_id')
+        .eq('id', cid)
+        .single();
+      if(res.error){
+        console.warn('Reminders company lookup failed', res.error);
+        return fallback;
+      }
+      const companyId = String(res.data && res.data.company_id || '').trim();
+      if(companyId){
+        Store.companyId = companyId;
+        try{ localStorage.setItem('zummee_company_id', companyId); }catch(_e){}
+      }
+      return companyId || fallback;
+    }
+    function normalizeReminderRow(row){
+      row = row || {};
+      return {
+        id: row.id,
+        company_id: row.company_id,
+        community_id: row.community_id,
+        title: row.title || 'Reminder',
+        date: row.due_date || row.date || '',
+        due_date: row.due_date || row.date || '',
+        status: row.status || 'active',
+        completed_at: row.completed_at || null,
+        archived_at: row.archived_at || null,
+        created_at: row.created_at || '',
+        updated_at: row.updated_at || ''
+      };
+    }
+    async function fetchReminderRows(){
+      const client = getRemindersClient();
+      const communityId = String(Store.activeCommunityId || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('zummeeActiveCommunityId') || '').trim();
+      if(!client || !communityId) return { rows:[], error:null };
+      const res = await client
+        .from('ops_reminders')
+        .select('*')
+        .eq('community_id', communityId)
+        .is('archived_at', null)
+        .is('completed_at', null)
+        .order('due_date', { ascending:true });
+      return { rows:(res.data || []).map(normalizeReminderRow), error:res.error || null };
+    }
+    async function upsertReminderRow(row){
+      await ensureRemindersAuth();
+      const client = getRemindersClient();
+      if(!client) throw new Error('Supabase client unavailable.');
+      const communityId = String(Store.activeCommunityId || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('zummeeActiveCommunityId') || '').trim();
+      if(!communityId) throw new Error('Missing selected community.');
+      const companyId = await deriveRemindersCompanyId(client, communityId);
+      if(!companyId) throw new Error('Unable to derive company_id from selected community.');
+      let userId = String(Store.userId || readCurrentUserId() || '').trim() || null;
+      try{
+        if(client.auth && client.auth.getUser){
+          const auth = await client.auth.getUser();
+          userId = String(auth && auth.data && auth.data.user && auth.data.user.id || userId || '').trim() || null;
+        }
+      }catch(_e){}
+      const payload = {
+        company_id: companyId,
+        community_id: communityId,
+        title: String(row.title || '').trim(),
+        due_date: String(row.due_date || row.date || '').trim() || null,
+        status: 'active'
+      };
+      if(userId) payload.created_by = userId;
+      let res;
+      if(String(row.id || '').trim()){
+        delete payload.created_by;
+        res = await client
+          .from('ops_reminders')
+          .update(Object.assign({}, payload, { updated_at:new Date().toISOString() }))
+          .eq('id', String(row.id).trim())
+          .eq('community_id', communityId)
+          .select('*')
+          .single();
+      }else{
+        res = await client
+          .from('ops_reminders')
+          .insert(payload)
+          .select('*')
+          .single();
+      }
+      if(res.error) throw res.error;
+      return normalizeReminderRow(res.data);
+    }
+    async function deleteReminderRow(id){
+      const client = getRemindersClient();
+      const communityId = String(Store.activeCommunityId || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('zummeeActiveCommunityId') || '').trim();
+      if(!client || !communityId) throw new Error('Missing Supabase client or selected community.');
+      const res = await client
+        .from('ops_reminders')
+        .delete()
+        .eq('id', String(id || '').trim())
+        .eq('community_id', communityId);
+      if(res.error) throw res.error;
+    }
+    async function completeReminderRow(id){
+      const client = getRemindersClient();
+      const communityId = String(Store.activeCommunityId || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('zummeeActiveCommunityId') || '').trim();
+      if(!client || !communityId) throw new Error('Missing Supabase client or selected community.');
+      const res = await client
+        .from('ops_reminders')
+        .update({ status:'completed', completed_at:new Date().toISOString(), updated_at:new Date().toISOString() })
+        .eq('id', String(id || '').trim())
+        .eq('community_id', communityId)
+        .select('*')
+        .single();
+      if(res.error) throw res.error;
+      return normalizeReminderRow(res.data);
     }
     function resetReminderForm(){
       Store.editingReminderId = '';
@@ -1587,70 +2828,265 @@ body.dark-mode .mh2-stat-box {
       byId('reminderDate').value = '';
       byId('saveReminderBtn').textContent = 'Save reminder';
     }
+    function getReminderUrgency(row){
+      const dueValue = String((row && (row.due_date || row.date)) || '').slice(0,10);
+      if(!dueValue) return { key:'upcoming', label:'Upcoming', icon:'📅', days:null, tone:'blue' };
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const due = new Date(dueValue + 'T00:00:00');
+      const diffDays = Math.ceil((due.getTime() - today.getTime()) / 86400000);
+      if(diffDays < 0) return { key:'overdue', label:'Overdue', icon:'⚠️', days:diffDays, tone:'red' };
+      if(diffDays <= 2) return { key:'due-soon', label:'Due Soon', icon:'⏳', days:diffDays, tone:'gold' };
+      return { key:'upcoming', label:'Upcoming', icon:'📅', days:diffDays, tone:'blue' };
+    }
+    function formatReminderDate(value){
+      const raw = String(value || '').slice(0,10);
+      if(!raw) return 'No due date';
+      const d = new Date(raw + 'T00:00:00');
+      if(Number.isNaN(d.getTime())) return raw;
+      return d.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
+    }
     function renderReminders(rows){
       const mount = byId('remindersMount');
-      rows = Array.isArray(rows) ? rows : [];
+      rows = Array.isArray(rows) ? rows.map(normalizeReminderRow) : [];
+      rows = rows
+        .map(row => ({ ...row, urgency:getReminderUrgency(row) }))
+        .sort((a,b) => {
+          const order = { 'overdue':0, 'due-soon':1, 'upcoming':2 };
+          const ao = order[a.urgency.key] ?? 3;
+          const bo = order[b.urgency.key] ?? 3;
+          if(ao !== bo) return ao - bo;
+          return String(a.due_date || a.date || '').localeCompare(String(b.due_date || b.date || ''));
+        });
       setMetric('remindersMetric', rows.length);
       byId('remindersCountPill').textContent = String(rows.length);
       if(!rows.length){ mountEmpty(mount, 'No reminders for this community yet.'); return; }
-      mount.className = 'recordList';
-      mount.innerHTML = rows.map(row => `
-        <article class="record">
-          <div class="recordTitle" style="font-size:18px;">${escapeHtml(row.title || 'Reminder')}</div>
-          <div class="recordMeta">
-            <div class="metaPill">Due ${escapeHtml(row.date || '—')}</div>
-            <div class="metaPill" style="background:${row.overdue ? 'rgba(255,234,234,.95)' : '#f7fafc'};color:${row.overdue ? '#8f2f2f' : '#35516e'};border-color:rgba(23,50,77,.08);">${row.overdue ? 'Overdue' : 'Scheduled'}</div>
+      mount.className = 'reminderPremiumList';
+      mount.innerHTML = rows.map(row => {
+        const urgency = row.urgency || getReminderUrgency(row);
+        const dueText = formatReminderDate(row.due_date || row.date);
+        const dayText = urgency.days === null ? 'No due date set' : (urgency.days < 0 ? `${Math.abs(urgency.days)} day${Math.abs(urgency.days) === 1 ? '' : 's'} overdue` : urgency.days === 0 ? 'Due today' : `Due in ${urgency.days} day${urgency.days === 1 ? '' : 's'}`);
+        return `
+        <article class="reminderPremiumCard ${escapeHtml(urgency.key)}">
+          <div class="reminderIconBadge" aria-hidden="true">${escapeHtml(urgency.icon)}</div>
+          <div class="reminderMainContent">
+            <div class="reminderTopLine">
+              <div>
+                <div class="reminderPremiumTitle">${escapeHtml(row.title || 'Reminder')}</div>
+                <div class="reminderPremiumSub">${escapeHtml(dayText)}</div>
+              </div>
+              <div class="reminderStatusPill ${escapeHtml(urgency.key)}">${escapeHtml(urgency.label)}</div>
+            </div>
+            <div class="reminderControlRow">
+              <span class="reminderMetaPill date">Due ${escapeHtml(dueText)}</span>
+              <div class="reminderActionsRow">
+                <button class="btn ghost reminder-load" type="button" data-id="${escapeHtml(row.id)}">Edit</button>
+                <button class="btn primary reminder-complete" type="button" data-id="${escapeHtml(row.id)}">Complete</button>
+                <button class="btn secondary reminder-delete reminderDeleteBtn" type="button" data-id="${escapeHtml(row.id)}">Delete</button>
+              </div>
+            </div>
           </div>
-          <div class="contactActions" style="margin-top:14px;">
-            <button class="btn ghost reminder-load" type="button" data-id="${escapeHtml(row.id)}">Load into form</button>
-            <button class="btn secondary reminder-delete" type="button" data-id="${escapeHtml(row.id)}">Delete</button>
-          </div>
-        </article>
-      `).join('');
+        </article>`;
+      }).join('');
       mount.querySelectorAll('.reminder-load').forEach(btn => btn.addEventListener('click', () => {
         const row = rows.find(r => r.id === btn.dataset.id);
         if(!row) return;
         Store.editingReminderId = row.id;
         byId('reminderTitle').value = row.title || '';
-        byId('reminderDate').value = row.date || '';
+        byId('reminderDate').value = row.date || row.due_date || '';
         byId('saveReminderBtn').textContent = 'Update reminder';
       }));
-      mount.querySelectorAll('.reminder-delete').forEach(btn => btn.addEventListener('click', () => {
-        const next = rows.filter(r => r.id !== btn.dataset.id);
-        writeReminderRows(next);
-        if(Store.editingReminderId === btn.dataset.id) resetReminderForm();
-        loadRemindersModule();
+      mount.querySelectorAll('.reminder-complete').forEach(btn => btn.addEventListener('click', async () => {
+        try{
+          btn.disabled = true;
+          await completeReminderRow(btn.dataset.id);
+          if(Store.editingReminderId === btn.dataset.id) resetReminderForm();
+          await loadRemindersModule();
+        }catch(err){
+          console.error('Reminder complete failed', err);
+          alert('Reminder complete failed. Check ops_reminders policies.');
+          btn.disabled = false;
+        }
+      }));
+      mount.querySelectorAll('.reminder-delete').forEach(btn => btn.addEventListener('click', async () => {
+        const ok = window.confirm('Delete this reminder from Supabase for this community?');
+        if(!ok) return;
+        try{
+          btn.disabled = true;
+          await deleteReminderRow(btn.dataset.id);
+          if(Store.editingReminderId === btn.dataset.id) resetReminderForm();
+          await loadRemindersModule();
+        }catch(err){
+          console.error('Reminder delete failed', err);
+          alert('Reminder delete failed. Check ops_reminders policies.');
+          btn.disabled = false;
+        }
       }));
     }
-    function loadRemindersModule(){
+    async function loadRemindersModule(){
       const mount = byId('remindersMount');
       if(!Store.activeCommunityId && !Store.activeCommunityName){ mountEmpty(mount, 'Choose a community to load reminders.'); setMetric('remindersMetric', 0); byId('remindersCountPill').textContent = '0'; return; }
-      const today = new Date().toISOString().slice(0,10);
-      const rows = readReminderRows().map(row => ({ ...row, overdue: !!(row.date && row.date < today) }));
-      renderReminders(rows);
+      mount.className = 'loader';
+      mount.textContent = 'Loading reminders…';
+      const result = await fetchReminderRows();
+      if(result.error){
+        console.error('Reminders load failed from ops_reminders', result.error);
+        setMetric('remindersMetric', 0);
+        byId('remindersCountPill').textContent = '0';
+        mountEmpty(mount, 'Reminders could not load from Supabase. Confirm ops_reminders table and RLS policies.');
+        return;
+      }
+      renderReminders(result.rows);
     }
     function attachRemindersModule(){
-      byId('saveReminderBtn').addEventListener('click', () => {
+      byId('saveReminderBtn').addEventListener('click', async () => {
+        const btn = byId('saveReminderBtn');
         const title = String(byId('reminderTitle').value || '').trim();
         const date = String(byId('reminderDate').value || '').trim();
-        if(!title){ alert('Enter a reminder first.'); return; }
-        const rows = readReminderRows();
-        const id = Store.editingReminderId || ('rem_' + Date.now());
-        const nextRow = { id, title, date, updatedAt: new Date().toISOString() };
-        const next = Store.editingReminderId ? rows.map(r => r.id === id ? nextRow : r) : [nextRow, ...rows];
-        writeReminderRows(next);
-        resetReminderForm();
-        loadRemindersModule();
+        if(!title){ alert('Enter a reminder first.'); byId('reminderTitle').focus(); return; }
+        const original = btn.textContent;
+        try{
+          btn.disabled = true;
+          btn.textContent = Store.editingReminderId ? 'Updating…' : 'Saving…';
+          await upsertReminderRow({ id:Store.editingReminderId, title, due_date:date });
+          resetReminderForm();
+          await loadRemindersModule();
+        }catch(err){
+          console.error('Reminder save failed', err);
+          alert('Reminder save failed: ' + (err && (err.message || err.details || err.code) || 'Check Supabase permissions and ops_reminders policies.'));
+        }finally{
+          btn.disabled = false;
+          if(!Store.editingReminderId) btn.textContent = 'Save reminder';
+          else btn.textContent = original || 'Update reminder';
+        }
       });
     }
     function quickNotesStorageKey(){
       return `dailyOpsV2:quickNotes:${Store.activeCommunityId || ('name:' + (Store.activeCommunityName || 'unknown').toLowerCase())}`;
     }
     function readQuickNoteRows(){
-      return getOpsSectionRows('quickNotes', quickNotesStorageKey);
+      // LOCKED v121: Quick Notes no longer read from Daily Ops local/cloud state.
+      // Supabase table public.ops_quick_notes is the source of truth.
+      return [];
     }
     function writeQuickNoteRows(rows){
-      writeOpsSectionRows('quickNotes', quickNotesStorageKey, rows);
+      // LOCKED v121: Quick Notes no longer write to Daily Ops local/cloud state.
+      // Supabase table public.ops_quick_notes is the source of truth.
+      return rows;
+    }
+    function getQuickNotesClient(){
+      return window.supabaseClient || window.sb || window.supabase || sb || null;
+    }
+    async function ensureQuickNotesAuth(){
+      const client = getQuickNotesClient();
+      if(!client) return false;
+      try{
+        if(typeof restoreSupabaseSessionFromStorage === 'function') await restoreSupabaseSessionFromStorage();
+        if(typeof ensureUser === 'function') await ensureUser();
+        if(client.auth && client.auth.getSession){
+          const session = await client.auth.getSession();
+          if(session && session.data && session.data.session && session.data.session.user && session.data.session.user.id) return true;
+        }
+      }catch(err){
+        console.warn('Quick Notes auth restore warning', err);
+      }
+      return true;
+    }
+    async function deriveQuickNotesCompanyId(client, communityId){
+      const fallback = String(Store.companyId || localStorage.getItem('zummee_company_id') || localStorage.getItem('zummeeCompanyId') || localStorage.getItem('activeCompanyId') || localStorage.getItem('currentCompanyId') || '').trim();
+      const cid = String(communityId || Store.activeCommunityId || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('zummeeActiveCommunityId') || '').trim();
+      if(!client || !cid) return fallback;
+      const res = await client
+        .from('PropertyCommunities')
+        .select('company_id')
+        .eq('id', cid)
+        .single();
+      if(res.error){
+        console.warn('Quick Notes company lookup failed', res.error);
+        return fallback;
+      }
+      const companyId = String(res.data && res.data.company_id || '').trim();
+      if(companyId){
+        Store.companyId = companyId;
+        try{ localStorage.setItem('zummee_company_id', companyId); }catch(_e){}
+      }
+      return companyId || fallback;
+    }
+    function normalizeQuickNoteRow(row){
+      row = row || {};
+      return {
+        id: row.id,
+        company_id: row.company_id,
+        community_id: row.community_id,
+        note: String(row.note || '').trim(),
+        created_by: row.created_by || null,
+        created_at: row.created_at || row.createdAt || '',
+        updated_at: row.updated_at || row.updatedAt || '',
+        updatedAt: row.updated_at || row.updatedAt || row.created_at || row.createdAt || ''
+      };
+    }
+    async function fetchQuickNoteRows(){
+      const client = getQuickNotesClient();
+      const communityId = String(Store.activeCommunityId || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('zummeeActiveCommunityId') || '').trim();
+      if(!client || !communityId) return { rows:[], error:null };
+      const res = await client
+        .from('ops_quick_notes')
+        .select('*')
+        .eq('community_id', communityId)
+        .order('created_at', { ascending:false });
+      return { rows:(res.data || []).map(normalizeQuickNoteRow), error:res.error || null };
+    }
+    async function upsertQuickNoteRow(row){
+      await ensureQuickNotesAuth();
+      const client = getQuickNotesClient();
+      if(!client) throw new Error('Supabase client unavailable.');
+      const communityId = String(Store.activeCommunityId || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('zummeeActiveCommunityId') || '').trim();
+      if(!communityId) throw new Error('Missing selected community.');
+      const companyId = await deriveQuickNotesCompanyId(client, communityId);
+      if(!companyId) throw new Error('Unable to derive company_id from selected community.');
+      let userId = String(Store.userId || readCurrentUserId() || '').trim() || null;
+      try{
+        if(client.auth && client.auth.getUser){
+          const auth = await client.auth.getUser();
+          userId = String(auth && auth.data && auth.data.user && auth.data.user.id || userId || '').trim() || null;
+        }
+      }catch(_e){}
+      const payload = {
+        company_id: companyId,
+        community_id: communityId,
+        note: String(row.note || '').trim()
+      };
+      if(userId) payload.created_by = userId;
+      let res;
+      if(String(row.id || '').trim()){
+        delete payload.created_by;
+        res = await client
+          .from('ops_quick_notes')
+          .update(Object.assign({}, payload, { updated_at:new Date().toISOString() }))
+          .eq('id', String(row.id).trim())
+          .eq('community_id', communityId)
+          .select('*')
+          .single();
+      }else{
+        res = await client
+          .from('ops_quick_notes')
+          .insert(payload)
+          .select('*')
+          .single();
+      }
+      if(res.error) throw res.error;
+      return normalizeQuickNoteRow(res.data);
+    }
+    async function deleteQuickNoteRow(id){
+      const client = getQuickNotesClient();
+      const communityId = String(Store.activeCommunityId || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('zummeeActiveCommunityId') || '').trim();
+      if(!client || !communityId) throw new Error('Missing Supabase client or selected community.');
+      const res = await client
+        .from('ops_quick_notes')
+        .delete()
+        .eq('id', String(id || '').trim())
+        .eq('community_id', communityId);
+      if(res.error) throw res.error;
     }
     function resetQuickNoteForm(){
       Store.editingQuickNoteId = '';
@@ -1663,62 +3099,167 @@ body.dark-mode .mh2-stat-box {
       setMetric('quickNotesMetric', rows.length);
       byId('quickNotesCountPill').textContent = String(rows.length);
       if(!rows.length){ mountEmpty(mount, 'No quick notes for this community yet.'); return; }
-      mount.className = 'recordList';
-      mount.innerHTML = rows.map(row => `
-        <article class="record">
-          <div class="recordTitle" style="font-size:18px;white-space:pre-wrap;">${escapeHtml(row.note || 'Quick note')}</div>
-          <div class="recordMeta">
-            <div class="metaPill">Saved ${escapeHtml(row.updatedAt ? new Date(row.updatedAt).toLocaleString() : 'recently')}</div>
-            <div class="metaPill" style="background:#f8fbff;color:#35516e;border-color:rgba(23,50,77,.08);">Community note</div>
+      mount.className = 'quickNotesList';
+      mount.innerHTML = rows.map(row => {
+        const preview = String(row.note || 'Quick note').trim();
+        return `
+        <article class="quickNoteCard quickNoteCleanCard">
+          <div class="quickNoteCardIcon">✦</div>
+          <div class="quickNoteCardMain">
+            <div class="quickNoteCardText">${escapeHtml(preview)}</div>
           </div>
-          <div class="contactActions" style="margin-top:14px;">
-            <button class="btn ghost quicknote-load" type="button" data-id="${escapeHtml(row.id)}">Load into form</button>
+          <div class="quickNoteActions">
+            <button class="btn ghost quicknote-load" type="button" data-id="${escapeHtml(row.id)}">Edit</button>
             <button class="btn secondary quicknote-delete" type="button" data-id="${escapeHtml(row.id)}">Delete</button>
           </div>
-        </article>
-      `).join('');
+        </article>`;
+      }).join('');
       mount.querySelectorAll('.quicknote-load').forEach(btn => btn.addEventListener('click', () => {
-        const row = rows.find(r => r.id === btn.dataset.id);
+        const row = rows.find(r => String(r.id) === String(btn.dataset.id));
         if(!row) return;
         Store.editingQuickNoteId = row.id;
         byId('quickNoteInput').value = row.note || '';
         byId('saveQuickNoteBtn').textContent = 'Update note';
       }));
-      mount.querySelectorAll('.quicknote-delete').forEach(btn => btn.addEventListener('click', () => {
-        const next = rows.filter(r => r.id !== btn.dataset.id);
-        writeQuickNoteRows(next);
-        if(Store.editingQuickNoteId === btn.dataset.id) resetQuickNoteForm();
-        loadQuickNotesModule();
+      mount.querySelectorAll('.quicknote-delete').forEach(btn => btn.addEventListener('click', async () => {
+        if(!confirm('Delete this quick note?')) return;
+        try{
+          await deleteQuickNoteRow(btn.dataset.id);
+          if(Store.editingQuickNoteId === btn.dataset.id) resetQuickNoteForm();
+          await loadQuickNotesModule();
+        }catch(err){
+          console.error('Quick note delete failed', err);
+          alert('Quick note delete failed. Check ops_quick_notes policies.');
+        }
       }));
     }
-    function loadQuickNotesModule(){
+    async function loadQuickNotesModule(){
       const mount = byId('quickNotesMount');
       if(!Store.activeCommunityId && !Store.activeCommunityName){ mountEmpty(mount, 'Choose a community to load quick notes.'); setMetric('quickNotesMetric', 0); byId('quickNotesCountPill').textContent = '0'; return; }
-      renderQuickNotes(readQuickNoteRows());
+      mount.className = 'loader';
+      mount.textContent = 'Loading quick notes…';
+      const result = await fetchQuickNoteRows();
+      if(result.error){
+        console.error('Quick Notes load failed from ops_quick_notes', result.error);
+        setMetric('quickNotesMetric', 0);
+        byId('quickNotesCountPill').textContent = '0';
+        mountEmpty(mount, 'Quick Notes could not load from Supabase. Confirm ops_quick_notes table and RLS policies.');
+        return;
+      }
+      renderQuickNotes(result.rows);
     }
     function attachQuickNotesModule(){
-      byId('saveQuickNoteBtn').addEventListener('click', () => {
+      byId('saveQuickNoteBtn').addEventListener('click', async () => {
+        const btn = byId('saveQuickNoteBtn');
         const note = String(byId('quickNoteInput').value || '').trim();
         if(!note){ alert('Enter a quick note first.'); return; }
-        const rows = readQuickNoteRows();
-        const id = Store.editingQuickNoteId || ('note_' + Date.now());
-        const nextRow = { id, note, updatedAt: new Date().toISOString() };
-        const next = Store.editingQuickNoteId ? rows.map(r => r.id === id ? nextRow : r) : [nextRow, ...rows];
-        writeQuickNoteRows(next);
-        resetQuickNoteForm();
-        loadQuickNotesModule();
+        const original = btn.textContent;
+        try{
+          btn.disabled = true;
+          btn.textContent = Store.editingQuickNoteId ? 'Updating…' : 'Saving…';
+          await upsertQuickNoteRow({ id:Store.editingQuickNoteId, note });
+          resetQuickNoteForm();
+          await loadQuickNotesModule();
+        }catch(err){
+          console.error('Quick note save failed', err);
+          alert('Quick note save failed: ' + (err && (err.message || err.details || err.code) || 'Check Supabase permissions and ops_quick_notes policies.'));
+        }finally{
+          btn.disabled = false;
+          if(!Store.editingQuickNoteId) btn.textContent = 'Save note';
+          else btn.textContent = original || 'Update note';
+        }
       });
     }
 
 
-    function vendorsStorageKey(){
-      return `dailyOpsV2:vendors:${Store.activeCommunityId || ('name:' + (Store.activeCommunityName || 'unknown').toLowerCase())}`;
+    /* v97 LOCKED: Vendors are Supabase-backed.
+       Source of truth: public.ops_vendors.
+       Local storage/daily_ops_state must not be used for vendor save/load/delete anymore. */
+    function normalizeVendorRow(row){
+      row = row || {};
+      return {
+        id: String(row.id || '').trim(),
+        name: String(row.name || '').trim(),
+        category: String(row.category || '').trim(),
+        phone: String(row.phone || '').trim(),
+        email: String(row.email || '').trim(),
+        contact_name: String(row.contact_name || row.contact || row.vendor_contact || '').trim(),
+        community_id: String(row.community_id || Store.activeCommunityId || '').trim(),
+        created_by: String(row.created_by || '').trim(),
+        created_at: row.created_at || row.createdAt || '',
+        updated_at: row.updated_at || row.updatedAt || ''
+      };
     }
-    function readVendorRows(){
-      return getOpsSectionRows('vendors', vendorsStorageKey);
+    function getVendorClient(){
+      return sb || window.supabaseClient || window.sb || window.supabase || null;
     }
-    function writeVendorRows(rows){
-      writeOpsSectionRows('vendors', vendorsStorageKey, rows);
+    async function ensureVendorAuth(){
+      if(typeof restoreSupabaseSessionFromStorage === 'function') await restoreSupabaseSessionFromStorage();
+      if(typeof ensureUser === 'function') await ensureUser();
+      return !!getVendorClient();
+    }
+    async function fetchVendorRows(){
+      const client = getVendorClient();
+      const communityId = String(Store.activeCommunityId || '').trim();
+      if(!client || !communityId) return { rows:[], error: client ? null : new Error('Supabase client unavailable') };
+      const res = await client
+        .from('ops_vendors')
+        .select('*')
+        .eq('community_id', communityId)
+        .order('created_at', { ascending:false });
+      if(res.error) return { rows:[], error:res.error };
+      return { rows:(res.data || []).map(normalizeVendorRow), error:null };
+    }
+    async function upsertVendorRow(row){
+      await ensureVendorAuth();
+      const client = getVendorClient();
+      const communityId = String(Store.activeCommunityId || '').trim();
+      if(!client || !communityId) throw new Error('Missing Supabase client or active community.');
+      const payload = {
+        name: String(row.name || '').trim(),
+        category: String(row.category || '').trim() || null,
+        phone: String(row.phone || '').trim() || null,
+        email: String(row.email || '').trim() || null,
+        contact_name: String(row.contact_name || '').trim() || null,
+        community_id: communityId,
+        created_by: String(Store.userId || readCurrentUserId() || '').trim() || null
+      };
+      if(String(row.id || '').trim()){
+        const res = await client
+          .from('ops_vendors')
+          .update({
+            name: payload.name,
+            category: payload.category,
+            phone: payload.phone,
+            email: payload.email,
+            contact_name: payload.contact_name
+          })
+          .eq('id', String(row.id).trim())
+          .eq('community_id', communityId)
+          .select('*')
+          .maybeSingle();
+        if(res.error) throw res.error;
+        return res.data;
+      }
+      const res = await client
+        .from('ops_vendors')
+        .insert(payload)
+        .select('*')
+        .single();
+      if(res.error) throw res.error;
+      return res.data;
+    }
+    async function deleteVendorRow(id){
+      await ensureVendorAuth();
+      const client = getVendorClient();
+      const communityId = String(Store.activeCommunityId || '').trim();
+      if(!client || !communityId) throw new Error('Missing Supabase client or active community.');
+      const res = await client
+        .from('ops_vendors')
+        .delete()
+        .eq('id', String(id || '').trim())
+        .eq('community_id', communityId);
+      if(res.error) throw res.error;
     }
     function ensureVendorCategoryOption(category){
       const select = byId('vendorCategoryInput');
@@ -1736,31 +3277,40 @@ body.dark-mode .mh2-stat-box {
       Store.editingVendorId = '';
       byId('vendorNameInput').value = '';
       byId('vendorCategoryInput').value = '';
+      byId('vendorContactInput').value = '';
       byId('vendorPhoneInput').value = '';
       byId('vendorEmailInput').value = '';
       byId('saveVendorBtn').textContent = 'Save vendor';
     }
     function renderVendors(rows){
       const mount = byId('vendorsMount');
-      rows = Array.isArray(rows) ? rows : [];
+      rows = Array.isArray(rows) ? rows.map(normalizeVendorRow) : [];
       setMetric('vendorsMetric', rows.length);
       byId('vendorsCountPill').textContent = String(rows.length);
       if(!rows.length){ mountEmpty(mount, 'No vendors for this community yet.'); return; }
-      mount.className = 'recordList';
-      mount.innerHTML = rows.map(row => `
-        <article class="record">
-          <div class="recordTitle" style="font-size:18px;">${escapeHtml(row.name || 'Vendor')}</div>
-          <div class="recordMeta">
-            <div class="metaPill">${escapeHtml(row.category || 'General')}</div>
-            ${row.phone ? `<div class="metaPill">${escapeHtml(row.phone)}</div>` : ''}
-            ${row.email ? `<div class="metaPill">${escapeHtml(row.email)}</div>` : ''}
+      mount.className = 'vendorCardsGrid';
+      mount.innerHTML = rows.map(row => {
+        const initials = String(row.name || 'V').trim().split(/\s+/).slice(0,2).map(part => part.charAt(0).toUpperCase()).join('') || 'V';
+        return `
+        <article class="vendorCardPremium">
+          <div class="vendorTopRow">
+            <div class="vendorAvatar">${escapeHtml(initials)}</div>
+            <div class="vendorNameBlock">
+              <div class="vendorNamePremium">${escapeHtml(row.name || 'Vendor')}</div>
+              <div class="vendorCategoryPremium">${escapeHtml(row.category || 'General Vendor')}</div>
+            </div>
           </div>
-          <div class="contactActions" style="margin-top:14px;">
-            <button class="btn ghost vendor-load" type="button" data-id="${escapeHtml(row.id)}">Load into form</button>
+          <div class="vendorInfoGrid hasVendorContact">
+            <span class="vendorInfoPill vendorContactPill ${row.contact_name ? '' : 'vendorContactMissing'}"><span class="icon">👤</span><span>${escapeHtml(row.contact_name || 'Contact not set')}</span></span>
+            ${row.phone ? `<a class="vendorInfoPill vendorPhonePill" href="tel:${escapeHtml(String(row.phone || '').replace(/[^0-9+]/g,''))}"><span class="icon">☎</span><span>${escapeHtml(row.phone)}</span></a>` : `<span class="vendorInfoPill vendorPhonePill vendorContactMissing"><span class="icon">☎</span><span>Phone not set</span></span>`}
+            ${row.email ? `<a class="vendorInfoPill vendorEmailPill" href="mailto:${escapeHtml(row.email)}"><span class="icon">✉</span><span>${escapeHtml(row.email)}</span></a>` : `<span class="vendorInfoPill vendorEmailPill vendorContactMissing"><span class="icon">✉</span><span>Email not set</span></span>`}
+          </div>
+          <div class="vendorActionsPremium">
+            <button class="btn ghost vendor-load" type="button" data-id="${escapeHtml(row.id)}">Edit Vendor</button>
             <button class="btn secondary vendor-delete" type="button" data-id="${escapeHtml(row.id)}">Delete</button>
           </div>
-        </article>
-      `).join('');
+        </article>`;
+      }).join('');
       mount.querySelectorAll('.vendor-load').forEach(btn => btn.addEventListener('click', () => {
         const row = rows.find(r => r.id === btn.dataset.id);
         if(!row) return;
@@ -1768,36 +3318,104 @@ body.dark-mode .mh2-stat-box {
         byId('vendorNameInput').value = row.name || '';
         ensureVendorCategoryOption(row.category || '');
         byId('vendorCategoryInput').value = row.category || '';
+        byId('vendorContactInput').value = row.contact_name || '';
         byId('vendorPhoneInput').value = row.phone || '';
         byId('vendorEmailInput').value = row.email || '';
         byId('saveVendorBtn').textContent = 'Update vendor';
       }));
-      mount.querySelectorAll('.vendor-delete').forEach(btn => btn.addEventListener('click', () => {
-        const next = rows.filter(r => r.id !== btn.dataset.id);
-        writeVendorRows(next);
-        if(Store.editingVendorId === btn.dataset.id) resetVendorForm();
-        loadVendorsModule();
+      mount.querySelectorAll('.vendor-delete').forEach(btn => btn.addEventListener('click', async () => {
+        const ok = window.confirm('Delete this vendor from Supabase for this community?');
+        if(!ok) return;
+        try{
+          btn.disabled = true;
+          await deleteVendorRow(btn.dataset.id);
+          if(Store.editingVendorId === btn.dataset.id) resetVendorForm();
+          await loadVendorsModule();
+        }catch(err){
+          console.error('Vendor delete failed', err);
+          alert('Vendor delete failed. Check Supabase permissions and ops_vendors policies.');
+          btn.disabled = false;
+        }
       }));
     }
-    function loadVendorsModule(){
+    async function loadVendorsModule(){
       const mount = byId('vendorsMount');
-      if(!Store.activeCommunityId && !Store.activeCommunityName){ mountEmpty(mount, 'Choose a community to load vendors.'); setMetric('vendorsMetric', 0); byId('vendorsCountPill').textContent = '0'; return; }
-      renderVendors(readVendorRows());
+      if(!Store.activeCommunityId){ mountEmpty(mount, 'Choose a community to load vendors.'); setMetric('vendorsMetric', 0); byId('vendorsCountPill').textContent = '0'; return; }
+      mount.className = 'loader';
+      mount.textContent = 'Loading vendors…';
+      const result = await fetchVendorRows();
+      if(result.error){
+        console.error('Vendor load failed from ops_vendors', result.error);
+        setMetric('vendorsMetric', 0);
+        byId('vendorsCountPill').textContent = '0';
+        mountEmpty(mount, 'Vendor records could not load from Supabase. Confirm ops_vendors table and RLS policies.');
+        return;
+      }
+      renderVendors(result.rows);
     }
+
+    function formatVendorPhoneInputValue(value){
+      const raw = String(value || '').replace(/\D/g,'').slice(0,10);
+      if(raw.length <= 3) return raw;
+      if(raw.length <= 6) return raw.slice(0,3) + '-' + raw.slice(3);
+      return raw.slice(0,3) + '-' + raw.slice(3,6) + '-' + raw.slice(6);
+    }
+    function vendorEmailLooksValid(value){
+      const v = String(value || '').trim();
+      return !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+    }
+    function setupVendorInputPolish(){
+      const phone = byId('vendorPhoneInput');
+      const email = byId('vendorEmailInput');
+      if(phone && !phone.dataset.vendorPolishBound){
+        phone.dataset.vendorPolishBound = '1';
+        phone.setAttribute('inputmode','tel');
+        phone.setAttribute('autocomplete','tel');
+        phone.addEventListener('input', function(){
+          const next = formatVendorPhoneInputValue(phone.value);
+          if(phone.value !== next) phone.value = next;
+        });
+      }
+      if(email && !email.dataset.vendorPolishBound){
+        email.dataset.vendorPolishBound = '1';
+        email.setAttribute('autocomplete','email');
+        const update = function(){
+          const value = String(email.value || '').trim();
+          email.classList.toggle('vendor-email-valid', !!value && vendorEmailLooksValid(value));
+          email.classList.toggle('vendor-email-invalid', !!value && !vendorEmailLooksValid(value));
+        };
+        email.addEventListener('input', update);
+        email.addEventListener('blur', update);
+        update();
+      }
+    }
+
     function attachVendorsModule(){
-      byId('saveVendorBtn').addEventListener('click', () => {
+      setupVendorInputPolish();
+      byId('saveVendorBtn').addEventListener('click', async () => {
+        const btn = byId('saveVendorBtn');
         const name = String(byId('vendorNameInput').value || '').trim();
         const category = String(byId('vendorCategoryInput').value || '').trim();
+        const contact_name = String(byId('vendorContactInput').value || '').trim();
         const phone = String(byId('vendorPhoneInput').value || '').trim();
         const email = String(byId('vendorEmailInput').value || '').trim();
         if(!name){ alert('Enter a vendor name first.'); return; }
-        const rows = readVendorRows();
-        const id = Store.editingVendorId || ('vendor_' + Date.now());
-        const nextRow = { id, name, category, phone, email, updatedAt: new Date().toISOString() };
-        const next = Store.editingVendorId ? rows.map(r => r.id === id ? nextRow : r) : [nextRow, ...rows];
-        writeVendorRows(next);
-        resetVendorForm();
-        loadVendorsModule();
+        if(email && !vendorEmailLooksValid(email)){ alert('Enter a valid vendor email address.'); byId('vendorEmailInput').focus(); return; }
+        const original = btn.textContent;
+        try{
+          btn.disabled = true;
+          btn.textContent = Store.editingVendorId ? 'Updating…' : 'Saving…';
+          await upsertVendorRow({ id:Store.editingVendorId, name, category, contact_name, phone, email });
+          resetVendorForm();
+          await loadVendorsModule();
+        }catch(err){
+          console.error('Vendor save failed', err);
+          alert('Vendor save failed. Check Supabase permissions and ops_vendors policies.');
+        }finally{
+          btn.disabled = false;
+          if(!Store.editingVendorId) btn.textContent = 'Save vendor';
+          else btn.textContent = original || 'Update vendor';
+        }
       });
     }
 
@@ -1805,10 +3423,145 @@ body.dark-mode .mh2-stat-box {
       return `dailyOpsV2:importantDates:${Store.activeCommunityId || ('name:' + (Store.activeCommunityName || 'unknown').toLowerCase())}`;
     }
     function readImportantDateRows(){
-      return getOpsSectionRows('importantDates', importantDatesStorageKey);
+      return [];
     }
     function writeImportantDateRows(rows){
-      writeOpsSectionRows('importantDates', importantDatesStorageKey, rows);
+      // LOCKED v112: Important Dates no longer writes to Daily Ops local/cloud state.
+      // Supabase table public.ops_important_dates is the source of truth.
+      return rows;
+    }
+    function getImportantDatesClient(){
+      return window.supabaseClient || window.sb || window.supabase || sb || null;
+    }
+    async function ensureImportantDatesAuth(){
+      const client = getImportantDatesClient();
+      if(!client) return false;
+      try{
+        if(typeof restoreSupabaseSessionFromStorage === 'function') await restoreSupabaseSessionFromStorage();
+        if(typeof ensureUser === 'function') await ensureUser();
+        if(client.auth && client.auth.getSession){
+          const session = await client.auth.getSession();
+          if(session && session.data && session.data.session && session.data.session.user && session.data.session.user.id) return true;
+        }
+      }catch(err){
+        console.warn('Important Dates auth restore warning', err);
+      }
+      return true;
+    }
+    async function deriveImportantDatesCompanyId(client, communityId){
+      const fallback = String(Store.companyId || localStorage.getItem('zummee_company_id') || localStorage.getItem('zummeeCompanyId') || localStorage.getItem('activeCompanyId') || localStorage.getItem('currentCompanyId') || '').trim();
+      const cid = String(communityId || Store.activeCommunityId || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('zummeeActiveCommunityId') || '').trim();
+      if(!client || !cid) return fallback;
+      const res = await client
+        .from('PropertyCommunities')
+        .select('company_id')
+        .eq('id', cid)
+        .single();
+      if(res.error){
+        console.warn('Important Dates company lookup failed', res.error);
+        return fallback;
+      }
+      const companyId = String(res.data && res.data.company_id || '').trim();
+      if(companyId){
+        Store.companyId = companyId;
+        try{ localStorage.setItem('zummee_company_id', companyId); }catch(_e){}
+      }
+      return companyId || fallback;
+    }
+    function normalizeImportantDateRow(row){
+      row = row || {};
+      return {
+        id: row.id,
+        community_id: row.community_id,
+        company_id: row.company_id,
+        type: row.type || 'Important Date',
+        vendor: row.vendor_company || row.vendor || '',
+        vendor_company: row.vendor_company || row.vendor || '',
+        description: row.description || '',
+        date: row.due_date || row.date || '',
+        due_date: row.due_date || row.date || '',
+        recurring: row.recurring || 'yes',
+        frequency: row.frequency || 'Yearly',
+        leadTime: Number(row.reminder_lead_days || row.leadTime || 30) || 30,
+        reminder_lead_days: Number(row.reminder_lead_days || row.leadTime || 30) || 30,
+        status: row.status || 'active',
+        completed_at: row.completed_at || null,
+        archived_at: row.archived_at || null,
+        created_at: row.created_at || '',
+        updated_at: row.updated_at || ''
+      };
+    }
+    async function fetchImportantDateRows(){
+      const client = getImportantDatesClient();
+      const communityId = String(Store.activeCommunityId || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('zummeeActiveCommunityId') || '').trim();
+      if(!client || !communityId) return { rows:[], error:null };
+      const res = await client
+        .from('ops_important_dates')
+        .select('*')
+        .eq('community_id', communityId)
+        .is('archived_at', null)
+        .is('completed_at', null)
+        .order('due_date', { ascending:true });
+      return { rows:(res.data || []).map(normalizeImportantDateRow), error:res.error || null };
+    }
+    async function upsertImportantDateRow(row){
+      await ensureImportantDatesAuth();
+      const client = getImportantDatesClient();
+      if(!client) throw new Error('Supabase client unavailable.');
+      const communityId = String(Store.activeCommunityId || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('zummeeActiveCommunityId') || '').trim();
+      if(!communityId) throw new Error('Missing selected community.');
+      const companyId = await deriveImportantDatesCompanyId(client, communityId);
+      if(!companyId) throw new Error('Unable to derive company_id from selected community.');
+      let userId = String(Store.userId || readCurrentUserId() || '').trim() || null;
+      try{
+        if(client.auth && client.auth.getUser){
+          const auth = await client.auth.getUser();
+          userId = String(auth && auth.data && auth.data.user && auth.data.user.id || userId || '').trim() || null;
+        }
+      }catch(_e){}
+      const payload = {
+        company_id: companyId,
+        community_id: communityId,
+        type: String(row.type || '').trim(),
+        vendor_company: String(row.vendor_company || row.vendor || '').trim() || null,
+        description: String(row.description || '').trim() || null,
+        due_date: String(row.due_date || row.date || '').trim(),
+        recurring: String(row.recurring || 'yes').trim(),
+        frequency: String(row.frequency || 'Yearly').trim(),
+        reminder_lead_days: Number(row.reminder_lead_days || row.leadTime || 30) || 30,
+        status: 'active'
+      };
+      if(userId) payload.created_by = userId;
+      console.log('IMPORTANT DATE SAVE PAYLOAD', payload);
+      let res;
+      if(String(row.id || '').trim()){
+        res = await client
+          .from('ops_important_dates')
+          .update(payload)
+          .eq('id', String(row.id).trim())
+          .eq('community_id', communityId)
+          .select('*')
+          .single();
+      }else{
+        res = await client
+          .from('ops_important_dates')
+          .insert(payload)
+          .select('*')
+          .single();
+      }
+      if(res.error) throw res.error;
+      return normalizeImportantDateRow(res.data);
+    }
+    async function deleteImportantDateRow(id){
+      const client = getImportantDatesClient();
+      const communityId = String(Store.activeCommunityId || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('zummeeActiveCommunityId') || '').trim();
+      if(!client || !communityId) throw new Error('Missing Supabase client or selected community.');
+      const res = await client
+        .from('ops_important_dates')
+        .delete()
+        .eq('id', String(id || '').trim())
+        .eq('community_id', communityId);
+      if(res.error) throw res.error;
     }
     function resetImportantDateForm(){
       Store.editingImportantDateId = '';
@@ -1822,9 +3575,9 @@ body.dark-mode .mh2-stat-box {
       byId('saveImportantDateBtn').textContent = 'Save important date';
     }
     function computeImportantDateStatus(row){
-      const due = String(row.date || '').trim();
+      const due = String(row.due_date || row.date || '').trim();
       if(!due) return 'Needs Review';
-      const lead = Number(row.leadTime || 30);
+      const lead = Number(row.reminder_lead_days || row.leadTime || 30) || 30;
       const today = new Date();
       today.setHours(0,0,0,0);
       const dueDate = new Date(due + 'T00:00:00');
@@ -1845,27 +3598,67 @@ body.dark-mode .mh2-stat-box {
     }
     function renderImportantDates(rows){
       const mount = byId('importantDatesMount');
-      rows = Array.isArray(rows) ? rows : [];
+      rows = Array.isArray(rows) ? rows.map(normalizeImportantDateRow) : [];
       setMetric('importantDatesMetric', rows.length);
       byId('importantDatesCountPill').textContent = String(rows.length);
       if(!rows.length){ mountEmpty(mount, 'No important dates for this community yet.'); return; }
-      const sorted = rows.slice().sort((a,b) => String(a.date||'9999-12-31').localeCompare(String(b.date||'9999-12-31')));
-      mount.className = 'recordList';
+      const sorted = rows.slice().sort((a,b) => String(a.due_date||a.date||'9999-12-31').localeCompare(String(b.due_date||b.date||'9999-12-31')));
+      mount.className = 'importantDatesPremiumList';
+      function statusClass(status){
+        return String(status || 'Needs Review').toLowerCase().replace(/\s+/g,'-');
+      }
+      function iconForType(type){
+        const t = String(type || '').toLowerCase();
+        if(t.includes('fire')) return '🔥';
+        if(t.includes('insurance')) return '🛡️';
+        if(t.includes('contract')) return '📄';
+        if(t.includes('elevator')) return '🏢';
+        if(t.includes('pool')) return '💧';
+        if(t.includes('alarm')) return '🚨';
+        if(t.includes('backflow')) return '🔧';
+        return '📅';
+      }
+      function daysUntilText(dueValue){
+        if(!dueValue) return '';
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const due = new Date(dueValue + 'T00:00:00');
+        if(Number.isNaN(due.getTime())) return '';
+        const diff = Math.floor((due - today) / 86400000);
+        if(diff < 0) return Math.abs(diff) + ' days overdue';
+        if(diff === 0) return 'Due today';
+        if(diff === 1) return 'Due tomorrow';
+        return 'Due in ' + diff + ' days';
+      }
       mount.innerHTML = sorted.map(row => {
         const status = computeImportantDateStatus(row);
+        const cls = statusClass(status);
+        const dueValue = row.due_date || row.date || '';
+        const dueLabel = dueValue ? new Date(dueValue + 'T00:00:00').toLocaleDateString() : 'No due date';
+        const vendor = row.vendor_company || row.vendor || '';
+        const recurrence = row.recurring === 'yes' ? (row.frequency || 'Recurring') : 'One Time';
+        const lead = String(row.reminder_lead_days || row.leadTime || 30);
         return `
-        <article class="record">
-          <div class="recordTitle" style="font-size:18px;">${escapeHtml(row.type || 'Important Date')}</div>
-          <div class="recordMeta">
-            <div class="metaPill" style="${importantStatusPill(status)}">${escapeHtml(status)}</div>
-            ${row.vendor ? `<div class="metaPill">${escapeHtml(row.vendor)}</div>` : ''}
-            ${row.date ? `<div class="metaPill">Due ${escapeHtml(new Date(row.date + 'T00:00:00').toLocaleDateString())}</div>` : ''}
-            ${row.recurring === 'yes' ? `<div class="metaPill">${escapeHtml(row.frequency || 'Recurring')}</div>` : `<div class="metaPill">One Time</div>`}
-            <div class="metaPill">Lead ${escapeHtml(String(row.leadTime || 30))}d</div>
+        <article class="importantDateCard is-${escapeHtml(cls)}">
+          <div class="importantDateTop">
+            <div class="importantDateTitleRow">
+              <div class="importantDateIcon">${iconForType(row.type)}</div>
+              <div>
+                <div class="importantDateTitle">${escapeHtml(row.type || 'Important Date')}</div>
+                ${vendor ? `<div class="importantDateVendor">${escapeHtml(vendor)}</div>` : `<div class="importantDateVendor">No vendor/company set</div>`}
+              </div>
+            </div>
+            <div class="importantDateStatus ${escapeHtml(cls)}">${escapeHtml(status)}</div>
           </div>
-          ${row.description ? `<div class="recordSub" style="margin-top:10px;">${escapeHtml(row.description)}</div>` : ''}
-          <div class="contactActions" style="margin-top:14px;">
-            <button class="btn ghost important-load" type="button" data-id="${escapeHtml(row.id)}">Load into form</button>
+          <div class="importantDateMetaRow">
+            <div class="importantDateMeta">📆 ${escapeHtml(dueLabel)}</div>
+            ${daysUntilText(dueValue) ? `<div class="importantDateMeta">⏱ ${escapeHtml(daysUntilText(dueValue))}</div>` : ''}
+            <div class="importantDateMeta">🔁 ${escapeHtml(recurrence)}</div>
+            <div class="importantDateMeta">🔔 Lead ${escapeHtml(lead)}d</div>
+          </div>
+          ${row.description ? `<div class="importantDateDescription">${escapeHtml(row.description)}</div>` : ''}
+          <div class="importantDateActions">
+            <button class="btn ghost important-load" type="button" data-id="${escapeHtml(row.id)}">Edit Date</button>
             <button class="btn secondary important-delete" type="button" data-id="${escapeHtml(row.id)}">Delete</button>
           </div>
         </article>
@@ -1875,46 +3668,73 @@ body.dark-mode .mh2-stat-box {
         if(!row) return;
         Store.editingImportantDateId = row.id;
         byId('importantTypeInput').value = row.type || 'Contract Renewal';
-        byId('importantVendorInput').value = row.vendor || '';
+        byId('importantVendorInput').value = row.vendor_company || row.vendor || '';
         byId('importantDescInput').value = row.description || '';
-        byId('importantDateInput').value = row.date || '';
+        byId('importantDateInput').value = row.due_date || row.date || '';
         byId('importantRecurringInput').value = row.recurring || 'yes';
         byId('importantFrequencyInput').value = row.frequency || 'Yearly';
-        byId('importantLeadInput').value = String(row.leadTime || 30);
+        byId('importantLeadInput').value = String(row.reminder_lead_days || row.leadTime || 30);
         byId('saveImportantDateBtn').textContent = 'Update important date';
+        byId('importantDatesCard').scrollIntoView({ behavior:'smooth', block:'start' });
       }));
-      mount.querySelectorAll('.important-delete').forEach(btn => btn.addEventListener('click', () => {
-        const next = rows.filter(r => r.id !== btn.dataset.id);
-        writeImportantDateRows(next);
-        if(Store.editingImportantDateId === btn.dataset.id) resetImportantDateForm();
-        loadImportantDatesModule();
-      loadAccessCodesModule();
+      mount.querySelectorAll('.important-delete').forEach(btn => btn.addEventListener('click', async () => {
+        const ok = window.confirm('Delete this important date from Supabase for this community?');
+        if(!ok) return;
+        try{
+          btn.disabled = true;
+          await deleteImportantDateRow(btn.dataset.id);
+          if(Store.editingImportantDateId === btn.dataset.id) resetImportantDateForm();
+          await loadImportantDatesModule();
+        }catch(err){
+          console.error('Important date delete failed', err);
+          alert('Important date delete failed. Check ops_important_dates policies.');
+          btn.disabled = false;
+        }
       }));
     }
-    function loadImportantDatesModule(){
+    async function loadImportantDatesModule(){
       const mount = byId('importantDatesMount');
       if(!Store.activeCommunityId && !Store.activeCommunityName){ mountEmpty(mount, 'Choose a community to load important dates.'); setMetric('importantDatesMetric', 0); byId('importantDatesCountPill').textContent = '0'; return; }
-      renderImportantDates(readImportantDateRows());
+      mount.className = 'loader';
+      mount.textContent = 'Loading important dates…';
+      const result = await fetchImportantDateRows();
+      if(result.error){
+        console.error('Important Dates load failed from ops_important_dates', result.error);
+        setMetric('importantDatesMetric', 0);
+        byId('importantDatesCountPill').textContent = '0';
+        mountEmpty(mount, 'Important Dates could not load from Supabase. Confirm ops_important_dates table and RLS policies.');
+        return;
+      }
+      renderImportantDates(result.rows);
     }
     function attachImportantDatesModule(){
-      byId('saveImportantDateBtn').addEventListener('click', () => {
+      byId('saveImportantDateBtn').addEventListener('click', async () => {
+        const btn = byId('saveImportantDateBtn');
         const type = String(byId('importantTypeInput').value || '').trim();
-        const vendor = String(byId('importantVendorInput').value || '').trim();
+        const vendor_company = String(byId('importantVendorInput').value || '').trim();
         const description = String(byId('importantDescInput').value || '').trim();
-        const date = String(byId('importantDateInput').value || '').trim();
+        const due_date = String(byId('importantDateInput').value || '').trim();
         const recurring = String(byId('importantRecurringInput').value || 'yes').trim();
         const frequency = String(byId('importantFrequencyInput').value || 'Yearly').trim();
-        const leadTime = Number(byId('importantLeadInput').value || 30) || 30;
+        const reminder_lead_days = Number(byId('importantLeadInput').value || 30) || 30;
         if(!type){ alert('Choose a type first.'); return; }
-        if(!description && !vendor){ alert('Add a vendor/company or a description first.'); return; }
-        const rows = readImportantDateRows();
-        const id = Store.editingImportantDateId || ('imp_' + Date.now());
-        const nextRow = { id, type, vendor, description, date, recurring, frequency, leadTime, updatedAt: new Date().toISOString() };
-        const next = Store.editingImportantDateId ? rows.map(r => r.id === id ? nextRow : r) : [nextRow, ...rows];
-        writeImportantDateRows(next);
-        resetImportantDateForm();
-        loadImportantDatesModule();
-      loadAccessCodesModule();
+        if(!due_date){ alert('Choose a due date first.'); byId('importantDateInput').focus(); return; }
+        if(!description && !vendor_company){ alert('Add a vendor/company or a description first.'); return; }
+        const original = btn.textContent;
+        try{
+          btn.disabled = true;
+          btn.textContent = Store.editingImportantDateId ? 'Updating…' : 'Saving…';
+          await upsertImportantDateRow({ id:Store.editingImportantDateId, type, vendor_company, description, due_date, recurring, frequency, reminder_lead_days });
+          resetImportantDateForm();
+          await loadImportantDatesModule();
+        }catch(err){
+          console.error('Important date save failed', err);
+          alert('Important date save failed: ' + (err && (err.message || err.details || err.code) || 'Check Supabase permissions and ops_important_dates policies.'));
+        }finally{
+          btn.disabled = false;
+          if(!Store.editingImportantDateId) btn.textContent = 'Save important date';
+          else btn.textContent = original || 'Update important date';
+        }
       });
     }
     function openAccessCodeText(row){
@@ -2025,10 +3845,10 @@ body.dark-mode .mh2-stat-box {
         const result = await client
           .from('supervisor_message_completions')
           .insert([payload])
-          .select('id');
+          .select('id,message_id,completed_at').maybeSingle();
         if(result && result.error){
           console.error('completeSupervisorCommunication completion insert failed', result.error);
-          await zummeePopupAlert('Complete failed. The completion table or policy is not ready yet.', { title:'Complete failed', okText:'OK', danger:true });
+          await zummeePopupAlert('Complete failed. Supabase rejected the completion write: ' + (result.error && (result.error.message || result.error.code) || 'Unknown error'), { title:'Complete failed', okText:'OK', danger:true });
           return;
         }
         await loadSupervisorCommsModule();
@@ -2096,9 +3916,33 @@ body.dark-mode .mh2-stat-box {
     async function getSupervisorSessionUser(){
       try{
         const client = getSupervisorClient();
-        const sessionRes = client && client.auth && typeof client.auth.getSession === 'function' ? await client.auth.getSession() : null;
-        return sessionRes && sessionRes.data && sessionRes.data.session && sessionRes.data.session.user ? sessionRes.data.session.user : null;
-      }catch(_e){ return null; }
+        if(!client || !client.auth || typeof client.auth.getSession !== 'function') return null;
+        let sessionRes = await client.auth.getSession();
+        let user = sessionRes && sessionRes.data && sessionRes.data.session && sessionRes.data.session.user ? sessionRes.data.session.user : null;
+        if(user) return user;
+
+        // Long-term fix: Operations Portal must restore the same authenticated Supabase
+        // session used by Manager Hub / Board Hub before any RLS-protected write.
+        if(typeof window.zummeeRestoreSupabaseSession === 'function'){
+          try{ await window.zummeeRestoreSupabaseSession(); }catch(_e){}
+        }
+        if(typeof restoreSupabaseSessionFromStorage === 'function'){
+          try{ await restoreSupabaseSessionFromStorage(); }catch(_e){}
+        }
+
+        sessionRes = await client.auth.getSession();
+        user = sessionRes && sessionRes.data && sessionRes.data.session && sessionRes.data.session.user ? sessionRes.data.session.user : null;
+        if(user) return user;
+
+        if(client.auth && typeof client.auth.getUser === 'function'){
+          const userRes = await client.auth.getUser();
+          user = userRes && userRes.data && userRes.data.user ? userRes.data.user : null;
+          if(user) return user;
+        }
+      }catch(err){
+        console.warn('getSupervisorSessionUser restore failed', err);
+      }
+      return null;
     }
 
     function normalizeZummeeRole(value){
@@ -2290,41 +4134,46 @@ body.dark-mode .mh2-stat-box {
           .concat(Array.isArray(communityResult && communityResult.data) ? communityResult.data : [])
           .concat(Array.isArray(companyResult && companyResult.data) ? companyResult.data : []);
 
-        const user = await getSupervisorSessionUser();
-        const userId = user && user.id ? String(user.id) : '';
-        let completedIds = new Set();
+        let completionMap = new Map();
         const messageIds = rawRows.map(row => row && row.id).filter(Boolean);
-        if(userId && messageIds.length){
+        if(messageIds.length){
           const completionResult = await client
             .from('supervisor_message_completions')
-            .select('message_id, completed_at')
-            .eq('user_id', userId)
+            .select('message_id, user_id, completed_at')
             .in('message_id', messageIds);
           if(completionResult && completionResult.error){
             console.warn('supervisor_message_completions query failed; showing active messages', completionResult.error);
           }else{
-            completedIds = new Set((completionResult.data || []).map(row => String(row.message_id || '')));
+            (completionResult.data || []).forEach(row => {
+              const id = String(row.message_id || '');
+              if(!id) return;
+              const prev = completionMap.get(id);
+              if(!prev || String(row.completed_at || '') > String(prev.completed_at || '')) completionMap.set(id, row);
+            });
           }
         }
 
-        return rawRows.filter(row => !completedIds.has(String(row.id || ''))).map(row => ({
-          id: row.id || ('db_' + String(row.created_at || Date.now())),
-          _dbId: row.id || '',
-          title: row.message || 'Supervisor communication',
-          type: row.type || 'Supervisor Message',
-          scope: row.scope || (row.company_key ? 'Company-wide' : 'Community'),
-          rule: row.rule || 'Needs Review',
-          notes: row.notes || '',
-          date: row.due_date || '',
-          createdAt: row.created_at || '',
-          updatedAt: row.updated_at || row.created_at || '',
-          completedAt: '',
-          completedBy: '',
-          createdBy: row.created_by || '',
-          _source: 'db',
-          _dbCommunityId: row.community_id || '',
-          _dbCompanyKey: row.company_key || ''
-        }));
+        return rawRows.map(row => {
+          const completed = completionMap.get(String(row.id || '')) || null;
+          return {
+            id: row.id || ('db_' + String(row.created_at || Date.now())),
+            _dbId: row.id || '',
+            title: row.message || 'Supervisor communication',
+            type: row.type || 'Supervisor Message',
+            scope: row.scope || (row.company_key ? 'Company-wide' : 'Community'),
+            rule: row.rule || 'Needs Review',
+            notes: row.notes || '',
+            date: row.due_date || '',
+            createdAt: row.created_at || '',
+            updatedAt: row.updated_at || row.created_at || '',
+            completedAt: completed ? (completed.completed_at || '') : '',
+            completedBy: completed ? (completed.user_id || '') : '',
+            createdBy: row.created_by || '',
+            _source: 'db',
+            _dbCommunityId: row.community_id || '',
+            _dbCompanyKey: row.company_key || ''
+          };
+        });
       }catch(err){
         console.error('loadSupervisorDbRows fatal', err);
         return [];
@@ -2456,14 +4305,17 @@ body.dark-mode .mh2-stat-box {
       });
     }
 
+    let supervisorCommsArchiveOpen = false;
     function renderSupervisorComms(rows){
       const mount = byId('supervisorCommsMount');
       rows = Array.isArray(rows) ? rows : [];
-      setMetric('supervisorCommsMetric', rows.length);
-      byId('supervisorCommsCountPill').textContent = String(rows.length);
+      const activeRows = rows.filter(row => !row.completedAt);
+      const archivedRows = rows.filter(row => !!row.completedAt);
+      setMetric('supervisorCommsMetric', activeRows.length);
+      byId('supervisorCommsCountPill').textContent = String(activeRows.length);
       if(!rows.length){ mountEmpty(mount, 'No supervisor communications for this community yet.'); return; }
       mount.className = 'recordList';
-      mount.innerHTML = rows.map(row => {
+      const renderSupervisorRowHtml = (row) => {
         const status = getSupervisorCommStatus(row);
         const scope = row.scope || 'Community';
         const isDbBacked = row._source === 'db' && String(row._dbId || row.id || '').trim() !== '';
@@ -2491,7 +4343,47 @@ body.dark-mode .mh2-stat-box {
             <div class="contactActions" style="margin-top:0;display:flex;gap:8px;flex-wrap:nowrap;justify-self:end;">${actionHtml}</div>
           </div>
         </article>`;
-      }).join('');
+      };
+      const activeHtml = activeRows.length ? activeRows.map(renderSupervisorRowHtml).join('') : '<div class="empty">No active supervisor communications for this community.</div>';
+      const groupedArchive = archivedRows.reduce((acc,row) => {
+        const d = row.completedAt ? new Date(row.completedAt) : new Date(row.updatedAt || row.createdAt || Date.now());
+        const safeDate = isNaN(d) ? new Date(0) : d;
+        const key = isNaN(d) ? 'unknown' : safeDate.getFullYear() + '-' + String(safeDate.getMonth()+1).padStart(2,'0');
+        const label = isNaN(d) ? 'Completed Communications' : safeDate.toLocaleDateString(undefined,{month:'long',year:'numeric'});
+        if(!acc[key]) acc[key] = {label:label, sort:safeDate.getTime(), rows:[]};
+        acc[key].rows.push(row);
+        return acc;
+      }, {});
+      const archiveHtml = archivedRows.length ? `
+        <section class="supervisorArchiveShell ${supervisorCommsArchiveOpen ? 'is-open' : ''}" aria-label="Completed Communications Archive">
+          <button id="supervisorArchiveToggle" class="supervisorArchiveToggle" type="button" aria-expanded="${supervisorCommsArchiveOpen ? 'true' : 'false'}">
+            <span class="supervisorArchiveTitleWrap">
+              <span class="supervisorArchiveTitle">Completed Communications Archive</span>
+              <span class="supervisorArchiveBadge">${archivedRows.length}</span>
+            </span>
+            <span class="supervisorArchiveAction"><span>${supervisorCommsArchiveOpen ? 'Hide Archive' : 'Show Archive'}</span><span class="supervisorArchiveChevron">⌄</span></span>
+          </button>
+          <div id="supervisorArchiveBody" class="supervisorArchiveBody">
+            ${Object.keys(groupedArchive).sort((a,b)=>groupedArchive[b].sort-groupedArchive[a].sort).map(key => {
+              const group = groupedArchive[key];
+              return '<details class="supervisorArchiveMonth" open><summary><span>' + escapeHtml(group.label) + '</span><span class="supervisorArchiveMonthCount">' + group.rows.length + ' completed</span></summary><div class="supervisorArchiveMonthBody">' + group.rows.map(renderSupervisorRowHtml).join('') + '</div></details>';
+            }).join('')}
+          </div>
+        </section>` : '';
+      mount.innerHTML = activeHtml + archiveHtml;
+      const archiveToggle = byId('supervisorArchiveToggle');
+      if(archiveToggle){
+        archiveToggle.addEventListener('click', () => {
+          supervisorCommsArchiveOpen = !supervisorCommsArchiveOpen;
+          const shell = archiveToggle.closest('.supervisorArchiveShell');
+          const body = byId('supervisorArchiveBody');
+          if(shell) shell.classList.toggle('is-open', supervisorCommsArchiveOpen);
+          archiveToggle.setAttribute('aria-expanded', supervisorCommsArchiveOpen ? 'true' : 'false');
+          const label = archiveToggle.querySelector('.supervisorArchiveAction span:first-child');
+          if(label) label.textContent = supervisorCommsArchiveOpen ? 'Hide Archive' : 'Show Archive';
+          if(body){ body.setAttribute('aria-hidden', supervisorCommsArchiveOpen ? 'false' : 'true'); }
+        });
+      }
       mount.querySelectorAll('.supervisor-record--db').forEach(card => {
         const openFullMessage = async () => {
           const dbId = String(card.dataset.dbId || '').trim();
@@ -2741,13 +4633,131 @@ body.dark-mode .mh2-stat-box {
     }
 
 function accessCodesStorageKey(){
+      // v118 deterministic lock: this legacy key is retained only so old code references do not crash.
+      // It is never read/written for rendering. public.ops_access_codes is the only source of truth.
       return `dailyOpsV2:accessCodes:${Store.activeCommunityId || ('name:' + (Store.activeCommunityName || 'unknown').toLowerCase())}`;
     }
     function readAccessCodeRows(){
-      return getOpsSectionRows('accessCodes', accessCodesStorageKey);
+      // LOCKED v115: Access Codes no longer read from Daily Ops local/cloud state.
+      // Supabase table public.ops_access_codes is the source of truth.
+      return [];
     }
     function writeAccessCodeRows(rows){
-      writeOpsSectionRows('accessCodes', accessCodesStorageKey, rows);
+      // LOCKED v115: Access Codes no longer write to Daily Ops local/cloud state.
+      // Supabase table public.ops_access_codes is the source of truth.
+      return rows;
+    }
+    function getAccessCodesClient(){
+      return window.supabaseClient || window.sb || window.supabase || sb || null;
+    }
+    async function ensureAccessCodesAuth(){
+      const client = getAccessCodesClient();
+      if(!client) return false;
+      try{
+        if(typeof restoreSupabaseSessionFromStorage === 'function') await restoreSupabaseSessionFromStorage();
+        if(typeof ensureUser === 'function') await ensureUser();
+        if(client.auth && client.auth.getSession){
+          const session = await client.auth.getSession();
+          if(session && session.data && session.data.session && session.data.session.user && session.data.session.user.id) return true;
+        }
+      }catch(err){
+        console.warn('Access Codes auth restore warning', err);
+      }
+      return true;
+    }
+    async function deriveAccessCodesCompanyId(client, communityId){
+      const fallback = String(Store.companyId || localStorage.getItem('zummee_company_id') || localStorage.getItem('zummeeCompanyId') || localStorage.getItem('activeCompanyId') || localStorage.getItem('currentCompanyId') || '').trim();
+      const cid = String(communityId || Store.activeCommunityId || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('zummeeActiveCommunityId') || '').trim();
+      if(!client || !cid) return fallback;
+      const res = await client.from('PropertyCommunities').select('company_id').eq('id', cid).single();
+      if(res.error){
+        console.warn('Access Codes company lookup failed', res.error);
+        return fallback;
+      }
+      const companyId = String(res.data && res.data.company_id || '').trim();
+      if(companyId){
+        Store.companyId = companyId;
+        try{ localStorage.setItem('zummee_company_id', companyId); }catch(_e){}
+      }
+      return companyId || fallback;
+    }
+    
+    window.zummeeDeleteAccessCodeTestArtifacts = async function(){
+      const client = getAccessCodesClient();
+      const communityId = String(Store.activeCommunityId || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('zummeeActiveCommunityId') || '').trim();
+      if(!client || !communityId) return { error:'Missing Supabase client or community.' };
+      const res = await client.from('ops_access_codes')
+        .delete()
+        .eq('community_id', communityId)
+        .in('name', ['Gate Test','Supabase Test Code']);
+      await loadAccessCodesModule();
+      return res;
+    };
+function normalizeAccessCodeRow(row){
+      row = row || {};
+      return {
+        id: row.id,
+        company_id: row.company_id,
+        community_id: row.community_id,
+        name: row.name || 'Access Code',
+        code: row.code || '',
+        notes: row.notes || '',
+        created_by: row.created_by || null,
+        createdAt: row.created_at || row.createdAt || '',
+        created_at: row.created_at || row.createdAt || '',
+        updatedAt: row.updated_at || row.updatedAt || '',
+        updated_at: row.updated_at || row.updatedAt || '',
+        communityName: Store.activeCommunityName || row.communityName || ''
+      };
+    }
+    async function fetchAccessCodeRows(){
+      const client = getAccessCodesClient();
+      const communityId = String(Store.activeCommunityId || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('zummeeActiveCommunityId') || '').trim();
+      if(!client || !communityId) return { rows:[], error:null };
+      const res = await client.from('ops_access_codes').select('*').eq('community_id', communityId).order('created_at', { ascending:false });
+      return { rows:(res.data || []).map(normalizeAccessCodeRow), error:res.error || null };
+    }
+    async function upsertAccessCodeRow(row){
+      await ensureAccessCodesAuth();
+      const client = getAccessCodesClient();
+      if(!client) throw new Error('Supabase client unavailable.');
+      const communityId = String(Store.activeCommunityId || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('zummeeActiveCommunityId') || '').trim();
+      if(!communityId) throw new Error('Missing selected community.');
+      const companyId = await deriveAccessCodesCompanyId(client, communityId);
+      if(!companyId) throw new Error('Unable to derive company_id from selected community.');
+      let userId = String(Store.userId || readCurrentUserId() || '').trim() || null;
+      try{
+        if(client.auth && client.auth.getUser){
+          const auth = await client.auth.getUser();
+          userId = String(auth && auth.data && auth.data.user && auth.data.user.id || userId || '').trim() || null;
+        }
+      }catch(_e){}
+      const payload = {
+        company_id: companyId,
+        community_id: communityId,
+        name: String(row.name || '').trim(),
+        code: String(row.code || '').trim(),
+        notes: String(row.notes || '').trim() || null,
+        created_by: userId
+      };
+      if(row.id){
+        delete payload.created_by;
+        const res = await client.from('ops_access_codes')
+          .update(Object.assign({}, payload, { updated_at:new Date().toISOString() }))
+          .eq('id', row.id).eq('community_id', communityId).select('*').single();
+        if(res.error) throw res.error;
+        return normalizeAccessCodeRow(res.data);
+      }
+      const res = await client.from('ops_access_codes').insert(payload).select('*').single();
+      if(res.error) throw res.error;
+      return normalizeAccessCodeRow(res.data);
+    }
+    async function deleteAccessCodeRow(id){
+      const client = getAccessCodesClient();
+      const communityId = String(Store.activeCommunityId || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('zummeeActiveCommunityId') || '').trim();
+      if(!client || !id) return;
+      const res = await client.from('ops_access_codes').delete().eq('id', String(id || '').trim()).eq('community_id', communityId);
+      if(res.error) throw res.error;
     }
     function resetAccessCodeForm(){
       Store.editingAccessCodeId = '';
@@ -2777,29 +4787,46 @@ function accessCodesStorageKey(){
         ta.remove();
       }catch(_e){}
     }
+    function accessCodeIconForName(name){
+      const n = String(name || '').toLowerCase();
+      if(n.includes('pool')) return '🏊';
+      if(n.includes('gym') || n.includes('fitness')) return '🏋️';
+      if(n.includes('gate') || n.includes('door') || n.includes('garage')) return '🚪';
+      if(n.includes('lock') || n.includes('box')) return '🔒';
+      return '🔑';
+    }
     function renderAccessCodes(rows){
       const mount = byId('accessCodesMount');
-      rows = Array.isArray(rows) ? rows : [];
+      rows = Array.isArray(rows) ? rows.map(normalizeAccessCodeRow) : [];
       setMetric('accessCodesMetric', rows.length);
       byId('accessCodesCountPill').textContent = String(rows.length);
-      if(!rows.length){ mountEmpty(mount, 'No access codes for this community yet.'); return; }
-      mount.className = 'recordList';
+      if(!rows.length){
+        mount.className = 'accessPremiumList';
+        mount.innerHTML = '<div class="accessEmptyState"><span style="font-size:22px;">🔐</span><span>No access codes yet. Add gate, pool, gym, lockbox, or vendor access details for this community.</span></div>';
+        return;
+      }
+      mount.className = 'accessPremiumList';
       mount.innerHTML = rows.map(row => `
-        <article class="record" style="padding:16px 18px;">
-          <div style="display:grid; grid-template-columns:minmax(110px, 160px) auto minmax(0,1fr) auto; align-items:center; gap:12px;">
-            <div class="recordTitle" style="font-size:17px; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(row.name || 'Access Code')}</div>
-            <button class="metaPill access-copy" type="button" data-code="${escapeHtml(row.code || '')}" style="cursor:pointer; white-space:nowrap; justify-self:start;">${escapeHtml(row.code || '—')}</button>
-            <div style="color:#5b7088; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;">${escapeHtml(row.notes || '')}</div>
-            <div class="contactActions" style="margin-top:0; margin-left:auto; display:flex; gap:8px; flex-wrap:nowrap; justify-self:end;">
-              <button class="btn ghost access-load" type="button" data-id="${escapeHtml(row.id)}">Edit</button>
-              <button class="btn ghost access-text" type="button" data-id="${escapeHtml(row.id)}">Text</button>
-              <button class="btn secondary access-delete" type="button" data-id="${escapeHtml(row.id)}">Delete</button>
-            </div>
+        <article class="accessSecureCard">
+          <div class="accessSecureAvatar" aria-hidden="true">${accessCodeIconForName(row.name)}</div>
+          <div style="min-width:0;">
+            <div class="accessSecureName">${escapeHtml(row.name || 'Access Code')}</div>
+            <div class="accessSecureSub">Secure access code</div>
+          </div>
+          <button class="accessCodePill access-copy" type="button" data-code="${escapeHtml(row.code || '')}" title="Tap to copy code">${escapeHtml(row.code || '—')}</button>
+          <div class="accessNotePill" title="${escapeHtml(row.notes || 'No notes')}"><span>📍</span><span style="overflow:hidden;text-overflow:ellipsis;">${escapeHtml(row.notes || 'No notes added')}</span></div>
+          <div class="accessPremiumActions">
+            <button class="accessPremiumBtn access-load" type="button" data-id="${escapeHtml(row.id)}">Edit</button>
+            <button class="accessPremiumBtn access-text" type="button" data-id="${escapeHtml(row.id)}">Text</button>
+            <button class="accessPremiumBtn delete access-delete" type="button" data-id="${escapeHtml(row.id)}">Delete</button>
           </div>
         </article>
       `).join('');
       mount.querySelectorAll('.access-copy').forEach(btn => btn.addEventListener('click', async () => {
         await copyAccessCodeValue(btn.dataset.code || '');
+        const original = btn.textContent;
+        btn.textContent = 'Copied';
+        setTimeout(() => { btn.textContent = original; }, 900);
       }));
       mount.querySelectorAll('.access-load').forEach(btn => btn.addEventListener('click', () => {
         const row = rows.find(r => r.id === btn.dataset.id);
@@ -2809,40 +4836,79 @@ function accessCodesStorageKey(){
         byId('accessCodeValueInput').value = row.code || '';
         byId('accessCodeNotesInput').value = row.notes || '';
         byId('saveAccessCodeBtn').textContent = 'Update access code';
+        byId('accessCodesCard').scrollIntoView({ behavior:'smooth', block:'start' });
       }));
       mount.querySelectorAll('.access-text').forEach(btn => btn.addEventListener('click', () => {
         const row = rows.find(r => r.id === btn.dataset.id);
         if(!row) return;
         openAccessCodeText(row);
       }));
-      mount.querySelectorAll('.access-delete').forEach(btn => btn.addEventListener('click', () => {
-        const next = rows.filter(r => r.id !== btn.dataset.id);
-        writeAccessCodeRows(next);
-        if(Store.editingAccessCodeId === btn.dataset.id) resetAccessCodeForm();
-        loadAccessCodesModule();
+      mount.querySelectorAll('.access-delete').forEach(btn => btn.addEventListener('click', async () => {
+        const ok = window.confirm('Delete this access code from Supabase for this community?');
+        if(!ok) return;
+        try{
+          btn.disabled = true;
+          await deleteAccessCodeRow(btn.dataset.id);
+          if(Store.editingAccessCodeId === btn.dataset.id) resetAccessCodeForm();
+          await loadAccessCodesModule();
+        }catch(err){
+          console.error('Access code delete failed', err);
+          alert('Access code delete failed. Check ops_access_codes policies.');
+          btn.disabled = false;
+        }
       }));
     }
-    function loadAccessCodesModule(){
+    async function loadAccessCodesModule(){
       const mount = byId('accessCodesMount');
       if(!Store.activeCommunityId && !Store.activeCommunityName){ mountEmpty(mount, 'Choose a community to load access codes.'); setMetric('accessCodesMetric', 0); byId('accessCodesCountPill').textContent = '0'; return; }
-      renderAccessCodes(readAccessCodeRows());
+      mount.className = 'loader';
+      mount.textContent = 'Loading access codes…';
+      const result = await fetchAccessCodeRows();
+      if(result.error){
+        console.error('Access Codes load failed from ops_access_codes', result.error);
+        setMetric('accessCodesMetric', 0);
+        byId('accessCodesCountPill').textContent = '0';
+        mountEmpty(mount, 'Access Codes could not load from Supabase. Confirm ops_access_codes table and RLS policies.');
+        return;
+      }
+      renderAccessCodes(result.rows);
     }
     function attachAccessCodesModule(){
-      byId('saveAccessCodeBtn').addEventListener('click', () => {
+      byId('saveAccessCodeBtn').addEventListener('click', async () => {
+        const btn = byId('saveAccessCodeBtn');
         const name = String(byId('accessCodeNameInput').value || '').trim();
         const code = String(byId('accessCodeValueInput').value || '').trim();
         const notes = String(byId('accessCodeNotesInput').value || '').trim();
-        if(!name){ alert('Enter a label for this access code first.'); return; }
-        if(!code){ alert('Enter the access code first.'); return; }
-        const rows = readAccessCodeRows();
-        const id = Store.editingAccessCodeId || ('access_' + Date.now());
-        const existing = rows.find(r => r.id === id) || null;
-        const nextRow = { id, name, code, notes, createdAt: existing && existing.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString(), communityName: Store.activeCommunityName || '' };
-        const next = Store.editingAccessCodeId ? rows.map(r => r.id === id ? nextRow : r) : [nextRow, ...rows];
-        writeAccessCodeRows(next);
-        resetAccessCodeForm();
-        loadAccessCodesModule();
+        if(!name){ alert('Enter a label for this access code first.'); byId('accessCodeNameInput').focus(); return; }
+        if(!code){ alert('Enter the access code first.'); byId('accessCodeValueInput').focus(); return; }
+        const original = btn.textContent;
+        try{
+          btn.disabled = true;
+          btn.textContent = Store.editingAccessCodeId ? 'Updating…' : 'Saving…';
+          await upsertAccessCodeRow({ id:Store.editingAccessCodeId, name, code, notes });
+          resetAccessCodeForm();
+          await loadAccessCodesModule();
+        }catch(err){
+          console.error('Access code save failed', err);
+          alert('Access code save failed: ' + (err && (err.message || err.details || err.code) || 'Check Supabase permissions and ops_access_codes policies.'));
+        }finally{
+          btn.disabled = false;
+          if(!Store.editingAccessCodeId) btn.textContent = 'Save access code';
+          else btn.textContent = original || 'Update access code';
+        }
       });
+    }
+    function openAccessCodeText(row){
+      const community = Store.activeCommunityName || row.communityName || 'the community';
+      const label = String(row && row.name || 'Access code').trim();
+      const code = String(row && row.code || '').trim();
+      const message = encodeURIComponent(`${community} - ${label} code: ${code}${row && row.notes ? ` (${String(row.notes).trim()})` : ''}`);
+      const smsHref = `sms:?body=${message}`;
+      try{
+        window.location.href = smsHref;
+      }catch(_e){
+        window.open(smsHref, '_self');
+      }
     }
 
     async function loadModules(){
@@ -2851,8 +4917,8 @@ function accessCodesStorageKey(){
       await Promise.all([loadBoardMembersModule()]);
       loadSupervisorCommsModule();
       loadRemindersModule();
-      loadQuickNotesModule();
-      loadVendorsModule();
+      await loadQuickNotesModule();
+      await loadVendorsModule();
       loadImportantDatesModule();
       loadAccessCodesModule();
     }
@@ -2876,17 +4942,62 @@ function accessCodesStorageKey(){
       logo.alt = String(alt || '').trim() || 'Management company logo';
       logo.src = finalUrl;
     }
+    async function deriveDailyOpsCompanyId(){
+      const cached = String(Store.companyId || readCurrentCompanyId() || '').trim();
+      if(cached) return cached;
+      const communityId = String(Store.activeCommunityId || localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('zummeeActiveCommunityId') || localStorage.getItem('activeCommunityId') || localStorage.getItem('currentCommunityId') || '').trim();
+      if(!communityId || !sb) return '';
+      try{
+        const res = await sb.from('PropertyCommunities')
+          .select('company_id')
+          .eq('id', communityId)
+          .maybeSingle();
+        const companyId = String(res && res.data && res.data.company_id || '').trim();
+        if(companyId){
+          Store.companyId = companyId;
+          try{ localStorage.setItem('zummee_company_id', companyId); }catch(_e){}
+          return companyId;
+        }
+      }catch(err){
+        console.warn('[Operations Portal logo] unable to derive company_id from selected community', err);
+      }
+      return '';
+    }
+    function pickDailyOpsLogoValue(row){
+      row = row || {};
+      return row.logo_url || row.logoUrl || row.logo_path || row.logoPath || row.company_logo_url || row.companyLogoUrl || row.company_logo || row.logo || row.image_url || row.brand_logo_url || '';
+    }
+    async function fetchDailyOpsCompanyLogoRow(companyId){
+      // Match Manager Hub source of truth first: public.companies.logo_path.
+      const attempts = [
+        { table:'companies', cols:'id,name,logo_path', by:'id' },
+        { table:'companies', cols:'id,name,logo_url', by:'id' },
+        { table:'Companies', cols:'id,name,logo_path', by:'id' },
+        { table:'Companies', cols:'id,name,logo_url', by:'id' },
+        { table:'company_branding', cols:'id,company_id,name,logo_path', by:'company_id' },
+        { table:'company_branding', cols:'id,company_id,name,logo_url', by:'company_id' },
+        { table:'CompanyBranding', cols:'id,company_id,name,logo_path', by:'company_id' },
+        { table:'CompanyBranding', cols:'id,company_id,name,logo_url', by:'company_id' }
+      ];
+      for(const a of attempts){
+        try{
+          const res = await sb.from(a.table).select(a.cols).eq(a.by, companyId).maybeSingle();
+          if(!res || res.error || !res.data) continue;
+          if(pickDailyOpsLogoValue(res.data)) return res.data;
+        }catch(_e){}
+      }
+      return null;
+    }
     async function loadDailyOpsCompanyLogo(){
       const logo = byId('dailyOpsCompanyLogo');
       if(!logo || !sb) return;
       try{
         await ensureUser();
-        const companyId = String(Store.companyId || readCurrentCompanyId() || '').trim();
+        const companyId = await deriveDailyOpsCompanyId();
         if(!companyId) throw new Error('No company id');
-        const res = await sb.from('companies').select('logo_path,name').eq('id', companyId).maybeSingle();
-        if(res && res.error) throw res.error;
-        const row = (res && res.data) || {};
-        const ref = parseDailyOpsLogoRef(row.logo_path);
+        const row = await fetchDailyOpsCompanyLogoRow(companyId);
+        if(!row) throw new Error('No company logo row');
+        const ref = parseDailyOpsLogoRef(pickDailyOpsLogoValue(row));
         if(!ref) throw new Error('No company logo');
         let url = String(ref.url || '').trim();
         if(!url && ref.bucket && ref.path && sb.storage && sb.storage.from){
@@ -2895,7 +5006,8 @@ function accessCodesStorageKey(){
         }
         if(!url) throw new Error('No logo url');
         setDailyOpsCompanyLogo(url, String(row.name || 'Management company logo'));
-      }catch(_err){
+      }catch(err){
+        console.warn('[Operations Portal logo] logo unavailable', err);
         setDailyOpsCompanyLogo('', 'Management company logo');
       }
     }
@@ -2903,10 +5015,13 @@ function accessCodesStorageKey(){
     async function init(){
       await restoreSupabaseSessionFromStorage();
       await ensureUser();
-      loadDailyOpsCompanyLogo();
-      Store.communities = readCommunityCandidates();
-      if(!Store.communities.length) Store.communities = await fetchCommunitiesFromSupabase();
+      // v110: company logo loads after selected community is resolved so company_id is derived from PropertyCommunities.
+      // v96 LOCKED: load assigned communities from shared/Supabase first.
+      // Local cached company lists are fallback only, never the primary dropdown source.
+      Store.communities = await fetchCommunitiesFromSupabase();
+      if(!Store.communities.length) Store.communities = readCommunityCandidates();
       renderCommunityOptions();
+      await loadDailyOpsCompanyLogo();
       attachCommunitySelect();
       await applySupervisorCommsRoleLock();
       setTimeout(() => guardSupervisorCommsAuthoring('post-init-delay'), 500);
@@ -3013,6 +5128,240 @@ function accessCodesStorageKey(){
 <script src="company_logo_sync.js"></script>
 
   <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+
+<style id="reminders-premium-v119">
+#remindersCard{background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%)!important;}
+#remindersCard .sectionHeader{padding-bottom:8px!important;}
+#remindersCard .sectionTitle{display:flex!important;align-items:center!important;gap:12px!important;}
+#remindersCard .sectionTitle:before{content:'⏰';width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#fff2b8,#f7cf52);border:1px solid rgba(214,168,32,.34);display:inline-flex;align-items:center;justify-content:center;font-size:19px;box-shadow:0 8px 18px rgba(214,168,32,.16);}
+#remindersCard .reminderFormWrap{background:rgba(255,255,255,.78)!important;box-shadow:inset 0 0 0 1px rgba(155,194,255,.28),0 10px 24px rgba(23,50,77,.04)!important;}
+#remindersCard .reminderPremiumList{display:grid;gap:12px;margin-top:14px;}
+#remindersCard .reminderPremiumCard{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:start;padding:16px;border-radius:22px;border:1.5px solid rgba(155,194,255,.68);background:linear-gradient(135deg,#ffffff 0%,#f8fbff 100%);box-shadow:0 14px 28px rgba(23,50,77,.055);animation:reminderFadeIn .22s ease-out both;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;}
+#remindersCard .reminderPremiumCard:hover{transform:translateY(-1px);box-shadow:0 18px 34px rgba(23,50,77,.075);}
+#remindersCard .reminderPremiumCard.overdue{border-color:rgba(205,64,64,.45);background:linear-gradient(135deg,#fff7f7 0%,#ffffff 58%,#fffafa 100%);box-shadow:0 14px 30px rgba(205,64,64,.08);}
+#remindersCard .reminderPremiumCard.due-soon{border-color:rgba(214,168,32,.48);background:linear-gradient(135deg,#fff9df 0%,#ffffff 62%,#fffdf4 100%);box-shadow:0 14px 30px rgba(214,168,32,.09);}
+#remindersCard .reminderIconBadge{width:50px;height:50px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#255b90,#173b63);color:#fff;font-size:21px;box-shadow:0 10px 24px rgba(23,59,99,.18);}
+#remindersCard .reminderPremiumCard.overdue .reminderIconBadge{background:linear-gradient(135deg,#d24a4a,#8f2f2f);}
+#remindersCard .reminderPremiumCard.due-soon .reminderIconBadge{background:linear-gradient(135deg,#f7cf52,#b98216);}
+#remindersCard .reminderMainContent{min-width:0;}
+#remindersCard .reminderTopLine{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;min-width:0;}
+#remindersCard .reminderPremiumTitle{font-size:20px;line-height:1.15;font-weight:950;color:#17324d;letter-spacing:-.03em;}
+#remindersCard .reminderPremiumSub{margin-top:4px;font-size:13px;font-weight:850;color:#6b7e94;}
+#remindersCard .reminderStatusPill{flex-shrink:0;border-radius:999px;padding:8px 14px;font-size:13px;font-weight:950;border:1px solid rgba(155,194,255,.55);background:#f4f8ff;color:#245a91;box-shadow:0 6px 14px rgba(23,50,77,.04);}
+#remindersCard .reminderStatusPill.overdue{background:#fff0f0;color:#a33131;border-color:rgba(205,64,64,.35);}
+#remindersCard .reminderStatusPill.due-soon{background:#fff2bf;color:#8a6300;border-color:rgba(214,168,32,.38);}
+#remindersCard .reminderControlRow{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:14px;min-width:0;}
+#remindersCard .reminderMetaPill{display:inline-flex;align-items:center;min-height:36px;padding:0 14px;border-radius:999px;border:1px solid rgba(155,194,255,.52);background:#fff;color:#35516e;font-size:13px;font-weight:950;white-space:nowrap;box-shadow:0 6px 14px rgba(23,50,77,.035);}
+#remindersCard .reminderActionsRow{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:0;flex-shrink:0;}
+#remindersCard .reminderActionsRow .btn{height:40px!important;border-radius:14px!important;padding:0 17px!important;min-width:auto!important;}
+#remindersCard .reminderDeleteBtn{background:#fff!important;color:#17324d!important;border-color:rgba(155,194,255,.65)!important;}
+#remindersCard .reminderPremiumCard.overdue .reminderDeleteBtn{border-color:rgba(205,64,64,.28)!important;color:#8f2f2f!important;}
+@keyframes reminderFadeIn{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
+@media (max-width:760px){#remindersCard .reminderPremiumCard{grid-template-columns:1fr;padding:14px;}#remindersCard .reminderIconBadge{width:44px;height:44px;}#remindersCard .reminderTopLine{align-items:flex-start;}#remindersCard .reminderControlRow{align-items:flex-start;flex-direction:column;}#remindersCard .reminderActionsRow{justify-content:flex-start;flex-wrap:wrap;}}
+</style>
+
+
+<style id="quick-notes-premium-v122-real">
+/* v122 real: premium Quick Notes module. Supabase remains the only source of truth. */
+#quickNotesCard.quickNotesPremiumShell{
+  background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%)!important;
+  border-color:rgba(155,194,255,.76)!important;
+}
+#quickNotesCard .quickNotesHeaderRow{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:16px!important;
+  margin-bottom:14px!important;
+}
+#quickNotesCard .quickNotesHeaderLeft{
+  display:flex!important;
+  align-items:center!important;
+  gap:14px!important;
+  min-width:0!important;
+}
+#quickNotesCard .quickNotesIconBadge{
+  width:54px!important;
+  height:54px!important;
+  border-radius:16px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  background:linear-gradient(135deg,#fff2b8,#f7cf52)!important;
+  border:1px solid rgba(214,168,32,.42)!important;
+  box-shadow:0 12px 24px rgba(214,168,32,.18)!important;
+  font-size:24px!important;
+  flex:0 0 auto!important;
+}
+#quickNotesCard .quickNotesHeaderSub{
+  margin-top:4px!important;
+  color:#6b7e94!important;
+  font-size:14px!important;
+  font-weight:850!important;
+}
+#quickNotesCard .quickNotesBody{display:grid!important;gap:16px!important;}
+#quickNotesCard .quickNoteComposer{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 150px!important;
+  gap:14px!important;
+  align-items:end!important;
+  padding:16px!important;
+  border-radius:22px!important;
+  border:1.5px solid rgba(155,194,255,.70)!important;
+  background:rgba(255,255,255,.82)!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.65),0 12px 26px rgba(23,50,77,.045)!important;
+}
+#quickNotesCard .quickNoteInputWrap{min-width:0!important;}
+#quickNotesCard #quickNoteInput{
+  width:100%!important;
+  min-height:74px!important;
+  max-height:150px!important;
+  border-radius:18px!important;
+  border:1.5px solid rgba(155,194,255,.55)!important;
+  padding:14px 16px!important;
+  background:linear-gradient(180deg,#fff,#fbfdff)!important;
+  color:#17324d!important;
+  font-size:17px!important;
+  font-weight:850!important;
+  resize:vertical!important;
+  box-shadow:0 8px 18px rgba(23,50,77,.035)!important;
+  box-sizing:border-box!important;
+}
+#quickNotesCard #quickNoteInput:focus{
+  outline:none!important;
+  border-color:#4f8df7!important;
+  box-shadow:0 0 0 4px rgba(79,141,247,.18),0 10px 22px rgba(23,50,77,.055)!important;
+}
+#quickNotesCard .quickNoteSaveBtn{
+  height:52px!important;
+  border-radius:18px!important;
+  padding:0 20px!important;
+  white-space:nowrap!important;
+  align-self:end!important;
+}
+#quickNotesCard .quickNotesList{display:grid!important;gap:12px!important;margin-top:0!important;}
+#quickNotesCard .quickNoteCard{
+  display:grid!important;
+  grid-template-columns:auto minmax(0,1fr) auto!important;
+  align-items:center!important;
+  gap:14px!important;
+  padding:16px!important;
+  border-radius:22px!important;
+  border:1.5px solid rgba(155,194,255,.70)!important;
+  background:linear-gradient(135deg,#ffffff 0%,#f8fbff 58%,#fffdf4 100%)!important;
+  box-shadow:0 14px 28px rgba(23,50,77,.055)!important;
+  animation:quickNoteFadeIn .22s ease-out both!important;
+}
+#quickNotesCard .quickNoteCardIcon{
+  width:46px!important;
+  height:46px!important;
+  border-radius:15px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  background:linear-gradient(135deg,#255b90,#173b63)!important;
+  color:#fff!important;
+  font-size:20px!important;
+  box-shadow:0 10px 22px rgba(23,59,99,.18)!important;
+}
+#quickNotesCard .quickNoteCardMain{min-width:0!important;}
+#quickNotesCard .quickNoteCardText{
+  color:#17324d!important;
+  font-size:19px!important;
+  line-height:1.28!important;
+  font-weight:950!important;
+  letter-spacing:-.025em!important;
+  white-space:pre-wrap!important;
+  overflow-wrap:anywhere!important;
+}
+#quickNotesCard .quickNoteCardFooter{
+  display:flex!important;
+  align-items:center!important;
+  gap:10px!important;
+  flex-wrap:wrap!important;
+  margin-top:10px!important;
+}
+#quickNotesCard .quickNoteMetaPill{
+  display:inline-flex!important;
+  align-items:center!important;
+  min-height:32px!important;
+  padding:0 12px!important;
+  border-radius:999px!important;
+  border:1px solid rgba(155,194,255,.52)!important;
+  background:#fff!important;
+  color:#35516e!important;
+  font-size:12px!important;
+  font-weight:950!important;
+  white-space:nowrap!important;
+}
+#quickNotesCard .quickNoteMetaPill.quiet{background:#f5f8fc!important;color:#6b7e94!important;border-color:rgba(23,50,77,.08)!important;}
+#quickNotesCard .quickNoteActions{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  gap:10px!important;
+  flex-wrap:nowrap!important;
+}
+#quickNotesCard .quickNoteActions .btn{height:42px!important;border-radius:15px!important;padding:0 18px!important;white-space:nowrap!important;}
+#quickNotesCard .quicknote-delete{background:#fff!important;color:#17324d!important;border-color:rgba(155,194,255,.70)!important;}
+@keyframes quickNoteFadeIn{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
+@media(max-width:760px){
+  #quickNotesCard .quickNoteComposer{grid-template-columns:1fr!important;}
+  #quickNotesCard .quickNoteSaveBtn{width:100%!important;}
+  #quickNotesCard .quickNoteCard{grid-template-columns:auto minmax(0,1fr)!important;}
+  #quickNotesCard .quickNoteActions{grid-column:1 / -1!important;justify-content:flex-start!important;}
+}
+</style>
+
+<style id="quick-notes-v123-clean-actions">
+/* v123: Quick Notes clean production layout. Removed metadata pills and locked actions to right. */
+#quickNotesCard .quickNoteCleanCard{
+  display:grid!important;
+  grid-template-columns:46px minmax(0,1fr) auto!important;
+  align-items:center!important;
+  gap:16px!important;
+  min-height:88px!important;
+  padding:18px 20px!important;
+}
+#quickNotesCard .quickNoteCleanCard .quickNoteCardMain{
+  min-width:0!important;
+  align-self:center!important;
+}
+#quickNotesCard .quickNoteCleanCard .quickNoteCardText{
+  margin:0!important;
+  padding:0!important;
+  font-size:20px!important;
+  line-height:1.25!important;
+}
+#quickNotesCard .quickNoteCardFooter,
+#quickNotesCard .quickNoteMetaPill{
+  display:none!important;
+}
+#quickNotesCard .quickNoteCleanCard .quickNoteActions{
+  justify-self:end!important;
+  align-self:center!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  gap:10px!important;
+  margin-left:18px!important;
+}
+#quickNotesCard .quickNoteCleanCard .quickNoteActions .btn{
+  height:44px!important;
+  min-width:86px!important;
+  border-radius:16px!important;
+}
+@media (max-width: 720px){
+  #quickNotesCard .quickNoteCleanCard{
+    grid-template-columns:42px minmax(0,1fr)!important;
+  }
+  #quickNotesCard .quickNoteCleanCard .quickNoteActions{
+    grid-column:1 / -1!important;
+    justify-self:end!important;
+    margin-left:0!important;
+  }
+}
+</style>
 </body>
 </html>
 

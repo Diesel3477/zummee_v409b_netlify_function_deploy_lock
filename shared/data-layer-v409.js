@@ -70,8 +70,11 @@
     try{
       var dataUrl=await fileToDataUrl(file);
       var base64=dataUrl.indexOf(',')>=0?dataUrl.split(',').pop():dataUrl;
-      var res=await fetch('/.netlify/functions/upload-board-photo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fileBase64:base64,fileName:safeFileName(file.name),contentType:file.type||'image/jpeg',community_id:communityId,user_id:uid,notification_id:notificationId})});
-      var json=null; try{json=await res.json();}catch(parseErr){json={error:'Upload function returned an unreadable response'};}
+      var payload={fileBase64:base64,fileName:safeFileName(file.name),contentType:file.type||'image/jpeg',community_id:communityId,user_id:uid,notification_id:notificationId};
+      window.__lastBoardPhotoPayload=payload;
+      var res=await fetch('/.netlify/functions/upload-board-photo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      var text=await res.text();
+      var json=null; try{json=text?JSON.parse(text):{};}catch(parseErr){json={error:'Upload function returned an unreadable response',raw:text};}
       if(!res.ok || (json&&json.error)) throw new Error((json&&json.error)||('Upload failed with HTTP '+res.status));
       console.info('[ZummeeDataLayer '+VERSION+'] uploadBoardItemPhoto success', json);
       return {data:json,error:null};

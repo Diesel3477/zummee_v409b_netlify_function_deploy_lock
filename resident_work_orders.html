@@ -1,51 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-03-27-1";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-04-v488-rwo-loader-community-token-lock";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script id="rwo-v478-scroll-reset">
+(function(){
+  try{ if('scrollRestoration' in history) history.scrollRestoration='manual'; }catch(_e){}
+  try{ if(new URLSearchParams(location.search||'').get('new_work_order')==='1'){ localStorage.removeItem('selectedWorkOrderId'); window.__rwoSuppressAutoScroll=true; } }catch(_e){}
+})();
+</script>
+<script id="rwo-v471-url-context-bootstrap">
+(function(){
+  try{
+    var UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    var p=new URLSearchParams(location.search||'');
+    var cid=String(p.get('community_id')||p.get('cid')||'').trim();
+    var cname=String(p.get('community_name')||p.get('name')||'').trim();
+    var uid=String(p.get('user_id')||p.get('uid')||'').trim();
+    if(UUID_RE.test(cid)){
+      ['zummee_selected_community_id','zummeeActiveCommunityId','activeCommunityId','currentCommunityId','zummee_community_id'].forEach(function(k){try{localStorage.setItem(k,cid);sessionStorage.setItem(k,cid);}catch(_e){}});
+      window.currentCommunityId=cid; window.activeCommunityId=cid; window.zummeeSelectedCommunityId=cid;
+    }
+    if(cname){
+      ['zummeeCurrentCommunityName','currentCommunityName','activeCommunityName','zummeeActiveCommunityName','zummee_community'].forEach(function(k){try{localStorage.setItem(k,cname);sessionStorage.setItem(k,cname);}catch(_e){}});
+    }
+    if(UUID_RE.test(uid)){
+      ['zummee_user_id_v1','zummeeUserId','activeUserId','currentUserId'].forEach(function(k){try{localStorage.setItem(k,uid);sessionStorage.setItem(k,uid);}catch(_e){}});
+    }
+  }catch(e){console.warn('[RWO v471] URL context bootstrap skipped',e);}
+})();
+</script>
+
 
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Resident Work Orders</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="shared/supabase-client.js?v=2026-04-08-2"></script>
-  <script src="shared/resident-auth.js?v=2026-03-27-1"></script>
-  <script src="shared/header.js?v=2026-04-08-2"></script>
-  <link rel="stylesheet" href="shared/header.css?v=2026-03-27-1">
-  <link rel="stylesheet" href="shared/zummee-design-system.css?v=2026-03-27-1">
+  <script src="shared/supabase-client.js?v=2026-05-04-v488"></script>
+  <script src="shared/auth.js?v=2026-05-04-v488"></script>
+  <script src="shared/zummee-auth.js?v=2026-05-04-v488"></script>
   
   <script id="zummeeStaffGuard">
   (async () => {
     if (window.__zummeeStaffGuardRan) return;
     window.__zummeeStaffGuardRan = true;
 
-    async function getClient(){
-      try{ if(typeof ensureSupabase === 'function'){ const c = await ensureSupabase(); if(c && c.auth && typeof c.auth.getSession === 'function') return c; } }catch(_e){}
-      try{ if(window.supabaseClient && window.supabaseClient.auth && typeof window.supabaseClient.auth.getSession === 'function') return window.supabaseClient; }catch(_e){}
-      try{ if(window.sb && window.sb.auth && typeof window.sb.auth.getSession === 'function') return window.sb; }catch(_e){}
-      return null;
+    function storedUserId(){
+      try{ return String(localStorage.getItem('zummee_user_id_v1') || localStorage.getItem('zummeeUserId') || localStorage.getItem('activeUserId') || localStorage.getItem('currentUserId') || '').trim(); }catch(_e){ return ''; }
     }
 
-    const go = (target) => {
-      try{ window.location.replace(target); }catch(_e){ window.location.href = target; }
-    };
+    try{
+      const auth = window.ZummeeAuth;
+      const session = auth && auth.requireSession ? await auth.requireSession({ redirect:false, timeoutMs:4200 }) : null;
+      const user = session && session.user ? session.user : null;
 
-    const sb = await getClient();
-    if(!sb){ go('login.html'); return; }
+      // Do not bounce managers to login while Supabase is still hydrating.  The data loader will show
+      // a clear message if the server truly rejects the session.
+      if(!user && !storedUserId()){
+        console.warn('[RWO v476] No hydrated session yet; continuing without login bounce.');
+        return;
+      }
 
-    const sessionRes = await sb.auth.getSession();
-    const user = sessionRes && sessionRes.data && sessionRes.data.session ? sessionRes.data.session.user : null;
-    if(!user){ go('login.html'); return; }
-
-    const ud = await sb
-      .from('userdirectory')
-      .select('role')
-      .eq('auth_user_id', user.id)
-      .single();
-
-    const role = String((ud && ud.data && ud.data.role) || '').trim();
-    if(role === 'Resident'){ go('resident_portal.html'); return; }
-
-    document.documentElement.setAttribute('data-staff-role', role || '');
+      if(user){
+        try{
+          const sb = await (auth && auth.getClient ? auth.getClient() : (window.ensureSupabase ? window.ensureSupabase() : window.supabaseClient));
+          const ud = await sb.from('userdirectory').select('role').eq('auth_user_id', user.id).maybeSingle();
+          const role = String((ud && ud.data && ud.data.role) || '').trim();
+          if(role === 'Resident'){
+            window.location.replace('resident_portal.html');
+            return;
+          }
+          document.documentElement.setAttribute('data-staff-role', role || '');
+        }catch(roleErr){
+          console.warn('[RWO v476] Role lookup skipped; page remains available for manager session.', roleErr);
+        }
+      }
+    }catch(err){
+      console.warn('[RWO v476] Staff guard did not complete; no login bounce.', err);
+    }
   })();
   </script>
 <script>
@@ -66,7 +97,7 @@
   <script>
     window.SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
     window.SUPABASE_ANON_KEY = 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
-    window.ZummeeResidentAuth && window.ZummeeResidentAuth.blockResidentsFromManagerPage && window.ZummeeResidentAuth.blockResidentsFromManagerPage();
+    // v471: disabled old immediate resident-auth redirect; staff guard above handles role after session restore.
   </script>
   
   <script>
@@ -77,7 +108,6 @@
       }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
     })();
   </script>
-  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
   <style>
     :root{
       --brand:#0f3554; --bg:#f4f6fa; --card:#ffffff; --muted:#5d6b7a; --border:#d9e1ea;
@@ -594,6 +624,122 @@ body.resident-work-orders-new-layout .rwo-inline-controls .rwo-back-hub-btn{
   }
 }
 </style>
+
+<style id="rwo-v472-logo-buttons-hub-polish">
+/* v472: Manager-Hub logo parity + compact action buttons */
+body.resident-work-orders-new-layout .rwo-title-brand-row{
+  align-items:flex-start !important;
+  justify-content:space-between !important;
+  gap:18px !important;
+  margin-bottom:18px !important;
+}
+body.resident-work-orders-new-layout .rwo-title-block{
+  min-width:0 !important;
+  flex:1 1 auto !important;
+}
+body.resident-work-orders-new-layout .rwo-brand-slot{
+  flex:0 0 auto !important;
+  min-width:220px !important;
+  min-height:78px !important;
+  display:flex !important;
+  justify-content:flex-end !important;
+  align-items:flex-start !important;
+  padding-top:0 !important;
+}
+body.resident-work-orders-new-layout #residentWorkOrdersCompanyLogo.rwo-company-logo{
+  display:block !important;
+  width:240px !important;
+  max-width:min(34vw,240px) !important;
+  height:84px !important;
+  max-height:84px !important;
+  object-fit:contain !important;
+  object-position:right top !important;
+  background:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
+  opacity:0 !important;
+}
+body.resident-work-orders-new-layout #residentWorkOrdersCompanyLogo.rwo-company-logo.logo-ready{
+  opacity:1 !important;
+}
+body.resident-work-orders-new-layout .rwo-primary-actions{
+  display:grid !important;
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  gap:12px !important;
+  margin:6px 0 18px !important;
+}
+body.resident-work-orders-new-layout .rwo-primary-actions .btn{
+  min-height:46px !important;
+  height:46px !important;
+  padding:0 16px !important;
+  border-radius:999px !important;
+  font-size:15px !important;
+  font-weight:900 !important;
+  border:1.5px solid rgba(147,197,253,.82) !important;
+  box-shadow:0 8px 18px rgba(15,53,84,.06) !important;
+  white-space:nowrap !important;
+}
+body.resident-work-orders-new-layout .rwo-primary-actions .btn.primary{
+  background:#17365f !important;
+  color:#fff !important;
+  border-color:#17365f !important;
+}
+@media(max-width:760px){
+  body.resident-work-orders-new-layout .rwo-title-brand-row{align-items:center !important;}
+  body.resident-work-orders-new-layout .rwo-brand-slot{min-width:150px !important;min-height:58px !important;}
+  body.resident-work-orders-new-layout #residentWorkOrdersCompanyLogo.rwo-company-logo{width:170px !important;max-width:42vw !important;height:60px !important;}
+  body.resident-work-orders-new-layout .rwo-primary-actions{grid-template-columns:1fr !important;gap:10px !important;}
+  body.resident-work-orders-new-layout .rwo-primary-actions .btn{height:48px !important;min-height:48px !important;}
+}
+</style>
+
+<style id="rwo-v473-logo-force-visible">
+/* v473: force Resident Work Orders company logo to render once a source is available */
+body.resident-work-orders-new-layout #residentWorkOrdersCompanyLogo.rwo-company-logo[src]{
+  display:block !important;
+  opacity:1 !important;
+  visibility:visible !important;
+}
+.rwo-title-brand-row{align-items:flex-start !important;}
+.rwo-brand-slot{display:flex !important;align-items:flex-start !important;justify-content:flex-end !important;}
+</style>
+
+<style id="rwo-v477-community-dropdown-lock">
+/* v477: Resident Work Orders gets its own durable community selector. */
+body.resident-work-orders-new-layout .rwo-controls-row{
+  display:block !important;
+  margin:10px 0 16px !important;
+}
+body.resident-work-orders-new-layout #residentWorkOrdersInlineControls{
+  display:grid !important;
+  grid-template-columns:1fr !important;
+  gap:0 !important;
+  width:100% !important;
+}
+body.resident-work-orders-new-layout #residentWorkOrdersInlineControls .rwo-community-picker-row{
+  display:flex !important;
+  width:100% !important;
+  margin:0 !important;
+  padding:0 !important;
+}
+body.resident-work-orders-new-layout #zummeeCommunitySelect{
+  display:block !important;
+  width:100% !important;
+  height:58px !important;
+  min-height:58px !important;
+  border-radius:22px !important;
+  border:1.5px solid rgba(147,197,253,.82) !important;
+  background:#f8fbff !important;
+  color:#17324c !important;
+  font-size:18px !important;
+  font-weight:900 !important;
+  padding:0 22px !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9), 0 8px 18px rgba(15,53,84,.04) !important;
+}
+@media(max-width:640px){
+  body.resident-work-orders-new-layout #zummeeCommunitySelect{height:56px !important;min-height:56px !important;font-size:17px !important;}
+}
+</style>
 </head>
 <body data-header-mode="hub" class="zummee-unified-layout resident-work-orders-new-layout">
   <main>
@@ -608,12 +754,17 @@ body.resident-work-orders-new-layout .rwo-inline-controls .rwo-back-hub-btn{
       </div>
 
       <div class="rwo-controls-row">
-        <div class="rwo-inline-controls" id="residentWorkOrdersInlineControls" aria-label="Resident work orders page controls"></div>
+        <div class="rwo-inline-controls" id="residentWorkOrdersInlineControls" aria-label="Resident work orders page controls">
+          <div class="zm-communityRow rwo-community-picker-row">
+            <select id="zummeeCommunitySelect" aria-label="Community"><option value="">Loading communities…</option></select>
+          </div>
+        </div>
       </div>
 
       <div class="actions zummee-page-actions rwo-primary-actions">
         <a class="btn" id="openResidentFormBtn" href="work_order_submit.html" target="_blank" rel="noopener">Open Resident Form</a>
-        <a class="btn primary" href="maintenance_updates.html">Open Maintenance Updates</a>
+        <a class="btn" id="openMaintenanceUpdatesBtn" href="maintenance_updates.html">Open Maintenance Updates</a>
+        <a class="btn primary" id="rwoBackToHubAction" href="manager_hub.html">Back to Hub</a>
       </div>
 
       <div class="stats">
@@ -832,33 +983,81 @@ body.resident-work-orders-new-layout .rwo-inline-controls .rwo-back-hub-btn{
     }
 
     function getStoredCommunities(){
+      const out = [];
+      const seen = new Set();
+      function addOne(c){
+        try{
+          if(!c) return;
+          const id = String(c.id || c.community_id || c.communityId || c.value || '').trim();
+          const name = String(c.name || c.community_name || c.communityName || c.label || c.text || c.community || id).trim();
+          if(!id || seen.has(id)) return;
+          seen.add(id);
+          out.push({ id, name: name || id });
+        }catch(_e){}
+      }
+      function addArray(arr){ (Array.isArray(arr) ? arr : []).forEach(addOne); }
       try{
-        const userId = String(localStorage.getItem('zummee_user_id_v1') || '').trim();
+        const userId = String(localStorage.getItem('zummee_user_id_v1') || localStorage.getItem('zummeeUserId') || '').trim();
         const candidates = [
           userId ? ('zummee_communities_v1__user__' + userId) : '',
           userId ? ('zummee_communities_v1__user_' + userId) : '',
+          'zummee_assigned_communities_v1',
+          'zummee_assigned_communities',
           'zummee_communities_v1',
-          'zummee_communities'
+          'zummee_communities',
+          'assignedCommunities',
+          'mh2_assigned_communities'
         ].filter(Boolean);
 
-        for(const key of candidates){
-          const raw = localStorage.getItem(key);
-          if(!raw) continue;
-          const arr = safeJsonParse(raw, []);
-          if(Array.isArray(arr) && arr.length) return arr;
-        }
+        candidates.forEach((key) => {
+          try{
+            const raw = localStorage.getItem(key) || sessionStorage.getItem(key);
+            if(!raw) return;
+            const parsed = safeJsonParse(raw, []);
+            if(Array.isArray(parsed)) addArray(parsed);
+            else if(parsed && Array.isArray(parsed.communities)) addArray(parsed.communities);
+            else if(parsed && Array.isArray(parsed.data)) addArray(parsed.data);
+          }catch(_e){}
+        });
+
+        // Always include current route/storage community so the selector never disappears.
+        const activeId = getStoredActiveCommunityId && getStoredActiveCommunityId();
+        const activeName = String(
+          localStorage.getItem('zummeeCurrentCommunityName') ||
+          localStorage.getItem('currentCommunityName') ||
+          localStorage.getItem('activeCommunityName') ||
+          localStorage.getItem('zummeeActiveCommunityName') ||
+          sessionStorage.getItem('zummeeCurrentCommunityName') ||
+          sessionStorage.getItem('currentCommunityName') ||
+          sessionStorage.getItem('activeCommunityName') ||
+          ''
+        ).trim();
+        if(activeId) addOne({id:activeId, name:activeName || activeId});
       }catch(_e){}
-      return [];
+      return out;
     }
 
     function getStoredActiveCommunityId(){
       try{
-        return String(
+        // v478: URL context seeds storage on entry, but after an employee changes
+        // the dropdown the live runtime/storage value must win. URL-first caused
+        // the dropdown to change visually while data kept loading the old community.
+        var live = String(
+          window.__rwoActiveCommunityId ||
+          window.activeCommunityId ||
           localStorage.getItem('zummeeActiveCommunityId') ||
           localStorage.getItem('activeCommunityId') ||
+          localStorage.getItem('currentCommunityId') ||
           localStorage.getItem('zummee_selected_community_id') ||
+          sessionStorage.getItem('zummeeActiveCommunityId') ||
+          sessionStorage.getItem('activeCommunityId') ||
+          sessionStorage.getItem('currentCommunityId') ||
+          sessionStorage.getItem('zummee_selected_community_id') ||
           ''
         ).trim();
+        if(live) return live;
+        var p = new URLSearchParams(window.location.search || '');
+        return String(p.get('community_id') || p.get('cid') || '').trim();
       }catch(_e){ return ''; }
     }
 
@@ -874,6 +1073,8 @@ body.resident-work-orders-new-layout .rwo-inline-controls .rwo-back-hub-btn{
           localStorage.setItem('activeCommunityName', String(name));
         }
         window.activeCommunityId = val;
+        window.__rwoActiveCommunityId = val;
+        if(name) window.activeCommunityName = String(name);
       }catch(_e){}
     }
 
@@ -882,16 +1083,17 @@ body.resident-work-orders-new-layout .rwo-inline-controls .rwo-back-hub-btn{
       if(!select) return;
       const communities = getStoredCommunities();
       const normalized = communities.map((c) => {
-        const id = String(c?.id || c?.communityId || c?.value || '').trim();
-        const name = String(c?.name || c?.communityName || c?.label || c?.text || id).trim();
+        const id = String(c?.id || c?.community_id || c?.communityId || c?.value || '').trim();
+        const name = String(c?.name || c?.community_name || c?.communityName || c?.label || c?.text || c?.community || id).trim();
         return id ? { id, name } : null;
       }).filter(Boolean);
 
+      const currentValue = select.value || getStoredActiveCommunityId();
       select.innerHTML = '';
       if(!normalized.length){
         const opt = document.createElement('option');
         opt.value = '';
-        opt.textContent = 'No communities';
+        opt.textContent = 'No assigned communities';
         select.appendChild(opt);
         select.disabled = true;
         return;
@@ -904,22 +1106,31 @@ body.resident-work-orders-new-layout .rwo-inline-controls .rwo-back-hub-btn{
         select.appendChild(opt);
       });
 
-      const stored = getStoredActiveCommunityId();
-      if(stored && normalized.some(c => c.id === stored)){
-        select.value = stored;
+      if(currentValue && normalized.some(c => c.id === currentValue)){
+        select.value = currentValue;
       } else {
         select.value = normalized[0].id;
-        setStoredActiveCommunity(normalized[0].id, normalized[0].name);
       }
-
+      const chosen = normalized.find(c => c.id === select.value) || normalized[0];
+      if(chosen) setStoredActiveCommunity(chosen.id, chosen.name);
       select.disabled = false;
     }
 
 async function getResidentAccessToken(){
-      async function maybeRefreshZummeeSession(parsed){
+      // v482: all pages should use ZummeeAuth as the single auth/token source.
+      try{
+        if(window.ZummeeAuth && typeof window.ZummeeAuth.getAccessToken === 'function'){
+          const t = await window.ZummeeAuth.getAccessToken({ redirect:false, timeoutMs:1800 });
+          if(t){ window.__rwoLastTokenSource = window.ZummeeAuth.lastTokenSource || 'ZummeeAuth'; return String(t); }
+        }
+      }catch(_e){}
+      // Legacy fallback kept only for compatibility while pages migrate to /shared/zummee-auth.js.
+      // v481: Resident Work Orders uses the same legacy Zummee auth token path that previously loaded this RLS table.
+      // Supabase auth.getSession() can be null in this app, so do NOT require it for this page's REST reads.
+      async function maybeRefreshZummeeSession(parsed, sourceKey){
         try{
-          const exp = Number(parsed?.expires_at || 0);
-          const refreshToken = String(parsed?.refresh_token || '').trim();
+          const exp = Number(parsed?.expires_at || parsed?.currentSession?.expires_at || parsed?.session?.expires_at || 0);
+          const refreshToken = String(parsed?.refresh_token || parsed?.currentSession?.refresh_token || parsed?.session?.refresh_token || '').trim();
           const now = Math.floor(Date.now() / 1000);
           if(!refreshToken) return parsed;
           if(exp && exp > (now + 60)) return parsed;
@@ -938,83 +1149,138 @@ async function getResidentAccessToken(){
           try{ next = raw ? JSON.parse(raw) : null; }catch(_e){ next = null; }
           if(res.ok && next && next.access_token){
             const merged = Object.assign({}, parsed || {}, next);
-            try{ localStorage.setItem('sb-zummee-auth', JSON.stringify(merged)); }catch(_e){}
+            try{ localStorage.setItem(sourceKey || 'sb-zummee-auth', JSON.stringify(merged)); }catch(_e){}
             return merged;
           }
         }catch(_e){}
         return parsed;
       }
 
-      try{
-        const rawZummee = localStorage.getItem('sb-zummee-auth');
-        if(rawZummee){
-          let parsed = JSON.parse(rawZummee);
-          parsed = await maybeRefreshZummeeSession(parsed);
-          const token = parsed?.access_token || parsed?.currentSession?.access_token;
-          if(token) return String(token);
-        }
-      }catch(_e){}
-      try{
-        const storageKey = 'sb-slcwuuwyrgnmlmxpcaim-auth-token';
-        const raw = localStorage.getItem(storageKey);
-        if(raw){
-          const parsed = JSON.parse(raw);
-          const token = parsed?.access_token || parsed?.currentSession?.access_token;
-          if(token) return String(token);
-        }
-      }catch(_e){}
+      function tokenFromObj(obj){
+        if(!obj || typeof obj !== 'object') return '';
+        return String(
+          obj.access_token || obj.accessToken ||
+          (obj.currentSession && obj.currentSession.access_token) ||
+          (obj.session && obj.session.access_token) ||
+          (obj.data && obj.data.session && obj.data.session.access_token) ||
+          ''
+        ).trim();
+      }
+
+      async function readTokenKey(key){
+        try{
+          const raw = localStorage.getItem(key) || sessionStorage.getItem(key) || '';
+          if(!raw) return '';
+          let parsed = JSON.parse(raw);
+          parsed = await maybeRefreshZummeeSession(parsed, key);
+          const token = tokenFromObj(parsed);
+          if(token){
+            window.__rwoLastTokenSource = key;
+            return token;
+          }
+        }catch(_e){}
+        return '';
+      }
+
+      const primaryKeys = [
+        'sb-zummee-auth',
+        'sb-slcwuuwyrgnmlmxpcaim-auth-token',
+        'supabase.auth.token',
+        'zummee_supabase_session',
+        'zummee_session_v1'
+      ];
+      for(const key of primaryKeys){
+        const token = await readTokenKey(key);
+        if(token) return token;
+      }
+
       try{
         for(let i=0; i<localStorage.length; i++){
           const k = localStorage.key(i);
           if(!k) continue;
           if(/auth/i.test(k) && /supabase|zummee|sb-/i.test(k)){
-            try{
-              const raw = localStorage.getItem(k);
-              if(!raw) continue;
-              const parsed = JSON.parse(raw);
-              const token = parsed?.access_token || parsed?.currentSession?.access_token;
-              if(token) return String(token);
-            }catch(_e2){}
+            const token = await readTokenKey(k);
+            if(token) return token;
           }
+        }
+      }catch(_e){}
+      try{
+        for(let i=0; i<sessionStorage.length; i++){
+          const k = sessionStorage.key(i);
+          if(!k) continue;
+          if(/auth/i.test(k) && /supabase|zummee|sb-/i.test(k)){
+            const token = await readTokenKey(k);
+            if(token) return token;
+          }
+        }
+      }catch(_e){}
+
+      try{
+        if(window.ZummeeAuth && typeof window.ZummeeAuth.getAccessToken === 'function'){
+          const token = await window.ZummeeAuth.getAccessToken({ redirect:false, timeoutMs:1200 });
+          if(token){ window.__rwoLastTokenSource='ZummeeAuth'; return String(token); }
         }
       }catch(_e){}
       try{
         if(window.sb?.auth?.getSession){
           const sess = await window.sb.auth.getSession();
           const token = sess?.data?.session?.access_token;
-          if(token) return String(token);
+          if(token){ window.__rwoLastTokenSource='window.sb.auth'; return String(token); }
         }
       }catch(_e){}
       try{
         if(window.supabaseClient?.auth?.getSession){
           const sess = await window.supabaseClient.auth.getSession();
           const token = sess?.data?.session?.access_token;
-          if(token) return String(token);
+          if(token){ window.__rwoLastTokenSource='window.supabaseClient.auth'; return String(token); }
         }
       }catch(_e){}
+      window.__rwoLastTokenSource = 'none';
       return '';
     }
 
     async function residentApi(path, opts){
+      opts = opts || {};
+      // v488: Resident Work Orders is an RLS-protected manager page.  It must use the
+      // same stored Supabase access token that login persists, because native
+      // auth.getSession() can be null in the current Zummee shell.
+      // Do NOT use supabaseClient.from() as the primary loader here.
+      try{
+        if(window.ZummeeAuth && typeof window.ZummeeAuth.fetchRest !== 'function' && typeof window.ZummeeAuth.rest === 'function'){
+          window.ZummeeAuth.fetchRest = window.ZummeeAuth.rest;
+        }
+      }catch(_e){}
       const url = (window.SUPABASE_URL || 'https://slcwuuwyrgnmlmxpcaim.supabase.co') + '/rest/v1/' + path;
-      const token = await getResidentAccessToken();
-      const headers = Object.assign({
-        'apikey': String(window.SUPABASE_ANON_KEY || ''),
-        'Content-Type': 'application/json'
-      }, (opts && opts.headers) || {});
-      if(token){
-        headers['Authorization'] = 'Bearer ' + token;
+
+      async function doFetch(forceRefresh){
+        if(forceRefresh && window.ZummeeAuth && typeof window.ZummeeAuth.refreshSession === 'function'){
+          try{ await window.ZummeeAuth.refreshSession(); }catch(_e){}
+        }
+        const token = await getResidentAccessToken();
+        const headers = Object.assign({
+          'apikey': String(window.SUPABASE_ANON_KEY || ''),
+          'Content-Type': 'application/json'
+        }, (opts && opts.headers) || {});
+        if(token) headers['Authorization'] = 'Bearer ' + token;
+        return fetch(url, Object.assign({}, opts || {}, { headers }));
       }
-      const res = await fetch(url, Object.assign({}, opts || {}, { headers }));
+
+      let res = await doFetch(false);
+      if(res.status === 401) res = await doFetch(true);
+
       const raw = await res.text();
       let parsed = null;
       try{ parsed = raw ? JSON.parse(raw) : null; }catch(_e){ parsed = raw; }
       if(!res.ok){
         const msg = (parsed && parsed.message) || (parsed && parsed.error_description) || (typeof parsed === 'string' ? parsed : '') || ('HTTP ' + res.status);
-        throw new Error(msg);
+        const err = new Error(msg);
+        err.status = res.status;
+        err.payload = parsed;
+        throw err;
       }
       return parsed;
     }
+
 
 
     async function invokeEdgeFunction(functionName, payload){
@@ -1557,9 +1823,14 @@ function statusClass(rowOrStatus){
       if(filtered.length){
         const stillSelected = selected && filtered.some(r => String(r.id || '') === String(selected.id || ''));
         if(!stillSelected){
-          selected = filtered[0];
-          renderDetail(selected);
-          populateVendorDropdown();
+          if(window.__rwoKeepDetailsEmpty){
+            selected = null;
+            renderDetail(null);
+          }else{
+            selected = filtered[0];
+            renderDetail(selected);
+            populateVendorDropdown();
+          }
         }
       } else {
         selected = null;
@@ -1586,8 +1857,10 @@ function statusClass(rowOrStatus){
       try{ loadWorkOrderPhotos(selected && selected.id); }catch(_e){}
       try{ applyFilters(); }catch(_e){}
       try{
-        const detailCard = document.querySelector('.detailCard');
-        if(detailCard) detailCard.scrollIntoView({ behavior:'smooth', block:'start' });
+        if(!window.__rwoSuppressAutoScroll){
+          const detailCard = document.querySelector('.detailCard');
+          if(detailCard) detailCard.scrollIntoView({ behavior:'smooth', block:'start' });
+        }
       }catch(_e){}
     }
     try{ window.__zummeeOpenResidentWorkOrder = openWorkOrderById; }catch(_e){}
@@ -1642,54 +1915,120 @@ function statusClass(rowOrStatus){
       }
     }
 
-    async function loadWorkOrders(){
-      statusLine.textContent = 'Loading resident work orders...';
+    let __rwoLoadSeq = 0;
+    async function loadWorkOrders(options){
+      options = options || {};
+      const loadSeq = ++__rwoLoadSeq;
+      const activeCommunityId = String((options.communityId || getStoredActiveCommunityId() || window.activeCommunityId || '')).trim();
+      const activeCommunityName = String((options.communityName || localStorage.getItem('activeCommunityName') || localStorage.getItem('zummeeActiveCommunityName') || localStorage.getItem('zummeeCurrentCommunityName') || '')).trim();
+      const isNewWorkOrderEntry = new URLSearchParams(window.location.search || '').get('new_work_order') === '1';
+
+      window.__rwoKeepDetailsEmpty = !!(isNewWorkOrderEntry || options.clearSelection);
+      if(isNewWorkOrderEntry || options.clearSelection){
+        try{ localStorage.removeItem('selectedWorkOrderId'); }catch(_e){}
+        selected = null;
+        try{ history.scrollRestoration = 'manual'; }catch(_e){}
+        try{ window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); }catch(_e){ try{ window.scrollTo(0,0); }catch(_e2){} }
+      }
+
+      if(!activeCommunityId){
+        if(loadSeq !== __rwoLoadSeq) return;
+        workOrders = [];
+        filtered = [];
+        renderStats([]);
+        renderDetail(null);
+        rowsEl.innerHTML = `<tr><td colspan="6"><div class="empty">Select a community to view resident work orders.</div></td></tr>`;
+        statusLine.textContent = 'Select a community to load resident work orders.';
+        return;
+      }
+
+      // v480: set context once, then every renderer reads the same community.
+      setStoredActiveCommunity(activeCommunityId, activeCommunityName);
+      window.activeCommunityId = activeCommunityId;
+      window.currentCommunityId = activeCommunityId;
+      if(loadSeq === __rwoLoadSeq){
+        statusLine.textContent = 'Loading resident work orders' + (activeCommunityName ? (' for ' + activeCommunityName) : '') + '...';
+        rowsEl.innerHTML = `<tr><td colspan="6"><div class="empty">Loading resident work orders${activeCommunityName ? (' for ' + esc(activeCommunityName)) : ''}...</div></td></tr>`;
+      }
+
       try{
-        const rows = await residentApi("resident_work_orders?select=*&order=submitted_at.desc&limit=500", {
-          method: 'GET'
+        let rows = null;
+        let lastError = null;
+
+        // v480 source lock: use the same REST token path that restored the working manager view.
+        // Do not use supabaseClient.from() here because auth.getSession() may be null even when
+        // the Zummee stored token is available; that client path causes 401 and then zero-overwrites.
+        const restPath = 'resident_work_orders?select=*'
+          + '&community_id=eq.' + encodeURIComponent(activeCommunityId)
+          + '&limit=500';
+        try{
+          rows = await residentApi(restPath, { method:'GET' });
+        }catch(err){
+          lastError = err;
+          rows = null;
+        }
+
+        // v488: no native-client fallback. That path is known to return session:null/401
+        // in the current shell and can zero-overwrite valid REST-loaded rows.
+        // If REST fails, show the exact error and preserve the selected community.
+
+        if(loadSeq !== __rwoLoadSeq) return;
+        if(rows === null){
+          throw lastError || new Error('Unable to load resident work orders.');
+        }
+
+        workOrders = Array.isArray(rows) ? rows.slice() : [];
+        workOrders.sort(function(a,b){
+          const ad = new Date(a.submitted_at || a.created_at || a.updated_at || 0).getTime() || 0;
+          const bd = new Date(b.submitted_at || b.created_at || b.updated_at || 0).getTime() || 0;
+          return bd - ad;
         });
-        workOrders = Array.isArray(rows) ? rows : [];
+
+        if(options.clearSelection || isNewWorkOrderEntry){ selected = null; }
         applyFilters();
+
         if(workOrders.length){
-          selected = workOrders[0];
+          if(!selected || !workOrders.some(function(r){ return String(r.id||'') === String(selected.id||''); })){
+            // Keep details empty when launched from + Work Order or community switch. Do not auto-scroll.
+            selected = (options.clearSelection || isNewWorkOrderEntry) ? null : workOrders[0];
+          }
           renderDetail(selected);
           populateVendorDropdown();
 
-try{
-  var openId = '';
-  try{
-    openId = String(new URLSearchParams(window.location.search || '').get('open_work_order_id') || '').trim();
-    if(!openId) openId = String(localStorage.getItem('selectedWorkOrderId') || '').trim();
-  }catch(_e){}
-  if(openId && workOrders && workOrders.length){
-    var target = workOrders.find(function(r){ return String(r.id||'') === openId; });
-    if(target){
-      selected = target;
-      try{ localStorage.setItem('selectedWorkOrderId', openId); }catch(_e){}
-      renderDetail(selected);
-      populateVendorDropdown();
-      try{ applyFilters(); }catch(_e){}
-      try{
-        var rowEl = rowsEl && rowsEl.querySelector ? rowsEl.querySelector('tr[data-id="'+CSS.escape(openId)+'"]') : null;
-        if(rowEl) rowEl.scrollIntoView({ behavior:'smooth', block:'center' });
-      }catch(_e){}
-    }
-  }
-}catch(_e){}
-
+          try{
+            var openId = String(new URLSearchParams(window.location.search || '').get('open_work_order_id') || '').trim();
+            if(openId && workOrders && workOrders.length){
+              var target = workOrders.find(function(r){ return String(r.id||'') === openId; });
+              if(target){
+                selected = target;
+                try{ localStorage.setItem('selectedWorkOrderId', openId); }catch(_e){}
+                renderDetail(selected);
+                populateVendorDropdown();
+                try{ applyFilters(); }catch(_e){}
+                try{
+                  var rowEl = rowsEl && rowsEl.querySelector ? rowsEl.querySelector('tr[data-id="'+CSS.escape(openId)+'"]') : null;
+                  if(rowEl) rowEl.scrollIntoView({ behavior:'smooth', block:'center' });
+                }catch(_e){}
+              }
+            }
+          }catch(_e){}
         } else {
-          statusLine.textContent = 'No resident work orders yet.';
+          statusLine.textContent = 'No resident work orders found' + (activeCommunityName ? (' for ' + activeCommunityName) : '') + '.';
+          selected = null;
           renderDetail(null);
           try{ const vn=document.getElementById('vendorName'); if(vn) vn.innerHTML='<option value="">Select vendor</option>'; const ve=document.getElementById('vendorEmail'); if(ve) ve.value=''; }catch(_e){}
           renderStats([]);
-          rowsEl.innerHTML = `<tr><td colspan="6"><div class="empty">No resident work orders found yet.</div></td></tr>`;
+          rowsEl.innerHTML = `<tr><td colspan="6"><div class="empty">No resident work orders found for this community.</div></td></tr>`;
         }
       }catch(err){
+        if(loadSeq !== __rwoLoadSeq) return;
         workOrders = [];
+        filtered = [];
+        selected = null;
         renderStats([]);
         renderDetail(null);
         try{ const vn=document.getElementById('vendorName'); if(vn) vn.innerHTML='<option value="">Select vendor</option>'; const ve=document.getElementById('vendorEmail'); if(ve) ve.value=''; }catch(_e){}
-        rowsEl.innerHTML = `<tr><td colspan="6"><div class="empty">Unable to load resident work orders. ${esc(err?.message || 'Please verify the resident_work_orders table exists and is readable.')} ${/row-level security|401|jwt|unauthorized/i.test(String(err?.message||'')) ? 'This page needs a fresh logged-in manager session. Try signing out and back in, or refresh the page.' : ''}</div></td></tr>`;
+        rowsEl.innerHTML = `<tr><td colspan="6"><div class="empty">Unable to load resident work orders. ${esc(err?.message || 'Please verify the resident_work_orders table exists and is readable.')} ${/row-level security|401|jwt|unauthorized|permission denied/i.test(String(err?.message||'')) ? 'The selected community may not be assigned to this manager session, or the session did not pass RLS.' : ''}</div></td></tr>`;
         statusLine.textContent = 'Resident work orders could not be loaded.';
       }
     }
@@ -1912,48 +2251,70 @@ try{
     completeBtn.addEventListener('click', markComplete);
     if(saveManagerUpdateBtn) saveManagerUpdateBtn.addEventListener('click', saveManagerUpdateNote);
 
+    function handleRwoCommunityChange(selectEl){
+      try{
+        if(!selectEl) return;
+        const name = selectEl.selectedOptions && selectEl.selectedOptions[0]
+          ? String(selectEl.selectedOptions[0].textContent || '').trim()
+          : '';
+        setStoredActiveCommunity(selectEl.value, name);
+        selected = null;
+        try{ localStorage.removeItem('selectedWorkOrderId'); }catch(_e){}
+        // Keep the page URL aligned without a full reload, so later refreshes preserve the selected community.
+        try{
+          const u = new URL(location.href);
+          if(selectEl.value) u.searchParams.set('community_id', selectEl.value);
+          if(name) u.searchParams.set('community_name', name);
+          u.searchParams.delete('open_work_order_id');
+          history.replaceState(null, '', u.toString());
+        }catch(_e){}
+        try{ document.dispatchEvent(new CustomEvent('zummee:community-changed', { detail:{ communityId: selectEl.value, communityName: name } })); }catch(_e){}
+        if (typeof loadWorkOrders === 'function') loadWorkOrders({ communityId: selectEl.value, communityName: name, clearSelection:true });
+      }catch(_e){}
+    }
+
     populateHeaderCommunities();
     const headerSelectEl = headerCommunitySelect();
     if(headerSelectEl){
       headerSelectEl.addEventListener('change', function(){
-        try{
-          const name = headerSelectEl.selectedOptions && headerSelectEl.selectedOptions[0]
-            ? headerSelectEl.selectedOptions[0].textContent.trim()
-            : '';
-          setStoredActiveCommunity(headerSelectEl.value, name);
-        }catch(_e){}
-        applyFilters();
+        handleRwoCommunityChange(headerSelectEl);
       });
     }
 
     if(!window.__zummeeResidentHeaderCommunityBound){
       window.__zummeeResidentHeaderCommunityBound = true;
 
-      document.addEventListener('change', function(ev){
-        const t = ev && ev.target;
-        if(!t || t.id !== 'zummeeCommunitySelect') return;
-        try{
-          const name = t.selectedOptions && t.selectedOptions[0]
-            ? String(t.selectedOptions[0].textContent || '').trim()
-            : '';
-          setStoredActiveCommunity(t.value, name);
-        }catch(_e){}
-        try{ applyFilters(); }catch(_e){}
-      }, true);
+      // v480: direct select listener above is the only community-change loader.
+      // Keeping a second delegated listener caused duplicate delayed loads and zero-overwrites.
 
-      window.addEventListener('storage', function(ev){
-        try{
-          if(!ev) return;
-          if(ev.key !== 'activeCommunityId' && ev.key !== 'zummeeActiveCommunityId' && ev.key !== 'zummee_selected_community_id') return;
-          const sel = headerCommunitySelect();
-          const activeId = getStoredActiveCommunityId();
-          if(sel && activeId && sel.value !== activeId) sel.value = activeId;
-          applyFilters();
-        }catch(_e){}
-      });
+      // v488: no storage-triggered reloads on this page.  Community changes are handled
+      // only by the visible dropdown so old tabs/timers cannot zero-overwrite the table.
     }
 
-    loadWorkOrders();
+    window.__rwoForceLoadCommunity = async function(id){
+      const sel = headerCommunitySelect();
+      if(sel && id){ sel.value = String(id); }
+      setStoredActiveCommunity(String(id || ''), sel && sel.selectedOptions && sel.selectedOptions[0] ? sel.selectedOptions[0].textContent : '');
+      return loadWorkOrders({ communityId:String(id || ''), communityName: sel && sel.selectedOptions && sel.selectedOptions[0] ? sel.selectedOptions[0].textContent : '', clearSelection:true });
+    };
+
+    window.__rwoAuthTest = async function(){
+      const session = window.ZummeeAuth && window.ZummeeAuth.requireSession ? await window.ZummeeAuth.requireSession({redirect:false, timeoutMs:4200}) : null;
+      const token = await getResidentAccessToken();
+      const activeCommunityId = getStoredActiveCommunityId() || window.activeCommunityId || '';
+      let sample = null;
+      try{ sample = await residentApi("resident_work_orders?select=id,community_id,status,subject,title&community_id=eq." + encodeURIComponent(activeCommunityId) + "&limit=5", { method:'GET' }); }catch(err){ sample = { error: err && (err.message || err.status || err.code) }; }
+      return { build: window.ZUMMEE_BUILD, authVersion: window.ZummeeAuth && window.ZummeeAuth.version, hasSession: !!session, userId: session && session.user && session.user.id, hasToken: !!token, tokenSource: window.__rwoLastTokenSource || (window.ZummeeAuth && window.ZummeeAuth.lastTokenSource), activeCommunityId, sample };
+    };
+
+    try{
+      if(new URLSearchParams(window.location.search || '').get('new_work_order') === '1'){
+        localStorage.removeItem('selectedWorkOrderId');
+        history.replaceState(null, '', location.pathname + location.search.replace(/([?&])open_work_order_id=[^&]*/,'$1').replace(/[?&]$/,''));
+        window.scrollTo(0,0);
+      }
+    }catch(_e){}
+    loadWorkOrders({ clearSelection: new URLSearchParams(window.location.search || '').get('new_work_order') === '1' });
   </script>
 <script>
 (function(){
@@ -2227,5 +2588,282 @@ body.dark-mode .mh2-stat-box {
 <script src="company_logo_sync.js"></script>
 
   <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+
+<script id="rwo-v471-context-links-and-new-work-order">
+(function(){
+  function getContext(){
+    var p=new URLSearchParams(location.search||'');
+    var cid=String(p.get('community_id')||p.get('cid')||localStorage.getItem('zummeeActiveCommunityId')||localStorage.getItem('activeCommunityId')||localStorage.getItem('currentCommunityId')||localStorage.getItem('zummee_selected_community_id')||'').trim();
+    var cname=String(p.get('community_name')||p.get('name')||localStorage.getItem('zummeeCurrentCommunityName')||localStorage.getItem('currentCommunityName')||localStorage.getItem('activeCommunityName')||localStorage.getItem('zummeeActiveCommunityName')||'').trim();
+    var uid=String(p.get('user_id')||p.get('uid')||localStorage.getItem('zummee_user_id_v1')||localStorage.getItem('zummeeUserId')||localStorage.getItem('activeUserId')||localStorage.getItem('currentUserId')||'').trim();
+    return {cid:cid,cname:cname,uid:uid};
+  }
+  function addContext(url){
+    try{
+      var ctx=getContext();
+      var u=new URL(url, location.href);
+      if(ctx.cid) u.searchParams.set('community_id',ctx.cid);
+      if(ctx.cname) u.searchParams.set('community_name',ctx.cname);
+      if(ctx.uid) u.searchParams.set('user_id',ctx.uid);
+      return u.pathname.replace(/^\//,'')+u.search+u.hash;
+    }catch(_e){ return url; }
+  }
+  function apply(){
+    var hub=document.getElementById('zummeeHdrHub')||document.querySelector('.rwo-back-hub-btn');
+    if(hub) hub.setAttribute('href', addContext('manager_hub.html'));
+    var live=document.querySelector('a[href^="maintenance_updates.html"]');
+    if(live) live.setAttribute('href', addContext('maintenance_updates.html'));
+    var form=document.getElementById('openResidentFormBtn');
+    if(form) form.setAttribute('href', addContext('work_order_submit.html'));
+    if(new URLSearchParams(location.search||'').get('new_work_order')==='1'){
+      try{ if(form){ form.classList.add('primary'); form.focus({preventScroll:true}); } }catch(_e){}
+    }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', apply, {once:true}); else apply();
+  window.addEventListener('load', apply, {once:true});
+  setTimeout(apply,250); setTimeout(apply,900);
+})();
+</script>
+
+
+<script id="rwo-v472-logo-and-button-link-lock">
+(function(){
+  var UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  function getLogoEl(){ return document.getElementById('residentWorkOrdersCompanyLogo'); }
+  function setLogo(url, alt){
+    var logo=getLogoEl(); if(!logo) return false;
+    url=String(url||'').trim();
+    if(!url) return false;
+    logo.classList.remove('logo-ready');
+    logo.hidden=false;
+    logo.onload=function(){ logo.hidden=false; logo.classList.add('logo-ready'); };
+    logo.onerror=function(){ logo.classList.remove('logo-ready'); };
+    logo.alt=String(alt||'Management company logo');
+    if(logo.getAttribute('src')!==url) logo.src=url;
+    return true;
+  }
+  function readCachedManagerHubLogo(){
+    try{
+      var stores=[sessionStorage,localStorage];
+      for(var s=0;s<stores.length;s++){
+        var store=stores[s];
+        for(var i=0;i<store.length;i++){
+          var k=store.key(i)||'';
+          if(k.indexOf('mh2_brand_logo_v1_')!==0) continue;
+          var obj=JSON.parse(store.getItem(k)||'{}');
+          if(obj && obj.url) return obj;
+        }
+      }
+    }catch(_e){}
+    var keys=['company_logo_url','zummee_company_logo_url','mh2CompanyLogoUrl','managerHubCompanyLogoUrl'];
+    for(var j=0;j<keys.length;j++){
+      try{
+        var val=localStorage.getItem(keys[j])||sessionStorage.getItem(keys[j]);
+        if(val) return {url:val,alt:'Management company logo'};
+      }catch(_e2){}
+    }
+    return null;
+  }
+  function parseLogoRef(raw){
+    raw=String(raw||'').trim();
+    if(!raw) return null;
+    if(/^https?:\/\//i.test(raw)) return {url:raw};
+    return {bucket:'company_logos',path:raw};
+  }
+  async function getClient(){
+    try{ if(typeof ensureSupabase==='function'){ var c=await ensureSupabase(); if(c&&c.from) return c; } }catch(_e){}
+    try{ if(window.supabaseClient&&window.supabaseClient.from) return window.supabaseClient; }catch(_e2){}
+    try{ if(window.sb&&window.sb.from) return window.sb; }catch(_e3){}
+    return null;
+  }
+  async function loadLogo(){
+    var cached=readCachedManagerHubLogo();
+    if(cached && cached.url) setLogo(cached.url,cached.alt||'Management company logo');
+    try{
+      var client=await getClient(); if(!client||!client.auth) return;
+      var userRes=await client.auth.getUser();
+      var user=userRes&&userRes.data&&userRes.data.user;
+      if(!user) return;
+      var prof=await client.from('userdirectory').select('company_id').eq('auth_user_id',user.id).maybeSingle();
+      var companyId=String(prof&&prof.data&&prof.data.company_id||'').trim();
+      if(!companyId) return;
+      var res=await client.from('companies').select('logo_path,name').eq('id',companyId).maybeSingle();
+      var row=res&&res.data||{};
+      var ref=parseLogoRef(row.logo_path); if(!ref) return;
+      var url=String(ref.url||'').trim();
+      if(!url&&ref.bucket&&ref.path&&client.storage&&client.storage.from){
+        var pub=client.storage.from(ref.bucket).getPublicUrl(ref.path);
+        url=String(pub&&pub.data&&pub.data.publicUrl||'').trim();
+      }
+      if(url){
+        setLogo(url,row.name||'Management company logo');
+        try{ sessionStorage.setItem('mh2_brand_logo_v1_'+companyId, JSON.stringify({url:url,alt:row.name||'Management company logo',isCompany:true})); }catch(_e4){}
+      }
+    }catch(e){ console.warn('[RWO v472] company logo lock skipped',e); }
+  }
+  function getContext(){
+    var p=new URLSearchParams(location.search||'');
+    var cid=String(p.get('community_id')||p.get('cid')||localStorage.getItem('zummeeActiveCommunityId')||localStorage.getItem('activeCommunityId')||localStorage.getItem('currentCommunityId')||localStorage.getItem('zummee_selected_community_id')||'').trim();
+    var cname=String(p.get('community_name')||p.get('name')||localStorage.getItem('zummeeCurrentCommunityName')||localStorage.getItem('currentCommunityName')||localStorage.getItem('activeCommunityName')||localStorage.getItem('zummeeActiveCommunityName')||'').trim();
+    var uid=String(p.get('user_id')||p.get('uid')||localStorage.getItem('zummee_user_id_v1')||localStorage.getItem('zummeeUserId')||localStorage.getItem('activeUserId')||localStorage.getItem('currentUserId')||'').trim();
+    return {cid:cid,cname:cname,uid:uid};
+  }
+  function addContext(url){
+    try{
+      var ctx=getContext(); var u=new URL(url,location.href);
+      if(UUID_RE.test(ctx.cid)) u.searchParams.set('community_id',ctx.cid);
+      if(ctx.cname) u.searchParams.set('community_name',ctx.cname);
+      if(UUID_RE.test(ctx.uid)) u.searchParams.set('user_id',ctx.uid);
+      return u.pathname.replace(/^\//,'')+u.search+u.hash;
+    }catch(_e){return url;}
+  }
+  function wireButtons(){
+    var hub=document.getElementById('rwoBackToHubAction');
+    if(hub) hub.setAttribute('href',addContext('manager_hub.html'));
+    var live=document.getElementById('openMaintenanceUpdatesBtn')||document.querySelector('a[href^="maintenance_updates.html"]');
+    if(live) live.setAttribute('href',addContext('maintenance_updates.html'));
+    var form=document.getElementById('openResidentFormBtn');
+    if(form) form.setAttribute('href',addContext('work_order_submit.html'));
+  }
+  function boot(){ loadLogo(); wireButtons(); setTimeout(loadLogo,300); setTimeout(wireButtons,300); setTimeout(loadLogo,1200); setTimeout(wireButtons,1200); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true}); else boot();
+  window.addEventListener('load',boot,{once:true});
+})();
+</script>
+
+<script id="rwo-v473-manager-hub-logo-source-lock">
+(function(){
+  function logoEl(){ return document.getElementById('residentWorkOrdersCompanyLogo'); }
+  function showLogo(url, alt){
+    url=String(url||'').trim();
+    var img=logoEl();
+    if(!img || !url) return false;
+    img.hidden=false;
+    img.style.display='block';
+    img.style.opacity='1';
+    img.style.visibility='visible';
+    img.alt=alt||'Management company logo';
+    img.onload=function(){ img.hidden=false; img.classList.add('logo-ready'); img.style.display='block'; img.style.opacity='1'; };
+    img.onerror=function(){ console.warn('[RWO v473] logo URL failed', url); };
+    if(img.getAttribute('src')!==url) img.src=url;
+    img.classList.add('logo-ready');
+    return true;
+  }
+  function fromStorage(){
+    var stores=[sessionStorage,localStorage];
+    var directKeys=['company_logo_url','zummee_company_logo_url','mh2CompanyLogoUrl','managerHubCompanyLogoUrl','zummeeCompanyLogoUrl','companyLogoUrl'];
+    for(var s=0;s<stores.length;s++){
+      var store=stores[s];
+      for(var i=0;i<directKeys.length;i++){
+        try{ var v=store.getItem(directKeys[i]); if(v && showLogo(v,'Management company logo')) return true; }catch(_e){}
+      }
+      try{
+        for(var k=0;k<store.length;k++){
+          var key=store.key(k)||'';
+          if(key.indexOf('mh2_brand_logo_v1_')!==0) continue;
+          var obj=JSON.parse(store.getItem(key)||'{}');
+          if(obj && obj.url && showLogo(obj.url,obj.alt||'Management company logo')) return true;
+        }
+      }catch(_e2){}
+    }
+    return false;
+  }
+  function parseRef(raw){
+    raw=String(raw||'').trim();
+    if(!raw) return null;
+    if(/^https?:\/\//i.test(raw)) return {url:raw};
+    return {bucket:'company_logos',path:raw.replace(/^\/+/, '')};
+  }
+  async function client(){
+    try{ if(typeof ensureSupabase==='function'){ var c=await ensureSupabase(); if(c&&c.from) return c; } }catch(_e){}
+    try{ if(window.supabaseClient&&window.supabaseClient.from) return window.supabaseClient; }catch(_e2){}
+    try{ if(window.sb&&window.sb.from) return window.sb; }catch(_e3){}
+    return null;
+  }
+  async function fromCompanies(sb, companyId){
+    if(!companyId) return false;
+    try{
+      var res=await sb.from('companies').select('*').eq('id',companyId).maybeSingle();
+      if(res.error || !res.data) return false;
+      var row=res.data||{};
+      var raw=row.logo_path||row.logo_url||row.company_logo_url||row.logo||row.logoUrl||'';
+      var ref=parseRef(raw);
+      if(!ref) return false;
+      var url=ref.url||'';
+      if(!url && ref.bucket && ref.path && sb.storage && sb.storage.from){
+        var pub=sb.storage.from(ref.bucket).getPublicUrl(ref.path);
+        url=String(pub&&pub.data&&pub.data.publicUrl||'').trim();
+      }
+      if(url){
+        showLogo(url,row.name||'Management company logo');
+        try{ sessionStorage.setItem('mh2_brand_logo_v1_'+companyId, JSON.stringify({url:url,alt:row.name||'Management company logo',isCompany:true})); }catch(_e){}
+        return true;
+      }
+    }catch(e){ console.warn('[RWO v473] companies logo lookup skipped',e); }
+    return false;
+  }
+  async function fromCompanyBranding(sb){
+    try{
+      var res=await sb.from('company_branding').select('*').limit(1).maybeSingle();
+      if(res.error || !res.data) return false;
+      var row=res.data||{};
+      var raw=row.logo_url||row.logo_path||row.company_logo_url||row.logo||row.logoUrl||'';
+      var ref=parseRef(raw);
+      if(!ref) return false;
+      var url=ref.url||'';
+      if(!url && ref.bucket && ref.path && sb.storage && sb.storage.from){
+        var pub=sb.storage.from(ref.bucket).getPublicUrl(ref.path);
+        url=String(pub&&pub.data&&pub.data.publicUrl||'').trim();
+      }
+      return !!(url && showLogo(url,row.company_name||row.name||'Management company logo'));
+    }catch(e){ console.warn('[RWO v473] company_branding lookup skipped',e); }
+    return false;
+  }
+  async function run(){
+    fromStorage();
+    var sb=await client();
+    if(!sb) return;
+    try{
+      var userId='';
+      try{ var gu=await sb.auth.getUser(); userId=String(gu&&gu.data&&gu.data.user&&gu.data.user.id||'').trim(); }catch(_e){}
+      if(!userId){ userId=String(localStorage.getItem('zummee_user_id_v1')||localStorage.getItem('zummeeUserId')||localStorage.getItem('activeUserId')||localStorage.getItem('currentUserId')||'').trim(); }
+      var companyId='';
+      if(userId){
+        var prof=await sb.from('userdirectory').select('company_id').eq('auth_user_id',userId).maybeSingle();
+        companyId=String(prof&&prof.data&&prof.data.company_id||'').trim();
+        if(!companyId){
+          var prof2=await sb.from('userdirectory').select('company_id').eq('id',userId).maybeSingle();
+          companyId=String(prof2&&prof2.data&&prof2.data.company_id||'').trim();
+        }
+      }
+      if(await fromCompanies(sb, companyId)) return;
+      await fromCompanyBranding(sb);
+    }catch(e){ console.warn('[RWO v473] logo source lock failed',e); }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', run, {once:true}); else run();
+  window.addEventListener('load', run, {once:true});
+  setTimeout(run,250); setTimeout(run,1000);
+})();
+</script>
+<!-- v475: Restored v473 no-login guard and live-session-first token for resident_work_orders RLS. -->
+
+<script id="rwo-v480-diagnostics">
+window.__rwoForceBiltmoreTest = async function(){
+  try{
+    return await residentApi('resident_work_orders?select=*&community_id=eq.be74ed53-0be0-4d91-b89c-37394c7594e0&limit=10', { method:'GET' });
+  }catch(err){ return { error: err && (err.message || err.status || err.code) }; }
+};
+</script>
+
+<script id="rwo-v481-diagnostics">
+window.__rwoTokenTest = async function(){
+  try{
+    const token = await getResidentAccessToken();
+    let sample = null;
+    try{ sample = await residentApi('resident_work_orders?select=*&community_id=eq.' + encodeURIComponent(String(window.activeCommunityId || localStorage.getItem('zummeeActiveCommunityId') || '')) + '&limit=3', {method:'GET'}); }catch(err){ sample = {error: err && (err.message || err.status || err.code), status: err && err.status, source: window.__rwoLastTokenSource}; }
+    return { build: window.ZUMMEE_BUILD, hasToken: !!token, tokenSource: window.__rwoLastTokenSource, activeCommunityId: window.activeCommunityId, stored: localStorage.getItem('zummeeActiveCommunityId'), sample };
+  }catch(err){ return {error: err && (err.message || err)}; }
+};
+</script>
 </body>
 </html>

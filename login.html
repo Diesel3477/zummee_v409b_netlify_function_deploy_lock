@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-03-27-1";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-04-v487-login-zummee-brand-lock";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <script>
 
@@ -140,6 +140,12 @@
   // Non-fatal error banner (helps debug without white-screen)
   window.addEventListener("error", function(e) {
     try {
+      // Ignore resource load failures (script/link/img 404s) so they do not show the red app error banner.
+      // Real JavaScript errors still surface below.
+      if(e && !e.message && e.target && e.target !== window){
+        var tag = String(e.target.tagName || '').toLowerCase();
+        if(tag === 'script' || tag === 'link' || tag === 'img') return;
+      }
       var msg = (e && e.message) ? e.message : "Unknown error";
       console.error("Zummee error:", e.error || e);
       var bar = document.getElementById("zummeeErrorBar");
@@ -238,6 +244,12 @@
     .z-topbar__inner{max-width:1200px;margin:0 auto;padding:14px 18px;display:flex;align-items:center;gap:18px}
     .z-brand{display:flex;align-items:center;gap:10px;min-width:180px}
     .z-brand img{height:34px;width:auto;display:block}
+
+/* Login page branding lock: always use Zummee static logo, never company branding */
+.z-login-logo{height:64px !important;width:auto !important;display:block !important;object-fit:contain !important;}
+#zummeeHeaderMount{display:none !important;}
+.z-topbar .z-brand img{max-width:240px !important;}
+@media(max-width:700px){.z-login-logo{height:56px !important;}}
     .z-brandTitle{font-weight:950;letter-spacing:.2px}
     .z-nav{display:flex;gap:18px;align-items:center;flex:1;justify-content:center}
     .z-nav a{color:rgba(15,47,74,.72);text-decoration:none;font-weight:800;font-size:13px;letter-spacing:1.2px;text-transform:uppercase}
@@ -646,7 +658,6 @@ body.dark-mode .mh2-stat-box {
 .mh2-actions .mh2-btn--ghost{display:none !important;}
 </style>
   <link rel="icon" type="image/png" href="zummee_mark_32.png">
-  <link rel="stylesheet" href="shared/header.css?v=2026-03-27-1">
   <script src="community_state_stable.js"></script>
 <style>
 /* FORCE white text in Status & Details section */
@@ -730,13 +741,10 @@ body.dark-mode .mh2-stat-box {
 </style>
 </head>
 <body data-header-mode="simple">
-<div id="zummeeHeaderMount"></div>
-<script src="shared/header.js?v=2026-04-08-2"></script>
-
   <header class="z-topbar">
     <div class="z-topbar__inner">
       <div class="z-brand">
-        <img src="zummee_logo_skyline_dark.svg" alt="Zummee" style="height:72px;width:auto;display:block;">
+        <img src="zummee_login_logo.svg?v=2026-05-04-v487" alt="Zummee" class="z-login-logo">
 </div>
       <nav class="z-nav" aria-label="Primary">
         <a href="#" onclick="return false;">Solutions</a>
@@ -917,7 +925,8 @@ body.dark-mode .mh2-stat-box {
 
 <!-- SUPABASE AUTH (LOGIN) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="shared/supabase-client.js?v=2026-04-29-v327"></script>
+<script src="shared/supabase-client.js?v=2026-05-06-v500-production-auth"></script>
+<script src="shared/zummee-auth.js?v=2026-05-04-v486"></script>
 <script>
 (function(){
   var SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
@@ -939,6 +948,28 @@ body.dark-mode .mh2-stat-box {
   }
   window.supabaseClient = sb;
   window.sb = sb;
+
+  async function lockSupabaseSession(session){
+    if(!session || !session.access_token) return null;
+    try{ if(window.zummeePersistSupabaseSession) window.zummeePersistSupabaseSession(session); }catch(_e){}
+    try{ if(window.ZummeeAuth && window.ZummeeAuth.persistSession) window.ZummeeAuth.persistSession(session); }catch(_e2){}
+    try{
+      localStorage.setItem('sb_access_token', session.access_token || '');
+      localStorage.setItem('zummee_sb_access_token', session.access_token || '');
+      sessionStorage.setItem('sb_access_token', session.access_token || '');
+      if(session.refresh_token){
+        localStorage.setItem('sb_refresh_token', session.refresh_token || '');
+        localStorage.setItem('zummee_sb_refresh_token', session.refresh_token || '');
+        sessionStorage.setItem('sb_refresh_token', session.refresh_token || '');
+      }
+      localStorage.setItem('sb-zummee-auth', JSON.stringify({ currentSession:session, session:session, access_token:session.access_token, refresh_token:session.refresh_token || '', user:session.user || null, saved_at:new Date().toISOString(), version:'login-v485' }));
+      localStorage.setItem('sb-slcwuuwyrgnmlmxpcaim-auth-token', JSON.stringify({ currentSession:session, session:session, access_token:session.access_token, refresh_token:session.refresh_token || '', user:session.user || null, saved_at:new Date().toISOString(), version:'login-v485' }));
+    }catch(_e3){}
+    try{ if(sb && sb.auth && sb.auth.setSession && session.refresh_token){ await sb.auth.setSession({ access_token:session.access_token, refresh_token:session.refresh_token }); } }catch(_e4){}
+    try{ if(window.zummeeRestoreSupabaseSession) await window.zummeeRestoreSupabaseSession(); }catch(_e5){}
+    try{ if(window.ensureSupabase) await window.ensureSupabase(); }catch(_e6){}
+    return session;
+  }
 
   // ===== Board Member Invite support =====
   function __qp(name){
@@ -1464,6 +1495,13 @@ var resp = await sb.auth.signUp({
       return;
     }
 
+    // v485 auth lock: persist and hydrate the real Supabase session before any profile/RLS work or redirect.
+    if(resp && resp.data && resp.data.session){
+      await lockSupabaseSession(resp.data.session);
+    } else {
+      console.warn('[Zummee login v485] signIn returned no Supabase session');
+    }
+
 // Ensure bootstrap admin always has Admin role + Supervisor department in Profiles (even if metadata is missing)
 // (Guarded here because normal sign-ups won't define isBootstrapAdmin.)
 if(typeof isBootstrapAdmin !== 'undefined' && isBootstrapAdmin){
@@ -1727,6 +1765,21 @@ if(isBootstrapAdmin){
       }
     }catch(_e){}
 
+    try{
+      var finalSessionRes = await sb.auth.getSession();
+      var finalSession = finalSessionRes && finalSessionRes.data && finalSessionRes.data.session;
+      if(!finalSession && window.zummeeRestoreSupabaseSession){ finalSession = await window.zummeeRestoreSupabaseSession(); }
+      if(finalSession) await lockSupabaseSession(finalSession);
+      if(!finalSession || !finalSession.user || !finalSession.user.id){
+        openAuthModal("Sign in incomplete", "Zummee could not create a secure Supabase session. Please try signing in again.");
+        return;
+      }
+      if(window.ZummeeAuth && window.ZummeeAuth.requireAuth) await window.ZummeeAuth.requireAuth({redirect:false});
+    }catch(_e){
+      openAuthModal("Sign in incomplete", "Zummee could not verify your secure session. Please try signing in again.");
+      return;
+    }
+
     redirectAfterLogin();
   }
 
@@ -1970,6 +2023,5 @@ document.addEventListener("DOMContentLoaded", function(){
 
 <script src="company_logo_sync.js"></script>
 
-  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
 </body>
 </html>

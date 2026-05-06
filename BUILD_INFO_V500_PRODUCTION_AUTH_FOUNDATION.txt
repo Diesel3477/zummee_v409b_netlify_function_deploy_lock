@@ -1,0 +1,14 @@
+Zummee v500 production auth foundation
+
+Changes:
+- Replaced shared/supabase-client.js with canonical persistent Supabase auth boot.
+- Login now persists and verifies a real Supabase session before redirecting.
+- Board Meetings now requires a real Supabase session instead of treating localStorage user IDs as authorization.
+- Board Meetings community and board-member loaders use auth.uid-compatible session IDs.
+- Added BOARD_MEMBERS_PRODUCTION_RLS.sql for final secure BoardMembers read policy.
+
+Post-deploy test:
+1. Log out and sign back in so Supabase stores a fresh session.
+2. In console: await supabaseClient.auth.getSession() should return a session with user.id.
+3. Run BOARD_MEMBERS_PRODUCTION_RLS.sql in Supabase SQL Editor.
+4. Board Meetings should load assigned communities and active BoardMembers under secure RLS.

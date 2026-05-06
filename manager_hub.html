@@ -1,6 +1,47 @@
 <!doctype html>
 <html lang="en">
 <head>
+<style id="zummee-v412-smart-alert-early-hide-css">
+  html:not([data-zummee-smart-alerts-v426-ready="1"]) #smartAlertStrip .mh2-alert{visibility:hidden!important;opacity:0!important;}
+
+
+/* v466: compact Manager Hub polish + remove legacy floating debug close pill */
+#mh2DebugClose,
+.mh2-debug-close,
+#mh2DebugFab,
+#mh2DebugPanel{
+  display:none !important;
+  visibility:hidden !important;
+  pointer-events:none !important;
+}
+#smartAlertStrip{
+  margin-top:14px !important;
+}
+#mh2CommandCenter{
+  margin-top:12px !important;
+  padding:16px 18px !important;
+  border-radius:22px !important;
+}
+#mh2CommandCenter .mh2-action-center-copy{
+  line-height:1.28 !important;
+}
+#mh2AiPrompt{
+  min-height:42px !important;
+}
+#mh2CommandCenter .mh2-action-center-light-grid{
+  margin-top:10px !important;
+  gap:8px !important;
+}
+#mh2CommandCenter .mh2-action-center-light-grid a{
+  min-height:44px !important;
+  padding:10px 12px !important;
+}
+#mh2CommandCenter .mh2-action-center-btn{
+  min-height:44px !important;
+}
+
+  </style>
+
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Zummee Manager Hub</title>
@@ -25,7 +66,7 @@
     })();
   </script>
   <script>
-window.__MH_VERSION = 'v2_stable';
+window.__MH_VERSION = 'v482_site_auth_lock';
 
     (function(){
       try{
@@ -2255,13 +2296,185 @@ body.dark-mode .mh2-stat-box {
 html[data-theme="dark"] .mh2-command-panel{background:linear-gradient(180deg,rgba(17,30,45,.92),rgba(12,25,39,.94));border-color:rgba(155,201,255,.24)}
 html[data-theme="dark"] .mh2-command-title,html[data-theme="dark"] .mh2-attention-title,html[data-theme="dark"] .mh2-today-row{color:#e8f3ff}html[data-theme="dark"] .mh2-command-sub,html[data-theme="dark"] .mh2-attention-copy,html[data-theme="dark"] .mh2-quick-action span,html[data-theme="dark"] .mh2-today-row span{color:#a9bad0}html[data-theme="dark"] .mh2-attention-item,html[data-theme="dark"] .mh2-quick-action,html[data-theme="dark"] .mh2-today-row{background:rgba(255,255,255,.06);border-color:rgba(155,201,255,.18);color:#e8f3ff}html[data-theme="dark"] .mh2-command-btn{background:rgba(255,255,255,.06);color:#e8f3ff;border-color:rgba(155,201,255,.34)}html[data-theme="dark"] .mh2-command-btn.primary{background:#2f6fed;color:#fff}
 
-</style>
-<style id="zummee-v330-smart-alert-no-flash-css">
-html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip .mh2-smart-strip{opacity:0!important;visibility:hidden!important;}
-html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"Loading smart alerts…";display:block;margin-top:14px;padding:14px 16px;border-radius:18px;background:#f4f7fb;color:#64748b;font-weight:800;}
-#smartAlertStrip .mh2-alert{transition:none!important;}
-</style>
+/* v410a Manager Hub Performance Split */
+.mh2-action-center-link{border:2px solid rgba(47,111,237,.30);background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,251,255,.98));border-radius:22px;padding:18px;box-shadow:0 10px 24px rgba(18,50,77,.07);display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;margin-top:12px;}
+.mh2-action-center-title{font-size:20px;font-weight:950;color:#12324d;letter-spacing:-.03em;margin:2px 0 4px}.mh2-action-center-copy{color:#63758a;font-weight:750;font-size:13px;line-height:1.35}.mh2-action-center-btn{min-height:46px;border-radius:16px;background:#17365f;color:#fff;text-decoration:none;font-weight:950;display:inline-flex;align-items:center;justify-content:center;padding:0 18px;white-space:nowrap}.mh2-action-center-light-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}.mh2-action-center-light-grid a{border:1.5px solid rgba(47,111,237,.22);background:white;border-radius:16px;text-decoration:none;color:#17365f;font-weight:900;padding:12px 14px;min-height:48px;display:flex;align-items:center;justify-content:center;text-align:center}@media(max-width:760px){.mh2-action-center-link{grid-template-columns:1fr}.mh2-action-center-light-grid{grid-template-columns:1fr 1fr}.mh2-action-center-btn{width:100%}}
+/* v410b: action cards moved off hub for faster first paint */
+.mh2-main{grid-template-columns:1fr!important;}
+.mh2-action-center-link{margin-bottom:6px;}
 
+/* v410b: action cards moved off hub for faster first paint */
+.mh2-main{grid-template-columns:1fr!important;}
+.mh2-action-center-link{margin-bottom:6px;}
+
+/* v410c: Live Activity moved above Smart Alerts and made collapsible */
+#activityFeedCard.mh2-live-primary{margin-top:18px;}
+#activityFeedCard.is-collapsed #activityFeedSection,
+#activityFeedCard.is-collapsed #activityFeedFooter{display:none!important;}
+#activityFeedToggleBtn{min-height:40px;padding:0 14px;}
+#activityFeedHeader{align-items:flex-start;}
+@media(max-width:760px){#activityFeedHeader .mh2-actions{width:100%;justify-content:flex-start;}#activityFeedToggleBtn{flex:1 1 auto;}}
+
+
+/* v410e: compact collapsible Live Activity header */
+#activityFeedCard.mh2-live-primary{padding:18px 22px;}
+#activityFeedCard.is-collapsed{padding:14px 22px;}
+#activityFeedHeader.mh2-live-compact-head{
+  display:flex;
+  align-items:center!important;
+  justify-content:space-between;
+  gap:16px;
+  margin:0;
+}
+#activityFeedHeader .mh2-section-title{margin:0;line-height:1;}
+.mh2-live-title-wrap{display:flex;align-items:center;min-width:0;}
+.mh2-live-compact-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-left:auto;}
+#activityFeedToggleBtn{min-height:44px;padding:0 18px;border-radius:999px;}
+#activityFeedCard.is-collapsed #activityFeedHeader{margin-bottom:0;}
+#activityFeedCard.is-collapsed #activityFeedSection,
+#activityFeedCard.is-collapsed #activityFeedFooter{display:none!important;}
+#activityFeedCard.is-collapsed .mh2-live-compact-actions .mh2-btn,
+#activityFeedCard.is-collapsed .mh2-live-compact-actions .mh2-status-pill{min-height:42px;}
+@media(max-width:760px){
+  #activityFeedCard.mh2-live-primary{padding:16px;}
+  #activityFeedHeader.mh2-live-compact-head{align-items:flex-start!important;flex-direction:column;}
+  .mh2-live-compact-actions{width:100%;justify-content:flex-start;margin-left:0;}
+}
+
+/* v442 Operations Portal due-date pill: one small status lane directly under Live Activity. */
+#mh2OperationsPortalPill{
+  margin-top:10px;
+  min-height:68px;
+  padding:12px 16px;
+  border-radius:22px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  text-decoration:none;
+  color:var(--ink);
+  background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(246,250,254,.90));
+  border:2px solid rgba(141,190,255,.55);
+  box-shadow:0 10px 24px rgba(18,42,67,.07), inset 0 1px 0 rgba(255,255,255,.80);
+  transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
+}
+#mh2OperationsPortalPill:hover{
+  transform:translateY(-1px);
+  box-shadow:0 14px 28px rgba(18,42,67,.10), inset 0 1px 0 rgba(255,255,255,.85);
+}
+.mh2-ops-pill-main{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.mh2-ops-pill-kicker{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#2f5b8f;}
+.mh2-ops-pill-title{font-size:16px;font-weight:900;line-height:1.18;letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mh2-ops-pill-badge{
+  min-height:36px;
+  padding:0 13px;
+  border-radius:999px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:#fff;
+  border:1px solid rgba(47,91,143,.16);
+  color:#2f5b8f;
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  white-space:nowrap;
+  box-shadow:0 8px 18px rgba(18,42,67,.05);
+}
+#mh2OperationsPortalPill.is-clear{border-color:#22c55e;background:linear-gradient(180deg,#f7fbf8,#eef8f1);}
+#mh2OperationsPortalPill.is-clear .mh2-ops-pill-kicker,#mh2OperationsPortalPill.is-clear .mh2-ops-pill-title,#mh2OperationsPortalPill.is-clear .mh2-ops-pill-badge{color:#166534;}
+#mh2OperationsPortalPill.is-clear .mh2-ops-pill-badge{border-color:rgba(34,197,94,.36);}
+#mh2OperationsPortalPill.is-due{border-color:#ef4444;background:linear-gradient(180deg,#fff7f7,#ffefef);box-shadow:0 0 0 0 rgba(239,68,68,.20),0 10px 24px rgba(239,68,68,.12);animation:mh2OpsPillPulse 1.8s ease-in-out infinite;}
+#mh2OperationsPortalPill.is-due .mh2-ops-pill-kicker,#mh2OperationsPortalPill.is-due .mh2-ops-pill-title,#mh2OperationsPortalPill.is-due .mh2-ops-pill-badge{color:#b91c1c;}
+#mh2OperationsPortalPill.is-due .mh2-ops-pill-badge{border-color:rgba(239,68,68,.42);}
+#mh2OperationsPortalPill.is-loading{opacity:.82;}
+@keyframes mh2OpsPillPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.24),0 10px 24px rgba(239,68,68,.12);}
+  50%{box-shadow:0 0 0 7px rgba(239,68,68,0),0 12px 28px rgba(239,68,68,.16);}
+}
+html[data-theme="dark"] #mh2OperationsPortalPill{background:linear-gradient(180deg,rgba(24,39,57,.96),rgba(18,30,45,.94));border-color:rgba(130,177,255,.22);color:var(--ink);}
+html[data-theme="dark"] #mh2OperationsPortalPill.is-clear{background:linear-gradient(180deg,rgba(18,52,38,.92),rgba(11,34,24,.96));border-color:rgba(34,197,94,.35);}
+html[data-theme="dark"] #mh2OperationsPortalPill.is-due{background:linear-gradient(180deg,rgba(79,23,29,.96),rgba(53,14,19,.98));border-color:rgba(239,68,68,.48);}
+@media(max-width:760px){
+  #mh2OperationsPortalPill{align-items:flex-start;flex-direction:column;border-radius:20px;}
+  .mh2-ops-pill-title{white-space:normal;}
+}
+
+/* v469: compact one-row operations shortcuts with green pulse on Action Center. */
+.mh2-ops-shortcut-row{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+  margin-top:10px;
+  margin-bottom:10px;
+  align-items:center;
+}
+.mh2-ops-shortcut{
+  min-height:42px;
+  padding:0 12px;
+  border-radius:999px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  text-decoration:none;
+  color:#17365f;
+  background:rgba(255,255,255,.92);
+  border:2px solid rgba(169,200,255,.68);
+  box-shadow:0 6px 14px rgba(18,42,67,.04), inset 0 1px 0 rgba(255,255,255,.88);
+  font-size:13px;
+  font-weight:950;
+  letter-spacing:-.005em;
+  white-space:nowrap;
+  transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+.mh2-ops-shortcut:hover{
+  transform:translateY(-1px);
+  border-color:rgba(47,91,143,.28);
+  box-shadow:0 10px 20px rgba(18,42,67,.065), inset 0 1px 0 rgba(255,255,255,.92);
+}
+.mh2-ops-shortcut--primary{
+  color:#17365f;
+  background:rgba(255,255,255,.92);
+  border-color:rgba(169,200,255,.68);
+  box-shadow:0 6px 14px rgba(18,42,67,.04), inset 0 1px 0 rgba(255,255,255,.88), 0 0 0 0 rgba(34,197,94,.32);
+  animation:mh2ActionCenterGreenPulse 1.85s ease-in-out infinite;
+}
+@keyframes mh2ActionCenterGreenPulse{
+  0%,100%{
+    border-color:rgba(169,200,255,.68);
+    box-shadow:0 6px 14px rgba(18,42,67,.04), inset 0 1px 0 rgba(255,255,255,.88), 0 0 0 0 rgba(34,197,94,.34);
+  }
+  50%{
+    border-color:rgba(34,197,94,.65);
+    box-shadow:0 8px 18px rgba(18,42,67,.055), inset 0 1px 0 rgba(255,255,255,.9), 0 0 0 7px rgba(34,197,94,0);
+  }
+}
+html[data-theme="dark"] .mh2-ops-shortcut{
+  color:#eef5ff;
+  background:rgba(255,255,255,.06);
+  border-color:rgba(211,226,245,.14);
+  box-shadow:none;
+}
+html[data-theme="dark"] .mh2-ops-shortcut--primary{
+  color:#eef5ff;
+  background:rgba(255,255,255,.06);
+  border-color:rgba(211,226,245,.14);
+  animation:mh2ActionCenterGreenPulseDark 1.85s ease-in-out infinite;
+}
+@keyframes mh2ActionCenterGreenPulseDark{
+  0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.28);border-color:rgba(211,226,245,.14);}
+  50%{box-shadow:0 0 0 7px rgba(34,197,94,0);border-color:rgba(34,197,94,.55);}
+}
+@media(max-width:700px){
+  .mh2-ops-shortcut-row{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media(max-width:430px){
+  .mh2-ops-shortcut-row{grid-template-columns:1fr;}
+}
+
+</style>
 <!-- v370 manager hub schema-safe query cleanup -->
 <script>
 (function(){
@@ -2269,6 +2482,193 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
   console.info('[MH2 v380] auth-gated schema-safe manager hub queries active: no optional legacy maintenance_events, no submitted_at/created_at ordering dependency.');
 })();
 </script>
+
+<style id="zummee-v410n-weather-contrast-polish">
+/* v410n Weather Hub contrast polish: cloudy/rain/snow use dark readable typography with glass backing. */
+#weatherHeroCard.mh2-weather-hero.wx-cloudy,
+#weatherHeroCard.mh2-weather-hero.wx-overcast,
+#weatherHeroCard.mh2-weather-hero.wx-rain,
+#weatherHeroCard.mh2-weather-hero.wx-rain-overcast,
+#weatherHeroCard.mh2-weather-hero.wx-snow,
+#weatherHeroCard.mh2-weather-hero.wx-ice{
+  color:#17324d !important;
+  text-shadow:none !important;
+}
+
+#weatherHeroCard.mh2-weather-hero.wx-cloudy::before,
+#weatherHeroCard.mh2-weather-hero.wx-overcast::before,
+#weatherHeroCard.mh2-weather-hero.wx-rain::before,
+#weatherHeroCard.mh2-weather-hero.wx-rain-overcast::before,
+#weatherHeroCard.mh2-weather-hero.wx-snow::before,
+#weatherHeroCard.mh2-weather-hero.wx-ice::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.72) 0%, rgba(255,255,255,.48) 45%, rgba(255,255,255,.18) 100%),
+    radial-gradient(circle at 24% 26%, rgba(255,255,255,.66), transparent 44%);
+  backdrop-filter:saturate(1.04);
+  -webkit-backdrop-filter:saturate(1.04);
+}
+
+#weatherHeroCard.mh2-weather-hero.wx-rain::before,
+#weatherHeroCard.mh2-weather-hero.wx-rain-overcast::before{
+  background:
+    linear-gradient(90deg, rgba(238,246,255,.78) 0%, rgba(238,246,255,.54) 48%, rgba(238,246,255,.22) 100%),
+    radial-gradient(circle at 22% 24%, rgba(255,255,255,.58), transparent 46%);
+}
+
+#weatherHeroCard.mh2-weather-hero.wx-snow::before,
+#weatherHeroCard.mh2-weather-hero.wx-ice::before{
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.82) 0%, rgba(250,253,255,.64) 50%, rgba(245,250,255,.26) 100%),
+    radial-gradient(circle at 22% 24%, rgba(255,255,255,.74), transparent 48%);
+}
+
+#weatherHeroCard.mh2-weather-hero.wx-cloudy > *:not(.mh2-weather-scene),
+#weatherHeroCard.mh2-weather-hero.wx-overcast > *:not(.mh2-weather-scene),
+#weatherHeroCard.mh2-weather-hero.wx-rain > *:not(.mh2-weather-scene),
+#weatherHeroCard.mh2-weather-hero.wx-rain-overcast > *:not(.mh2-weather-scene),
+#weatherHeroCard.mh2-weather-hero.wx-snow > *:not(.mh2-weather-scene),
+#weatherHeroCard.mh2-weather-hero.wx-ice > *:not(.mh2-weather-scene){
+  position:relative;
+  z-index:2;
+}
+
+#weatherHeroCard.mh2-weather-hero.wx-cloudy .mh2-kicker,
+#weatherHeroCard.mh2-weather-hero.wx-cloudy .mh2-weather-temp,
+#weatherHeroCard.mh2-weather-hero.wx-cloudy .mh2-weather-copy,
+#weatherHeroCard.mh2-weather-hero.wx-cloudy .mh2-daylight-times,
+#weatherHeroCard.mh2-weather-hero.wx-cloudy .mh2-daylight-times span,
+#weatherHeroCard.mh2-weather-hero.wx-overcast .mh2-kicker,
+#weatherHeroCard.mh2-weather-hero.wx-overcast .mh2-weather-temp,
+#weatherHeroCard.mh2-weather-hero.wx-overcast .mh2-weather-copy,
+#weatherHeroCard.mh2-weather-hero.wx-overcast .mh2-daylight-times,
+#weatherHeroCard.mh2-weather-hero.wx-overcast .mh2-daylight-times span,
+#weatherHeroCard.mh2-weather-hero.wx-rain .mh2-kicker,
+#weatherHeroCard.mh2-weather-hero.wx-rain .mh2-weather-temp,
+#weatherHeroCard.mh2-weather-hero.wx-rain .mh2-weather-copy,
+#weatherHeroCard.mh2-weather-hero.wx-rain .mh2-daylight-times,
+#weatherHeroCard.mh2-weather-hero.wx-rain .mh2-daylight-times span,
+#weatherHeroCard.mh2-weather-hero.wx-rain-overcast .mh2-kicker,
+#weatherHeroCard.mh2-weather-hero.wx-rain-overcast .mh2-weather-temp,
+#weatherHeroCard.mh2-weather-hero.wx-rain-overcast .mh2-weather-copy,
+#weatherHeroCard.mh2-weather-hero.wx-rain-overcast .mh2-daylight-times,
+#weatherHeroCard.mh2-weather-hero.wx-rain-overcast .mh2-daylight-times span,
+#weatherHeroCard.mh2-weather-hero.wx-snow .mh2-kicker,
+#weatherHeroCard.mh2-weather-hero.wx-snow .mh2-weather-temp,
+#weatherHeroCard.mh2-weather-hero.wx-snow .mh2-weather-copy,
+#weatherHeroCard.mh2-weather-hero.wx-snow .mh2-daylight-times,
+#weatherHeroCard.mh2-weather-hero.wx-snow .mh2-daylight-times span,
+#weatherHeroCard.mh2-weather-hero.wx-ice .mh2-kicker,
+#weatherHeroCard.mh2-weather-hero.wx-ice .mh2-weather-temp,
+#weatherHeroCard.mh2-weather-hero.wx-ice .mh2-weather-copy,
+#weatherHeroCard.mh2-weather-hero.wx-ice .mh2-daylight-times,
+#weatherHeroCard.mh2-weather-hero.wx-ice .mh2-daylight-times span{
+  color:#17324d !important;
+  text-shadow:none !important;
+}
+
+#weatherHeroCard.mh2-weather-hero.wx-cloudy .mh2-weather-temp,
+#weatherHeroCard.mh2-weather-hero.wx-overcast .mh2-weather-temp,
+#weatherHeroCard.mh2-weather-hero.wx-rain .mh2-weather-temp,
+#weatherHeroCard.mh2-weather-hero.wx-rain-overcast .mh2-weather-temp,
+#weatherHeroCard.mh2-weather-hero.wx-snow .mh2-weather-temp,
+#weatherHeroCard.mh2-weather-hero.wx-ice .mh2-weather-temp{
+  color:#102a45 !important;
+}
+
+#weatherHeroCard.mh2-weather-hero.wx-cloudy .mh2-chip,
+#weatherHeroCard.mh2-weather-hero.wx-overcast .mh2-chip,
+#weatherHeroCard.mh2-weather-hero.wx-rain .mh2-chip,
+#weatherHeroCard.mh2-weather-hero.wx-rain-overcast .mh2-chip,
+#weatherHeroCard.mh2-weather-hero.wx-snow .mh2-chip,
+#weatherHeroCard.mh2-weather-hero.wx-ice .mh2-chip{
+  background:rgba(255,255,255,.68) !important;
+  border:1px solid rgba(23,50,77,.12) !important;
+  color:#17324d !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.72), 0 8px 18px rgba(18,42,67,.06) !important;
+}
+
+#weatherHeroCard.mh2-weather-hero.wx-cloudy .mh2-daylight-row,
+#weatherHeroCard.mh2-weather-hero.wx-overcast .mh2-daylight-row,
+#weatherHeroCard.mh2-weather-hero.wx-rain .mh2-daylight-row,
+#weatherHeroCard.mh2-weather-hero.wx-rain-overcast .mh2-daylight-row,
+#weatherHeroCard.mh2-weather-hero.wx-snow .mh2-daylight-row,
+#weatherHeroCard.mh2-weather-hero.wx-ice .mh2-daylight-row{
+  background:rgba(23,50,77,.10) !important;
+}
+
+#weatherHeroCard.mh2-weather-hero.wx-cloudy .mh2-daylight-fill,
+#weatherHeroCard.mh2-weather-hero.wx-overcast .mh2-daylight-fill,
+#weatherHeroCard.mh2-weather-hero.wx-rain .mh2-daylight-fill,
+#weatherHeroCard.mh2-weather-hero.wx-rain-overcast .mh2-daylight-fill,
+#weatherHeroCard.mh2-weather-hero.wx-snow .mh2-daylight-fill,
+#weatherHeroCard.mh2-weather-hero.wx-ice .mh2-daylight-fill{
+  background:linear-gradient(90deg, rgba(235,199,84,.54), rgba(255,231,153,.96), rgba(235,199,84,.54)) !important;
+}
+
+#weatherHeroCard.mh2-weather-hero.wx-clear,
+#weatherHeroCard.mh2-weather-hero.wx-night,
+#weatherHeroCard.mh2-weather-hero.wx-sunrise,
+#weatherHeroCard.mh2-weather-hero.wx-sunset{
+  color:#fff !important;
+}
+</style>
+
+<style id="mh2-ask-zummee-modal-v467-css">
+/* v467: Ask Zummee moves from inline section to compact header modal */
+#mh2AiAssistantInline{display:none!important;}
+#mh2AskZummeeBtn{border-color:rgba(47,91,143,.16)!important;}
+.mh2-ask-modal-overlay{
+  position:fixed;
+  inset:0;
+  z-index:9998;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  background:rgba(10,24,40,.42);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+}
+.mh2-ask-modal-overlay.is-open{display:flex;}
+.mh2-ask-modal{
+  width:min(720px,94vw);
+  border-radius:30px;
+  border:2px solid rgba(169,200,255,.88);
+  background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(247,251,255,.98));
+  box-shadow:0 28px 80px rgba(18,42,67,.24), inset 0 1px 0 rgba(255,255,255,.9);
+  padding:24px;
+  color:#17324d;
+}
+.mh2-ask-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px;}
+.mh2-ask-modal-title{margin:4px 0 0;font-size:30px;line-height:1;font-weight:950;letter-spacing:-.04em;color:#17365f;}
+.mh2-ask-modal-sub{margin:8px 0 0;color:#63758a;font-weight:750;line-height:1.35;font-size:14px;max-width:560px;}
+.mh2-ask-close{appearance:none;border:1px solid rgba(169,200,255,.7);background:#fff;color:#17365f;width:44px;height:44px;border-radius:16px;font-size:22px;font-weight:950;cursor:pointer;box-shadow:0 10px 24px rgba(18,42,67,.08);}
+.mh2-ask-modal .mh2-ai-chip-row{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 14px;}
+.mh2-ask-modal .mh2-ai-chip{border:1px solid rgba(47,111,237,.28);background:#fff;color:#245aa3;border-radius:999px;padding:10px 13px;font-size:13px;font-weight:900;cursor:pointer;}
+.mh2-ask-modal .mh2-ai-input-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:end;}
+.mh2-ask-modal #mh2AiPrompt{width:100%;min-height:64px;max-height:140px;resize:vertical;border:2px solid #cfe3ff;border-radius:20px;padding:14px 16px;font-size:15px;color:#12324d;background:#fff;font-family:inherit;line-height:1.35;}
+.mh2-ask-modal .mh2-ai-send,.mh2-ask-modal .mh2-ai-mic{min-height:54px;border:2px solid #2f6fed;border-radius:18px;padding:0 18px;font-size:14px;font-weight:950;cursor:pointer;white-space:nowrap;}
+.mh2-ask-modal .mh2-ai-send{background:#2f6fed;color:#fff;}
+.mh2-ask-modal .mh2-ai-mic{background:#fff;color:#12324d;}
+.mh2-ask-modal .mh2-ai-mic.is-listening{background:#fff4e6;border-color:#f59e0b;color:#92400e;}
+html[data-theme="dark"] .mh2-ask-modal{background:linear-gradient(180deg,rgba(17,30,45,.98),rgba(12,25,39,.98));border-color:rgba(155,201,255,.25);color:#e8f3ff;}
+html[data-theme="dark"] .mh2-ask-modal-title{color:#f1f6fc;}
+html[data-theme="dark"] .mh2-ask-modal-sub{color:#a9bad0;}
+html[data-theme="dark"] .mh2-ask-close,html[data-theme="dark"] .mh2-ask-modal .mh2-ai-chip,html[data-theme="dark"] .mh2-ask-modal #mh2AiPrompt,html[data-theme="dark"] .mh2-ask-modal .mh2-ai-mic{background:rgba(255,255,255,.06);border-color:rgba(155,201,255,.22);color:#e8f3ff;}
+@media(max-width:760px){
+  .mh2-ask-modal-overlay{padding:14px;align-items:flex-end;}
+  .mh2-ask-modal{border-radius:26px;padding:20px;}
+  .mh2-ask-modal .mh2-ai-input-row{grid-template-columns:1fr;}
+  .mh2-ask-modal .mh2-ai-send,.mh2-ask-modal .mh2-ai-mic{width:100%;}
+}
+</style>
+
+  <script src="shared/zummee-board-data.js?v=463-manager-hub-notification-events-hard-lock"></script>
 </head>
 <body class="manager-hub-page">
   <main class="mh2-page">
@@ -2281,6 +2681,7 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
           <div class="mh2-actions mh2-actions--header">
             <a class="mh2-btn mh2-btn--secondary" id="mh2ProfileBtn" href="profile.html">Profile</a>
             <button class="mh2-btn mh2-btn--ghost" id="mh2ThemeToggleBtn" type="button" aria-pressed="false">Dark mode</button>
+            <button class="mh2-btn mh2-btn--secondary" id="mh2AskZummeeBtn" type="button" aria-haspopup="dialog" aria-controls="mh2AskZummeeModal">Ask Zummee</button>
             <button class="mh2-btn mh2-btn--secondary" id="mh2SignOutBtn" type="button">Sign out</button>
           </div>
         </div>
@@ -2358,6 +2759,37 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
             </div>
           </section>
 
+      <section id="activityFeedCard" class="mh2-card mh2-live-primary" aria-label="Live activity shell">
+          <div id="activityFeedHeader" class="mh2-section-head mh2-live-compact-head">
+            <div id="liveActivityTitleWrapper" class="mh2-live-title-wrap">
+              <h2 id="liveActivityTitle" class="mh2-section-title">Live Activity</h2>
+            </div>
+            <div class="mh2-actions mh2-live-compact-actions">
+              <div class="mh2-status-pill" id="mh2LiveActivityCount">0</div>
+              <button id="activityFeedToggleBtn" class="mh2-btn mh2-btn--secondary mh2-live-toggle" type="button" aria-expanded="false" aria-controls="activityFeedSection">Expand</button>
+            </div>
+          </div>
+          <div id="activityFeedSection" class="mh2-feed"><div id="activityFeedList" class="mh2-feed"></div></div>
+          <div id="activityFeedFooter" class="mh2-footnote">
+            <span id="mh2LiveActivityNote">Recent feed items for the selected community.</span>
+          </div>
+        </section>
+
+        <a id="mh2OperationsPortalPill" class="mh2-ops-portal-pill is-loading" href="daily_ops_rebuild.html" data-mh2-context-link aria-label="Operations Portal due-date status">
+          <div class="mh2-ops-pill-main">
+            <span class="mh2-ops-pill-kicker">Operations Portal</span>
+            <span id="mh2OperationsPortalPillTitle" class="mh2-ops-pill-title">Checking operations due dates…</span>
+          </div>
+          <span id="mh2OperationsPortalPillBadge" class="mh2-ops-pill-badge">Loading</span>
+        </a>
+        <div id="mh2OperationsShortcutRow" class="mh2-ops-shortcut-row" aria-label="Operations quick actions">
+          <a id="managerActionCenterLink" class="mh2-ops-shortcut mh2-ops-shortcut--primary" href="manager_action_center.html" data-mh2-context-link>Open Action Center</a>
+          <a class="mh2-ops-shortcut" href="resident_work_orders.html?new_work_order=1" data-mh2-context-link>+ Work Order</a>
+          <a class="mh2-ops-shortcut" href="board_member_hub_v2.html" data-mh2-context-link>Board Hub</a>
+          <a class="mh2-ops-shortcut" href="maintenance_updates.html" data-mh2-context-link>Live Updates</a>
+        </div>
+
+
       <section id="smartAlertStrip" class="mh2-card mh2-section" aria-label="Smart alerts shell">
         <div class="mh2-section-head">
           <div>
@@ -2367,9 +2799,9 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
           </div>
         </div>
         <div class="mh2-smart-strip">
-          <a id="mh2AlertBoard" class="mh2-alert is-good" href="board_member_hub.html">
-            <div class="mh2-alert-top"><div class="mh2-alert-title">Board review status</div><div class="mh2-alert-badge">Stable</div></div>
-            <div class="mh2-alert-copy">Board queue updates will surface here for the selected community.</div>
+          <a id="mh2AlertBoard" class="mh2-alert is-attention" href="board_member_hub_v2.html" data-zummee-board-loading="1">
+            <div class="mh2-alert-top"><div class="mh2-alert-title">Board review status</div><div class="mh2-alert-badge">Loading</div></div>
+            <div class="mh2-alert-copy">Checking current board items for review.</div>
           </a>
           <a id="mh2AlertActivity" class="mh2-alert is-good" href="maintenance_updates.html">
             <div class="mh2-alert-top"><div class="mh2-alert-title">Maintenance activity</div><div class="mh2-alert-badge">Quiet</div></div>
@@ -2381,65 +2813,6 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
           </a>
         </div>
       </section>
-      <section id="mh2AiAssistantInline" class="mh2-ai-inline" aria-label="Zummee AI Assistant quick entry">
-        <div class="mh2-kicker">AI Assistant</div>
-        <div class="mh2-ai-inline-title">Ask Zummee what you need next</div>
-        <div class="mh2-ai-inline-sub">Type or dictate a request for the selected community — schedule a date, ask a covenant/bylaw question, or find the right Zummee page.</div>
-        <div class="mh2-ai-chip-row">
-          <button class="mh2-ai-chip" type="button" data-ai-prompt="Schedule a board meeting reminder for this community">Schedule date</button>
-          <button class="mh2-ai-chip" type="button" data-ai-prompt="Answer a covenant or bylaw question for this community">Covenants / bylaws</button>
-          <button class="mh2-ai-chip" type="button" data-ai-prompt="Where do I go in Zummee to complete this task?">Find page</button>
-        </div>
-        <div class="mh2-ai-input-row">
-          <textarea id="mh2AiPrompt" placeholder="Example: Remind me about the pool inspection next Friday, or can a resident install a fence?"></textarea>
-          <button id="mh2AiDictateBtn" class="mh2-ai-mic" type="button">Dictate</button>
-          <button id="mh2AiSendBtn" class="mh2-ai-send" type="button">Ask Assistant</button>
-        </div>
-      </section>
-
-      <section id="mh2CommandCenter" class="mh2-command-grid" aria-label="Manager command center">
-        <section class="mh2-command-panel mh2-command-panel--wide" aria-label="Needs your attention">
-          <div class="mh2-command-head">
-            <div>
-              <div class="mh2-kicker">Action queue</div>
-              <h2 class="mh2-command-title">Needs Your Attention</h2>
-              <div class="mh2-command-sub">Items managers can act on now for the selected community.</div>
-            </div>
-            <div id="mh2NeedsAttentionCount" class="mh2-command-count">0</div>
-          </div>
-          <div id="mh2NeedsAttentionList" class="mh2-attention-list"><div class="mh2-command-empty">Loading action items…</div></div>
-        </section>
-
-        <section class="mh2-command-panel" aria-label="Quick actions">
-          <div class="mh2-command-head">
-            <div>
-              <div class="mh2-kicker">One-tap starts</div>
-              <h2 class="mh2-command-title">Quick Actions</h2>
-              <div class="mh2-command-sub">Jump directly into the work managers use most often.</div>
-            </div>
-          </div>
-          <div class="mh2-quick-actions">
-            <a class="mh2-quick-action" href="resident_work_order.html"><strong>+ Work Order</strong><span>Create or review requests</span></a>
-            <a class="mh2-quick-action" href="architectural_change_request.html"><strong>+ ACC</strong><span>Open architectural flow</span></a>
-            <a class="mh2-quick-action" href="board_member_hub.html#calendar"><strong>+ Event</strong><span>Community calendar</span></a>
-            <a class="mh2-quick-action" href="property_manager_messages.html"><strong>Message</strong><span>Resident messages</span></a>
-          </div>
-        </section>
-
-        <section class="mh2-command-panel" aria-label="Today snapshot">
-          <div class="mh2-command-head">
-            <div>
-              <div class="mh2-kicker">Today</div>
-              <h2 class="mh2-command-title">Today Snapshot</h2>
-              <div class="mh2-command-sub">Events and reminders tied to the selected community.</div>
-            </div>
-          </div>
-          <div id="mh2TodaySnapshotList" class="mh2-today-list"><div class="mh2-command-empty">Loading today…</div></div>
-        </section>
-      </section>
-
-
-
       <section id="employeeHubSection" class="mh2-card mh2-section" aria-label="Employee Hub supervisor tools">
         <div class="mh2-section-head">
           <div>
@@ -2488,261 +2861,42 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
         </div>
       </section>
 
-      <section id="activityFeedCard" class="mh2-card mh2-live-primary" aria-label="Live activity shell">
-          <div id="activityFeedHeader" class="mh2-section-head">
-            <div id="liveActivityTitleWrapper">
-              <div>
-                <div class="mh2-kicker">Primary manager feed</div>
-                <h2 id="liveActivityTitle" class="mh2-section-title">Live Activity</h2>
-                <p class="mh2-section-sub">Recent work-order, maintenance, board, and annual meeting events for the selected community.</p>
-              </div>
-            </div>
-            <div class="mh2-actions">
-              <div class="mh2-status-pill" id="mh2LiveActivityCount">0</div>
-              <a class="mh2-btn mh2-btn--secondary" href="activity_history.html">View all</a>
-</div>
-          </div>
-          <div id="activityFeedSection" class="mh2-feed"><div id="activityFeedList" class="mh2-feed"></div></div>
-          <div id="activityFeedFooter" class="mh2-footnote">
-            <span id="mh2LiveActivityNote">Recent feed items for the selected community.</span>
-          </div>
-        </section>
-
-        <div class="mh2-stats">
-          <div class="mh2-stat">
-            <div class="mh2-stat-label">Board overdue</div>
-            <div class="mh2-stat-value" id="mh2BoardOverdueCount">0</div>
-            <div class="mh2-stat-note" id="mh2BoardOverdueNote">Past-due board items for the selected community.</div>
-          </div>
-          <div class="mh2-stat">
-            <div class="mh2-stat-label">Hub cards</div>
-            <div class="mh2-stat-value" id="mh2HubCardCount">19</div>
-            <div class="mh2-stat-note">Visible destinations for this account. Count updates by role.</div>
-          </div>
-        </div>
+        <!-- v464: Redundant Board Review / Action Center summary cards removed. Smart Alerts are the single board-review UI. -->
       </section>
 
-      <div class="mh2-main">
-        <div class="mh2-stack">
-          
-
-          <section id="managerBoardItemsPanel" class="mh2-card mh2-section" aria-label="Board submitted items panel">
-            <div class="mh2-section-head">
-              <div>
-                <div class="mh2-kicker">Board action queue</div>
-                <h2 class="mh2-section-title">Submitted Board Items</h2>
-                <p class="mh2-section-sub">Board-submitted items for the selected community, with open and overdue status surfaced in the panel header.</p>
-              </div>
-              <div class="mh2-actions">
-                <div class="mh2-status-pill" id="mh2BoardItemsPill">0</div>
-                <div class="mh2-status-pill" id="mh2BoardStatusPill"></div>
-                <a class="mh2-btn mh2-btn--secondary" href="board_member_hub.html">Open hub</a>
-              </div>
-            </div>
-            <div id="managerBoardItemsBody" class="mh2-list">
-              <div class="mh2-placeholder"></div>
-            </div>
-            <div id="managerBoardItemsFooter" class="mh2-footnote">
-              <span id="mh2BoardItemNote">Open board-submitted items for the selected community.</span>
-            </div>
-          </section>
-
-          <section id="managerBoardHubStatusPanel" class="mh2-card mh2-card--gold mh2-section" aria-label="Board hub status shell">
-            <div class="mh2-section-head">
-              <div>
-                <div class="mh2-kicker">Board hub summary</div>
-                <h2 class="mh2-section-title">Board Status</h2>
-                <p class="mh2-section-sub">Open and overdue board status for the selected community.</p>
-              </div>
-            </div>
-            <div id="managerBoardHubStatusBody" class="mh2-placeholder"></div>
-          </section>
-        </div>
-
-        <aside class="mh2-stack">
-          <section class="mh2-card mh2-section" aria-label="Tool cards shell">
-            <div class="mh2-tools-head">
-              <div>
-                <div class="mh2-kicker">Core tools</div>
-                <h2 class="mh2-section-title">Manager actions</h2>
-                <p class="mh2-section-sub">Your main manager destinations, with saved favorites and saved order on this device.</p>
-                <div class="mh2-favorites-note">Favorites stay pinned at the top on this device.</div><div class="mh2-drag-note">Tip: while customizing, drag cards to reorder them.</div>
-              </div>
-              <div class="mh2-tools-actions">
-                <button id="mh2CustomizeCardsBtn" class="mh2-btn mh2-btn--secondary" type="button">Customize cards</button>
-                <button id="mh2ResetCardsBtn" class="mh2-btn mh2-btn--ghost" type="button">Reset layout</button>
-              </div>
-            </div>
-            <div id="hubCards" class="mh2-tool-grid">
-              <a id="dailyOpsCard" data-card-key="daily_ops" class="mh2-tool-card mh2-tool-card--gold" href="ops.html">
-                <div class="mh2-tool-top">
-                  <div class="mh2-tool-top-left">
-                    <div class="mh2-kicker">Daily workflow</div>
-                    <div class="mh2-tool-name">Daily Ops</div>
-                  </div>
-                  <div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Ready</span></div>
-                </div>
-                <div class="mh2-tool-copy">Primary daily command surface for reminders, access codes, important dates, insurance renewals, and community-level operating notes.</div>
-                <div class="mh2-tool-meta">
-                  <div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Board queue</div><div class="mh2-tool-metric-value" data-role="metric1">0</div></div>
-                  <div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Attention</div><div class="mh2-tool-metric-value" data-role="metric2">0</div></div>
-                </div>
-                <div class="mh2-tool-controls">
-                  <button class="mh2-mini-btn" data-action="up" type="button">↑</button>
-                  <button class="mh2-mini-btn" data-action="down" type="button">↓</button>
-                  <button class="mh2-mini-btn" data-action="favorite" type="button">★</button>
-                </div>
-              </a>
-              <a id="boardMemberHubCard" data-card-key="board_hub" class="mh2-tool-card mh2-tool-card--gold" href="board_member_hub.html">
-                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Board collaboration</div><div class="mh2-tool-name">Board Member Hub</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Board</span></div></div>
-                <div class="mh2-tool-copy">Board-submitted items, action requests, meeting workflow, and resident-facing board activity for the selected community.</div>
-                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Open items</div><div class="mh2-tool-metric-value" data-role="metric1">0</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Overdue</div><div class="mh2-tool-metric-value" data-role="metric2">0</div></div></div>
-                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
-              </a>
-              <a id="residentWorkOrdersCard" data-card-key="resident_work_orders" class="mh2-tool-card" href="resident_work_orders.html">
-                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Maintenance intake</div><div class="mh2-tool-name">Resident Work Orders</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Queue</span></div></div>
-                <div class="mh2-tool-copy">Resident and employee-submitted work orders, priority handling, vendor routing, and work-order status management.</div>
-                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Open work orders</div><div class="mh2-tool-metric-value" data-role="metric1">0</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Urgent</div><div class="mh2-tool-metric-value" data-role="metric2">0</div></div></div>
-                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
-              </a>
-              <a id="liveMaintenanceUpdatesCard" data-card-key="live_updates" class="mh2-tool-card" href="maintenance_updates.html">
-                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Maintenance stream</div><div class="mh2-tool-name">Live Maintenance Updates</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Live</span></div></div>
-                <div class="mh2-tool-copy">Real-time vendor, active-job, and completion visibility for the selected community’s maintenance activity stream.</div>
-                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Live events</div><div class="mh2-tool-metric-value" data-role="metric1">0</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Urgent activity</div><div class="mh2-tool-metric-value" data-role="metric2">0</div></div></div>
-                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
-              </a>
-              <a id="mileageCard" data-card-key="mileage" class="mh2-tool-card" href="mileage.html">
-                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Compliance</div><div class="mh2-tool-name">Mileage Tracker</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Monthly</span></div></div>
-                <div class="mh2-tool-copy">Mileage submission, employee compliance, monthly reporting, and reimbursement-ready record keeping.</div>
-                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Status</div><div class="mh2-tool-metric-value" data-role="metric1">Ready</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Reminder</div><div class="mh2-tool-metric-value" data-role="metric2">25th</div></div></div>
-                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
-              </a>
-              <a id="inspectionsCard" data-card-key="inspections" class="mh2-tool-card" href="inspections.html">
-                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Field work</div><div class="mh2-tool-name">Community Inspections</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Field</span></div></div>
-                <div class="mh2-tool-copy">Inspection logging, issue capture, reminder follow-up, and fast conversion from field findings into work orders.</div>
-                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Inspection WO</div><div class="mh2-tool-metric-value" data-role="metric1">0</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Follow-up</div><div class="mh2-tool-metric-value" data-role="metric2">Ready</div></div></div>
-                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
-              </a>
-              <a id="annualMeetingsCard" data-card-key="annual_meetings" class="mh2-tool-card" href="annual_meetings.html">
-                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Meeting workflow</div><div class="mh2-tool-name">Annual Meetings</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Packets</span></div></div>
-                <div class="mh2-tool-copy">Packet generation, approval flow, mailed records, and meeting presentation workflow for annual meeting readiness.</div>
-                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Open approvals</div><div class="mh2-tool-metric-value" data-role="metric1">0</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Status</div><div class="mh2-tool-metric-value" data-role="metric2">Ready</div></div></div>
-                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
-              </a>
-              <a id="preferredVendorsCard" data-card-key="preferred_vendors" class="mh2-tool-card" href="preferred_vendors.html">
-                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Vendor network</div><div class="mh2-tool-name">Preferred Vendors</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Directory</span></div></div>
-                <div class="mh2-tool-copy">Approved service partners, quick vendor lookups, and daily-ops vendor routing support for community work.</div>
-                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Access</div><div class="mh2-tool-metric-value" data-role="metric1">Ready</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Quick use</div><div class="mh2-tool-metric-value" data-role="metric2">On</div></div></div>
-                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
-              </a>
-              <a id="remindersCard" data-card-key="reminders" class="mh2-tool-card" href="inspections.html#reminders">
-                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Task follow-up</div><div class="mh2-tool-name">Reminders</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Schedule</span></div></div>
-                <div class="mh2-tool-copy">Reminder queue for due-soon and overdue follow-up items tied to inspections and daily operations.</div>
-                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Due soon</div><div class="mh2-tool-metric-value" data-role="metric1">0</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Overdue</div><div class="mh2-tool-metric-value" data-role="metric2">0</div></div></div>
-                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
-              </a>
-              <a id="communityTextingCard" data-card-key="community_texting" class="mh2-tool-card" href="emergency_texting.html">
-                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Resident communication</div><div class="mh2-tool-name">Community Texting</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Texting</span></div></div>
-                <div class="mh2-tool-copy">Compose and send community-wide alerts, schedule messages, and review prior emergency text activity.</div>
-                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Status</div><div class="mh2-tool-metric-value" data-role="metric1">Ready</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Mode</div><div class="mh2-tool-metric-value" data-role="metric2">Live</div></div></div>
-                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
-              </a>
-              <a id="companyDirectoryCard" data-card-key="company_directory" class="mh2-tool-card" href="company_directory.html">
-                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Contacts</div><div class="mh2-tool-name">Company Directory</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Directory</span></div></div>
-                <div class="mh2-tool-copy">Management-company contacts and internal directory access for quick lookups and communication.</div>
-                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Access</div><div class="mh2-tool-metric-value" data-role="metric1">Ready</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">View</div><div class="mh2-tool-metric-value" data-role="metric2">Company</div></div></div>
-                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
-              </a>
-              <a id="managerTrainingCard" data-card-key="training" class="mh2-tool-card" href="manager_info_training.html">
-                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Reference</div><div class="mh2-tool-name">Manager Info &amp; Training</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Guide</span></div></div>
-                <div class="mh2-tool-copy">Training materials, manager-facing guidance, and internal process references for daily Zummee use.</div>
-                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Status</div><div class="mh2-tool-metric-value" data-role="metric1">Ready</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Use</div><div class="mh2-tool-metric-value" data-role="metric2">Reference</div></div></div>
-                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
-              </a>
-              <a id="onlineVotingCard" data-card-key="online_voting" class="mh2-tool-card" href="online_voting.html">
-                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Resident participation</div><div class="mh2-tool-name">Online Voting</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Voting</span></div></div>
-                <div class="mh2-tool-copy">Election setup, ballot flow, nominations, proxy handling, and live results for community voting.</div>
-                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Status</div><div class="mh2-tool-metric-value" data-role="metric1">Ready</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Mode</div><div class="mh2-tool-metric-value" data-role="metric2">Live</div></div></div>
-                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
-              </a>
-              <a id="boardMeetingsCard" data-card-key="board_meetings" class="mh2-tool-card" href="board_meetings.html">
-                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Agenda workflow</div><div class="mh2-tool-name">Board Meetings</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Meetings</span></div></div>
-                <div class="mh2-tool-copy">Agenda building, meeting prep, minutes workflow, and board-meeting coordination for the selected community.</div>
-                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Status</div><div class="mh2-tool-metric-value" data-role="metric1">Ready</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Next</div><div class="mh2-tool-metric-value" data-role="metric2">Agenda</div></div></div>
-                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
-              </a><a id="communityExperienceCard" data-card-key="community_experience" class="mh2-tool-card" href="community_experience.html?preview=manager">
-                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Resident experience</div><div class="mh2-tool-name">Community Experience</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Portal</span></div></div>
-                <div class="mh2-tool-copy">Preview the Facebook-style resident landing page with events, reservations, and resident work orders.</div>
-                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">View</div><div class="mh2-tool-metric-value" data-role="metric1">Preview</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Role</div><div class="mh2-tool-metric-value" data-role="metric2">Manager</div></div></div>
-                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
-              </a>
-              <a id="residentDirectoryCard" data-card-key="resident_directory" class="mh2-tool-card" href="resident_directory.html">
-                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Resident records</div><div class="mh2-tool-name">Resident Directory</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Directory</span></div></div>
-                <div class="mh2-tool-copy">Resident roster, contact details, invite flow, and resident-management tools for the selected community.</div>
-                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Access</div><div class="mh2-tool-metric-value" data-role="metric1">Ready</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Mode</div><div class="mh2-tool-metric-value" data-role="metric2">Directory</div></div></div>
-                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
-              </a>
-              <a id="annualPresentationHubCard" data-card-key="annual_presentation_builder" class="mh2-tool-card" href="annual_presentation.html">
-                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Presentation builder</div><div class="mh2-tool-name">Annual Presentation</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Slides</span></div></div>
-                <div class="mh2-tool-copy">Build the community annual presentation with company branding, agenda content, and board-ready visuals.</div>
-                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Status</div><div class="mh2-tool-metric-value" data-role="metric1">Ready</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Output</div><div class="mh2-tool-metric-value" data-role="metric2">Slides</div></div></div>
-                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
-              </a>
-              <a id="maintenanceControlCenterCard" data-card-key="maintenance_control_center" class="mh2-tool-card" href="maintenance_dashboard.html">
-                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Operations board</div><div class="mh2-tool-name">Maintenance Control Center</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Control</span></div></div>
-                <div class="mh2-tool-copy">Kanban-style maintenance control center for open, awaiting vendor, in-progress, and completed work order management.</div>
-                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Open work</div><div class="mh2-tool-metric-value" data-role="metric1">0</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Live</div><div class="mh2-tool-metric-value" data-role="metric2">Board</div></div></div>
-                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
-              </a>
-              <a id="poolOpsCard" data-card-key="pool_ops" class="mh2-tool-card" href="pool_ops.html">
-                <div class="mh2-tool-top"><div class="mh2-tool-top-left"><div class="mh2-kicker">Seasonal operations</div><div class="mh2-tool-name">Pool Opening &amp; Closing</div></div><div class="mh2-tool-badges"><span class="mh2-tool-pill" data-role="tone">Seasonal</span></div></div>
-                <div class="mh2-tool-copy">Pool season setup and closing workflow for communities that use seasonal operations checklists.</div>
-                <div class="mh2-tool-meta"><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Status</div><div class="mh2-tool-metric-value" data-role="metric1">Ready</div></div><div class="mh2-tool-metric"><div class="mh2-tool-metric-label">Use</div><div class="mh2-tool-metric-value" data-role="metric2">Seasonal</div></div></div>
-                <div class="mh2-tool-controls"><button class="mh2-mini-btn" data-action="up" type="button">↑</button><button class="mh2-mini-btn" data-action="down" type="button">↓</button><button class="mh2-mini-btn" data-action="favorite" type="button">★</button></div>
-              </a>
-
-
-            </div>
-          </section>
-
-          <section id="boardItemsStaticCard" class="mh2-card mh2-section" aria-label="Static board summary shell">
-            <div class="mh2-section-head">
-              <div>
-                <div class="mh2-kicker">Secondary summary</div>
-                <h2 id="boardItemsStaticTitle" class="mh2-section-title">Board Snapshot</h2>
-                <p class="mh2-section-sub">A reserved card for future summary counts or a simplified board overview without crowding the main feed.</p>
-              </div>
-            </div>
-            <div class="mh2-placeholder"></div>
-          </section>
-
-          <section id="annualApprovalPanel" class="mh2-card mh2-card--gold mh2-section" aria-label="Open approvals panel">
-            <div class="mh2-section-head">
-              <div>
-                <div class="mh2-kicker">Approvals layer</div>
-                <h2 class="mh2-section-title">Open Approvals</h2>
-                <p class="mh2-section-sub" id="mh2ApprovalNote">Current annual meeting approval items in progress.</p>
-              </div>
-              <div class="mh2-actions">
-                <div class="mh2-status-pill" id="mh2ApprovalPill">0</div>
-                <a class="mh2-btn mh2-btn--secondary" href="annual_meeting_approvals.html">Open queue</a>
-              </div>
-            </div>
-            <div id="annualApprovalBody" class="mh2-list">
-              <div class="mh2-placeholder"></div>
-            </div>
-            <div class="mh2-footnote">
-              <span id="mh2ApprovalFoot">Open annual approval items for the selected community.</span>
-            </div>
-          </section>
-        </aside>
-      </div>
-    </div>
+      <!-- v465: Removed redundant Submitted Board Items and Board Status sections. Smart Alerts are the only board-review UI on Manager Hub. -->
   </main>
 
+  <div id="mh2AskZummeeModal" class="mh2-ask-modal-overlay" aria-hidden="true">
+    <div class="mh2-ask-modal" role="dialog" aria-modal="true" aria-labelledby="mh2AskZummeeTitle">
+      <div class="mh2-ask-modal-head">
+        <div>
+          <div class="mh2-kicker">AI Assistant</div>
+          <h2 id="mh2AskZummeeTitle" class="mh2-ask-modal-title">Ask Zummee</h2>
+          <p class="mh2-ask-modal-sub">Ask a question, schedule a task, dictate a request, or jump to the right Zummee page for the selected community.</p>
+        </div>
+        <button id="mh2AskZummeeClose" class="mh2-ask-close" type="button" aria-label="Close Ask Zummee">×</button>
+      </div>
+      <div class="mh2-ai-chip-row">
+        <button class="mh2-ai-chip" type="button" data-ai-prompt="Schedule a board meeting reminder for this community">Schedule date</button>
+        <button class="mh2-ai-chip" type="button" data-ai-prompt="Answer a covenant or bylaw question for this community">Covenants / bylaws</button>
+        <button class="mh2-ai-chip" type="button" data-ai-prompt="Where do I go in Zummee to complete this task?">Find page</button>
+      </div>
+      <div class="mh2-ai-input-row">
+        <textarea id="mh2AiPrompt" placeholder="Example: Remind me about the pool inspection next Friday, or can a resident install a fence?"></textarea>
+        <button id="mh2AiDictateBtn" class="mh2-ai-mic" type="button">Dictate</button>
+        <button id="mh2AiSendBtn" class="mh2-ai-send" type="button">Ask Zummee</button>
+      </div>
+    </div>
+  </div>
 
-  <script src="shared/supabase-client.js?v=2026-04-29-v327"></script>
+
+
+  <script src="shared/supabase-client.js?v=2026-05-06-v500-production-auth"></script>
+  <script src="shared/auth.js?v=2026-05-04-v486"></script>
+  <script src="shared/zummee-auth.js?v=2026-05-04-v486"></script>
   <script src="shared/data-layer-v405.js?v=2026-04-30-v405-final-context-authority-board-schema-safe"></script>
+<script src="shared/zummee-board-data.js?v=465-remove-redundant-manager-hub-board-sections"></script>
 <script src="zummee_clean_bootstrap.js?v=clean-2026-04-28"></script>
   <script>
     (function(){
@@ -3335,6 +3489,7 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
       }
       
       function setAlertCard(id, cfg){
+        if(/^mh2Alert(Board|Activity|Approvals)$/.test(String(id||''))) return;
         var el = $(id);
         if(!el) return;
         cfg = cfg || {};
@@ -3382,7 +3537,7 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
         setText('mh2BoardItemsPill', String(open.length));
         setText('mh2BoardStatusPill', overdue.length ? 'Overdue ' + overdue.length : (open.length ? 'Open ' + open.length : 'Clear'));
         setText('mh2BoardOverdueCount', String(overdue.length));
-        setText('mh2BoardOverdueNote', overdue.length ? ('Needs review in ' + (ctxCache && ctxCache.name ? ctxCache.name : 'selected community') + '.') : 'Past-due board items for the selected community.');
+        setText('mh2BoardOverdueNote', overdue.length ? ('Needs review in ' + (ctxCache && ctxCache.name ? ctxCache.name : 'selected community') + '.') : 'Current board items for the selected community.');
         var statusBody = $('managerBoardHubStatusBody');
         if(statusBody){
           if(!open.length){
@@ -3401,7 +3556,7 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
           copy: open.length
             ? (esc(String(open.length)) + ' open item' + (open.length===1?'':'s') + (overdue.length ? ', ' + esc(String(overdue.length)) + ' overdue.' : ' ready for review.'))
             : 'No open board items for the selected community.',
-          href: 'board_member_hub_rebuild.html?from=manager_hub' + (communityId ? '&community_id=' + encodeURIComponent(communityId) : '')
+          href: 'board_member_hub_v2.html?from=manager_hub' + (communityId ? '&community_id=' + encodeURIComponent(communityId) : '')
         });
         var staticCard = $('boardItemsStaticCard');
         if(staticCard){ staticCard.setAttribute('data-open-count', String(open.length)); }
@@ -3425,7 +3580,7 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
             rows = Array.isArray(sharedBoard.rows) ? sharedBoard.rows : [];
           }else{
             var sb = await requireSb();
-            var q = await sb.from('BoardMemberActionItems').select('id,community_id,title,details,due_date,created_at,status,completed_at').eq('community_id', communityId).order('created_at',{ascending:false}).limit(500);
+            var q = await sb.from('notification_events').select('id,title,message,metadata,created_at,event_type,community_id').eq('community_id', communityId).eq('event_type','board_item_submitted').order('created_at',{ascending:false}).limit(500);
             if(q.error) throw q.error;
             rows = Array.isArray(q.data) ? q.data : [];
           }
@@ -3448,7 +3603,7 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
               '<div><div class="mh2-item-title">' + esc(row.title || 'Untitled item') + '</div>' +
               '<div class="mh2-board-meta">' + meta.map(function(item){ return '<span class="mh2-chip">' + item + '</span>'; }).join('') + '</div>' +
               '<div class="mh2-item-copy">' + (desc || 'Open board-submitted item ready for review.') + '</div></div>' +
-              '<a class="mh2-item-tag mh2-board-tag' + (overdue ? ' is-overdue' : '') + '" href="board_member_hub.html">' + (overdue ? 'Overdue' : 'Open') + '</a>' +
+              '<a class="mh2-item-tag mh2-board-tag' + (overdue ? ' is-overdue' : '') + '" href="board_member_hub_v2.html">' + (overdue ? 'Overdue' : 'Open') + '</a>' +
             '</article>';
           }).join('');
         }catch(err){
@@ -3465,12 +3620,12 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
         if(type === 'maintenance' || type === 'resident_work_order') return 'resident_work_orders.html';
         if((type === 'acc_request' || type === 'architectural_change_request') && (event.acc_request_id || event.request_id)) return 'architectural_change_request.html?open_acc_request_id=' + encodeURIComponent(String(event.acc_request_id || event.request_id));
         if(type === 'acc_request' || type === 'architectural_change_request') return 'architectural_change_request.html';
-        if(type === 'board_item' && event.board_item_id) return 'board_member_hub.html';
+        if(type === 'board_item' && event.board_item_id) return 'board_member_hub_v2.html';
         if(type === 'annual_meeting') return 'annual_meetings.html';
         if(type === 'community_alert') return 'emergency_texting.html';
         if((type === 'resident_message' || type === 'resident_manager_message') && (event.message_id || event.id)) return 'employee_message_thread.html?id=' + encodeURIComponent(String(event.message_id || event.id));
         if(type === 'compliance_drive') return 'mileage.html';
-        if(msg.indexOf('board') !== -1) return 'board_member_hub.html';
+        if(msg.indexOf('board') !== -1) return 'board_member_hub_v2.html';
         if(msg.indexOf('work order') !== -1 || msg.indexOf('maintenance') !== -1) return 'resident_work_orders.html';
         return null;
       }
@@ -3492,119 +3647,99 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
         if(!list) return;
         var ctx = await getActiveCommunityContext();
         var communityId = ctx.id;
-        var communityName = ctx.name;
-        list.innerHTML = '<div class="mh2-placeholder"></div>';
-        setText('mh2LiveActivityNote', 'Refreshing live feed' + (communityName ? ' for ' + communityName : '') + '.');
-        try{
-          var sb = await requireSb();
-          var events = [];
-          function maybePush(time, message, extra){
-            if(!time || !message) return;
-            events.push(Object.assign({ time:time, message:message }, extra || {}));
-          }
-          try{
-            var notifQ = sb.from('notification_events').select('id,created_at,event_type,priority,title,message,link_url,community_id,source_table,source_id,metadata').limit(20);
-            if(communityId) notifQ = notifQ.eq('community_id', communityId);
-            var notif = await notifQ;
-            if(!notif.error && Array.isArray(notif.data)){
-              notif.data.forEach(function(row){
-                var md = row && row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
-                var msg = String(row.message || row.title || 'Notification update').trim();
-                if(/board item|board member|board-submitted/i.test(msg)) return;
-                events.push({ time:row.created_at, message:msg, type:String(row.event_type||'').toLowerCase(), priority:String(row.priority||'').toLowerCase(), link_url:row.link_url || null, request_id:md.work_order_id || md.request_id || null, board_item_id:md.board_item_id || null, community_id:row.community_id || null });
-              });
-            }
-          }catch(_e){}
-          try{
-            var annual = await sb.from('annual_meeting_activity_events').select('*').limit(12);
-            if(!annual.error && Array.isArray(annual.data)){
-              annual.data.forEach(function(row){
-                if(communityId && String((row && row.community_id) || '') !== communityId) return;
-                maybePush(row.created_at, String(row.title || row.detail || row.event_type || 'Annual meeting update').trim(), { type:'annual_meeting', community_id:row.community_id || null });
-              });
-            }
-          }catch(_e2){}
-          try{
-            var rwo = await sb.from('resident_work_orders').select('*').limit(20);
-            if(!rwo.error && Array.isArray(rwo.data)){
-              rwo.data.forEach(function(row){
-                if(communityId && String((row && row.community_id) || '') !== communityId) return;
-                var priority = String(row.priority || '').toLowerCase();
-                var status = String(row.status || '').toLowerCase();
-                var unit = String(row.unit_number || '').trim().toLowerCase();
-                var label = unit === 'inspection' ? 'Inspection work order created' : 'Employee work order created';
-                if(priority === 'urgent') label = 'Urgent ' + label;
-                else if(['in_progress','assigned_to_vendor','active'].indexOf(status) !== -1) label = 'Employee work order in progress';
-                maybePush(row.submitted_at || row.created_at, label, { type:'resident_work_order', community_id:row.community_id || null, request_id:row.id });
-              });
-            }
-          }catch(_e3){}
-          try{
-            var accQ = sb.from('architectural_change_requests').select('id,community_id,resident_name,address,request_title,request_type,status,created_at,updated_at').limit(20);
-            if(communityId) accQ = accQ.eq('community_id', communityId);
-            var acc = await accQ;
-            if(!acc.error && Array.isArray(acc.data)){
-              acc.data.forEach(function(row){
-                var resident = String(row.resident_name || 'Resident').trim();
-                var title = String(row.request_title || row.request_type || 'ACC request').trim();
-                var status = String(row.status || '').toLowerCase().replace(/_/g, ' ');
-                var prefix = status.indexOf('approved') !== -1 ? 'ACC request approved' : (status.indexOf('reject') !== -1 ? 'ACC request rejected' : (status.indexOf('question') !== -1 ? 'ACC question requested' : 'New ACC request submitted'));
-                maybePush(row.created_at || row.updated_at, prefix + ': ' + resident + ' — ' + title, { type:'acc_request', priority:'attention', community_id:row.community_id || null, acc_request_id:row.id, request_id:row.id });
-              });
-            }
-          }catch(_accErr){}
-          try{
-            var maint = await Promise.resolve({ data: [], error: null });
-            if(!maint.error && Array.isArray(maint.data)){
-              maint.data.forEach(function(row){
-                if(communityId && String((row && row.community_id) || '') !== communityId) return;
-                var eventType = String(row.event_type || '').toLowerCase();
-                var label = 'Maintenance update';
-                if(eventType === 'created') label = 'Maintenance request created';
-                else if(eventType === 'updated') label = 'Maintenance request updated';
-                else if(eventType === 'completed') label = 'Maintenance request completed';
-                maybePush(row.created_at || row.submitted_at, label, { type:'maintenance', community_id:row.community_id || null, request_id:row.request_id || row.maintenance_request_id || null });
-              });
-            }
-          }catch(_e4){}
-          try{
-            var bm = await sb.from('BoardMemberActionItems').select('id,community_id,title,created_at,status').limit(12);
-            if(!bm.error && Array.isArray(bm.data)){
-              bm.data.forEach(function(row){
-                if(communityId && String((row && row.community_id) || '') !== communityId) return;
-                if(!shouldCountAsOpenRow(row)) return;
-                maybePush(row.created_at, String(row.title || 'Board item submitted').trim(), { type:'board_item', community_id:row.community_id || null, board_item_id:row.id || null, priority:isOverdueRow(row) ? 'urgent' : 'attention' });
-              });
-            }
-          }catch(_e5){}
-          try{
-            var msgQ = null; /* resident_manager_messages disabled: messaging SQL not installed */
-            var residentMsgs = { error:null, data:[] };
-            if(!residentMsgs.error && Array.isArray(residentMsgs.data)){
-              residentMsgs.data.forEach(function(row){
-                var status = String(row.status || 'open').toLowerCase();
-                if(status === 'closed' || status === 'archived') return;
-                var who = String(row.resident_name || 'Resident').trim();
-                var subj = String(row.subject || 'Message Property Manager').trim();
-                maybePush(row.created_at || row.updated_at, 'New resident message: ' + who + ' — ' + subj, { type:'resident_message', community_id:row.community_id || null, message_id:row.id, id:row.id, priority: status === 'open' ? 'attention' : 'active' });
-              });
-            }
-          }catch(_e6){}
-          events.sort(function(a,b){ return new Date(b.time).getTime() - new Date(a.time).getTime(); });
-          events = events.slice(0,8);
-          setText('mh2LiveActivityCount', String(events.length));
-          var urgentEvents = events.filter(function(e){ return eventPriority(e) === 'urgent'; }).length;
-          /* legacy maintenance alert writer removed */
-          if(!events.length){
-            try{ window.__mh2LiveEvents = []; }catch(_e){}
+        var communityName = ctx.name || getSelectedCommunityName() || 'Selected community';
+        var cacheKey = 'mh2_live_activity_cache_v441:' + String(communityId || 'global');
+        var stateKey = String(communityId || 'global');
+        window.__mh2LiveActivityState = window.__mh2LiveActivityState || { loading:false, token:0, signatures:{} };
+        var liveState = window.__mh2LiveActivityState;
+
+        function normalizePriority(row){
+          var p = String((row && row.priority) || '').toLowerCase();
+          var t = String((row && row.event_type) || '').toLowerCase();
+          var msg = String((row && (row.message || row.title)) || '').toLowerCase();
+          if(p === 'urgent' || msg.indexOf('urgent') !== -1 || msg.indexOf('overdue') !== -1) return 'urgent';
+          if(p === 'attention' || t.indexOf('approval') !== -1 || msg.indexOf('submitted') !== -1 || msg.indexOf('approval') !== -1 || msg.indexOf('review') !== -1) return 'attention';
+          if(msg.indexOf('completed') !== -1 || msg.indexOf('accepted') !== -1 || msg.indexOf('active') !== -1 || msg.indexOf('scheduled') !== -1) return 'active';
+          return 'attention';
+        }
+        function normalizeHref(row){
+          var md = row && row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+          if(row && row.link_url) return row.link_url;
+          if(md.work_order_id || md.request_id) return 'maintenance_updates.html';
+          if(md.board_item_id || String((row && row.event_type) || '').toLowerCase().indexOf('board') !== -1) return 'board_member_hub_v2.html';
+          if(String((row && row.event_type) || '').toLowerCase().indexOf('annual') !== -1) return 'annual_meeting_status.html';
+          return 'maintenance_updates.html';
+        }
+        function isLegacyBoardNotification(row){
+          var md = row && row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+          var type = String((row && row.event_type) || '').toLowerCase();
+          var source = String((row && row.source_table) || md.source_table || '').toLowerCase();
+          var title = String((row && (row.title || row.message)) || '').toLowerCase();
+          if(source.indexOf('board') !== -1) return true;
+          if(type.indexOf('board') !== -1) return true;
+          if(md.board_item_id || md.board_notification_id) return true;
+          if(title.indexOf('board item') !== -1 && (title.indexOf('submitted') !== -1 || title.indexOf('review') !== -1)) return true;
+          return false;
+        }
+        function normalizeBoardRows(rows){
+          return (rows || []).map(function(row){
+            return {
+              id:'board:' + String((row && row.id) || '').trim(),
+              time:(row && (row.created_at || row.updated_at || row.due_date)) || new Date().toISOString(),
+              title:'A new board item was submitted and needs review.',
+              priority:'attention',
+              href:'board_member_hub_v2.html',
+              community_id:(row && row.community_id) || communityId || null
+            };
+          }).filter(function(ev){ return !!ev.id && !!ev.time; });
+        }
+        function normalizeRows(rows){
+          var seen = new Set();
+          return (rows || []).filter(function(row){
+            // v441: Live Activity no longer renders legacy board notification history.
+            // Current board activity is supplied separately from notification_events rows.
+            return !isLegacyBoardNotification(row);
+          }).map(function(row){
+            var md = row && row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+            var title = String((row && (row.message || row.title)) || 'Activity update').trim();
+            var id = String((row && row.id) || md.id || title + ':' + ((row && row.created_at) || '')).trim();
+            return {
+              id:id,
+              time:(row && row.created_at) || md.created_at || new Date().toISOString(),
+              title:title,
+              priority:normalizePriority(row),
+              href:normalizeHref(row),
+              community_id:(row && row.community_id) || communityId || null
+            };
+          }).filter(function(ev){
+            if(!ev.time || !ev.title) return false;
+            if(seen.has(ev.id)) return false;
+            seen.add(ev.id);
+            return true;
+          }).sort(function(a,b){
+            var dt = new Date(b.time).getTime() - new Date(a.time).getTime();
+            if(dt) return dt;
+            return String(b.id || '').localeCompare(String(a.id || ''));
+          }).slice(0,8);
+        }
+        function signature(items){
+          return (items || []).map(function(e){ return [e.id, e.time, e.title, e.priority].join('|'); }).join('||');
+        }
+        function renderStable(items, options){
+          options = options || {};
+          items = normalizeRows(items || []);
+          var sig = signature(items);
+          if(!options.force && liveState.signatures[stateKey] === sig) return;
+          liveState.signatures[stateKey] = sig;
+          try{ window.__mh2LiveEvents = items.slice(); }catch(_e){}
+          setText('mh2LiveActivityCount', String(items.length));
+          setText('mh2LiveActivityNote', items.length ? ('Showing the latest ' + String(items.length) + ' event' + (items.length===1?'':'s') + (communityName ? ' for ' + communityName : '') + '.') : ('Connected, but no recent events were found' + (communityName ? ' for ' + communityName : '') + '.'));
+          if(!items.length){
             list.innerHTML = '<div class="mh2-placeholder">No recent activity for this community.</div>';
-            setText('mh2LiveActivityNote', 'Connected, but no recent events were found' + (communityName ? ' for ' + communityName : '') + '.');
             return;
           }
-          try{ window.__mh2LiveEvents = events.slice(); }catch(_e){}
-          list.innerHTML = events.map(function(event){
-            var href = mapNotificationHref(event);
-            var priority = eventPriority(event);
+          list.innerHTML = items.map(function(event){
+            var priority = String(event.priority || '').toLowerCase();
             var ageMs = Math.max(0, Date.now() - new Date(event.time).getTime());
             var rowClass = priority === 'urgent' ? 'mh2-feed-item is-urgent' : (priority === 'attention' ? 'mh2-feed-item is-attention' : (priority === 'active' ? 'mh2-feed-item is-active' : 'mh2-feed-item'));
             var dot = priority === 'urgent' ? 'mh2-dot mh2-dot--urgent' : (priority === 'attention' ? 'mh2-dot mh2-dot--gold' : (priority === 'active' ? 'mh2-dot mh2-dot--green' : 'mh2-dot'));
@@ -3612,17 +3747,76 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
             var tagClass = ageMs <= 60 * 60 * 1000 ? 'mh2-item-tag is-recent' : (ageMs <= 24 * 60 * 60 * 1000 ? 'mh2-item-tag is-fresh' : 'mh2-item-tag is-stale');
             var inner = '<article class="' + rowClass + '">' +
               '<div class="' + dot + '"></div>' +
-              '<div><div class="mh2-item-title">' + esc(event.message || 'Activity update') + '</div><div class="mh2-item-copy">' + esc(communityName || getSelectedCommunityName() || 'Selected community') + '</div></div>' +
+              '<div><div class="mh2-item-title">' + esc(event.title || 'Activity update') + '</div><div class="mh2-item-copy">' + esc(communityName || 'Selected community') + '</div></div>' +
               '<div class="' + tagClass + '">' + esc(fmtAgo(event.time)) + '</div>' +
             '</article>';
-            return href ? '<a href="' + esc(href) + '" style="text-decoration:none;color:inherit;display:block">' + inner + '</a>' : inner;
+            return event.href ? '<a href="' + esc(event.href) + '" style="text-decoration:none;color:inherit;display:block">' + inner + '</a>' : inner;
           }).join('');
-          setText('mh2LiveActivityNote', 'Showing the latest ' + String(events.length) + ' event' + (events.length===1?'':'s') + (communityName ? ' for ' + communityName : '') + '.');
+        }
+
+        // Instant stable paint from the last known good list for this community.
+        try{
+          var cached = JSON.parse(localStorage.getItem(cacheKey) || '[]');
+          if(Array.isArray(cached) && cached.length) renderStable(cached, { force:true });
+        }catch(_cacheErr){}
+
+        var token = ++liveState.token;
+        if(liveState.loading) return;
+        liveState.loading = true;
+        try{
+          var sb = await requireSb();
+          var query = sb
+            .from('notification_events')
+            .select('id,created_at,event_type,priority,title,message,link_url,community_id,source_table,source_id,metadata')
+            .order('created_at', { ascending:false })
+            .order('id', { ascending:false })
+            .limit(40);
+          if(communityId) query = query.eq('community_id', communityId);
+          var res = await query;
+          if(token !== liveState.token) return;
+          if(res && res.error) throw res.error;
+
+          var notificationEvents = normalizeRows(Array.isArray(res && res.data) ? res.data : []);
+          var boardEvents = [];
+
+          // v441: Board activity comes from the same canonical source as Board Hub.
+          // Use rows only (active/open queue), never raw/archive/history.
+          try{
+            if(window.ZummeeBoardData && typeof window.ZummeeBoardData.getBoardReviewItems === 'function'){
+              var boardResult = await window.ZummeeBoardData.getBoardReviewItems(communityId);
+              boardEvents = normalizeBoardRows(Array.isArray(boardResult && boardResult.rows) ? boardResult.rows : []);
+            }
+          }catch(boardErr){
+            console.warn('[ManagerHub v441] canonical board live activity load failed; using direct fallback', boardErr);
+          }
+          if(!boardEvents.length && communityId){
+            try{
+              var boardFallback = await sb.from('notification_events')
+                .select('id,title,message,metadata,created_at,event_type,community_id')
+                .eq('community_id', communityId)
+                .eq('event_type','board_item_submitted')
+                .order('created_at', { ascending:false })
+                .limit(20);
+              if(boardFallback && !boardFallback.error) boardEvents = normalizeBoardRows((boardFallback.data || []).filter(boardRowIsCurrent));
+            }catch(fallbackErr){ console.warn('[ManagerHub v461] notification_events board live activity fallback failed', fallbackErr); }
+          }
+
+          var events = boardEvents.concat(notificationEvents).sort(function(a,b){
+            var dt = new Date(b.time).getTime() - new Date(a.time).getTime();
+            if(dt) return dt;
+            return String(b.id || '').localeCompare(String(a.id || ''));
+          }).slice(0,8);
+          try{ localStorage.setItem(cacheKey, JSON.stringify(events)); }catch(_storeErr){}
+          renderStable(events, { force:!liveState.signatures[stateKey] });
         }catch(err){
-          try{ window.__mh2LiveEvents = []; }catch(_e){}
-          list.innerHTML = '<div class="mh2-placeholder">Unable to load live activity.</div>';
-          setText('mh2LiveActivityCount', '0');
-          setText('mh2LiveActivityNote', 'Live feed unavailable right now.');
+          console.warn('[ManagerHub] Stable Live Activity load failed', err);
+          if(!liveState.signatures[stateKey]){
+            list.innerHTML = '<div class="mh2-placeholder">Unable to load live activity.</div>';
+            setText('mh2LiveActivityCount', '0');
+            setText('mh2LiveActivityNote', 'Live feed unavailable right now.');
+          }
+        }finally{
+          if(token === liveState.token) liveState.loading = false;
         }
       }
       function approvalStatusLabel(status){
@@ -3857,9 +4051,7 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
         return !!priv;
       }
       function updateVisibleHubCardCount(){
-
-        var count = Array.prototype.filter.call(document.querySelectorAll('#hubCards .mh2-tool-card[data-card-key]'), function(card){ return getComputedStyle(card).display !== 'none'; }).length;
-        setText('mh2HubCardCount', String(count));
+        setText("mh2HubCardCount", "Open");
       }
       window.testManagerHubSupervisorCards = async function(){
         var priv = false;
@@ -4134,10 +4326,10 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
           try{
             var sb = await requireSb();
 
-            var boardQ = await sb.from('BoardMemberActionItems')
-              .select('id,community_id,title,created_at,status')
+            var boardQ = await sb.from('notification_events')
+              .select('id,title,message,metadata,created_at,event_type,community_id')
               .eq('community_id', communityId)
-              
+              .eq('event_type','board_item_submitted')
               .limit(200);
             if(!boardQ.error && Array.isArray(boardQ.data)){
               var openRows = boardQ.data.filter(shouldCountAsOpenRow);
@@ -4158,17 +4350,13 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
               .eq('community_id', communityId)
               .limit(200);
             if(!rwo.error && Array.isArray(rwo.data)){
-              var closedStates = ['completed','closed','cancelled'];
-              openWorkOrders = rwo.data.filter(function(row){
-                return closedStates.indexOf(String(row.status||'').toLowerCase()) === -1;
+              var mh2OpenMaintenanceRows = rwo.data.filter(mh2IsOpenMaintenanceRow);
+              openWorkOrders = mh2OpenMaintenanceRows.length;
+              urgentWorkOrders = mh2OpenMaintenanceRows.filter(function(row){
+                return /urgent|emergency|high/i.test(String(row.priority||row.severity||''));
               }).length;
-              urgentWorkOrders = rwo.data.filter(function(row){
-                return String(row.priority||'').toLowerCase() === 'urgent' &&
-                  closedStates.indexOf(String(row.status||'').toLowerCase()) === -1;
-              }).length;
-              inspectionWos = rwo.data.filter(function(row){
-                return String(row.unit_number||'').trim().toLowerCase() === 'inspection' &&
-                  closedStates.indexOf(String(row.status||'').toLowerCase()) === -1;
+              inspectionWos = mh2OpenMaintenanceRows.filter(function(row){
+                return String(row.unit_number||'').trim().toLowerCase() === 'inspection';
               }).length;
             }
           }catch(_e){}
@@ -4223,25 +4411,8 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
         var totalOpenMaintenance = Number(openWorkOrders || 0);
         var totalLiveMaintenance = Number(liveEvents || 0);
 
-        setAlertCard('mh2AlertActivity', {
-          tone: totalUrgentMaintenance > 0
-            ? 'urgent'
-            : ((totalOpenMaintenance > 0 || totalLiveMaintenance > 0) ? 'attention' : 'good'),
-          title: 'Maintenance activity',
-          badge: totalUrgentMaintenance > 0
-            ? (String(totalUrgentMaintenance) + ' urgent')
-            : (totalOpenMaintenance > 0
-              ? (String(totalOpenMaintenance) + ' open')
-              : (totalLiveMaintenance > 0 ? (String(totalLiveMaintenance) + ' live') : 'Quiet')),
-          copy: totalUrgentMaintenance > 0
-            ? (String(totalUrgentMaintenance) + ' urgent maintenance signal' + (totalUrgentMaintenance === 1 ? '' : 's'))
-            : (totalOpenMaintenance > 0
-              ? (String(totalOpenMaintenance) + ' open maintenance item' + (totalOpenMaintenance === 1 ? '' : 's'))
-              : (totalLiveMaintenance > 0
-                ? (String(totalLiveMaintenance) + ' live maintenance event' + (totalLiveMaintenance === 1 ? '' : 's'))
-                : 'No open maintenance items')),
-          href: 'maintenance_updates.html'
-        });
+        // v441 lock: do not repaint mh2AlertActivity here.
+        // The v426 smart-alert owner below is the only code allowed to set the Maintenance Activity smart card.
 
         var today = new Date();
         var dayOfMonth = today.getDate();
@@ -4401,44 +4572,88 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
       function setWeatherVisualClass(model){
         var hero = $('weatherHeroCard') || document.querySelector('.mh2-weather-hero');
         if(!hero) return;
-        hero.classList.remove('wx-day','wx-night','wx-cloudy','wx-clear','wx-rain','wx-empty','wx-sunrise','wx-sunset','wx-overcast','wx-rain-overcast','wx-thunder');
 
-        var summary = String((model && model.summary) || '').toLowerCase();
-        var sunriseRaw = String((model && model.sunrise) || '');
-        var sunsetRaw = String((model && model.sunset) || '');
+        // Long-term scene mapper: use weather_code first, then all visible weather text as fallback.
+        // This prevents "right description / wrong picture" when the API returns phrases like
+        // drizzle, showers, overcast clouds, fog, mist, storms, freezing rain, etc.
+        var allWeatherClasses = [
+          'wx-day','wx-night','wx-cloudy','wx-clear','wx-rain','wx-empty','wx-sunrise','wx-sunset',
+          'wx-overcast','wx-rain-overcast','wx-thunder','wx-snow','wx-ice'
+        ];
+        hero.classList.remove.apply(hero.classList, allWeatherClasses);
+
+        model = model || {};
+        var code = Number(model.weatherCode || 0);
+        var summary = [
+          model.summary,
+          model.nowSub,
+          model.laterSub,
+          model.tonightSub
+        ].map(function(v){ return String(v || '').toLowerCase(); }).join(' ');
+
+        var sunriseRaw = String(model.sunrise || '');
+        var sunsetRaw = String(model.sunset || '');
         var mRise = sunriseRaw.match(/(\d{1,2}):(\d{2})/);
         var mSet = sunsetRaw.match(/(\d{1,2}):(\d{2})/);
         var now = new Date();
         var currentMins = now.getHours() * 60 + now.getMinutes();
-        var scene = 'wx-day';
+        var baseScene = 'wx-day';
+        var isNight = false;
 
         if(mRise && mSet){
           var riseMins = Number(mRise[1]) * 60 + Number(mRise[2]);
           var setMins = Number(mSet[1]) * 60 + Number(mSet[2]);
           var isSunriseWindow = currentMins >= (riseMins - 45) && currentMins <= (riseMins + 75);
           var isSunsetWindow = currentMins >= (setMins - 75) && currentMins <= (setMins + 45);
-          var isNight = currentMins < (riseMins - 45) || currentMins > (setMins + 45);
-          if(isSunriseWindow){
-            scene = 'wx-sunrise';
-          }else if(isSunsetWindow){
-            scene = 'wx-sunset';
-          }else if(isNight){
-            scene = 'wx-night';
-          }
+          isNight = currentMins < (riseMins - 45) || currentMins > (setMins + 45);
+          if(isSunriseWindow) baseScene = 'wx-sunrise';
+          else if(isSunsetWindow) baseScene = 'wx-sunset';
+          else if(isNight) baseScene = 'wx-night';
         }else{
-          if(now.getHours() < 6 || now.getHours() >= 19){
-            scene = 'wx-night';
-          }else if(now.getHours() === 6 || now.getHours() === 7){
-            scene = 'wx-sunrise';
-          }else if(now.getHours() === 18){
-            scene = 'wx-sunset';
-          }
+          isNight = now.getHours() < 6 || now.getHours() >= 19;
+          if(isNight) baseScene = 'wx-night';
+          else if(now.getHours() === 6 || now.getHours() === 7) baseScene = 'wx-sunrise';
+          else if(now.getHours() === 18) baseScene = 'wx-sunset';
         }
 
-        var isCloudy = /cloud|overcast|fog|mist|haze/.test(summary);
-        var isRain = /rain|storm|shower|drizzle|thunder/.test(summary);
-        hero.classList.add(scene);
-        hero.classList.add(isRain ? 'wx-rain' : (isCloudy ? 'wx-cloudy' : 'wx-clear'));
+        var thunderCodes = [95,96,99];
+        var rainCodes = [51,53,55,56,57,61,63,65,66,67,80,81,82];
+        var snowCodes = [71,73,75,77,85,86];
+        var fogCodes = [45,48];
+        var cloudCodes = [2,3];
+        var partlyCloudCode = code === 1;
+
+        var isThunder = thunderCodes.indexOf(code) >= 0 || /thunder|storm|lightning/.test(summary);
+        var isIce = [56,57,66,67].indexOf(code) >= 0 || /freezing|sleet|ice|icy/.test(summary);
+        var isSnow = snowCodes.indexOf(code) >= 0 || /snow|flurr/.test(summary);
+        var isRain = rainCodes.indexOf(code) >= 0 || /rain|shower|drizzle|downpour|precip/.test(summary);
+        var isOvercast = code === 3 || /overcast|heavy cloud|cloudy/.test(summary);
+        var isCloudy = cloudCodes.indexOf(code) >= 0 || fogCodes.indexOf(code) >= 0 || /cloud|fog|mist|haze/.test(summary);
+        var isClear = code === 0 || /clear|sunny|sun/.test(summary);
+
+        var conditionScene = '';
+        if(isThunder) conditionScene = 'wx-thunder';
+        else if(isIce) conditionScene = 'wx-ice';
+        else if(isSnow) conditionScene = 'wx-snow';
+        else if(isRain) conditionScene = 'wx-rain-overcast';
+        else if(isOvercast) conditionScene = 'wx-overcast';
+        else if(isCloudy || partlyCloudCode) conditionScene = 'wx-cloudy';
+        else if(isClear) conditionScene = isNight ? 'wx-night' : 'wx-clear';
+        else conditionScene = baseScene;
+
+        // Keep sunrise/sunset/night/day context for clear/partly-cloudy scenes, but let severe
+        // condition classes own the visual background when conditions require it.
+        if(conditionScene === 'wx-cloudy' || conditionScene === 'wx-clear') hero.classList.add(baseScene);
+        hero.classList.add(conditionScene);
+
+        // For thunder, add a short flash pulse whenever the scene updates.
+        if(conditionScene === 'wx-thunder'){
+          hero.classList.remove('flash');
+          setTimeout(function(){ hero.classList.add('flash'); }, 30);
+          setTimeout(function(){ hero.classList.remove('flash'); }, 1700);
+        }else{
+          hero.classList.remove('flash');
+        }
       }
 
       function renderWeatherEmptyState(communityName, message){
@@ -4457,7 +4672,7 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
         var hero = $('weatherHeroCard') || document.querySelector('.mh2-weather-hero');
         var side = $('weatherSideCard');
         if(hero){
-          hero.classList.remove('wx-day','wx-night','wx-cloudy','wx-clear','wx-rain','wx-sunrise','wx-sunset');
+          hero.classList.remove('wx-day','wx-night','wx-cloudy','wx-clear','wx-rain','wx-sunrise','wx-sunset','wx-overcast','wx-rain-overcast','wx-thunder','wx-snow','wx-ice','flash');
           hero.classList.add('wx-empty');
           hero.classList.add('mh2-is-ready');
         }
@@ -4823,7 +5038,7 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
       function mh2Go(url){ try{ window.location.href = url; }catch(_e){} }
       function mh2Short(v, fallback){ v = String(v == null ? '' : v).trim(); return v || String(fallback || '').trim(); }
       function mh2OpenWorkOrder(id){ mh2Go('maintenance_updates.html' + (id ? ('?work_order_id=' + encodeURIComponent(id)) : '')); }
-      function mh2OpenACC(id){ mh2Go('board_member_hub.html' + (id ? ('?acc_request_id=' + encodeURIComponent(id)) : '')); }
+      function mh2OpenACC(id){ mh2Go('board_member_hub_v2.html' + (id ? ('?acc_request_id=' + encodeURIComponent(id)) : '')); }
       function mh2OpenMessage(id){ mh2Go('property_manager_messages.html' + (id ? ('?message_id=' + encodeURIComponent(id)) : '')); }
       function mh2OpenGalleryApprovals(){ mh2Go('board_gallery_approvals.html'); }
       window.mh2OpenWorkOrder = mh2OpenWorkOrder;
@@ -4866,7 +5081,7 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
             if(typeof window.notifyVendor === 'function') await window.notifyVendor(vendor, Object.assign({}, wo, patch));
             else await fetch('/.netlify/functions/send-vendor-email', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ vendorEmail:patch.vendor_email, vendorName:patch.vendor_name, workOrder:Object.assign({}, wo, patch) }) });
           }catch(mailErr){ try{ console.warn('Vendor email warning', mailErr); }catch(_e){} }
-          await loadManagerCommandCenter();
+          /* v410a split: await loadManagerCommandCenter(); moved to manager_action_center.html */
           await loadLiveActivity();
         }catch(err){
           try{ if(btn){ btn.disabled = false; btn.textContent = 'Approve & Route'; } }catch(_e){}
@@ -4949,7 +5164,7 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
           var bc = sb.from('board_calendar_events').select('id,title,event_date,event_time,community_id').eq('event_date', todayStr).order('event_time',{ascending:true}).limit(6);
           if(communityId) bc = bc.eq('community_id', communityId);
           var bcr = await bc;
-          if(!bcr.error && Array.isArray(bcr.data)) bcr.data.forEach(function(r){ rows.push({title:r.title || 'Community event', meta:(r.event_time ? String(r.event_time).slice(0,5) : 'Today'), href:'board_member_hub.html#calendar'}); });
+          if(!bcr.error && Array.isArray(bcr.data)) bcr.data.forEach(function(r){ rows.push({title:r.title || 'Community event', meta:(r.event_time ? String(r.event_time).slice(0,5) : 'Today'), href:'board_member_hub_v2.html#calendar'}); });
         }catch(_e){}
         try{
           var mc = sb.from('manager_calendar_events').select('id,title,event_date,event_time,community_id').eq('event_date', todayStr).order('event_time',{ascending:true}).limit(6);
@@ -4972,13 +5187,32 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
         if(t.hasAttribute('data-mh2-open-message')) return mh2OpenMessage(t.getAttribute('data-mh2-open-message'));
       });
 
+
+      function mh2ContextUrl(href){
+        try{
+          var url = new URL(href, location.href);
+          var cid = (typeof getActiveCommunityId === 'function') ? getActiveCommunityId() : '';
+          var cname = (typeof getSelectedCommunityName === 'function') ? getSelectedCommunityName() : '';
+          var uid = '';
+          try{ uid = localStorage.getItem('zummee_user_id_v1') || sessionStorage.getItem('zummee_user_id_v1') || ''; }catch(_e){}
+          if(cid) url.searchParams.set('community_id', cid);
+          if(cname) url.searchParams.set('community_name', cname);
+          if(uid) url.searchParams.set('user_id', uid);
+          return url.pathname.replace(/^\//,'') + (url.search || '') + (url.hash || '');
+        }catch(_e){ return href; }
+      }
+      function mh2ApplyContextLinks(){
+        try{ Array.prototype.forEach.call(document.querySelectorAll('[data-mh2-context-link]'), function(a){ var raw=a.getAttribute('href')||'#'; if(raw && raw !== '#') a.setAttribute('href', mh2ContextUrl(raw)); }); }catch(_e){}
+      }
       async function refreshAll(){
         bootstrapCommunityGlobals();
         await renderCommunities();
         bootstrapCommunityGlobals();
-        await Promise.all([loadBoardItemsPanel(), loadLiveActivity(), loadApprovalSummary(), loadBrandLogo(), ensureManagerHubSupervisorSectionVisible(), loadWeatherHub()]);
-        await loadManagerActionCards();
-        await loadManagerCommandCenter();
+        mh2ApplyContextLinks();
+        await Promise.allSettled([loadBoardItemsPanel(), loadLiveActivity()]);
+        setTimeout(function(){ Promise.allSettled([loadApprovalSummary(), loadBrandLogo(), ensureManagerHubSupervisorSectionVisible(), loadWeatherHub()]).then(function(){ applyCanonicalSmartAlerts(); }); }, 0);
+        /* v410a split: await loadManagerActionCards(); moved to manager_action_center.html */
+        /* v410a split: await loadManagerCommandCenter(); moved to manager_action_center.html */
         await ensureManagerHubSupervisorSectionVisible();
         applyCanonicalSmartAlerts();
       }
@@ -4996,20 +5230,22 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
       document.addEventListener('community:changed', async function(){
         bootstrapCommunityGlobals();
         applyWeatherContext(getActiveCommunityContext());
-        await Promise.all([loadWeatherHub(true), loadBoardItemsPanel(), loadLiveActivity(), loadApprovalSummary(), loadBrandLogo()]);
+        await Promise.allSettled([loadBoardItemsPanel(), loadLiveActivity()]);
+        setTimeout(function(){ Promise.allSettled([loadWeatherHub(true), loadApprovalSummary(), loadBrandLogo()]); }, 0);
         wireThemeToggle();
-        await loadManagerActionCards();
-        await loadManagerCommandCenter();
+        /* v410a split: await loadManagerActionCards(); moved to manager_action_center.html */
+        /* v410a split: await loadManagerCommandCenter(); moved to manager_action_center.html */
         await ensureManagerHubSupervisorSectionVisible();
       });
       window.addEventListener('focus', async function(){
         bootstrapCommunityGlobals();
         restoreManagerHubRoleVisibilityFromCache();
         applyWeatherContext(getActiveCommunityContext());
-        await Promise.all([loadWeatherHub(true), loadBoardItemsPanel(), loadLiveActivity(), loadApprovalSummary(), loadBrandLogo()]);
+        await Promise.allSettled([loadBoardItemsPanel(), loadLiveActivity()]);
+        setTimeout(function(){ Promise.allSettled([loadWeatherHub(true), loadApprovalSummary(), loadBrandLogo()]); }, 0);
         wireThemeToggle();
-        await loadManagerActionCards();
-        await loadManagerCommandCenter();
+        /* v410a split: await loadManagerActionCards(); moved to manager_action_center.html */
+        /* v410a split: await loadManagerCommandCenter(); moved to manager_action_center.html */
         await ensureManagerHubSupervisorSectionVisible();
       });
     })();
@@ -5018,11 +5254,7 @@ html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{content:"
     // Manager Hub production shell with live panels, smart alerts,
     // branded actions, and saved favorites/order behavior.
   </script>
-<button id="mh2DebugClose" class="mh2-debug-close" type="button">Close</button>
-  </div>
-  <div id="mh2DebugBody" class="mh2-debug-grid"></div>
-</div>
-
+<!-- v466: removed legacy debug Close pill / debug panel remnants. -->
 
   <script id="zummee-v5-page-lock-manager">
 (function(){
@@ -5185,7 +5417,7 @@ function renderSmartAlerts(state){
       title: state.board.title,
       badge: state.board.badge,
       copy: state.board.copy,
-      href: 'board_member_hub_rebuild.html?from=manager_hub' + (communityId ? '&community_id=' + encodeURIComponent(communityId) : '')
+      href: 'board_member_hub_v2.html?from=manager_hub' + (communityId ? '&community_id=' + encodeURIComponent(communityId) : '')
     });
   }
   if (state.maintenance) {
@@ -5538,6 +5770,46 @@ html[data-theme="light"] #employeeHubSection #employeeHubCards > a.mh2-tool-card
 })();
 </script>
 
+
+<script id="mh2-ask-zummee-modal-v467-js">
+(function(){
+  function $(id){ return document.getElementById(id); }
+  function openAskZummee(){
+    var modal=$('mh2AskZummeeModal');
+    if(!modal) return;
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden','false');
+    setTimeout(function(){ try{ var input=$('mh2AiPrompt'); if(input) input.focus(); }catch(_e){} },60);
+  }
+  function closeAskZummee(){
+    var modal=$('mh2AskZummeeModal');
+    if(!modal) return;
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden','true');
+    try{ var btn=$('mh2AskZummeeBtn'); if(btn) btn.focus(); }catch(_e){}
+  }
+  function wire(){
+    var btn=$('mh2AskZummeeBtn'), close=$('mh2AskZummeeClose'), modal=$('mh2AskZummeeModal');
+    if(btn && btn.dataset.askZummeeWired!=='1'){
+      btn.dataset.askZummeeWired='1';
+      btn.addEventListener('click', openAskZummee);
+    }
+    if(close && close.dataset.askZummeeWired!=='1'){
+      close.dataset.askZummeeWired='1';
+      close.addEventListener('click', closeAskZummee);
+    }
+    if(modal && modal.dataset.askZummeeWired!=='1'){
+      modal.dataset.askZummeeWired='1';
+      modal.addEventListener('click', function(e){ if(e.target===modal) closeAskZummee(); });
+      document.addEventListener('keydown', function(e){ if(e.key==='Escape' && modal.classList.contains('is-open')) closeAskZummee(); });
+    }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', wire, {once:true}); else wire();
+  window.mh2OpenAskZummee=openAskZummee;
+  window.mh2CloseAskZummee=closeAskZummee;
+})();
+</script>
+
 <script id="mh2-inline-ai-dictation-v253">
 (function(){
   function $(id){ return document.getElementById(id); }
@@ -5808,6 +6080,47 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
 
 
 
+<script id="zummee-v410k-app-context-auth-guard">
+(function(){
+  if(window.__ZUMMEE_V410K_APP_CONTEXT_AUTH_GUARD__) return;
+  window.__ZUMMEE_V410K_APP_CONTEXT_AUTH_GUARD__ = true;
+  var UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  function readUserId(){
+    var keys=['zummee_user_id_v1','zummeeUserId','activeUserId','currentUserId'];
+    for(var i=0;i<keys.length;i++){
+      try{
+        var v=String(localStorage.getItem(keys[i])||sessionStorage.getItem(keys[i])||'').trim();
+        if(UUID_RE.test(v)) return v;
+      }catch(_e){}
+    }
+    return '';
+  }
+  window.validateZummeeSession = async function(){
+    var localUserId=readUserId();
+    var hasSession=false;
+    try{
+      var sb=window.supabaseClient||window.sb||(typeof window.ensureSupabaseSync==='function'?window.ensureSupabaseSync():null);
+      if(sb&&sb.auth&&typeof sb.auth.getSession==='function'){
+        var res=await sb.auth.getSession();
+        hasSession=!!(res&&res.data&&res.data.session);
+      }
+    }catch(_e){}
+    if(!hasSession && !localUserId){
+      try{ window.location.href='login.html'; }catch(_e){}
+      return false;
+    }
+    if(localUserId){
+      try{
+        ['zummee_user_id_v1','zummeeUserId','activeUserId','currentUserId'].forEach(function(k){
+          localStorage.setItem(k,localUserId); sessionStorage.setItem(k,localUserId);
+        });
+      }catch(_e){}
+    }
+    return true;
+  };
+})();
+</script>
+
 <script id="zummee-v380-auth-ready-helper">
 (function(){
   if(window.__ZUMMEE_V380_AUTH_READY_HELPER__) return;
@@ -5830,146 +6143,6 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
   };
 })();
 </script>
-<script>
-/* ===== v4 iPad deterministic Manager Hub stabilizer =====
-   Final pass runs after legacy scripts and does NOT depend on legacy scoped loaders.
-   It prevents smart alert taps from falling through to stale/nested links, keeps the
-   selected community UUID, and repopulates smart alerts + live activity directly. */
-(function(){
-  const ROUTES = {
-    mh2AlertBoard: 'board_member_hub.html',
-    mh2AlertActivity: 'maintenance_updates.html',
-    mh2AlertApprovals: 'annual_meeting_status.html'
-  };
-  function $(id){ return document.getElementById(id); }
-  function esc(v){ return String(v == null ? '' : v).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-  function txt(id,v){ const el=$(id); if(el) el.textContent=String(v==null?'':v); }
-  function getSelect(){ return $('zummeeCommunitySelect') || document.querySelector('select[data-community-select], select[name="community"], #communitySelect, #communityDropdown'); }
-  function isUuid(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||'').trim()); }
-  function currentCtx(){
-    const sel=getSelect();
-    let id = String(localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('activeCommunityId') || localStorage.getItem('zummeeActiveCommunityId') || localStorage.getItem('currentCommunityId') || '').trim();
-    let name = String(localStorage.getItem('currentCommunityName') || '').trim();
-    let zip = '';
-    if(sel && sel.value){
-      const opt = sel.options && sel.options[sel.selectedIndex];
-      if(isUuid(sel.value)) id = String(sel.value).trim();
-      if(opt){
-        name = String(opt.textContent || name || '').trim();
-        zip = String(opt.getAttribute('data-zip') || opt.dataset?.zip || '').trim();
-      }
-    }
-    if(isUuid(id)){
-      ['zummee_selected_community_id','activeCommunityId','zummeeActiveCommunityId','currentCommunityId'].forEach(k=>{try{localStorage.setItem(k,id)}catch(_e){}});
-      if(name) try{localStorage.setItem('currentCommunityName',name)}catch(_e){}
-      window.currentCommunityId=id; window.zummeeSelectedCommunityId=id; window.activeCommunityId=id;
-    }
-    return { id:isUuid(id)?id:'', name, zip };
-  }
-  async function sb(){
-    if(window.supabaseClient) return window.supabaseClient;
-    if(window.sb) return window.sb;
-    if(typeof window.ensureSupabase === 'function') return await window.ensureSupabase();
-    return null;
-  }
-  function setAlert(id, tone, title, badge, copy){
-    const el=$(id); if(!el) return;
-    el.classList.remove('is-good','is-attention','is-urgent');
-    el.classList.add(tone==='urgent'?'is-urgent':tone==='attention'?'is-attention':'is-good');
-    el.setAttribute('href', ROUTES[id] || '#');
-    el.setAttribute('data-zummee-route', ROUTES[id] || '#');
-    el.innerHTML = '<div class="mh2-alert-top"><div class="mh2-alert-title">'+esc(title)+'</div><div class="mh2-alert-badge">'+esc(badge)+'</div></div><div class="mh2-alert-copy">'+esc(copy)+'</div>';
-  }
-  function isOpenStatus(st){
-    st=String(st||'').toLowerCase();
-    return !['complete','completed','closed','done','resolved','approved','rejected','archived'].includes(st);
-  }
-  function isOverdueDate(d){
-    if(!d) return false;
-    const x=new Date(String(d).slice(0,10)+'T00:00:00'); if(isNaN(x)) return false;
-    const n=new Date(); n.setHours(0,0,0,0); return x<n;
-  }
-  function fmtAgo(iso){
-    const d=new Date(iso||Date.now()); if(isNaN(d)) return '';
-    const mins=Math.max(0,Math.round((Date.now()-d.getTime())/60000));
-    if(mins<1) return 'Now'; if(mins<60) return mins+' min';
-    const hrs=Math.round(mins/60); if(hrs<24) return hrs+' hr';
-    const days=Math.round(hrs/24); return days+' day';
-  }
-  function renderLive(events, cname){
-    const list=$('activityFeedList'); if(!list) return;
-    events.sort((a,b)=>new Date(b.time||0)-new Date(a.time||0));
-    events=events.slice(0,8);
-    txt('mh2LiveActivityCount', events.length);
-    txt('mh2LiveActivityNote', events.length ? ('Showing the latest '+events.length+' event'+(events.length===1?'':'s')+(cname?' for '+cname:'' )+'.') : ('Connected, but no recent events were found'+(cname?' for '+cname:'' )+'.'));
-    if(!events.length){ list.innerHTML='<div class="mh2-placeholder">No recent activity for this community.</div>'; return; }
-    list.innerHTML = events.map(ev=>{
-      const priority=String(ev.priority||'').toLowerCase();
-      const cls=priority==='urgent'?'mh2-feed-item is-urgent':(priority==='attention'?'mh2-feed-item is-attention':'mh2-feed-item is-active');
-      const dot=priority==='urgent'?'mh2-dot mh2-dot--urgent':(priority==='attention'?'mh2-dot mh2-dot--gold':'mh2-dot mh2-dot--green');
-      const inner='<article class="'+cls+'"><div class="'+dot+'"></div><div><div class="mh2-item-title">'+esc(ev.title||'Activity update')+'</div><div class="mh2-item-copy">'+esc(cname||'Selected community')+'</div></div><div class="mh2-item-tag">'+esc(fmtAgo(ev.time))+'</div></article>';
-      return '<a href="'+esc(ev.href||'maintenance_updates.html')+'" style="text-decoration:none;color:inherit;display:block">'+inner+'</a>';
-    }).join('');
-  }
-  async function stableRefresh(){
-    const ctx=currentCtx(); if(!ctx.id) return;
-    const client=await sb(); if(!client) return;
-    if(typeof window.zummeeWaitForAuthReady === 'function'){
-      const session = await window.zummeeWaitForAuthReady(client);
-      if(!session) return;
-    }
-    try{
-      const [boardR, workR, maintR, annualR, notifR] = await Promise.allSettled([
-        client.from('BoardMemberActionItems').select('id,title,status,created_at,community_id').eq('community_id',ctx.id).limit(100),
-        client.from('resident_work_orders').select('*').eq('community_id',ctx.id).limit(30),
-        Promise.resolve({ data: [], error: null }),
-        client.from('annual_meeting_packet_requests').select('*').eq('community_id',ctx.id).limit(50),
-        client.from('notification_events').select('id,created_at,event_type,priority,title,message,link_url,community_id').eq('community_id',ctx.id).limit(20)
-      ]);
-      const val=r=>r.status==='fulfilled' && !r.value.error && Array.isArray(r.value.data) ? r.value.data : [];
-      const boards=val(boardR).filter(r=>isOpenStatus(r.status) && !r.completed_at && !/__ZUMMEE_BM_CONVERTED__/i.test(String(r.details||'')));
-      const boardOver=boards.filter(r=>isOverdueDate(r.due_date)).length;
-      const wos=val(workR).filter(r=>isOpenStatus(r.status));
-      const urgent=wos.filter(r=>/urgent|emergency/i.test(String(r.priority||''))).length;
-      const approvals=val(annualR).filter(r=>isOpenStatus(r.status) && /pending|board|supervisor|approval|draft/i.test(String(r.status||'pending')));
-      const approvalOver=approvals.filter(r=>{ const d=r.submitted_at||r.created_at||r.updated_at; return d && (Date.now()-new Date(d).getTime())>2*86400000; }).length;
-
-      setAlert('mh2AlertBoard', boardOver?'urgent':(boards.length?'attention':'good'), boardOver?'Board review overdue':'Board review status', boardOver?'URGENT':(boards.length?'OPEN':'STABLE'), boards.length?(boards.length+' open item'+(boards.length===1?'':'s')+(boardOver?', '+boardOver+' overdue.':' ready for review.')):'No open board items for the selected community.');
-      setAlert('mh2AlertActivity', urgent?'urgent':(wos.length?'attention':'good'), 'Maintenance activity', urgent?(urgent+' urgent'):(wos.length?(wos.length+' open'):'Quiet'), urgent?(urgent+' urgent maintenance signal'+(urgent===1?'':'s')):(wos.length?(wos.length+' open maintenance item'+(wos.length===1?'':'s')):'No open maintenance items'));
-      setAlert('mh2AlertApprovals', approvalOver?'urgent':(approvals.length?'attention':'good'), 'Annual meeting approvals', approvalOver?(approvalOver+' overdue'):(approvals.length?(approvals.length+' open'):'Clear'), approvalOver?(approvalOver+' annual meeting approval item'+(approvalOver===1?' has':'s have')+' been open more than 2 days.'):(approvals.length?(approvals.length+' approval item'+(approvals.length===1?'':'s')+' in progress.'):'No active items'));
-
-      txt('mh2BoardItemsPill', boards.length); txt('mh2BoardOverdueCount', boardOver);
-      txt('mh2BoardStatusPill', boardOver?'Overdue '+boardOver:(boards.length?'Open '+boards.length:'Clear'));
-      txt('mh2BoardOverdueNote', boardOver ? ('Needs review in '+(ctx.name||'selected community')+'.') : 'Past-due board items for the selected community.');
-      txt('mh2ApprovalPill', approvals.length);
-      txt('mh2ApprovalNote', approvals.length ? ('Current approval items for '+(ctx.name||'the selected community')+'.') : 'No approval items for this community.');
-
-      const events=[];
-      val(notifR).forEach(r=>events.push({time:r.created_at,title:r.message||r.title||'Notification update',priority:r.priority||'attention',href:r.link_url||'maintenance_updates.html'}));
-      wos.slice(0,8).forEach(r=>events.push({time:r.submitted_at||r.created_at,title:(/urgent|emergency/i.test(String(r.priority||''))?'Urgent ':'')+(r.subject||'Work order submitted'),priority:/urgent|emergency/i.test(String(r.priority||''))?'urgent':'attention',href:'maintenance_updates.html?work_order_id='+encodeURIComponent(r.id)}));
-      val(maintR).forEach(r=>events.push({time:r.created_at||r.submitted_at,title:r.title||r.message||'Maintenance update',priority:'attention',href:'maintenance_updates.html'}));
-      boards.slice(0,5).forEach(r=>events.push({time:r.created_at,title:r.title||'Board item submitted',priority:isOverdueDate(r.due_date)?'urgent':'attention',href:'board_member_hub.html'}));
-      approvals.slice(0,5).forEach(r=>events.push({time:r.submitted_at||r.created_at||r.updated_at,title:'Annual meeting approval update',priority:'attention',href:'annual_meeting_status.html'}));
-      renderLive(events, ctx.name);
-    }catch(e){ console.warn('[MH2 v4 stable refresh skipped]', e); }
-  }
-  function bindAlertRoutes(){
-    ['mh2AlertBoard','mh2AlertActivity','mh2AlertApprovals'].forEach(id=>{ const el=$(id); if(el){ el.setAttribute('href', ROUTES[id]); el.setAttribute('data-zummee-route', ROUTES[id]); }});
-  }
-  document.addEventListener('click', function(e){
-    const a=e.target && e.target.closest ? e.target.closest('#mh2AlertBoard,#mh2AlertActivity,#mh2AlertApprovals') : null;
-    if(!a) return;
-    e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation();
-    const url=ROUTES[a.id] || a.getAttribute('href') || 'manager_hub.html';
-    window.location.href=url;
-  }, true);
-  function boot(){ bindAlertRoutes(); stableRefresh(); setTimeout(stableRefresh,350); setTimeout(stableRefresh,1200); setTimeout(bindAlertRoutes,1600); }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot, {once:true}); else boot();
-  window.addEventListener('pageshow', boot);
-  document.addEventListener('community:changed', ()=>setTimeout(boot,60));
-})();
-</script>
-
 <script id="zummee-v307-board-alert-route-lock">
 (function(){
   if(window.__ZUMMEE_V307_BOARD_ALERT_ROUTE_LOCK__) return;
@@ -5987,7 +6160,7 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     }
     return '';
   }
-  function boardUrl(){ var id = selectedCommunityId(); return 'board_member_hub.html' + (id ? ('?community_id=' + encodeURIComponent(id) + '&from=manager_hub') : '?from=manager_hub'); }
+  function boardUrl(){ var id = selectedCommunityId(); return 'board_member_hub_v2.html' + (id ? ('?community_id=' + encodeURIComponent(id) + '&from=manager_hub') : '?from=manager_hub'); }
   function bind(){ var board = document.getElementById('mh2AlertBoard'); if(board){ var url = boardUrl(); board.setAttribute('href', url); board.setAttribute('data-zummee-route', url); board.onclick = null; } }
   function route(evt){ var a = evt.target && evt.target.closest ? evt.target.closest('#mh2AlertBoard') : null; if(!a) return; evt.preventDefault(); evt.stopPropagation(); if(evt.stopImmediatePropagation) evt.stopImmediatePropagation(); try{ sessionStorage.setItem('zummee_manager_internal_entry','1'); sessionStorage.setItem('zummee_board_manager_entry','1'); }catch(_e){} window.location.assign(boardUrl()); }
   ['pointerdown','touchstart','mousedown','click'].forEach(function(type){ document.addEventListener(type, route, true); });
@@ -6037,599 +6210,9 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
   setTimeout(bind, 150); setTimeout(bind, 700); setTimeout(bind, 1600); setTimeout(bind, 3200);
 })();
 </script>
-<script src="zummee_v329_board_soft_session_render_lock.js?v=2026-04-29-v332"></script>
-<script id="zummee-v330-smart-alert-no-flash-lock">
-(function(){
-if(window.__ZUMMEE_V330_SMART_ALERT_NO_FLASH__)return;window.__ZUMMEE_V330_SMART_ALERT_NO_FLASH__=true;
-var ROUTES={mh2AlertBoard:'board_member_hub_rebuild.html?from=manager_hub',mh2AlertActivity:'maintenance_updates.html',mh2AlertApprovals:'annual_meeting_status.html'};
-function $(id){return document.getElementById(id)}
-function esc(v){return String(v==null?'':v).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]||c})}
-function isOpen(st){st=String(st||'').toLowerCase();return ['complete','completed','closed','done','resolved','approved','rejected','archived','cancelled','canceled'].indexOf(st)===-1}
-function isUuid(v){return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||'').trim())}
-function cid(){var sel=document.querySelector('#zummeeCommunitySelect,#communitySelect,select');var v=sel&&isUuid(sel.value)?sel.value:(localStorage.getItem('zummee_selected_community_id')||window.currentCommunityId||'');return isUuid(v)?v:''}
-async function sb(){var c=window.supabaseClient||window.sb||(typeof window.ensureSupabase==='function'?await window.ensureSupabase():null);if(c&&c.auth){try{var sess=await c.auth.getSession();if(!(sess&&sess.data&&sess.data.session)){var at=localStorage.getItem('sb_access_token'),rt=localStorage.getItem('sb_refresh_token');if(at&&rt)await c.auth.setSession({access_token:at,refresh_token:rt});}}catch(e){}}if(c && typeof window.zummeeWaitForAuthReady==='function'){await window.zummeeWaitForAuthReady(c,{attempts:24,delay:125});}return c}
-function setCard(id,tone,title,badge,copy,href){var el=$(id);if(!el)return;el.classList.remove('is-good','is-attention','is-urgent');el.classList.add(tone==='urgent'?'is-urgent':tone==='attention'?'is-attention':'is-good');el.setAttribute('href',href||ROUTES[id]||'#');el.setAttribute('data-zummee-route',href||ROUTES[id]||'#');var html='<div class="mh2-alert-top"><div class="mh2-alert-title">'+esc(title)+'</div><div class="mh2-alert-badge">'+esc(badge)+'</div></div><div class="mh2-alert-copy">'+esc(copy)+'</div>';if(el.innerHTML!==html)el.innerHTML=html}
-async function finalRefresh(){
-  var communityId=cid(), client=await sb();
-  if(!communityId||!client) return false;
-  if(typeof window.zummeeWaitForAuthReady==='function'){var __sess=await window.zummeeWaitForAuthReady(client,{attempts:24,delay:125}); if(!__sess){console.warn('[v380 smart alerts] protected queries paused until auth session is ready'); return false;}}
-  var boardCount=0, boardErr=false, maintCount=0, urgentMaint=0, annualCount=0, annualOver=0;
-  function isBoardOpen(x){var st=String((x&&x.status)||'').trim().toLowerCase(); return !st || ['open','submitted','pending','new','active','review','awaiting_review','awaiting employee review'].indexOf(st)!==-1;}
-  try{
-    var r=await client.from('BoardMemberActionItems').select('id,title,status,created_at,community_id').eq('community_id',communityId).limit(500);
-    if(r.error) boardErr=true; else boardCount=(r.data||[]).filter(isBoardOpen).length;
-  }catch(e){boardErr=true;}
-  try{
-    var wr=await client.from('resident_work_orders').select('*').eq('community_id',communityId).limit(200);
-    var rows=(!wr.error&&Array.isArray(wr.data))?wr.data:[];
-    var open=rows.filter(function(x){return isOpen(x.status)});
-    maintCount=open.length; urgentMaint=open.filter(function(x){return /urgent|emergency/i.test(String(x.priority||''))}).length;
-  }catch(e){}
-  try{
-    var ar=await client.from('annual_meeting_packet_requests').select('*').eq('community_id',communityId).limit(100);
-    var arows=(!ar.error&&Array.isArray(ar.data))?ar.data.filter(function(x){return isOpen(x.status)}):[];
-    annualCount=arows.length; annualOver=arows.filter(function(x){var d=x.submitted_at||x.created_at||x.updated_at;return d&&(Date.now()-new Date(d).getTime())>172800000}).length;
-  }catch(e){}
-  if(boardErr)setCard('mh2AlertBoard','attention','Board review status','SESSION','Sign back in on this device to load board review items. Counts are paused so they do not show a false zero.',ROUTES.mh2AlertBoard);else setCard('mh2AlertBoard',boardCount?'attention':'good','Board review status',boardCount?'OPEN':'STABLE',boardCount?(boardCount+' open item'+(boardCount===1?'':'s')+' ready for review.'):'No open board items for the selected community.',ROUTES.mh2AlertBoard);
-  setCard('mh2AlertActivity',urgentMaint?'urgent':(maintCount?'attention':'good'),'Maintenance activity',urgentMaint?(urgentMaint+' urgent'):(maintCount?(maintCount+' open'):'QUIET'),urgentMaint?(urgentMaint+' urgent maintenance signal'+(urgentMaint===1?'':'s')):(maintCount?(maintCount+' open maintenance item'+(maintCount===1?'':'s')):'No open maintenance items'),ROUTES.mh2AlertActivity);
-  setCard('mh2AlertApprovals',annualOver?'urgent':(annualCount?'attention':'good'),'Annual meeting approvals',annualOver?(annualOver+' overdue'):(annualCount?(annualCount+' open'):'CLEAR'),annualOver?(annualOver+' annual meeting approval item'+(annualOver===1?' has':'s have')+' been open more than 2 days.'):(annualCount?(annualCount+' approval item'+(annualCount===1?'':'s')+' in progress.'):'No active annual meeting approval items.'),ROUTES.mh2AlertApprovals);
-  document.documentElement.setAttribute('data-zummee-smart-alerts-ready','1');
-  window.__ZUMMEE_V330_SMART_ALERT_STATE__={boardCount:boardCount,maintCount:maintCount,annualCount:annualCount,boardErr:boardErr,communityId:communityId};
-  return true;
-}
-// v379 long-term boot owner: define a real local boot function for this smart-alert module.
-// This prevents the fatal "boot is not defined" runtime break and keeps this module self-contained.
-var run = finalRefresh;
-function boot(){
-  document.documentElement.removeAttribute('data-zummee-smart-alerts-ready');
-  finalRefresh();
-  setTimeout(finalRefresh, 350);
-  setTimeout(finalRefresh, 1200);
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-window.addEventListener('pageshow',boot);
-document.addEventListener('community:changed',function(){document.documentElement.removeAttribute('data-zummee-smart-alerts-ready');setTimeout(boot,80)},true);
-var strip=$('smartAlertStrip')||document.body;
-if(strip&&window.MutationObserver){new MutationObserver(function(){var st=window.__ZUMMEE_V330_SMART_ALERT_STATE__;if(!st)return;var b=$('mh2AlertBoard');if(b&&!/No open board items|open item|Sign back in/.test(b.textContent||''))setTimeout(finalRefresh,0)}).observe(strip,{childList:true,subtree:true,characterData:true})}
-})();
-</script>
-
-
-<!-- v333 Manager Hub Smart Alerts data-ready barrier: prevents visible alert churn while legacy async loaders settle. -->
-<style id="zummee-v333-smart-alert-barrier-css">
-html:not([data-zummee-smart-alerts-v333-ready="1"]) #smartAlertStrip .mh2-smart-strip{
-  opacity:0!important;
-  visibility:hidden!important;
-  pointer-events:none!important;
-}
-html:not([data-zummee-smart-alerts-v333-ready="1"]) #smartAlertStrip{
-  min-height:230px!important;
-}
-html:not([data-zummee-smart-alerts-v333-ready="1"]) #smartAlertStrip::after{
-  content:"Loading smart alerts…";
-  display:block;
-  margin-top:14px;
-  padding:14px 16px;
-  border-radius:18px;
-  background:#f4f7fb;
-  color:#64748b;
-  font-weight:900;
-  letter-spacing:.01em;
-}
-</style>
-<script id="zummee-v333-smart-alert-data-ready-barrier">
-(function(){
-  if(window.__ZUMMEE_V333_SMART_ALERT_BARRIER__) return;
-  window.__ZUMMEE_V333_SMART_ALERT_BARRIER__ = true;
-  try{ document.documentElement.removeAttribute('data-zummee-smart-alerts-ready'); }catch(_e){}
-  try{ document.documentElement.removeAttribute('data-zummee-smart-alerts-v333-ready'); }catch(_e){}
-
-  var ROUTES = {
-    mh2AlertBoard: 'board_member_hub_rebuild.html',
-    mh2AlertActivity: 'maintenance_updates.html',
-    mh2AlertApprovals: 'annual_meeting_employee_status.html'
-  };
-
-  function $(id){ return document.getElementById(id); }
-  function validUuid(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||'')); }
-  function getCid(){
-    var sel = document.querySelector('#zummeeCommunitySelect, #communitySelect, select[data-community-select], select');
-    var ids = [
-      window.currentCommunityId,
-      sel && sel.value,
-      localStorage.getItem('zummee_selected_community_id'),
-      localStorage.getItem('activeCommunityId'),
-      localStorage.getItem('zummeeActiveCommunityId'),
-      localStorage.getItem('currentCommunityId')
-    ];
-    for(var i=0;i<ids.length;i++){ if(validUuid(ids[i])) return ids[i]; }
-    return '';
-  }
-  async function sb(){
-    if(window.supabaseClient) return window.supabaseClient;
-    if(typeof window.ensureSupabase === 'function') return await window.ensureSupabase();
-    if(window.supabase && window.supabase.createClient){
-      var url = window.SUPABASE_URL || window.ZUMMEE_SUPABASE_URL || 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
-      var key = window.SUPABASE_ANON_KEY || window.ZUMMEE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsY3d1dXd5cmdubWxteHBjYWltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY0MDU2NjEsImV4cCI6MjA2MTk4MTY2MX0.1cnTnD6Rbm-6X94yTq_XEHFDZHfQc7_uQP4mSkCmwLg';
-      window.supabaseClient = window.supabase.createClient(url,key);
-      return window.supabaseClient;
-    }
-    return null;
-  }
-  function isOpen(v){
-    var s=String(v||'').toLowerCase().trim();
-    return !s || ['open','submitted','pending','new','active','in_progress','sent_to_vendor','manager_review'].indexOf(s)>=0;
-  }
-  function setCard(id,tone,title,pill,body,route){
-    var card=$(id); if(!card) return;
-    var mapped = tone==='urgent' ? 'is-urgent' : (tone==='attention' ? 'is-attention' : 'is-good');
-    card.className = 'mh2-alert ' + mapped;
-    card.setAttribute('role','button');
-    card.setAttribute('tabindex','0');
-    card.setAttribute('data-zummee-final-smart-alert','1');
-    card.setAttribute('href', route || card.getAttribute('href') || '#');
-    card.setAttribute('data-zummee-route', route || card.getAttribute('href') || '#');
-    card.onclick = function(e){ e.preventDefault(); e.stopPropagation(); if(route) window.location.href=route; };
-    card.onkeydown = function(e){ if((e.key==='Enter'||e.key===' ') && route){ e.preventDefault(); window.location.href=route; } };
-    var html = '<div class="mh2-alert-top"><div class="mh2-alert-title">'+title+'</div><div class="mh2-alert-badge">'+pill+'</div></div><div class="mh2-alert-copy">'+body+'</div>';
-    if(card.innerHTML !== html) card.innerHTML = html;
-  }
-  async function fetchCounts(){
-    var client = await sb();
-    var cid = getCid();
-    if(!client || !cid) return null;
-    var out = {cid:cid, board:0, boardBlocked:false, maintenance:0, urgentMaintenance:0, annual:0, annualOverdue:0};
-    try{
-      var b = await client.from('BoardMemberActionItems').select('id,status,community_id,created_at,title').eq('community_id',cid).limit(500);
-      if(b.error) throw b.error;
-      out.board = (b.data||[]).length;
-    }catch(e){
-      console.warn('[v333 smart alerts] board count failed', e);
-      out.boardBlocked = true;
-    }
-    try{
-      var m = await client.from('resident_work_orders').select('*').eq('community_id',cid).limit(500);
-      var mr = (!m.error && Array.isArray(m.data)) ? m.data : [];
-      mr = mr.filter(function(x){return isOpen(x.status)});
-      out.maintenance = mr.length;
-      out.urgentMaintenance = mr.filter(function(x){return /urgent|emergency|high/i.test(String(x.priority||''));}).length;
-    }catch(e){ console.warn('[v333 smart alerts] maintenance count skipped', e); }
-    try{
-      var a = await client.from('annual_meeting_packet_requests').select('*').eq('community_id',cid).limit(200);
-      var ar = (!a.error && Array.isArray(a.data)) ? a.data.filter(function(x){return isOpen(x.status)}) : [];
-      out.annual = ar.length;
-      out.annualOverdue = ar.filter(function(x){ var d=x.submitted_at||x.created_at||x.updated_at; return d && (Date.now()-new Date(d).getTime())>172800000; }).length;
-    }catch(e){ console.warn('[v333 smart alerts] annual count skipped', e); }
-    return out;
-  }
-  function render(c){
-    if(!c) return false;
-    if(c.boardBlocked){
-      setCard('mh2AlertBoard','attention','Board review status','SESSION','Sign back in on this device to load board review items. Counts are paused so they do not show a false zero.',ROUTES.mh2AlertBoard);
-    }else{
-      setCard('mh2AlertBoard',c.board?'attention':'good','Board review status',c.board?'OPEN':'STABLE',c.board?(c.board+' open board item'+(c.board===1?'':'s')+' ready for review.'):'No open board items for the selected community.',ROUTES.mh2AlertBoard);
-    }
-    setCard('mh2AlertActivity',c.urgentMaintenance?'urgent':(c.maintenance?'attention':'good'),'Maintenance activity',c.urgentMaintenance?(c.urgentMaintenance+' urgent'):(c.maintenance?(c.maintenance+' open'):'QUIET'),c.urgentMaintenance?(c.urgentMaintenance+' urgent maintenance signal'+(c.urgentMaintenance===1?'':'s')+' for this community.'):(c.maintenance?(c.maintenance+' open maintenance item'+(c.maintenance===1?'':'s')+'.'):'No open maintenance items'),ROUTES.mh2AlertActivity);
-    setCard('mh2AlertApprovals',c.annualOverdue?'urgent':(c.annual?'attention':'good'),'Annual meeting approvals',c.annualOverdue?(c.annualOverdue+' overdue'):(c.annual?(c.annual+' open'):'CLEAR'),c.annualOverdue?(c.annualOverdue+' annual meeting approval item'+(c.annualOverdue===1?' has':'s have')+' been open more than 2 days.'):(c.annual?(c.annual+' approval item'+(c.annual===1?'':'s')+' in progress.'):'No active annual meeting approval items.'),ROUTES.mh2AlertApprovals);
-    window.__ZUMMEE_V333_SMART_ALERT_FINAL__ = c;
-    document.documentElement.setAttribute('data-zummee-smart-alerts-v333-ready','1');
-    document.documentElement.setAttribute('data-zummee-smart-alerts-ready','1');
-    return true;
-  }
-  var running=false;
-  async function stableRun(){
-    if(running) return; running=true;
-    try{
-      var cid='';
-      for(var i=0;i<16;i++){
-        cid=getCid();
-        if(cid) break;
-        await new Promise(function(r){setTimeout(r,150);});
-      }
-      if(!cid){ console.warn('[v333 smart alerts] no community id after wait'); return; }
-      // Let legacy community/weather/annual loaders finish their early churn before final visible paint.
-      await new Promise(function(r){setTimeout(r,500);});
-      var counts = await fetchCounts();
-      render(counts);
-    } finally { running=false; }
-  }
-  function boot(){
-    document.documentElement.removeAttribute('data-zummee-smart-alerts-v333-ready');
-    setTimeout(stableRun, 0);
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot, {once:true}); else boot();
-  window.addEventListener('pageshow', boot);
-  document.addEventListener('community:changed', boot, true);
-  document.addEventListener('change', function(e){ if(e.target && /community/i.test(String(e.target.id||e.target.name||e.target.className||''))) boot(); }, true);
-
-  var strip = $('smartAlertStrip') || document.body;
-  if(strip && window.MutationObserver){
-    new MutationObserver(function(){
-      var final = window.__ZUMMEE_V333_SMART_ALERT_FINAL__;
-      if(!final || document.documentElement.getAttribute('data-zummee-smart-alerts-v333-ready')!=='1') return;
-      var b=$('mh2AlertBoard');
-      if(b && !/Board review status/.test(b.textContent||'')) setTimeout(function(){render(final)},0);
-    }).observe(strip,{childList:true,subtree:true,characterData:true});
-  }
-})();
-</script>
-
-
-<script id="zummee-v334-smart-alert-polish-lock">
-(function(){
-  if(window.__ZUMMEE_V334_SMART_ALERT_POLISH__) return;
-  window.__ZUMMEE_V334_SMART_ALERT_POLISH__ = true;
-  // Keep smart alert cards in the Manager Hub card style if any older script rewrites them as plain links.
-  function normalize(){
-    ['mh2AlertBoard','mh2AlertActivity','mh2AlertApprovals'].forEach(function(id){
-      var el=document.getElementById(id); if(!el) return;
-      if(!/mh2-alert/.test(el.className||'')){
-        var txt=(el.textContent||'').toLowerCase();
-        var tone=/overdue|urgent|session/.test(txt)?'is-urgent':(/open|review|maintenance/.test(txt)?'is-attention':'is-good');
-        el.className='mh2-alert '+tone;
-      }
-    });
-  }
-  document.addEventListener('DOMContentLoaded', normalize, {once:true});
-  window.addEventListener('pageshow', function(){setTimeout(normalize,100);setTimeout(normalize,900);});
-  setTimeout(normalize,300); setTimeout(normalize,1200); setTimeout(normalize,2500);
-})();
-</script>
-
-<!-- v335 Manager Hub Smart Alerts zero-jump layout lock: reserves final card geometry from first paint. -->
-<style id="zummee-v335-smart-alert-zero-jump-css">
-  #smartAlertStrip{ min-height:372px !important; box-sizing:border-box !important; }
-  #smartAlertStrip .mh2-smart-strip{ display:grid !important; grid-template-columns:repeat(3,minmax(0,1fr)) !important; gap:18px !important; align-items:stretch !important; min-height:178px !important; height:178px !important; margin-top:16px !important; box-sizing:border-box !important; }
-  #smartAlertStrip .mh2-alert{ min-height:158px !important; height:158px !important; box-sizing:border-box !important; overflow:hidden !important; display:flex !important; flex-direction:column !important; justify-content:center !important; }
-  html:not([data-zummee-smart-alerts-v333-ready="1"]) #smartAlertStrip .mh2-smart-strip,
-  html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip .mh2-smart-strip{ opacity:1 !important; visibility:visible !important; pointer-events:none !important; }
-  html:not([data-zummee-smart-alerts-v333-ready="1"]) #smartAlertStrip .mh2-smart-strip .mh2-alert,
-  html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip .mh2-smart-strip .mh2-alert{ visibility:hidden !important; opacity:0 !important; }
-  html:not([data-zummee-smart-alerts-v333-ready="1"]) #smartAlertStrip::after,
-  html:not([data-zummee-smart-alerts-ready="1"]) #smartAlertStrip::after{ content:none !important; display:none !important; }
-  @media (max-width:760px){ #smartAlertStrip{min-height:640px !important;} #smartAlertStrip .mh2-smart-strip{grid-template-columns:1fr !important; height:auto !important; min-height:518px !important;} #smartAlertStrip .mh2-alert{min-height:158px !important; height:158px !important;} }
-</style>
-<script id="zummee-v335-smart-alert-zero-jump-script">
-(function(){
-  if(window.__ZUMMEE_V335_SMART_ALERT_ZERO_JUMP__) return;
-  window.__ZUMMEE_V335_SMART_ALERT_ZERO_JUMP__ = true;
-  function reserve(){
-    var strip=document.getElementById('smartAlertStrip');
-    var grid=strip && strip.querySelector('.mh2-smart-strip');
-    if(!grid) return;
-    ['mh2AlertBoard','mh2AlertActivity','mh2AlertApprovals'].forEach(function(id){
-      if(!document.getElementById(id)){
-        var a=document.createElement('a');
-        a.id=id; a.className='mh2-alert is-good'; a.href='#';
-        a.innerHTML='<div class="mh2-alert-top"><div class="mh2-alert-title">&nbsp;</div><div class="mh2-alert-badge">&nbsp;</div></div><div class="mh2-alert-copy">&nbsp;</div>';
-        grid.appendChild(a);
-      }
-    });
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', reserve, {once:true}); else reserve();
-  window.addEventListener('pageshow', reserve);
-  setTimeout(reserve,50); setTimeout(reserve,400); setTimeout(reserve,1000);
-})();
-</script>
-
-<!-- v336 Maintenance smart alert source-of-truth lock: resident_work_orders only. -->
-<script id="zummee-v336-maintenance-source-truth-lock">
-(function(){
-  if(window.__ZUMMEE_V336_MAINT_SOURCE_TRUTH__) return;
-  window.__ZUMMEE_V336_MAINT_SOURCE_TRUTH__ = true;
-  function isUuid(v){return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||'').trim());}
-  function cid(){var sel=document.querySelector('#zummeeCommunitySelect,#communitySelect,select[data-community-select],select');var values=[sel&&sel.value,window.currentCommunityId,localStorage.getItem('zummee_selected_community_id'),localStorage.getItem('activeCommunityId'),localStorage.getItem('zummeeActiveCommunityId'),localStorage.getItem('currentCommunityId')];for(var i=0;i<values.length;i++){if(isUuid(values[i]))return values[i];}return '';}
-  async function sb(){var client=window.supabaseClient||(typeof window.ensureSupabase==='function'?await window.ensureSupabase():null);if(client&&client.auth){try{var sess=await client.auth.getSession();if(!(sess&&sess.data&&sess.data.session)){var at=localStorage.getItem('sb_access_token'),rt=localStorage.getItem('sb_refresh_token');if(at&&rt)await client.auth.setSession({access_token:at,refresh_token:rt});}}catch(_e){}}return client;}
-  function isOpenStatus(status){var s=String(status||'').toLowerCase().trim();return ['open','active','submitted','sent_to_vendor','scheduled','in_progress','manager_review','vendor_accepted','vendor_in_progress'].indexOf(s)>=0;}
-  function setMaintenanceCard(count,urgent){var card=document.getElementById('mh2AlertActivity');if(!card)return;var tone=urgent?'is-urgent':(count?'is-attention':'is-good');card.className='mh2-alert '+tone;card.setAttribute('href','maintenance_updates.html');card.setAttribute('data-zummee-route','maintenance_updates.html');card.onclick=function(e){e.preventDefault();e.stopPropagation();window.location.href='maintenance_updates.html';};var badge=urgent?(urgent+' urgent'):(count?(count+' open'):'QUIET');var copy=urgent?(urgent+' urgent maintenance item'+(urgent===1?'':'s')+' for this community.'):(count?(count+' open maintenance item'+(count===1?'':'s')+'.'):'No open maintenance items');card.innerHTML='<div class="mh2-alert-top"><div class="mh2-alert-title">Maintenance activity</div><div class="mh2-alert-badge">'+badge+'</div></div><div class="mh2-alert-copy">'+copy+'</div>';window.__ZUMMEE_V336_MAINT_COUNT__={count:count,urgent:urgent,communityId:cid()};}
-  async function refreshMaintenanceCard(){var communityId=cid();var client=await sb();if(!communityId||!client)return;if(typeof window.zummeeWaitForAuthReady==='function'){var __s=await window.zummeeWaitForAuthReady(client,{attempts:24,delay:125});if(!__s)return;}try{var res=await client.from('resident_work_orders').select('*').eq('community_id',communityId).limit(500);if(res.error){console.warn('[v336 maintenance] resident_work_orders count failed',res.error);return;}var rows=(res.data||[]).filter(function(r){return isOpenStatus(r.status);});var urgent=rows.filter(function(r){return /urgent|emergency|high/i.test(String(r.priority||''));}).length;setMaintenanceCard(rows.length,urgent);}catch(e){console.warn('[v336 maintenance] count crashed',e);}}
-  function schedule(){setTimeout(refreshMaintenanceCard,80);setTimeout(refreshMaintenanceCard,700);setTimeout(refreshMaintenanceCard,1800);}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});else schedule();window.addEventListener('pageshow',schedule);document.addEventListener('community:changed',schedule,true);document.addEventListener('change',function(e){if(e.target&&/community/i.test(String(e.target.id||e.target.name||e.target.className||'')))schedule();},true);
-  var strip=document.getElementById('smartAlertStrip')||document.body;if(strip&&window.MutationObserver){new MutationObserver(function(){var st=window.__ZUMMEE_V336_MAINT_COUNT__;var card=document.getElementById('mh2AlertActivity');if(st&&card&&!/Maintenance activity/.test(card.textContent||''))setTimeout(function(){setMaintenanceCard(st.count,st.urgent);},0);}).observe(strip,{childList:true,subtree:true,characterData:true});}
-})();
-</script>
-
-<!-- v340 Maintenance smart-alert no-flash lock: keep Manager Hub maintenance card on the same source/filter as Live Maintenance. -->
-<style id="zummee-v340-maintenance-no-flash-css">
-  html:not([data-zummee-maintenance-alert-ready="1"]) #mh2AlertActivity{visibility:hidden!important;opacity:0!important;}
-</style>
-<script id="zummee-v340-maintenance-smart-alert-no-flash">
-(function(){
-  if(window.__ZUMMEE_V340_MAINT_NO_FLASH__) return;
-  window.__ZUMMEE_V340_MAINT_NO_FLASH__ = true;
-  function isUuid(v){return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||'').trim());}
-  function cid(){var sel=document.querySelector('#zummeeCommunitySelect,#communitySelect,select[data-community-select],select');var vals=[sel&&sel.value,window.currentCommunityId,localStorage.getItem('zummee_selected_community_id'),localStorage.getItem('activeCommunityId'),localStorage.getItem('zummeeActiveCommunityId'),localStorage.getItem('currentCommunityId')];for(var i=0;i<vals.length;i++){if(isUuid(vals[i]))return vals[i];}return '';}
-  async function sb(){var c=window.supabaseClient||(typeof window.ensureSupabase==='function'?await window.ensureSupabase():null);if(c&&c.auth){try{var s=await c.auth.getSession();if(!(s&&s.data&&s.data.session)){var at=localStorage.getItem('sb_access_token'),rt=localStorage.getItem('sb_refresh_token');if(at&&rt)await c.auth.setSession({access_token:at,refresh_token:rt});}}catch(_e){}}return c;}
-  function esc(v){return String(v==null?'':v).replace(/[&<>\"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c;});}
-  function rowOk(x){var m=x&&x.metadata&&typeof x.metadata==='object'?x.metadata:{};return !!m.subject && m.vendor_assigned!==false && m.vendor_assigned!=='false';}
-  function rowUrgent(x){var m=x&&x.metadata&&typeof x.metadata==='object'?x.metadata:{};return /urgent|emergency|high/i.test(String(m.priority||m.category||x.priority||x.title||''));}
-  function htmlFor(count,urgent){var badge=urgent?(urgent+' urgent'):(count?(count+' open'):'QUIET');var copy=urgent?(urgent+' urgent maintenance item'+(urgent===1?'':'s')+' for this community.'):(count?(count+' open maintenance item'+(count===1?'':'s')+'.'):'No open maintenance items');return '<div class="mh2-alert-top"><div class="mh2-alert-title">Maintenance activity</div><div class="mh2-alert-badge">'+esc(badge)+'</div></div><div class="mh2-alert-copy">'+esc(copy)+'</div>';}
-  function apply(count,urgent){var card=document.getElementById('mh2AlertActivity');if(!card)return;var tone=urgent?'is-urgent':(count?'is-attention':'is-good');var html=htmlFor(count,urgent);card.className='mh2-alert '+tone;card.setAttribute('href','maintenance_updates.html');card.setAttribute('data-zummee-route','maintenance_updates.html');card.onclick=function(e){e.preventDefault();e.stopPropagation();window.location.href='maintenance_updates.html';};if(card.innerHTML!==html)card.innerHTML=html;window.__ZUMMEE_V340_MAINT_FINAL__={count:count,urgent:urgent,html:html,tone:tone};document.documentElement.setAttribute('data-zummee-maintenance-alert-ready','1');}
-  async function refresh(){var id=cid(),client=await sb();if(!id||!client)return;try{var r=await client.from('notification_events').select('id,event_type,title,status,source_table,source_id,metadata,created_at').eq('community_id',id).or('event_type.eq.new_work_order,event_type.eq.maintenance_update').limit(100);if(r.error)return;var rows=(r.data||[]).filter(rowOk),urgent=rows.filter(rowUrgent).length;apply(rows.length,urgent);}catch(e){console.warn('[v340 maintenance] skipped',e);}}
-  function boot(){document.documentElement.removeAttribute('data-zummee-maintenance-alert-ready');setTimeout(refresh,40);setTimeout(refresh,220);setTimeout(refresh,650);setTimeout(refresh,1400);}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();window.addEventListener('pageshow',boot);document.addEventListener('community:changed',boot,true);document.addEventListener('change',function(e){if(e.target&&/community/i.test(String(e.target.id||e.target.name||e.target.className||'')))boot();},true);
-  var fixTimer=setInterval(function(){var st=window.__ZUMMEE_V340_MAINT_FINAL__,card=document.getElementById('mh2AlertActivity');if(st&&card&&(card.innerHTML!==st.html||!card.className.includes(st.tone)))apply(st.count,st.urgent);},80);setTimeout(function(){clearInterval(fixTimer);},6000);
-  var strip=document.getElementById('smartAlertStrip')||document.body;if(strip&&window.MutationObserver){new MutationObserver(function(){var st=window.__ZUMMEE_V340_MAINT_FINAL__,card=document.getElementById('mh2AlertActivity');if(st&&card&&(card.innerHTML!==st.html||!card.className.includes(st.tone)))setTimeout(function(){apply(st.count,st.urgent);},0);}).observe(strip,{childList:true,subtree:true,characterData:true,attributes:true});}
-})();
-</script>
-
-<!-- v341 Annual meeting smart-alert no-flash lock: keep annual approval card on final annual_packet source and prevent legacy repaint flash. -->
-<style id="zummee-v341-annual-no-flash-css">
-  #mh2AlertApprovals{visibility:visible!important;opacity:1!important;}
-</style>
-<script id="zummee-v341-annual-smart-alert-no-flash">
-(function(){
-  if(window.__ZUMMEE_V341_ANNUAL_ALERT_LOCK__) return;
-  window.__ZUMMEE_V341_ANNUAL_ALERT_LOCK__=true;
-  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});}
-  function isUuid(v){return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||'').trim());}
-  function norm(v){return String(v||'').toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');}
-  function selected(){var sel=document.getElementById('zummeeCommunitySelect')||document.querySelector('select[data-community-select], select[name="community"], #communitySelect, #communityDropdown');var id='',name='';if(sel){if(isUuid(sel.value)) id=String(sel.value).trim();var opt=sel.options&&sel.selectedIndex>=0?sel.options[sel.selectedIndex]:null;if(opt) name=String(opt.textContent||'').trim();}if(!id){try{id=String(localStorage.getItem('zummee_selected_community_id')||localStorage.getItem('activeCommunityId')||localStorage.getItem('zummeeActiveCommunityId')||localStorage.getItem('currentCommunityId')||'').trim();}catch(e){}}if(!name){try{name=String(localStorage.getItem('currentCommunityName')||localStorage.getItem('zummeeCurrentCommunityName')||'').trim();}catch(e){}}return {id:isUuid(id)?id:'', name:name};}
-  async function sb(){if(window.supabaseClient&&typeof window.supabaseClient.from==='function') return window.supabaseClient;if(typeof window.ensureSupabase==='function') return await window.ensureSupabase();if(window.sb&&typeof window.sb.from==='function') return window.sb;return null;}
-  function isOpen(row){var st=String((row&&row.status)||'').toLowerCase().trim().replace(/[\s-]+/g,'_');if(!st) return true;if(st.indexOf('reject')>-1||st.indexOf('mail')>-1||st.indexOf('sent_to_admin')>-1) return false;if(['approved','complete','completed','closed','archived','done','resolved'].indexOf(st)>-1) return false;if(st.indexOf('approved_ready')>-1) return false;return st.indexOf('pending')>-1||st.indexOf('board')>-1||st.indexOf('supervisor')>-1||st.indexOf('approval')>-1||st==='draft'||st==='open';}
-  function when(row){var raw=row&&(row.submitted_at||row.created_at||row.updated_at||row.created||'');var t=Date.parse(String(raw||''));return isFinite(t)?t:0;}
-  function overdue(row){var t=when(row);return !!(t&&(Date.now()-t)>172800000);}
-  function matches(row,ctx){if(!row) return false;var rid=String(row.community_id||row.communityId||'').trim();if(ctx.id&&rid&&rid===ctx.id) return true;var rn=norm(row.community_name||row.community||row.property_name||row.association_name||row.name);var cn=norm(ctx.name);return !!(cn&&rn&&cn===rn);}
-  function htmlFor(count,over,ctx){var badge=over?(over+' OVERDUE'):(count?(count+' OPEN'):'CLEAR');var copy=over?(over+' annual meeting approval item'+(over===1?' has':'s have')+' been open more than 2 days for '+esc(ctx.name||'the selected community')+'.'):(count?(count+' annual meeting approval item'+(count===1?' is':'s are')+' still in progress for '+esc(ctx.name||'the selected community')+'.'):'No active annual meeting approval items.');return '<div class="mh2-alert-top"><div class="mh2-alert-title">Annual meeting approvals</div><div class="mh2-alert-badge">'+esc(badge)+'</div></div><div class="mh2-alert-copy">'+copy+'</div>';}
-  function apply(count,over,ctx){var card=document.getElementById('mh2AlertApprovals'); if(!card) return;var tone=over?'is-urgent':(count?'is-attention':'is-good');var html=htmlFor(count,over,ctx||selected());card.className='mh2-alert '+tone;var href=(window.mh2IsPrivileged?'annual_meeting_approvals.html':'annual_meeting_status.html');card.setAttribute('href',href); card.setAttribute('data-zummee-route',href);card.onclick=function(e){e.preventDefault();e.stopPropagation();window.location.href=href;};if(card.innerHTML!==html) card.innerHTML=html;window.__ZUMMEE_V341_ANNUAL_FINAL__={count:count,overdue:over,html:html,tone:tone,communityId:(ctx&&ctx.id)||selected().id};document.documentElement.setAttribute('data-zummee-annual-alert-ready','1');}
-  async function refresh(){var ctx=selected(),client=await sb(); if(!ctx.id||!client) return;try{var q=client.from('annual_meeting_packet_requests').select('*').limit(200).eq('community_id',ctx.id);var r=await q;if(r.error){console.warn('[v341 annual] primary query failed', r.error);var all=await client.from('annual_meeting_packet_requests').select('*').limit(200);if(all.error) return;r={data:(all.data||[]).filter(function(row){return matches(row,ctx);})};}var rows=(r.data||[]).filter(isOpen);var over=rows.filter(overdue).length;apply(rows.length,over,ctx);}catch(e){console.warn('[v341 annual] skipped',e);}}
-  function boot(){refresh();setTimeout(refresh,350);setTimeout(refresh,1200);}
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true}); else boot();
-  window.addEventListener('pageshow',function(){setTimeout(refresh,80);});
-  document.addEventListener('change',function(e){if(e&&e.target&&(e.target.id==='zummeeCommunitySelect'||/community/i.test(e.target.name||'')))setTimeout(refresh,80);},true);
-  var fixTimer=setInterval(function(){var st=window.__ZUMMEE_V341_ANNUAL_FINAL__,card=document.getElementById('mh2AlertApprovals');if(st&&card&&(card.innerHTML!==st.html||!card.className.includes(st.tone)))apply(st.count,st.overdue,selected());},80);setTimeout(function(){clearInterval(fixTimer);},6000);
-  var strip=document.getElementById('smartAlertStrip')||document.body;if(strip&&window.MutationObserver){new MutationObserver(function(){var st=window.__ZUMMEE_V341_ANNUAL_FINAL__,card=document.getElementById('mh2AlertApprovals');if(st&&card&&(card.innerHTML!==st.html||!card.className.includes(st.tone)))setTimeout(function(){apply(st.count,st.overdue,selected());},0);}).observe(strip,{childList:true,subtree:true,characterData:true,attributes:true});}
-})();
-</script>
 
 
 
-<!-- v342 Annual smart-alert restore: never hide the annual card; render a safe final shell even if legacy annual query fails. -->
-<style id="zummee-v342-annual-card-always-visible-css">
-  #mh2AlertApprovals{visibility:visible!important;opacity:1!important;}
-</style>
-<script id="zummee-v342-annual-card-restore">
-(function(){
-  if(window.__ZUMMEE_V342_ANNUAL_CARD_RESTORE__) return;
-  window.__ZUMMEE_V342_ANNUAL_CARD_RESTORE__ = true;
-  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});}
-  function isUuid(v){return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||'').trim());}
-  function norm(v){return String(v||'').toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');}
-  function ctx(){
-    var sel=document.getElementById('zummeeCommunitySelect')||document.querySelector('select[data-community-select],select[name="community"],#communitySelect,#communityDropdown,select');
-    var id='', name='';
-    if(sel){ if(isUuid(sel.value)) id=String(sel.value).trim(); var opt=sel.options&&sel.selectedIndex>=0?sel.options[sel.selectedIndex]:null; if(opt) name=String(opt.textContent||'').trim(); }
-    if(!id){ var vals=[window.currentCommunityId,localStorage.getItem('zummee_selected_community_id'),localStorage.getItem('activeCommunityId'),localStorage.getItem('zummeeActiveCommunityId'),localStorage.getItem('currentCommunityId')]; for(var i=0;i<vals.length;i++){ if(isUuid(vals[i])){id=String(vals[i]).trim();break;} } }
-    if(!name) name=localStorage.getItem('currentCommunityName')||localStorage.getItem('zummeeCurrentCommunityName')||'';
-    return {id:id,name:name};
-  }
-  async function sb(){
-    var c=window.supabaseClient||(typeof window.ensureSupabase==='function'?await window.ensureSupabase():null);
-    if(c&&c.auth){try{var s=await c.auth.getSession(); if(!(s&&s.data&&s.data.session)){var at=localStorage.getItem('sb_access_token'),rt=localStorage.getItem('sb_refresh_token'); if(at&&rt) await c.auth.setSession({access_token:at,refresh_token:rt});}}catch(_e){}}
-    return c;
-  }
-  function isOpen(row){
-    var st=String(row&&row.status||'').toLowerCase().trim().replace(/[\s-]+/g,'_');
-    if(!st) return true;
-    if(/reject|rejected|approved_ready|sent_to_admin|mail|mailed|complete|completed|closed|archived|done|resolved|cancel/.test(st)) return false;
-    return /open|pending|board|supervisor|approval|draft|submitted|review/.test(st);
-  }
-  function when(row){var raw=row&&(row.submitted_at||row.created_at||row.updated_at||row.created||'');var t=Date.parse(String(raw||''));return isFinite(t)?t:0;}
-  function isOver(row){var t=when(row);return !!(t&&(Date.now()-t)>172800000);}
-  function matches(row,c){
-    if(!row) return false;
-    var rid=String(row.community_id||row.communityId||'').trim();
-    if(c.id&&rid&&rid===c.id) return true;
-    var rn=norm(row.community_name||row.community||row.property_name||row.association_name||row.name);
-    return !!(rn&&norm(c.name)&&rn===norm(c.name));
-  }
-  function apply(count,over,c,failed){
-    var card=document.getElementById('mh2AlertApprovals'); if(!card) return;
-    var href=(window.mh2IsPrivileged?'annual_meeting_approvals.html':'annual_meeting_status.html');
-    var tone=over?'is-urgent':(count?'is-attention':'is-good');
-    var badge=failed?'CHECK':(over?(over+' OVERDUE'):(count?(count+' OPEN'):'CLEAR'));
-    var copy=failed?'Annual meeting approval status is available on the status page.':(over?(over+' annual meeting approval item'+(over===1?' has':'s have')+' been open more than 2 days for '+esc((c&&c.name)||'the selected community')+'.'):(count?(count+' annual meeting approval item'+(count===1?' is':'s are')+' still in progress for '+esc((c&&c.name)||'the selected community')+'.'):'No active annual meeting approval items.'));
-    var html='<div class="mh2-alert-top"><div class="mh2-alert-title">Annual meeting approvals</div><div class="mh2-alert-badge">'+esc(badge)+'</div></div><div class="mh2-alert-copy">'+copy+'</div>';
-    card.className='mh2-alert '+tone;
-    card.setAttribute('href',href); card.setAttribute('data-zummee-route',href);
-    card.onclick=function(e){e.preventDefault();e.stopPropagation();window.location.href=href;};
-    if(card.innerHTML!==html) card.innerHTML=html;
-    card.style.visibility='visible'; card.style.opacity='1';
-    window.__ZUMMEE_V342_ANNUAL_FINAL__={count:count,overdue:over,failed:!!failed,html:html,tone:tone};
-    document.documentElement.setAttribute('data-zummee-annual-alert-ready','1');
-    document.documentElement.setAttribute('data-zummee-smart-alerts-ready','1');
-    document.documentElement.setAttribute('data-zummee-smart-alerts-v333-ready','1');
-  }
-  async function refresh(){
-    var c=ctx();
-    if(!c.id){ apply(0,0,c,true); return; }
-    var client=await sb();
-    if(!client){ apply(0,0,c,true); return; }
-    try{
-      var r=await client.from('annual_meeting_packet_requests').select('*').limit(200);
-      if(r.error) throw r.error;
-      var rows=(r.data||[]).filter(function(row){return matches(row,c)&&isOpen(row);});
-      apply(rows.length,rows.filter(isOver).length,c,false);
-    }catch(e){
-      console.warn('[v342 annual] safe annual query failed; keeping annual card visible', e);
-      apply(0,0,c,true);
-    }
-  }
-  function boot(){ setTimeout(refresh,80); setTimeout(refresh,600); setTimeout(refresh,1500); }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true}); else boot();
-  window.addEventListener('pageshow',boot);
-  document.addEventListener('community:changed',boot,true);
-  document.addEventListener('change',function(e){if(e.target&&/community/i.test(String(e.target.id||e.target.name||e.target.className||'')))boot();},true);
-  setInterval(function(){var st=window.__ZUMMEE_V342_ANNUAL_FINAL__,card=document.getElementById('mh2AlertApprovals'); if(st&&card&&(card.innerHTML!==st.html||!card.className.includes(st.tone)||card.style.visibility==='hidden')) apply(st.count,st.overdue,ctx(),st.failed);},250);
-})();
-</script>
-
-
-
-<!-- v343 Annual smart-alert settle lock: visible neutral shell, then final annual state once. -->
-<style id="zummee-v343-annual-settle-lock-css">
-  #mh2AlertApprovals{min-height:150px!important;height:150px!important;overflow:hidden!important;transition:none!important;}
-  #mh2AlertApprovals.zummee-annual-settling{background:#fffaf0!important;border-color:#f59e0b!important;color:#8a4b00!important;box-shadow:none!important;}
-  #mh2AlertApprovals.zummee-annual-settling .mh2-alert-badge{border-color:#f59e0b!important;color:#8a4b00!important;background:#fff7ed!important;}
-</style>
-<script id="zummee-v343-annual-settle-lock">
-(function(){
-  if(window.__ZUMMEE_V343_ANNUAL_SETTLE_LOCK__) return;
-  window.__ZUMMEE_V343_ANNUAL_SETTLE_LOCK__=true;
-  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});}
-  function isUuid(v){return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||'').trim());}
-  function norm(v){return String(v||'').toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]+/g,' ').trim().replace(/s+/g,' ');}
-  function card(){return document.getElementById('mh2AlertApprovals');}
-  function ctx(){var sel=document.getElementById('zummeeCommunitySelect')||document.querySelector('select[data-community-select],select[name="community"],#communitySelect,#communityDropdown,select');var id='',name='';if(sel){if(isUuid(sel.value))id=String(sel.value).trim();var opt=sel.options&&sel.selectedIndex>=0?sel.options[sel.selectedIndex]:null;if(opt)name=String(opt.textContent||'').trim();}if(!id){var vals=[window.currentCommunityId,localStorage.getItem('zummee_selected_community_id'),localStorage.getItem('activeCommunityId'),localStorage.getItem('zummeeActiveCommunityId'),localStorage.getItem('currentCommunityId')];for(var i=0;i<vals.length;i++){if(isUuid(vals[i])){id=String(vals[i]).trim();break;}}}if(!name)name=localStorage.getItem('currentCommunityName')||localStorage.getItem('zummeeCurrentCommunityName')||'';return{id:id,name:name};}
-  async function sb(){var c=window.supabaseClient||(typeof window.ensureSupabase==='function'?await window.ensureSupabase():null);if(c&&c.auth){try{var s=await c.auth.getSession();if(!(s&&s.data&&s.data.session)){var at=localStorage.getItem('sb_access_token'),rt=localStorage.getItem('sb_refresh_token');if(at&&rt)await c.auth.setSession({access_token:at,refresh_token:rt});}}catch(_e){}}return c;}
-  function isOpen(row){var st=String(row&&row.status||'').toLowerCase().trim().replace(/[s-]+/g,'_');if(!st)return true;if(/reject|rejected|approved_ready|sent_to_admin|mail|mailed|complete|completed|closed|archived|done|resolved|cancel/.test(st))return false;return /open|pending|board|supervisor|approval|draft|submitted|review/.test(st);}
-  function when(row){var raw=row&&(row.submitted_at||row.created_at||row.updated_at||row.created||'');var t=Date.parse(String(raw||''));return isFinite(t)?t:0;}
-  function overdue(row){var t=when(row);return !!(t&&(Date.now()-t)>172800000);}
-  function matches(row,c){if(!row)return false;var rid=String(row.community_id||row.communityId||'').trim();if(c.id&&rid&&rid===c.id)return true;var rn=norm(row.community_name||row.community||row.property_name||row.association_name||row.name);return !!(rn&&norm(c.name)&&rn===norm(c.name));}
-  function shell(){var el=card();if(!el)return;el.className='mh2-alert zummee-annual-settling';el.style.visibility='visible';el.style.opacity='1';var href=(window.mh2IsPrivileged?'annual_meeting_approvals.html':'annual_meeting_status.html');el.setAttribute('href',href);el.setAttribute('data-zummee-route',href);el.innerHTML='<div class="mh2-alert-top"><div class="mh2-alert-title">Annual meeting approvals</div><div class="mh2-alert-badge">CHECKING</div></div><div class="mh2-alert-copy">Checking annual meeting approval status…</div>';}
-  function finalPaint(count,over,c,failed){var el=card();if(!el)return;var href=(window.mh2IsPrivileged?'annual_meeting_approvals.html':'annual_meeting_status.html');var tone=failed?'is-attention':(over?'is-urgent':(count?'is-attention':'is-good'));var badge=failed?'CHECK':(over?(over+' OVERDUE'):(count?(count+' OPEN'):'CLEAR'));var copy=failed?'Annual meeting approval status is available on the status page.':(over?(over+' annual meeting approval item'+(over===1?' has':'s have')+' been open more than 2 days for '+esc((c&&c.name)||'the selected community')+'.'):(count?(count+' annual meeting approval item'+(count===1?' is':'s are')+' still in progress for '+esc((c&&c.name)||'the selected community')+'.'):'No active annual meeting approval items.'));var html='<div class="mh2-alert-top"><div class="mh2-alert-title">Annual meeting approvals</div><div class="mh2-alert-badge">'+esc(badge)+'</div></div><div class="mh2-alert-copy">'+copy+'</div>';el.className='mh2-alert '+tone;el.setAttribute('href',href);el.setAttribute('data-zummee-route',href);el.onclick=function(e){e.preventDefault();e.stopPropagation();window.location.href=href;};el.innerHTML=html;el.style.visibility='visible';el.style.opacity='1';window.__ZUMMEE_V343_ANNUAL_FINAL__={html:html,tone:tone,count:count,overdue:over,failed:!!failed,href:href};document.documentElement.setAttribute('data-zummee-annual-alert-ready','1');}
-  async function compute(){var c=ctx();if(!c.id){finalPaint(0,0,c,true);return;}var client=await sb();if(!client){finalPaint(0,0,c,true);return;}try{var r=await client.from('annual_meeting_packet_requests').select('*').limit(200);if(r.error)throw r.error;var rows=(r.data||[]).filter(function(row){return matches(row,c)&&isOpen(row);});finalPaint(rows.length,rows.filter(overdue).length,c,false);}catch(e){console.warn('[v343 annual] final annual query failed; keeping card stable',e);finalPaint(0,0,c,true);}}
-  function boot(){shell();setTimeout(compute,700);}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();window.addEventListener('pageshow',function(){setTimeout(boot,50);});document.addEventListener('community:changed',boot,true);document.addEventListener('change',function(e){if(e.target&&/community/i.test(String(e.target.id||e.target.name||e.target.className||'')))boot();},true);
-  var strip=document.getElementById('smartAlertStrip')||document.body;if(strip&&window.MutationObserver){new MutationObserver(function(){var st=window.__ZUMMEE_V343_ANNUAL_FINAL__,el=card();if(st&&el&&(el.innerHTML!==st.html||!el.className.includes(st.tone))){setTimeout(function(){finalPaint(st.count,st.overdue,ctx(),st.failed);},0);}}).observe(strip,{childList:true,subtree:true,characterData:true,attributes:true});}
-})();
-</script>
-
-
-<!-- v344 Smart Alerts single-paint final lock: reserve layout, hide interim repaints, then paint all three cards once. -->
-<style id="zummee-v344-smart-alert-single-paint-css">
-  #smartAlertStrip .mh2-smart-strip{
-    min-height:180px !important;
-    display:grid !important;
-    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
-    gap:18px !important;
-    align-items:stretch !important;
-  }
-  #smartAlertStrip .mh2-alert{
-    min-height:150px !important;
-    height:150px !important;
-    display:flex !important;
-    flex-direction:column !important;
-    justify-content:center !important;
-    overflow:hidden !important;
-  }
-  html:not([data-zummee-smart-alerts-final="1"]) #smartAlertStrip .mh2-alert{
-    visibility:hidden !important;
-  }
-  html:not([data-zummee-smart-alerts-final="1"]) #smartAlertStrip::after{
-    content:"" !important;
-    display:none !important;
-  }
-</style>
-<script id="zummee-v344-smart-alert-single-paint-lock">
-(function(){
-  if(window.__ZUMMEE_V344_SMART_ALERT_SINGLE_PAINT__) return;
-  window.__ZUMMEE_V344_SMART_ALERT_SINGLE_PAINT__ = true;
-
-  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});}
-  function isUuid(v){return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||'').trim());}
-  function norm(v){return String(v||'').toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');}
-  function ctx(){
-    var sel=document.getElementById('zummeeCommunitySelect')||document.querySelector('select[data-community-select],select[name="community"],#communitySelect,#communityDropdown,select');
-    var id='',name='';
-    if(sel){if(isUuid(sel.value))id=String(sel.value).trim();var opt=sel.options&&sel.selectedIndex>=0?sel.options[sel.selectedIndex]:null;if(opt)name=String(opt.textContent||'').trim();}
-    if(!id){var vals=[window.currentCommunityId,localStorage.getItem('zummee_selected_community_id'),localStorage.getItem('activeCommunityId'),localStorage.getItem('zummeeActiveCommunityId'),localStorage.getItem('currentCommunityId')];for(var i=0;i<vals.length;i++){if(isUuid(vals[i])){id=String(vals[i]).trim();break;}}}
-    if(!name)name=localStorage.getItem('currentCommunityName')||localStorage.getItem('zummeeCurrentCommunityName')||'';
-    return {id:id,name:name};
-  }
-  async function sb(){
-    var c=window.supabaseClient||(typeof window.ensureSupabase==='function'?await window.ensureSupabase():null);
-    if(c&&c.auth){try{var s=await c.auth.getSession();if(!(s&&s.data&&s.data.session)){var at=localStorage.getItem('sb_access_token'),rt=localStorage.getItem('sb_refresh_token');if(at&&rt)await c.auth.setSession({access_token:at,refresh_token:rt});}}catch(_e){}}
-    return c;
-  }
-  function isOpenStatus(v){var st=String(v||'').toLowerCase().trim().replace(/[\s-]+/g,'_');if(!st)return true;return !(/complete|completed|closed|archived|done|resolved|cancel|reject|approved_ready|sent_to_admin|mailed/.test(st));}
-  function applyCard(id,tone,title,badge,copy,href){
-    var el=document.getElementById(id); if(!el)return;
-    var html='<div class="mh2-alert-top"><div class="mh2-alert-title">'+esc(title)+'</div><div class="mh2-alert-badge">'+esc(badge)+'</div></div><div class="mh2-alert-copy">'+esc(copy)+'</div>';
-    el.className='mh2-alert '+tone;
-    el.setAttribute('href',href);
-    el.setAttribute('data-zummee-route',href);
-    el.onclick=function(e){e.preventDefault();e.stopPropagation();window.location.href=href;};
-    if(el.innerHTML!==html) el.innerHTML=html;
-    return {id:id,tone:tone,html:html,href:href};
-  }
-  async function countBoard(client,c){
-    try{
-      if(window.ZummeeDataLayer && typeof window.ZummeeDataLayer.countOpenBoardItemsForCommunity==='function'){
-        var shared=await window.ZummeeDataLayer.countOpenBoardItemsForCommunity(c.id);
-        if(!shared.error) return shared.count||0;
-        console.warn('[v404 smart alerts] shared board count failed', shared.error);
-      }
-      var r=await client.from('BoardMemberActionItems').select('id,status,community_id').eq('community_id',c.id).limit(500);
-      var rows=(!r.error&&Array.isArray(r.data))?r.data:[];
-      return rows.filter(function(row){var st=String(row&&row.status||'').toLowerCase().trim().replace(/[\s-]+/g,'_');return !st || !(/complete|completed|closed|archived|done|resolved|cancel|reject|rejected|approved_ready|sent_to_admin|mail|mailed/.test(st));}).length;
-    }catch(e){return 0;}
-  }
-  async function countMaintenance(client,c){
-    try{
-      var r=await client.from('notification_events').select('id,event_type,title,metadata,community_id').eq('community_id',c.id).or('event_type.eq.new_work_order,event_type.eq.maintenance_update').limit(100);
-      var rows=(!r.error&&Array.isArray(r.data))?r.data:[];
-      /* Match the Live Maintenance smart-card filter: true maintenance records, not converted-board history. */
-      return rows.filter(function(x){
-        var title=String(x.title||'');
-        var m=x.metadata||{};
-        if(/converted/i.test(title)) return false;
-        if(/sent to vendor/i.test(title)) return true;
-        if(title==='New Work Order' && (m.subject || m.vendor_assigned===true || m.vendor_assigned===false)) return true;
-        return false;
-      }).length;
-    }catch(e){return (window.__ZUMMEE_V336_MAINT_COUNT__&&window.__ZUMMEE_V336_MAINT_COUNT__.count)||0;}
-  }
-  async function countAnnual(client,c){
-    if(window.__ZUMMEE_V343_ANNUAL_FINAL__ && typeof window.__ZUMMEE_V343_ANNUAL_FINAL__.count==='number'){
-      return {count:window.__ZUMMEE_V343_ANNUAL_FINAL__.count,over:window.__ZUMMEE_V343_ANNUAL_FINAL__.overdue||0,failed:!!window.__ZUMMEE_V343_ANNUAL_FINAL__.failed};
-    }
-    try{
-      var r=await client.from('annual_meeting_packet_requests').select('*').limit(200);
-      if(r.error) throw r.error;
-      var rows=(r.data||[]).filter(function(row){
-        var rid=String(row.community_id||row.communityId||'').trim();
-        var rn=norm(row.community_name||row.community||row.property_name||row.association_name||row.name);
-        var match=(c.id&&rid&&rid===c.id)||((rn&&norm(c.name)&&rn===norm(c.name)));
-        return match && isOpenStatus(row.status);
-      });
-      var over=rows.filter(function(row){var raw=row.submitted_at||row.created_at||row.updated_at;var t=Date.parse(String(raw||''));return isFinite(t)&&(Date.now()-t)>172800000;}).length;
-      return {count:rows.length,over:over,failed:false};
-    }catch(e){return {count:0,over:0,failed:true};}
-  }
-  function paint(final){
-    var b=final.board, m=final.maintenance, a=final.annual, name=(final.ctx&&final.ctx.name)||'the selected community';
-    applyCard('mh2AlertBoard', b?'is-attention':'is-good','Board review status',b?'OPEN':'STABLE',b?(b+' open item'+(b===1?'':'s')+' ready for review.'):'No open board items for the selected community.','board_member_hub.html');
-    applyCard('mh2AlertActivity', m?'is-attention':'is-good','Maintenance activity',m?(m+' OPEN'):'QUIET',m?(m+' open maintenance item'+(m===1?'':'s')+'.'):'No open maintenance items','maintenance_updates.html');
-    var annualHref=(window.mh2IsPrivileged?'annual_meeting_approvals.html':'annual_meeting_status.html');
-    var tone=a.failed?'is-attention':(a.over?'is-urgent':(a.count?'is-attention':'is-good'));
-    var badge=a.failed?'CHECK':(a.over?(a.over+' OVERDUE'):(a.count?(a.count+' OPEN'):'CLEAR'));
-    var copy=a.failed?'Annual meeting approval status is available on the status page.':(a.over?(a.over+' annual meeting approval item'+(a.over===1?' has':'s have')+' been open more than 2 days for '+name+'.'):(a.count?(a.count+' annual meeting approval item'+(a.count===1?' is':'s are')+' still in progress for '+name+'.'):'No active annual meeting approval items.'));
-    applyCard('mh2AlertApprovals',tone,'Annual meeting approvals',badge,copy,annualHref);
-    window.__ZUMMEE_V344_SMART_ALERT_FINAL__=final;
-    document.documentElement.setAttribute('data-zummee-smart-alerts-ready','1');
-    document.documentElement.setAttribute('data-zummee-smart-alerts-final','1');
-  }
-  async function computeAndPaint(){
-    if(window.__ZUMMEE_V344_SMART_ALERT_FINAL_LOCK__) return;
-    var c=ctx();
-    if(!c.id){setTimeout(computeAndPaint,150);return;}
-    var client=await sb();
-    if(!client){setTimeout(computeAndPaint,150);return;}
-    /* Let older boot scripts finish their early churn while cards stay invisible/reserved. */
-    await new Promise(function(r){setTimeout(r,900);});
-    var final={ctx:c,board:0,maintenance:0,annual:{count:0,over:0,failed:false}};
-    final.board=await countBoard(client,c);
-    final.maintenance=await countMaintenance(client,c);
-    final.annual=await countAnnual(client,c);
-    window.__ZUMMEE_V344_SMART_ALERT_FINAL_LOCK__=true;
-    paint(final);
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',computeAndPaint,{once:true}); else computeAndPaint();
-  window.addEventListener('pageshow',function(){ if(!window.__ZUMMEE_V344_SMART_ALERT_FINAL_LOCK__) computeAndPaint(); });
-  var strip=document.getElementById('smartAlertStrip')||document.body;
-  if(strip&&window.MutationObserver){new MutationObserver(function(){var f=window.__ZUMMEE_V344_SMART_ALERT_FINAL__;if(!f)return;var b=document.getElementById('mh2AlertBoard'),m=document.getElementById('mh2AlertActivity'),a=document.getElementById('mh2AlertApprovals');var bad=(!b||!/Board review status/.test(b.textContent||''))||(!m||!/Maintenance activity/.test(m.textContent||''))||(!a||!/Annual meeting approvals/.test(a.textContent||''));if(bad||document.documentElement.getAttribute('data-zummee-smart-alerts-final')!=='1'){setTimeout(function(){paint(f);},0);}}).observe(strip,{childList:true,subtree:true,characterData:true,attributes:true});}
-})();
-</script>
 
 <script id="zummee-v403-manager-community-url-sync">
 (function(){
@@ -6697,6 +6280,190 @@ html:not([data-zummee-smart-alerts-v333-ready="1"]) #smartAlertStrip::after{
   function schedule(){ [0,80,250,700,1500,3000].forEach(function(ms){setTimeout(function(){apply('timer-'+ms);},ms);}); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', schedule, {once:true}); else schedule();
   window.addEventListener('pageshow', schedule);
+})();
+</script>
+
+
+<script id="zummee-v410d-live-activity-collapse-js">
+(function(){
+  function ready(fn){
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+  ready(function(){
+    var card=document.getElementById('activityFeedCard');
+    if(!card) return;
+    var buttons=[document.getElementById('activityFeedToggleBtn')].filter(Boolean);
+    if(!buttons.length) return;
+    var key='zummee_manager_hub_live_activity_collapsed_v1';
+    function apply(collapsed){
+      card.classList.toggle('is-collapsed', !!collapsed);
+      buttons.forEach(function(btn){
+        btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        btn.textContent = collapsed ? 'Expand' : 'Collapse';
+      });
+    }
+    var collapsed=false;
+    try{ collapsed=localStorage.getItem(key)==='1'; }catch(e){}
+    apply(collapsed);
+    buttons.forEach(function(btn){
+      btn.addEventListener('click', function(ev){
+        ev.preventDefault();
+        collapsed=!card.classList.contains('is-collapsed');
+        try{ localStorage.setItem(key, collapsed ? '1' : '0'); }catch(e){}
+        apply(collapsed);
+      });
+    });
+  });
+})();
+</script>
+
+
+
+<!-- v412 Smart Alerts single owner: no flashing, no legacy repaint, one render path for board/maintenance/annual. -->
+
+
+
+
+
+<script id="zummee-v453-board-smart-source-sync">
+(function(){
+  function n(v){ return Number(v||0)||0; }
+  function syncBoardSurfaces(){
+    try{
+      var final=window.__ZUMMEE_V412_SMART_ALERT_FINAL__||{};
+      var board=final.board||{};
+      var open=n(board.count);
+      var overdue=n(board.overdue);
+      var countEl=document.getElementById('mh2BoardOverdueCount');
+      var noteEl=document.getElementById('mh2BoardOverdueNote');
+      if(countEl){ countEl.textContent=String(open); }
+      if(noteEl){ noteEl.textContent=open ? ('Needs review in '+((final.ctx&&final.ctx.name)||'selected community')+'.') : 'Current board items for the selected community.'; }
+      var card=document.getElementById('boardMemberHubCard');
+      if(card){
+        var tone=card.querySelector('[data-role="tone"]');
+        var m1=card.querySelector('[data-role="metric1"]');
+        var m2=card.querySelector('[data-role="metric2"]');
+        if(tone){
+          tone.textContent=overdue ? 'Overdue' : (open ? 'Open' : 'Clear');
+          tone.className='mh2-tool-pill'+(overdue?' is-urgent':(open?' is-gold':' is-good'));
+        }
+        if(m1){ m1.textContent=String(open); }
+        if(m2){ m2.textContent=String(overdue); }
+        card.classList.remove('mh2-tool-card--gold','mh2-tool-card--urgent');
+        if(overdue){ card.classList.add('mh2-tool-card--urgent'); }
+        else if(open){ card.classList.add('mh2-tool-card--gold'); }
+      }
+    }catch(e){}
+  }
+  window.addEventListener('load',function(){
+    var tries=0;
+    var timer=setInterval(function(){
+      tries++;
+      syncBoardSurfaces();
+      if(tries>20) clearInterval(timer);
+    },400);
+  });
+  document.addEventListener('visibilitychange',function(){ if(!document.hidden) syncBoardSurfaces(); });
+})();
+</script>
+
+
+
+
+
+<script id="zummee-v462-manager-hub-board-smart-card-direct-lock">
+(function(){
+  'use strict';
+  var UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  function isUuid(v){return UUID.test(String(v||'').trim());}
+  function $(id){return document.getElementById(id);}
+  function esc(s){return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function client(){
+    try{ if(window.supabaseClient&&window.supabaseClient.from) return window.supabaseClient; }catch(e){}
+    try{ if(window.getSupabase){var c=window.getSupabase(); if(c&&c.from) return c;} }catch(e){}
+    try{ if(window.ensureSupabaseSync){var c2=window.ensureSupabaseSync(); if(c2&&c2.from) return c2;} }catch(e){}
+    return null;
+  }
+  function context(){
+    var id='',name='';
+    var sel=$('zummeeCommunitySelect')||$('communitySelect')||document.querySelector('select[data-community-select],select[name="community"],select');
+    if(sel){
+      if(isUuid(sel.value)) id=String(sel.value).trim();
+      var opt=sel.options&&sel.selectedIndex>=0?sel.options[sel.selectedIndex]:null;
+      if(opt) name=String(opt.textContent||'').trim();
+    }
+    if(!id){
+      [window.currentCommunityId,window.activeCommunityId,window.zummeeSelectedCommunityId,localStorage.getItem('zummee_selected_community_id'),localStorage.getItem('zummeeActiveCommunityId'),localStorage.getItem('activeCommunityId'),localStorage.getItem('currentCommunityId'),sessionStorage.getItem('zummee_selected_community_id'),sessionStorage.getItem('zummeeActiveCommunityId'),sessionStorage.getItem('activeCommunityId'),sessionStorage.getItem('currentCommunityId')].some(function(v){ if(isUuid(v)){ id=String(v).trim(); return true; } return false; });
+    }
+    if(!name) name=localStorage.getItem('zummeeCurrentCommunityName')||localStorage.getItem('currentCommunityName')||sessionStorage.getItem('zummeeCurrentCommunityName')||sessionStorage.getItem('currentCommunityName')||'the selected community';
+    return {id:id,name:name};
+  }
+  function statusOf(row){
+    var md=(row&&row.metadata&&typeof row.metadata==='object')?row.metadata:{};
+    return String((row&&(row.status||row.workflow_status||row.review_status))||md.status||md.workflow_status||md.review_status||'open').toLowerCase().trim();
+  }
+  function isCurrent(row){
+    if(!row) return false;
+    if(row.deleted_at||row.archived_at||row.completed_at||row.reviewed_at) return false;
+    var st=statusOf(row);
+    if(/reviewed|complete|completed|closed|archived|done|resolved|cancel|cancelled|reject|rejected|approved|converted|agenda|minutes|deleted|inactive/i.test(st)) return false;
+    return true;
+  }
+  function isOverdue(row){
+    var raw=row&&(row.due_date||row.review_due_date||row.deadline||(row.metadata&&row.metadata.due_date));
+    if(!raw) return false;
+    var d=new Date(String(raw).slice(0,10)+'T00:00:00');
+    if(isNaN(d.getTime())) return false;
+    var today=new Date(); today.setHours(0,0,0,0); d.setHours(0,0,0,0);
+    return d.getTime()<today.getTime();
+  }
+  function setText(id,value){var el=$(id); if(el) el.textContent=String(value);}
+  function render(payload){
+    payload=payload||{};
+    var count=Number(payload.count)||0, overdue=Number(payload.overdue)||0;
+    var ctx=context();
+    var card=$('mh2AlertBoard');
+    if(card){
+      card.classList.remove('is-good','is-attention','is-urgent');
+      card.classList.add(overdue?'is-urgent':(count?'is-attention':'is-good'));
+      card.setAttribute('href','board_member_hub_v2.html'+(ctx.id?'?community_id='+encodeURIComponent(ctx.id):''));
+      var title=card.querySelector('.mh2-alert-title'), badge=card.querySelector('.mh2-alert-badge'), copy=card.querySelector('.mh2-alert-copy');
+      if(title) title.textContent=overdue?'Board review overdue':'Board review status';
+      if(badge) badge.textContent=overdue?(overdue+' OVERDUE'):(count?'OPEN':'STABLE');
+      if(copy) copy.textContent=overdue?(count+' current board item'+(count===1?'':'s')+' ready for review, '+overdue+' overdue.'):(count?(count+' current board item'+(count===1?'':'s')+' ready for review.'):'No current board items for review.');
+    }
+    setText('mh2BoardOverdueCount',count);
+    setText('mh2BoardOverdueNote',count?('Needs review in '+(ctx.name||'selected community')+'.'):'Current board items for the selected community.');
+    setText('mh2BoardItemsPill',count);
+    setText('mh2BoardStatusPill',overdue?('Overdue '+overdue):(count?('Open '+count):'Clear'));
+    try{ document.documentElement.setAttribute('data-zummee-smart-alerts-v426-ready','1'); }catch(e){}
+    window.__ZUMMEE_V462_BOARD_SMART_LOCK__={ctx:ctx,count:count,overdue:overdue,source:payload.source||'notification_events'};
+  }
+  async function load(){
+    var ctx=context(); if(!isUuid(ctx.id)){render({count:0,overdue:0,source:'no-community'}); return;}
+    try{
+      if(window.ZummeeBoardData&&typeof window.ZummeeBoardData.getBoardReviewItems==='function'){
+        var shared=await window.ZummeeBoardData.getBoardReviewItems(ctx.id,{sb:client(),communityName:ctx.name});
+        if(shared && !shared.error && Array.isArray(shared.rows)){ render({count:shared.rows.length,overdue:shared.rows.filter(isOverdue).length,source:'shared-notification_events'}); return; }
+      }
+    }catch(e){ console.warn('[v462 Manager Hub board smart card] shared board source skipped',e); }
+    var sb=client(); if(!sb){render({count:0,overdue:0,source:'no-client'}); return;}
+    try{
+      var q=await sb.from('notification_events').select('id,title,message,metadata,created_at,event_type,community_id').eq('community_id',ctx.id).eq('event_type','board_item_submitted').order('created_at',{ascending:false}).limit(500);
+      if(q.error) throw q.error;
+      var rows=(Array.isArray(q.data)?q.data:[]).filter(isCurrent);
+      render({count:rows.length,overdue:rows.filter(isOverdue).length,source:'notification_events-direct'});
+    }catch(e){
+      console.warn('[v462 Manager Hub board smart card] direct notification_events load failed',e);
+      render({count:0,overdue:0,source:'notification_events-error'});
+    }
+  }
+  function schedule(){
+    // v500: disabled legacy Board Review writer. The shared manager-hub-data-layer.js owns this card.
+    try{ console.info('[v500 board no-flash lock] legacy board smart writer disabled'); }catch(_e){}
+  }
+  window.__ZUMMEE_V462_BOARD_SMART_LOCK_DISABLED__ = true;
 })();
 </script>
 
@@ -6976,4 +6743,10 @@ body[data-theme="dark"] a.mh2-board-tag.is-overdue{
 })();
 </script>
 
-<!-- v404: Smart Alerts and Board Hub submitted items use shared BoardMemberActionItems direct authority. No RPC dependency. -->
+
+
+<!-- v404: Smart Alerts and Board Hub submitted items use shared notification_events board_item_submitted direct authority. No RPC dependency. -->
+
+
+<!-- v492: Manager Hub canonical data layer lock. Final owner for Smart Alerts + Operations Portal pill. -->
+<script src="shared/manager-hub-data-layer.js?v=2026-05-04-v500"></script>

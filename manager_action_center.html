@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Manager Action Center</title>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="shared/supabase-client.js?v=2026-04-29-v327"></script>
+  <script src="shared/data-layer-v409.js?v=2026-04-30-v409-server-board-photo-upload"></script>
+  <script src="shared/zummee-board-data.js?v=461-notification-events-board-source-lock"></script>
+  <script src="company_logo_sync.js"></script>
+  <style>
+    :root{--navy:#17365f;--line:#a9c8ff;--muted:#64748b;--ink:#143052;--red:#dc2626}
+    *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:linear-gradient(180deg,#f6fbff,#eef6ff);color:var(--ink)}
+    .wrap{max-width:1180px;margin:28px auto;padding:0 28px 60px}.card{background:rgba(255,255,255,.94);border:3px solid var(--line);border-radius:34px;box-shadow:0 18px 44px rgba(30,75,140,.08);padding:28px;margin-bottom:24px}
+    .hero{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:start}.title{font-size:42px;line-height:1.05;margin:0;color:#17365f;font-weight:950;letter-spacing:-.04em}.sub{margin:8px 0 0;color:var(--muted);font-weight:800;font-size:16px;line-height:1.4}.logo{width:210px;max-height:92px;object-fit:contain;justify-self:end}
+    .controls{grid-column:1/-1;display:grid;grid-template-columns:minmax(220px,1fr) auto;gap:18px;align-items:center}.select{height:62px;border:1.5px solid #dce7f4;border-radius:24px;background:white;color:#17365f;font-size:18px;padding:0 20px}.btn{height:62px;border:0;border-radius:24px;background:#17365f;color:white;font-weight:950;font-size:16px;padding:0 24px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}.btn.secondary{background:white;color:#17365f;border:2px solid var(--line)}
+    .grid{display:grid;grid-template-columns:1.35fr 1fr;gap:18px}.panel{border:2px solid rgba(47,111,237,.30);background:linear-gradient(180deg,#fff,#f8fbff);border-radius:24px;padding:18px}.panel.gold{background:linear-gradient(135deg,#fff8d8,#fff1a8);border-color:#efcf5b}.head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px}.kicker{text-transform:uppercase;letter-spacing:.08em;font-size:12px;font-weight:950;color:#537098}.h2{font-size:23px;margin:2px 0 4px;color:#17365f;font-weight:950}.copy{color:#64748b;font-weight:800;font-size:14px;line-height:1.38}.count{min-width:40px;height:40px;border-radius:999px;background:#eef6ff;border:1px solid rgba(47,111,237,.22);display:grid;place-items:center;font-weight:950;color:#245aa3}.list{display:grid;gap:12px}.empty{border:1.5px dashed #bdd4f6;border-radius:18px;background:#fbfdff;padding:18px;color:#64748b;font-weight:800;text-align:center}
+    .item{border:1.5px solid #bad3ff;background:#f7fbff;border-radius:20px;padding:15px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}.item.urgent{border-color:#f0a6a6;background:#fff6f6}.item h3{margin:0 0 4px;font-size:17px;color:#17365f}.item p{margin:0;color:#64748b;font-weight:750;font-size:13px}.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.mini{border:2px solid var(--line);background:white;color:#17365f;border-radius:14px;padding:10px 12px;font-weight:950;text-decoration:none;cursor:pointer}.mini.primary{background:#17365f;color:white;border-color:#17365f}
+    /* v446 premium core destinations */
+    .tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px}
+    .tool{position:relative;min-height:132px;border-radius:24px;text-decoration:none;color:#17365f;padding:20px;display:flex;flex-direction:column;justify-content:center;gap:10px;background:linear-gradient(180deg,#ffffff,#f7fbff);border:2px solid rgba(96,165,250,.35);box-shadow:0 10px 24px rgba(18,42,67,.08),0 0 0 1px rgba(96,165,250,.18),inset 0 1px 0 rgba(255,255,255,.9);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;overflow:hidden}
+    .tool::before{content:"";position:absolute;left:0;top:18px;bottom:18px;width:5px;border-radius:999px;background:#a9c8ff}
+    .tool:hover{transform:translateY(-2px);box-shadow:0 16px 32px rgba(18,42,67,.12),0 0 0 1px rgba(96,165,250,.28),inset 0 1px 0 rgba(255,255,255,.92)}
+    .tool strong{font-size:19px;font-weight:950;letter-spacing:-.025em;line-height:1.1;padding-right:92px}
+    .tool span{color:#64748b;font-weight:780;font-size:13px;line-height:1.35;padding-right:20px}
+    .tool.gold{background:linear-gradient(135deg,#fff9df,#fff1a8);border-color:#e5c14d;box-shadow:0 12px 28px rgba(198,148,16,.16),inset 0 1px 0 rgba(255,255,255,.7)}
+    .tool.gold::before{background:#d6a719}
+    .tool-badge{position:absolute;right:16px;top:16px;min-height:30px;min-width:42px;padding:0 11px;border-radius:999px;background:#eef6ff;border:1px solid rgba(47,111,237,.22);color:#245aa3;display:none;align-items:center;justify-content:center;font-size:12px;font-weight:950;letter-spacing:.02em;box-shadow:0 6px 14px rgba(30,75,140,.08)}
+    .tool-badge.is-on{display:inline-flex}
+    .tool-badge.is-good{background:#ecfdf3;border-color:#bbf7d0;color:#067647}
+    .tool-badge.is-warn{background:#fff7ed;border-color:#fed7aa;color:#b45309}
+    .tool-badge.is-urgent{background:#fff1f1;border-color:#f5b8b8;color:#b42318;animation:toolBadgePulse 1.8s ease-in-out infinite}
+    @keyframes toolBadgePulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.22),0 6px 14px rgba(30,75,140,.08)}50%{box-shadow:0 0 0 7px rgba(220,38,38,0),0 8px 18px rgba(220,38,38,.12)}}
+    .status{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1.5px solid #d8e5f6;background:white;border-radius:18px;padding:14px;text-decoration:none;color:#17365f;font-weight:900}.today-row span{color:#64748b;font-size:13px;font-weight:800}
+    @media(max-width:860px){.wrap{padding:18px 16px}.hero,.controls,.grid{grid-template-columns:1fr}.logo{justify-self:start;width:150px}.title{font-size:34px}.btn{width:100%}.card{padding:22px;border-radius:26px}.item{grid-template-columns:1fr}.actions{justify-content:flex-start}}
+    @media(max-width:560px){.tools{grid-template-columns:1fr}.tool strong,.tool span{padding-right:0}.tool-badge{position:static;width:max-content;margin-bottom:2px}}
+
+    /* v445 Action Center section order + collapsible panels */
+    .section-toggle{
+      appearance:none;
+      border:2px solid rgba(169,200,255,.92);
+      background:rgba(255,255,255,.88);
+      color:#17365f;
+      min-width:42px;
+      height:42px;
+      border-radius:999px;
+      display:inline-grid;
+      place-items:center;
+      font-size:18px;
+      font-weight:950;
+      cursor:pointer;
+      box-shadow:0 8px 18px rgba(30,75,140,.08);
+      transition:transform .16s ease, box-shadow .16s ease;
+    }
+    .section-toggle:hover{transform:translateY(-1px);box-shadow:0 12px 22px rgba(30,75,140,.12)}
+    .section-toggle::before{content:"⌄";line-height:1;transform:translateY(-1px)}
+    .is-collapsed > .section-toggle::before,
+    .is-collapsed .section-toggle::before{content:"›";transform:none}
+    .collapsible-section.is-collapsed .collapsible-body{display:none!important}
+    .mac-section-card .head{margin-bottom:18px}
+    .mac-section-card.is-collapsed .head{margin-bottom:0}
+    html[data-theme="dark"] .section-toggle{background:rgba(255,255,255,.06);color:#eef5ff;border-color:rgba(169,200,255,.30)}
+
+    html[data-theme="dark"] .tool{background:linear-gradient(180deg,rgba(24,39,57,.96),rgba(18,30,45,.94));border-color:rgba(169,200,255,.24);color:#eef5ff;box-shadow:0 10px 24px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.04)}
+    html[data-theme="dark"] .tool strong{color:#eef5ff}
+    html[data-theme="dark"] .tool span{color:#b8c7d9}
+    html[data-theme="dark"] .tool.gold{background:linear-gradient(135deg,rgba(83,64,21,.96),rgba(58,45,17,.96));border-color:rgba(229,193,77,.42)}
+  
+
+    /* v447 header cleanup: logo top-right, no helper/status pill, controls on one line */
+    .hero{
+      grid-template-columns:minmax(0,1fr) auto !important;
+      align-items:start !important;
+      column-gap:24px !important;
+    }
+    .hero .sub,
+    #statusLine{
+      display:none !important;
+    }
+    .logo{
+      grid-column:2 !important;
+      grid-row:1 !important;
+      justify-self:end !important;
+      align-self:start !important;
+      width:210px !important;
+      max-width:28vw !important;
+      max-height:92px !important;
+      object-fit:contain !important;
+      margin-top:4px !important;
+    }
+    .controls{
+      grid-column:1 / -1 !important;
+      display:grid !important;
+      grid-template-columns:minmax(0,1fr) minmax(220px,320px) !important;
+      gap:18px !important;
+      align-items:center !important;
+      margin-top:12px !important;
+    }
+    .controls .btn,
+    .controls .select{
+      width:100% !important;
+    }
+    @media(max-width:760px){
+      .hero{grid-template-columns:1fr !important;}
+      .logo{grid-column:1 !important;grid-row:2 !important;justify-self:start !important;max-width:210px !important;width:180px !important;}
+      .controls{grid-template-columns:1fr !important;}
+    }
+
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <section class="card hero">
+    <div><h1 class="title">Manager Action Center</h1><p class="sub">Dedicated manager queues and action cards for the selected community. The main hub stays faster; heavier work loads here.</p></div>
+    <img id="companyLogo" class="logo" alt="Company logo">
+    <div class="controls"><select id="communitySelect" class="select"><option value="">Loading communities…</option></select><a id="backToHub" class="btn secondary" href="manager_hub.html">Back to Manager Hub</a></div>
+    <div id="statusLine" class="status">Connecting…</div>
+  </section>
+  <section id="coreDestinationsSection" class="card mac-section-card collapsible-section" data-collapse-key="mac-core-destinations">
+    <div class="head">
+      <div><div class="kicker">Manager actions</div><div class="h2">Core Destinations</div><div class="copy">Open the work area you need without making the Manager Hub load every action card.</div></div>
+      <button class="section-toggle" type="button" aria-label="Collapse Core Destinations" aria-expanded="true" data-collapse-target="coreDestinationsSection"></button>
+    </div>
+    <div class="collapsible-body"><div id="toolsGrid" class="tools"></div></div>
+  </section>
+  <section id="attentionSection" class="card mac-section-card collapsible-section" data-collapse-key="mac-needs-attention">
+    <div class="head">
+      <div><div class="kicker">Action queue</div><div class="h2">Needs Your Attention</div><div class="copy">Work orders, ACC reviews, board items, approvals, and pending gallery activity.</div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div id="attentionCount" class="count">…</div><button class="section-toggle" type="button" aria-label="Collapse Needs Your Attention" aria-expanded="true" data-collapse-target="attentionSection"></button></div>
+    </div>
+    <div class="collapsible-body"><div id="attentionList" class="list"><div class="empty">Loading action items…</div></div></div>
+  </section>
+  <section id="todaySnapshotSection" class="card mac-section-card collapsible-section" data-collapse-key="mac-today-snapshot">
+    <div class="head">
+      <div><div class="kicker">Today</div><div class="h2">Today Snapshot</div><div class="copy">Calendar events and reminders for this community.</div></div>
+      <button class="section-toggle" type="button" aria-label="Collapse Today Snapshot" aria-expanded="true" data-collapse-target="todaySnapshotSection"></button>
+    </div>
+    <div class="collapsible-body"><div id="todayList" class="list"><div class="empty">Loading today…</div></div></div>
+  </section>
+</div>
+<script>
+(function(){
+const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;const $=id=>document.getElementById(id);let sb=null,userId='',selectedCommunityId='',selectedCommunityName='';
+function isUuid(v){return UUID_RE.test(String(v||'').trim())}function qp(n){return String(new URLSearchParams(location.search).get(n)||'').trim()}function esc(s=''){return String(s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#039;")}function getStore(keys){for(const k of keys){try{const v=String(localStorage.getItem(k)||sessionStorage.getItem(k)||'').trim();if(v)return v}catch(e){}}return''}
+function setStatus(msg,type){const el=$('statusLine');if(el){el.textContent=msg||'';el.classList.toggle('err',type==='err')}}
+function getContext(){return{cid:isUuid(qp('community_id'))?qp('community_id'):'',uid:isUuid(qp('user_id'))?qp('user_id'):getStore(['zummee_user_id_v1','zummeeUserId','activeUserId','currentUserId']),name:decodeURIComponent(qp('community_name')||'')}}
+function contextUrl(href){try{const u=new URL(href,location.href);if(selectedCommunityId)u.searchParams.set('community_id',selectedCommunityId);if(selectedCommunityName)u.searchParams.set('community_name',selectedCommunityName);if(userId)u.searchParams.set('user_id',userId);return u.pathname.replace(/^\//,'')+u.search+u.hash}catch(e){return href}}
+function applyLinks(){document.querySelectorAll('[data-link]').forEach(a=>a.href=contextUrl(a.getAttribute('href')||'#'));$('backToHub').href=contextUrl('manager_hub.html')}
+async function waitForClient(){const start=Date.now();while(Date.now()-start<6000){let c=window.supabaseClient||(window.getSupabase&&window.getSupabase())||null;if(!c&&window.ensureSupabaseSync)c=window.ensureSupabaseSync();if(c&&c.from)return c;await new Promise(r=>setTimeout(r,80))}throw new Error('Supabase client unavailable')}
+async function loadCommunities(){const rows=[];const add=arr=>(arr||[]).forEach(r=>{const id=String(r.id||r.community_id||'').trim();const name=String(r.name||r.community_name||r.community||'').trim();if(isUuid(id)&&!rows.some(x=>x.id===id))rows.push({id,name:name||id})});if(window.ZummeeDataLayer&&window.ZummeeDataLayer.getAssignedCommunities){try{add(await window.ZummeeDataLayer.getAssignedCommunities({userId}))}catch(e){console.warn(e)}}if(!rows.length){try{add(JSON.parse(localStorage.getItem('zummee_assigned_communities_v1')||'[]'))}catch(e){}}if(selectedCommunityId&&!rows.some(r=>r.id===selectedCommunityId))rows.unshift({id:selectedCommunityId,name:selectedCommunityName||selectedCommunityId});const sel=$('communitySelect');if(!rows.length){sel.innerHTML='<option value="">Open from Manager Hub</option>';return}sel.innerHTML=rows.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');if(selectedCommunityId&&rows.some(c=>c.id===selectedCommunityId))sel.value=selectedCommunityId;else selectedCommunityId=sel.value=rows[0].id;selectedCommunityName=sel.options[sel.selectedIndex].textContent.trim();sel.onchange=function(){selectedCommunityId=sel.value;selectedCommunityName=sel.options[sel.selectedIndex].textContent.trim();const u=new URL(location.href);u.searchParams.set('community_id',selectedCommunityId);u.searchParams.set('community_name',selectedCommunityName);if(userId)u.searchParams.set('user_id',userId);location.href=u.toString()};applyLinks()}
+function item(opts){return`<article class="item ${opts.urgent?'urgent':''}"><div><h3>${esc(opts.title)}</h3><p>${esc(opts.copy||'')}</p></div><div class="actions">${opts.actions||''}</div></article>`}
+async function loadAttention(){const list=$('attentionList'),count=$('attentionCount');list.innerHTML='<div class="empty">Loading action items…</div>';let items=[];try{const[wo,board,approvals,gallery]=await Promise.allSettled([sb.from('resident_work_orders').select('*').eq('community_id',selectedCommunityId).limit(12),getBoardReviewPayload(),sb.from('annual_meeting_packet_requests').select('*').limit(12),sb.from('community_gallery').select('id,community,submitted_by,caption,status,created_at').eq('status','pending').limit(12)]);if(wo.value&&!wo.value.error)(wo.value.data||[]).forEach(r=>{const st=String(r.status||'').toLowerCase();if(['completed','closed','cancelled'].includes(st))return;items.push(item({title:r.subject||'Resident work order',copy:(r.resident_name?r.resident_name+' • ':'')+(r.category||'Needs manager review'),urgent:/urgent|emergency/i.test(String(r.priority||'')),actions:`<a class="mini primary" data-link href="resident_work_orders.html?open_work_order_id=${esc(r.id)}">Open</a>`}))});if(board.value&&!board.value.error)(board.value.rows||[]).slice(0,12).forEach(r=>{items.push(item({title:r.title||'Board submitted item',copy:r.details||'Ready for review',urgent:isBoardReviewOverdue(r),actions:`<a class="mini" data-link href="board_member_hub.html?open_item=${esc(r.id)}">Board Hub</a>`}))});if(approvals.value&&!approvals.value.error)(approvals.value.data||[]).forEach(r=>{
+  const rid=String(r.community_id||r.communityId||'').trim();
+  const rname=String(r.community_name||r.community||r.property_name||r.association_name||r.name||'').trim().toLowerCase();
+  const selectedName=String(selectedCommunityName||'').trim().toLowerCase();
+  const matchesCommunity=(rid&&rid===selectedCommunityId)||(!rid&&rname&&selectedName&&rname===selectedName);
+  if(!matchesCommunity) return;
+  items.push(item({title:'Annual Meeting Approval',copy:r.community_name||r.community||selectedCommunityName||'Approval waiting for review',actions:`<a class="mini" data-link href="annual_meeting_approvals.html">Review</a>`}))
+});if(gallery.value&&!gallery.value.error)(gallery.value.data||[]).forEach(r=>{items.push(item({title:r.caption||'Gallery approval',copy:(r.submitted_by?r.submitted_by+' • ':'')+'Pending approval',actions:`<a class="mini" data-link href="board_gallery_approvals.html">Approve</a>`}))});count.textContent=String(items.length);list.innerHTML=items.length?items.slice(0,18).join(''):`<div class="empty">Nothing needs attention for ${esc(selectedCommunityName||'this community')}.</div>`;applyLinks()}catch(e){console.error(e);count.textContent='0';list.innerHTML='<div class="empty">Unable to load action items.</div>'}}
+async function loadToday(){const c=$('todayList');const today=new Date().toISOString().slice(0,10);let rows=[];try{const[bc,mc]=await Promise.allSettled([sb.from('board_calendar_events').select('id,title,event_date,event_time,community_id').eq('community_id',selectedCommunityId).eq('event_date',today).limit(8),sb.from('manager_calendar_events').select('id,title,event_date,event_time,community_id').eq('community_id',selectedCommunityId).eq('event_date',today).limit(8)]);[bc,mc].forEach(x=>{if(x.value&&!x.value.error)(x.value.data||[]).forEach(r=>rows.push(r))})}catch(e){}c.innerHTML=rows.length?rows.map(r=>`<a class="today-row" data-link href="board_member_hub.html#calendar"><strong>${esc(r.title||'Event')}</strong><span>${esc(r.event_time?String(r.event_time).slice(0,5):'Today')}</span></a>`).join(''):`<div class="empty">No events scheduled today for ${esc(selectedCommunityName||'this community')}.</div>`;applyLinks()}
+
+function initCollapsibleSections(){
+  document.querySelectorAll('.collapsible-section').forEach(section=>{
+    const key=section.getAttribute('data-collapse-key')||section.id;
+    const btn=section.querySelector('.section-toggle');
+    let collapsed=false;
+    try{collapsed=localStorage.getItem(key)==='collapsed'}catch(e){}
+    function apply(){
+      section.classList.toggle('is-collapsed',collapsed);
+      if(btn){
+        btn.setAttribute('aria-expanded',String(!collapsed));
+        const label=(collapsed?'Expand ':'Collapse ')+(section.querySelector('.h2')?.textContent||'section');
+        btn.setAttribute('aria-label',label);
+      }
+    }
+    apply();
+    if(btn){
+      btn.addEventListener('click',()=>{
+        collapsed=!collapsed;
+        try{localStorage.setItem(key,collapsed?'collapsed':'expanded')}catch(e){}
+        apply();
+      });
+    }
+  });
+}
+function renderTools(){
+  const tools=[
+    ['Daily Ops','ops.html','Daily operating notes, reminders, access codes, and community records.','gold','ops'],
+    ['Board Member Hub','board_member_hub.html','Board-submitted items, calendar, agenda workflow, photos, and work orders.','gold','board'],
+    ['Resident Work Orders','resident_work_orders.html','Resident and employee-submitted work-order management.','','workorders'],
+    ['Live Maintenance Updates','maintenance_updates.html','Active vendor and maintenance status stream.','','maintenance'],
+    ['Mileage Tracker','mileage.html','Mileage submission, compliance, reporting, and reimbursements.','',''],
+    ['Community Inspections','inspections.html','Inspection logging and follow-up work orders.','',''],
+    ['Annual Meetings','annual_meetings.html','Packet generation, approvals, mailed records, and presentation workflow.','','annual'],
+    ['Preferred Vendors','preferred_vendors.html','Approved vendor directory and routing support.','',''],
+    ['Reminders','inspections.html#reminders','Due-soon and overdue reminders tied to daily operations.','','reminders'],
+    ['Community Texting','emergency_texting.html','Community-wide alerts, scheduled messages, and emergency text activity.','',''],
+    ['Company Directory','company_directory.html','Internal contacts and company directory access.','',''],
+    ['Manager Info & Training','manager_info_training.html','Training materials and manager-facing process guidance.','',''],
+    ['Online Voting','online_voting.html','Election setup, ballots, nominations, proxies, and live results.','',''],
+    ['Board Meetings','board_meetings.html','Agenda building, meeting prep, minutes workflow, and coordination.','',''],
+    ['Community Experience','community_experience.html?preview=manager','Preview the resident landing page, events, reservations, and work orders.','',''],
+    ['Resident Directory','resident_directory.html','Resident roster, contact details, invites, and resident management.','',''],
+    ['Annual Presentation','annual_presentation.html','Build annual presentations with branding and board-ready visuals.','',''],
+    ['Maintenance Control Center','maintenance_dashboard.html','Kanban-style maintenance control center for open and active work.','','maintenance'],
+    ['Pool Opening & Closing','pool_ops.html','Seasonal pool operations checklists and workflow.','',''],
+    ['Operations Portal','ops.html','Community board, vendor, reminder, and operations source data.','','ops'],
+    ['Supervisor Communications','supervisor_communications.html','Supervisor directives and team communications.','gold',''],
+    ['Annual Meeting Approvals','annual_meeting_approvals.html','Supervisor approval queue for annual meeting packets.','gold','approvals'],
+    ['Community Assignments','community_assignments.html','Assign communities, assistants, and routing ownership.','gold',''],
+    ['Employee Account Activations','employee_account_activations.html','Review and approve employee account requests.','gold',''],
+    ['Company Branding & Texting','company_branding_texting.html','Company logo, branding, and internal texting controls.','gold',''],
+    ['Employee Performance','employee_performance_report.html','Company and employee performance reporting.','gold','']
+  ];
+  $('toolsGrid').innerHTML=tools.map((t,i)=>`<a class="tool ${t[3]}" data-tool-key="${esc(t[4]||'')}" data-link href="${t[1]}"><em class="tool-badge" aria-hidden="true"></em><strong>${esc(t[0])}</strong><span>${esc(t[2])}</span></a>`).join('');
+  applyLinks();
+  loadToolBadges();
+}
+function setToolBadge(key,label,tone){
+  document.querySelectorAll(`.tool[data-tool-key="${key}"] .tool-badge`).forEach(b=>{
+    b.textContent=label||'';
+    b.className='tool-badge'+(label?' is-on':'')+(tone?' is-'+tone:'');
+    b.setAttribute('aria-hidden',label?'false':'true');
+  });
+}
+
+function macNorm(v){return String(v||'').toLowerCase().trim().replace(/[\s-]+/g,'_')}
+function boardRowStatus(row){
+  const md=(row&&row.metadata&&typeof row.metadata==='object')?row.metadata:{};
+  return macNorm(
+    (row&&(row.status||row.workflow_status||row.review_status||row.item_status||row.board_status)) ||
+    md.status || md.workflow_status || md.review_status || md.item_status || md.board_status ||
+    ''
+  );
+}
+function boardRowIsCurrent(row){
+  const st=boardRowStatus(row);
+  const details=String((row&&(row.details||row.message||row.description))||'');
+  if(row&&(row.completed_at||row.completedAt||row.reviewed_at||row.reviewedAt))return false;
+  if(row&&(row.deleted_at||row.deletedAt||row.archived_at||row.archivedAt))return false;
+  if(/__ZUMMEE_BM_CONVERTED__:\s*RWO\|/i.test(details))return false;
+  if(/reviewed|complete|completed|closed|archived|done|resolved|cancel|cancelled|reject|rejected|approved_ready|sent_to_admin|mail|mailed|minutes/i.test(st))return false;
+  return !/agenda/.test(st);
+}
+function isBoardReviewOverdue(row){
+  try{
+    const raw=(row&&(row.due_date||row.dueDate||row.review_due_date||row.deadline))||'';
+    if(!raw)return false;
+    const d=new Date(raw); if(isNaN(d.getTime()))return false;
+    const today=new Date(); today.setHours(0,0,0,0); d.setHours(0,0,0,0);
+    return d.getTime()<today.getTime();
+  }catch(e){return false}
+}
+async function getBoardReviewPayload(){
+  const empty={count:0,overdue:0,rows:[],source:'notification_events-unavailable'};
+  try{
+    if(window.ZummeeBoardData && typeof window.ZummeeBoardData.getBoardReviewItems==='function'){
+      const r=await window.ZummeeBoardData.getBoardReviewItems(selectedCommunityId,{sb});
+      if(r && !r.error && Array.isArray(r.rows)){
+        return {count:Number(r.count)||r.rows.length,overdue:Number(r.overdue)||0,rows:r.rows,source:r.source||'shared/zummee-board-data.js'};
+      }
+      if(r && r.error) throw r.error;
+    }
+  }catch(e){
+    console.warn('[board source lock v461] shared notification_events board provider failed',e);
+  }
+
+  // v461 locked fallback: active board review items come only from notification_events.
+  try{
+    const q=await sb
+      .from('notification_events')
+      .select('id,title,message,metadata,created_at,event_type,community_id')
+      .eq('community_id',selectedCommunityId)
+      .eq('event_type','board_item_submitted')
+      .limit(500);
+    if(q.error) throw q.error;
+    const rows=(q.data||[]).filter(boardRowIsCurrent).map(r=>{
+      const md=(r&&r.metadata&&typeof r.metadata==='object')?r.metadata:{};
+      return {
+        ...r,
+        source:'notification_events.board_item_submitted',
+        title:r.title||r.subject||md.title||'Board submitted item',
+        details:r.details||r.message||r.description||md.details||md.message||'Ready for review',
+        status:r.status||r.workflow_status||r.review_status||r.item_status||md.status||md.workflow_status||md.review_status||'open',
+        due_date:r.due_date||r.dueDate||r.review_due_date||r.deadline||md.due_date||md.review_due_date||md.deadline||'',
+        created_at:r.created_at||r.submitted_at||r.inserted_at||md.created_at||''
+      };
+    });
+    return {count:rows.length,overdue:rows.filter(isBoardReviewOverdue).length,rows,source:'notification_events.board_item_submitted'};
+  }catch(e){
+    console.error('[board source lock v461] notification_events failed; board badge held at 0',e);
+    return empty;
+  }
+}
+
+async function getAnnualApprovalPayload(){
+  try{
+    const q=await sb
+      .from('annual_meeting_packet_requests')
+      .select('id,community_id,community_name,status,submitted_at')
+      .limit(120);
+    if(q.error)throw q.error;
+    const selectedName=String(selectedCommunityName||'').trim().toLowerCase();
+    const rows=(q.data||[]).filter(r=>{
+      const rid=String(r.community_id||'').trim();
+      const rn=String(r.community_name||r.community||'').trim().toLowerCase();
+      const matches=(rid&&rid===selectedCommunityId)||(!rid&&rn&&selectedName&&rn===selectedName);
+      const closed=/approved|rejected|completed|closed|archived/i.test(String(r.status||''));
+      return matches&&!closed;
+    });
+    return {count:rows.length,rows,source:'annual_meeting_packet_requests'};
+  }catch(e){
+    console.warn('Annual approval count source failed',e);
+    return {count:0,rows:[],source:'annual_meeting_packet_requests'};
+  }
+}
+
+function activeCount(rows){return (rows||[]).filter(r=>!/(completed|closed|cancelled|archived|done)/i.test(String(r.status||r.workflow_status||''))).length}
+async function loadToolBadges(){
+  if(!sb||!selectedCommunityId)return;
+  const today=new Date();
+  const soon=new Date(today.getTime()+30*86400000).toISOString().slice(0,10);
+  try{
+    const [wo,board,maint,reminders,important,approvals]=await Promise.allSettled([
+      sb.from('resident_work_orders').select('id,status,priority').eq('community_id',selectedCommunityId).limit(80),
+      getBoardReviewPayload(),
+      sb.from('maintenance_updates').select('id,status,community_id').eq('community_id',selectedCommunityId).limit(80),
+      sb.from('ops_reminders').select('id,status,due_date,community_id').eq('community_id',selectedCommunityId).lte('due_date',soon).limit(80),
+      sb.from('ops_important_dates').select('id,date,due_date,community_id').eq('community_id',selectedCommunityId).limit(80),
+      getAnnualApprovalPayload()
+    ]);
+    if(wo.value&&!wo.value.error){const n=activeCount(wo.value.data);if(n)setToolBadge('workorders',String(n),n>0?'warn':'good')}
+    if(board.value&&!board.value.error){const n=Number(board.value.count)||0;if(n)setToolBadge('board',String(n)+' open','warn');else setToolBadge('board','','good')}
+    if(maint.value&&!maint.value.error){const n=activeCount(maint.value.data);if(n)setToolBadge('maintenance',String(n),n>0?'warn':'good')}
+    if(reminders.value&&!reminders.value.error){const n=activeCount(reminders.value.data);if(n){const urgent=(reminders.value.data||[]).some(r=>{const d=String(r.due_date||'').slice(0,10);return d&&d<=new Date(today.getTime()+5*86400000).toISOString().slice(0,10)&&!/completed|done|closed/i.test(String(r.status||''))});setToolBadge('reminders',String(n),urgent?'urgent':'warn')}}
+    let opsDue=0;
+    if(important.value&&!important.value.error)opsDue+=(important.value.data||[]).filter(r=>{const d=String(r.due_date||r.date||'').slice(0,10);return d&&d<=soon}).length;
+    if(reminders.value&&!reminders.value.error)opsDue+=activeCount(reminders.value.data);
+    if(opsDue)setToolBadge('ops',String(opsDue),opsDue>0?'warn':'good');
+    if(approvals.value&&!approvals.value.error){const n=Number(approvals.value.count)||0;if(n)setToolBadge('approvals',String(n),'warn');else setToolBadge('approvals','','good')}
+  }catch(e){console.warn('Tool badges skipped',e)}
+}
+
+try{
+  window.ZummeeActionCenterSourceAudit={
+    board:'notification_events.board_item_submitted only',
+    annualApprovals:'annual_meeting_packet_requests only',
+    getBoardReviewPayload:()=>getBoardReviewPayload(),
+    getAnnualApprovalPayload:()=>getAnnualApprovalPayload()
+  };
+}catch(e){}
+document.addEventListener('DOMContentLoaded',async()=>{try{initCollapsibleSections();const ctx=getContext();userId=ctx.uid;selectedCommunityId=ctx.cid;selectedCommunityName=ctx.name;sb=await waitForClient();await loadCommunities();renderTools();await Promise.all([loadAttention(),loadToday()]);setStatus('Loaded '+(selectedCommunityName||'selected community'))}catch(e){console.error(e);setStatus('Action Center could not initialize.','err')}})
+})();
+
+<!-- v456: Long-term board source lock. Board cards use shared/zummee-board-data.js + notification_events only; no archived board history table or annual approvals fallback. -->
+</script>
+
+<script id="zummee-v457-action-center-shared-badge-lock">
+(function(){
+  'use strict';
+  var UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  function isUuid(v){return UUID.test(String(v||'').trim());}
+  function getClient(){return window.supabaseClient||(window.getSupabase&&window.getSupabase())||(window.ensureSupabaseSync&&window.ensureSupabaseSync())||null;}
+  function getCtx(){var sel=document.getElementById('communitySelect')||document.querySelector('select'); var id='',name=''; if(sel){if(isUuid(sel.value)) id=String(sel.value).trim(); var opt=sel.options&&sel.selectedIndex>=0?sel.options[sel.selectedIndex]:null; if(opt) name=String(opt.textContent||'').trim();} return {id:id,name:name};}
+  function setBadge(key,label,tone){document.querySelectorAll('.tool[data-tool-key="'+key+'"] .tool-badge').forEach(function(b){b.textContent=label||''; b.className='tool-badge'+(label?' is-on':'')+(tone?' is-'+tone:''); b.setAttribute('aria-hidden',label?'false':'true');});}
+  async function refresh(){
+    var data=window.ZummeeSmartData||window.ZummeeBoardData; var ctx=getCtx(), sb=getClient(); if(!data||!sb||!isUuid(ctx.id)) return;
+    try{
+      var res=await Promise.allSettled([
+        data.getBoardReviewCount(ctx.id,{sb:sb,communityName:ctx.name}),
+        data.getMaintenanceOpenCount(ctx.id,{sb:sb,communityName:ctx.name}),
+        data.getAnnualApprovalCount(ctx.id,{sb:sb,communityName:ctx.name}),
+        data.getOperationsDueSummary(ctx.id,{sb:sb,communityName:ctx.name}),
+        data.getReminderDueCount(ctx.id,{sb:sb,communityName:ctx.name})
+      ]);
+      var board=res[0].value||{count:0,overdue:0};
+      var maint=res[1].value||{count:0,urgent:0};
+      var annual=res[2].value||{count:0,overdue:0};
+      var ops=res[3].value||{count:0,overdue:0,critical:0};
+      var rem=res[4].value||{count:0,critical:0};
+      setBadge('board',board.count?String(board.count)+' open':'',board.overdue?'urgent':(board.count?'warn':'good'));
+      setBadge('maintenance',maint.count?String(maint.count):'',maint.urgent?'urgent':(maint.count?'warn':'good'));
+      setBadge('approvals',annual.count?String(annual.count):'',annual.overdue?'urgent':(annual.count?'warn':'good'));
+      setBadge('ops',ops.count?String(ops.count):'',ops.overdue||ops.critical?'urgent':(ops.count?'warn':'good'));
+      setBadge('reminders',rem.count?String(rem.count):'',rem.critical?'urgent':(rem.count?'warn':'good'));
+      window.ZummeeActionCenterSharedCounts={board:board,maintenance:maint,annual:annual,operations:ops,reminders:rem,version:'v457'};
+    }catch(e){console.warn('[v457 Action Center badge lock] refresh failed',e);}
+  }
+  function schedule(){setTimeout(refresh,250); setTimeout(refresh,1000);}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',schedule,{once:true}); else schedule();
+  window.addEventListener('pageshow',schedule); document.addEventListener('change',function(e){if(e.target&&e.target.id==='communitySelect') schedule();},true);
+})();
+</script>
+
+
+
+<script id="zummee-v458-action-center-board-badge-guard">
+(function(){
+  'use strict';
+  var UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  function isUuid(v){return UUID.test(String(v||'').trim());}
+  function getClient(){
+    try{return window.supabaseClient||(window.getSupabase&&window.getSupabase())||(window.ensureSupabaseSync&&window.ensureSupabaseSync())||null;}catch(e){return null;}
+  }
+  function getCtx(){
+    var sel=document.getElementById('communitySelect')||document.querySelector('select');
+    var id='', name='';
+    if(sel){
+      if(isUuid(sel.value)) id=String(sel.value).trim();
+      var opt=sel.options&&sel.selectedIndex>=0?sel.options[sel.selectedIndex]:null;
+      if(opt) name=String(opt.textContent||'').trim();
+    }
+    if(!id){
+      ['zummeeActiveCommunityId','activeCommunityId','currentCommunityId','zummee_selected_community_id'].some(function(k){
+        try{var v=localStorage.getItem(k)||sessionStorage.getItem(k)||''; if(isUuid(v)){id=String(v).trim(); return true;}}catch(e){}
+        return false;
+      });
+    }
+    return {id:id,name:name};
+  }
+  function boardStatus(row){
+    var md=(row&&row.metadata&&typeof row.metadata==='object')?row.metadata:{};
+    return String((row&&(row.status||row.workflow_status||row.review_status||row.item_status||row.board_status))||md.status||md.workflow_status||md.review_status||md.item_status||md.board_status||'open').toLowerCase().trim();
+  }
+  function isCurrentBoard(row){
+    if(!row) return false;
+    var st=boardStatus(row);
+    var details=String(row.details||row.message||row.description||'');
+    if(row.completed_at||row.completedAt||row.deleted_at||row.deletedAt||row.archived_at||row.archivedAt||row.reviewed_at||row.reviewedAt) return false;
+    if(/__ZUMMEE_BM_CONVERTED__:\s*RWO\|/i.test(details)) return false;
+    if(/reviewed|complete|completed|closed|archived|done|resolved|cancel|cancelled|reject|rejected|approved_ready|sent_to_admin|mail|mailed|minutes|deleted|inactive/i.test(st)) return false;
+    if(/agenda/.test(st)) return false;
+    return true;
+  }
+  function isOverdue(row){
+    var raw=row&&(row.due_date||row.dueDate||row.review_due_date||row.deadline);
+    if(!raw) return false;
+    var d=new Date(String(raw).slice(0,10)+'T00:00:00');
+    if(isNaN(d.getTime())) return false;
+    var today=new Date(); today.setHours(0,0,0,0);
+    return d.getTime()<today.getTime();
+  }
+  function paint(count,overdue){
+    document.querySelectorAll('.tool[data-tool-key="board"] .tool-badge').forEach(function(b){
+      var n=Number(count)||0, o=Number(overdue)||0;
+      b.textContent=n ? (String(n)+' open') : '';
+      b.className='tool-badge'+(n?' is-on':'')+(o?' is-urgent':(n?' is-warn':' is-good'));
+      b.setAttribute('aria-hidden',n?'false':'true');
+    });
+    window.ZummeeActionCenterBoardBadge={count:Number(count)||0,overdue:Number(overdue)||0,source:'v461 notification_events direct guard'};
+  }
+  async function refresh(){
+    var sb=getClient(), ctx=getCtx();
+    if(!sb||!sb.from||!isUuid(ctx.id)) return;
+    try{
+      var q=await sb.from('notification_events').select('id,title,message,metadata,created_at,event_type,community_id').eq('community_id',ctx.id).eq('event_type','board_item_submitted').limit(500);
+      if(q.error) throw q.error;
+      var rows=(q.data||[]).filter(isCurrentBoard);
+      paint(rows.length,rows.filter(isOverdue).length);
+    }catch(e){
+      console.warn('[v461 Action Center board badge guard] notification_events source failed; leaving existing badge unchanged',e);
+    }
+  }
+  function schedule(){setTimeout(refresh,350); setTimeout(refresh,1200); setTimeout(refresh,2500);}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',schedule,{once:true}); else schedule();
+  window.addEventListener('pageshow',schedule);
+  document.addEventListener('change',function(e){if(e.target&&e.target.id==='communitySelect') schedule();},true);
+})();
+</script>
+
+</body></html>

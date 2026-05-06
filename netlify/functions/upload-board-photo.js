@@ -1,7 +1,14 @@
 const { createClient } = require('@supabase/supabase-js');
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim();
+const SERVICE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || '').trim();
+
+console.log('UPLOAD ENV CHECK', {
+  hasUrl: !!SUPABASE_URL,
+  urlPrefix: SUPABASE_URL.slice(0, 30),
+  hasKey: !!SERVICE_KEY,
+  keyPrefix: SERVICE_KEY.slice(0, 12)
+});
 const BUCKET = 'board-item-photos';
 
 function json(statusCode, body) {
@@ -70,18 +77,21 @@ exports.handler = async function handler(event) {
   if (!fileBase64) return json(400, { error: 'Missing photo data' });
   if (!contentType.startsWith('image/')) return json(400, { error: 'Only image uploads are supported' });
 
-  const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false }
-  });
+ const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
 
   try {
+    console.log('STEP 1: before assignment query');
+    
     const { data: assignment, error: assignmentError } = await supabase
       .from('community_assignments')
       .select('id')
       .eq('community_id', communityId)
       .eq('employee_id', userId)
       .maybeSingle();
-
+    
+console.log('STEP 2: after assignment query', { assignment, assignmentError });
     if (assignmentError) {
       return json(500, { error: assignmentError.message });
     }
@@ -92,7 +102,7 @@ exports.handler = async function handler(event) {
 
     const extFromName = fileName.includes('.') ? fileName.split('.').pop().toLowerCase() : '';
     const ext = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(extFromName) ? extFromName : (contentType.split('/')[1] || 'jpg');
-    const path = `${communityId}/${notificationId}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+    const path = `${communityId}/${notificationId}/${Date.now()}-${Math.random().toString(36).substring(2, 10)}.${ext}`;
     const buffer = Buffer.from(fileBase64, 'base64');
 
     if (!buffer.length) {
@@ -160,7 +170,13 @@ exports.handler = async function handler(event) {
     }
 
     return json(200, { path, photo, photos, notification_id: notificationId });
-  } catch (error) {
-    return json(500, { error: error.message || String(error) });
-  }
+ } catch (error) {
+  console.error('UPLOAD BOARD PHOTO ERROR:', error);
+
+  return json(500, {
+    error: error.message || String(error),
+    name: error.name || null,
+    stack: error.stack || null
+  });
+}
 };

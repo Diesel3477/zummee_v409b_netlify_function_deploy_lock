@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Profile · Zummee</title>
+  <!-- v410j profile hub-context fallback: prevents valid hub users from being bounced to login when Supabase auth storage is empty. -->
   <link rel="icon" type="image/png" href="zummee_mark_32.png">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="shared/supabase-client.js?v=2026-04-27-profile-v265"></script>
@@ -150,8 +151,50 @@
   async function getSession(sb){
     var res = await sb.auth.getSession();
     var session = res && res.data ? res.data.session : null;
-    if(!session){ try{ await sb.auth.refreshSession(); }catch(_e){} res = await sb.auth.getSession(); session = res && res.data ? res.data.session : null; }
-    return session;
+    if(session) return session;
+
+    try{ await sb.auth.refreshSession(); }catch(_e){}
+    res = await sb.auth.getSession();
+    session = res && res.data ? res.data.session : null;
+    if(session) return session;
+
+    // iPad/Safari can hydrate Supabase auth late. Wait briefly before deciding.
+    return await new Promise(function(resolve){
+      var resolved = false;
+      var sub = null;
+      try{
+        var listener = sb.auth.onAuthStateChange(function(_event, newSession){
+          if(newSession && !resolved){
+            resolved = true;
+            try{ if(sub && sub.subscription) sub.subscription.unsubscribe(); }catch(_e){}
+            resolve(newSession);
+          }
+        });
+        sub = listener && listener.data;
+      }catch(_e){}
+      setTimeout(async function(){
+        if(resolved) return;
+        var retry = null;
+        try{ var again = await sb.auth.getSession(); retry = again && again.data ? again.data.session : null; }catch(_e){}
+        resolved = true;
+        try{ if(sub && sub.subscription) sub.subscription.unsubscribe(); }catch(_e){}
+        resolve(retry || null);
+      }, 1400);
+    });
+  }
+  function getStoredUserId(){
+    var keys=['zummee_user_id_v1','zummee_user_id','zummeeUserId','activeUserId','currentUserId'];
+    for(var i=0;i<keys.length;i++){
+      try{ var v=trim(localStorage.getItem(keys[i]) || sessionStorage.getItem(keys[i]) || ''); if(v) return v; }catch(_e){}
+    }
+    return '';
+  }
+  function getStoredEmail(){
+    var keys=['zummee_user_email','zummeeUserEmail','currentUserEmail','activeUserEmail'];
+    for(var i=0;i<keys.length;i++){
+      try{ var v=trim(localStorage.getItem(keys[i]) || sessionStorage.getItem(keys[i]) || ''); if(v) return v; }catch(_e){}
+    }
+    return '';
   }
   async function maybeSingle(sb, table, select, col, val){
     try{ var r = await sb.from(table).select(select).eq(col,val).maybeSingle(); if(r && !r.error && r.data) return r.data; }catch(_e){}
@@ -246,11 +289,29 @@
     var sb=client();
     if(!sb){ showStatus('Supabase did not load. Refresh the page.'); return; }
     var session=await getSession(sb);
-    if(!session || !session.user){ window.location.replace('login.html'); return; }
-    state.user=session.user; state.email=trim(session.user.email);
-    try{ localStorage.setItem('zummee_user_id_v1',state.user.id); }catch(_e){}
+
+    if(session && session.user){
+      state.user=session.user;
+      state.email=trim(session.user.email);
+      try{ localStorage.setItem('zummee_user_id_v1',state.user.id); }catch(_e){}
+    } else {
+      // Long-term route guard: Manager Hub uses app-level stored user context even when
+      // Supabase auth storage has no session token on iPad/Safari. Do not bounce a
+      // valid hub user back to login just because auth hydration is empty.
+      var fallbackUserId = getStoredUserId();
+      if(!fallbackUserId){
+        console.warn('[Profile] No Supabase session and no stored Zummee user id → login');
+        window.location.replace('login.html');
+        return;
+      }
+      console.warn('[Profile] Using stored Zummee user context fallback:', fallbackUserId);
+      state.user = { id:fallbackUserId, email:getStoredEmail(), user_metadata:{} };
+      state.email = trim(state.user.email);
+    }
+
     state.profile = await maybeSingle(sb,'profiles','*','id',state.user.id) || {};
     state.directory = await maybeSingle(sb,'userdirectory','*','auth_user_id',state.user.id) || {};
+    if(!state.email) state.email = trim(state.profile.email || state.directory.email || '');
     state.companyId = trim(state.profile.company_id || state.directory.company_id || '');
     await loadCompanies(sb);
     populate();

@@ -1,1473 +1,279 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-03-27-1";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
-
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Resident Work Orders</title>
-  <link rel="stylesheet" href="shared/header.css?v=2026-03-27-1">
-  <script src="shared/header.js?v=2026-04-08-2"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Submit Work Order · Zummee</title>
+  <script>window.ZUMMEE_BUILD="2026-05-04-v491-rwo-owner-dropdown-lock";console.log('Zummee build:', window.ZUMMEE_BUILD);</script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="shared/supabase-client.js?v=2026-04-08-2"></script>
-  <script src="shared/resident-auth.js?v=2026-03-27-1"></script>
-
-  <script>
-    window.SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
-    window.SUPABASE_ANON_KEY = 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
-  </script>
-
-  
-  <script>
-    (function(){
-      try{
-        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
-        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
-      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
-    })();
-  </script>
-  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <script src="shared/supabase-client.js?v=2026-05-04-v491"></script>
+  <script src="shared/zummee-auth.js?v=2026-05-04-v491"></script>
   <style>
-    :root{
-      --brand:#0f3554; --bg:#f4f6fa; --card:#fff; --muted:#5d6b7a; --border:#d9e1ea;
-      --ok:#d9f2e3; --danger:#fee2e2;
-    }
-    *{box-sizing:border-box}
-    body{margin:0;background:linear-gradient(180deg,#eef5fb 0%,#f7f9fc 100%);font-family:Arial,Helvetica,sans-serif;color:#17324c}
-    #zummeeHeaderMount{position:sticky;top:0;z-index:20;box-shadow:0 6px 18px rgba(15,53,84,.08)}
-    .wrap{max-width:860px;margin:24px auto;padding:0 16px 42px}
-    .card{background:#fff;border:1px solid rgba(15,53,84,.12);border-radius:28px;padding:24px;box-shadow:0 18px 42px rgba(15,53,84,.08)}
-    h1{margin:0;color:var(--brand);font-size:clamp(30px,5vw,42px);line-height:1.05}
-    .sub{margin-top:8px;color:var(--muted);font-size:15px}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
-    .field label{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;font-weight:800}
-    .field input,.field select,.field textarea{width:100%;border:1.5px solid var(--border);border-radius:16px;padding:12px 14px;font-size:16px;background:#fff;color:#17324c}
-    .field textarea{min-height:140px;resize:vertical}
-    .full{grid-column:1 / -1}
-    .btnRow{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px;justify-content:flex-end}
-    .btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:11px 18px;border-radius:999px;border:2px solid var(--brand);background:#fff;color:var(--brand);text-decoration:none;font-size:16px;font-weight:800;cursor:pointer}
-    .btn.primary{background:var(--brand);color:#fff}
-    .file-input{font-size:16px;border:none;background:transparent;width:auto;padding:0;color:#17324c}
-    .file-input::file-selector-button{background:var(--brand);color:#fff;border:none;border-radius:999px;padding:11px 18px;margin-right:12px;font-size:16px;font-weight:800;cursor:pointer}
-    .file-input::file-selector-button:hover{background:#214768}
-    .upload-preview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:10px;margin-top:12px}
-    .upload-preview-card{border:1px solid #d9e1ea;border-radius:16px;background:#fff;padding:8px}
-    .upload-preview-card img{width:100%;height:82px;object-fit:cover;border-radius:10px;display:block;background:#eef3f8}
-    .upload-preview-name{font-size:12px;color:var(--muted);margin-top:6px;word-break:break-word}
-    .upload-meta{margin-top:8px;color:var(--muted);font-size:13px}
-
-    .message{margin-top:14px;font-weight:700}
-    .message.ok{color:#11653a}
-    .message.err{color:#8c1d18}
-    .notice{margin-top:16px;padding:14px 16px;border-radius:18px;background:#f9fbfd;border:1px solid rgba(15,53,84,.08);color:var(--muted)}
-    .confirmCard{display:none;margin-top:18px;padding:22px;border-radius:22px;background:linear-gradient(180deg,#f7fcf8 0%,#eef8f0 100%);border:1px solid rgba(17,101,58,.16);box-shadow:0 12px 28px rgba(15,53,84,.06)}
-    .confirmCard.show{display:block}
-    .confirmTitle{font-size:28px;font-weight:900;color:#11653a;margin:0 0 8px}
-    .confirmMeta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
-    .confirmBox{background:#fff;border:1px solid rgba(15,53,84,.08);border-radius:16px;padding:14px}
-    .confirmLabel{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#5d6b7a;font-weight:800;margin-bottom:6px}
-    .confirmValue{font-size:18px;font-weight:800;color:#0f3554;word-break:break-word}
-    .communityContext{margin-top:14px;padding:14px 16px;border-radius:18px;background:#f7fbff;border:1px solid rgba(15,53,84,.10);color:#17324c}
-    .communityContext strong{color:#0f3554}
-
-    .historyCard{margin-top:22px;padding:20px;border-radius:24px;background:rgba(255,255,255,.86);border:1px solid rgba(15,53,84,.12);box-shadow:0 12px 28px rgba(15,53,84,.07)}
-    .historyHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
-    .historyHeader h2{margin:0;color:var(--brand);font-size:26px;letter-spacing:-.03em}
-    .historyHeader p{margin:6px 0 0;color:var(--muted);font-size:14px}
-    .miniBtn{min-height:38px;padding:8px 13px;border-radius:999px;border:1.5px solid var(--brand);background:#fff;color:var(--brand);font-weight:900;cursor:pointer}
-    .workOrderList{display:grid;gap:12px;margin-top:16px}
-    .workOrderItem{background:#fff;border:1px solid rgba(15,53,84,.12);border-radius:18px;padding:15px;box-shadow:0 8px 18px rgba(15,53,84,.05)}
-    .workOrderTop{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
-    .workOrderTitle{font-size:17px;font-weight:950;color:#0f3554;line-height:1.2}
-    .workOrderMeta{margin-top:6px;color:var(--muted);font-size:13px;line-height:1.35}
-    .statusPill{display:inline-flex;align-items:center;border-radius:999px;padding:6px 10px;background:#edf6ff;border:1px solid rgba(15,53,84,.10);color:#0f3554;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
-    .statusPill.submitted,.statusPill.manager_review{background:#fff8df;color:#755300}.statusPill.active,.statusPill.in_progress{background:#e8f3ff;color:#164f7c}.statusPill.completed{background:#e9f8ee;color:#11653a}
-    .emptyHistory{padding:16px;border-radius:18px;background:#fff;color:var(--muted);border:1px dashed rgba(15,53,84,.18);font-weight:700}
-    @media (max-width: 700px){ .confirmMeta{grid-template-columns:1fr} }
-    @media (max-width: 700px){
-      .wrap{padding:0 12px 32px}
-      .card{padding:16px;border-radius:22px}
-      .grid{grid-template-columns:1fr}
-    }
-  
-    #residentSelect{
-      width:100%;
-      min-height:58px;
-      border-radius:20px;
-      border:2px solid #c8d4e0;
-      background:#fff;
-      color:#173658;
-      font-size:18px;
-      padding:0 18px;
-      appearance:auto;
-    }
-    #residentSelect:disabled{
-      background:#f3f7fb;
-      color:#73849a;
-    }
-    #residentSelect.is-loading{
-      opacity:1;
-      -webkit-text-fill-color:#73849a;
-    }
-
-  
-
-
-    /* === Submit Work Order premium gold card === */
-    #submitWorkOrderPage #submitWorkOrderCard{
-      background: linear-gradient(135deg, #f4c95d 0%, #e6b84c 100%);
-      border: 1px solid rgba(0,0,0,0.08);
-      box-shadow:
-        0 20px 40px rgba(0,0,0,0.12),
-        inset 0 1px 0 rgba(255,255,255,0.40);
-      border-radius: 28px;
-      position: relative;
-      overflow: hidden;
-    }
-    #submitWorkOrderPage #submitWorkOrderCard::after{
-      content: "";
-      position: absolute;
-      top: -40%;
-      right: -20%;
-      width: 300px;
-      height: 300px;
-      background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 60%);
-      pointer-events: none;
-      z-index: 0;
-    }
-    #submitWorkOrderPage #submitWorkOrderCard > *{
-      position: relative;
-      z-index: 1;
-    }
-    #submitWorkOrderPage #submitWorkOrderCard h1{
-      color: #17324c;
-    }
-    #submitWorkOrderPage #submitWorkOrderCard .sub{
-      margin-bottom: 18px;
-    }
-    #submitWorkOrderPage #submitWorkOrderCard input,
-    #submitWorkOrderPage #submitWorkOrderCard select,
-    #submitWorkOrderPage #submitWorkOrderCard textarea{
-      background: rgba(255,255,255,0.90);
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
-      border: 1px solid rgba(0,0,0,0.08);
-    }
-    #submitWorkOrderPage #submitWorkOrderCard .grid{
-      gap: 16px;
-    }
-
-    /* sticky/floating submit action */
-    #submitWorkOrderPage .submitBar{
-      position: sticky;
-      bottom: 14px;
-      display: flex;
-      justify-content: flex-end;
-      padding-top: 18px;
-      z-index: 8;
-    }
-    #submitWorkOrderPage #submitWorkOrderBtn{
-      min-width: 240px;
-      min-height: 62px;
-      padding: 0 26px;
-      border: 0;
-      border-radius: 999px;
-      background: linear-gradient(180deg, #214f88 0%, #173b67 100%);
-      color: #ffffff;
-      font-size: 18px;
-      font-weight: 900;
-      box-shadow:
-        0 14px 28px rgba(23,59,103,0.28),
-        inset 0 1px 0 rgba(255,255,255,0.18);
-    }
-    #submitWorkOrderPage #submitWorkOrderBtn:active{
-      transform: translateY(1px);
-    }
-
-    /* subtle shimmer on touch */
-    #submitWorkOrderPage #submitWorkOrderCard:active::before{
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(
-        120deg,
-        transparent 20%,
-        rgba(255,255,255,0.25),
-        transparent 80%
-      );
-      animation: shimmerSwipe 0.6s ease;
-      z-index: 2;
-      pointer-events: none;
-    }
-    @keyframes shimmerSwipe{
-      from { transform: translateX(-100%); }
-      to   { transform: translateX(100%); }
-    }
-
-    @media (max-width: 768px){
-      #submitWorkOrderPage .submitBar{
-        bottom: 10px;
-      }
-      #submitWorkOrderPage #submitWorkOrderBtn{
-        width: 100%;
-        min-width: 0;
-      }
-    }
-
-
-/* DARK MODE — MANAGER ACTIONS FINAL */
-body.dark-mode .mh2-stat-box,
-body.dark-mode .mh2-kpi,
-body.dark-mode .mh2-mini-stat {
-  background: #f3f4f6 !important;
-  border: 1px solid rgba(255,255,255,0.08);
-}
-body.dark-mode .mh2-stat-value,
-body.dark-mode .mh2-card-value,
-body.dark-mode .mh2-kpi-value {
-  color: #0b0f14 !important;
-  font-weight: 700;
-}
-body.dark-mode .mh2-stat-label,
-body.dark-mode .mh2-card-label {
-  color: #4b5563 !important;
-}
-body.dark-mode .mh2-stat-box {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.25),
-    0 6px 16px rgba(0,0,0,0.25);
-}
-
-
-.mh2-actions .mh2-btn--ghost{display:none !important;}
-</style>
-
-<style id="submitWorkOrderHeaderMatchMileage">
-#zummeeHeaderMount{position:sticky;top:0;z-index:20;box-shadow:0 6px 18px rgba(15,53,84,.08)}
-body[data-header-mode="simple"] header.zm-header .zm-header__logo img{
-  height:42px !important;
-  min-height:42px !important;
-  max-height:42px !important;
-  width:auto !important;
-}
-@media (max-width: 768px){
-  body[data-header-mode="simple"] header.zm-header .zm-header__logo img{
-    height:36px !important;
-    min-height:36px !important;
-    max-height:36px !important;
-  }
-}
-
-/* DARK MODE — MANAGER ACTIONS FINAL */
-body.dark-mode .mh2-stat-box,
-body.dark-mode .mh2-kpi,
-body.dark-mode .mh2-mini-stat {
-  background: #f3f4f6 !important;
-  border: 1px solid rgba(255,255,255,0.08);
-}
-body.dark-mode .mh2-stat-value,
-body.dark-mode .mh2-card-value,
-body.dark-mode .mh2-kpi-value {
-  color: #0b0f14 !important;
-  font-weight: 700;
-}
-body.dark-mode .mh2-stat-label,
-body.dark-mode .mh2-card-label {
-  color: #4b5563 !important;
-}
-body.dark-mode .mh2-stat-box {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.25),
-    0 6px 16px rgba(0,0,0,0.25);
-}
-
-</style>
-
-  <script src="community_state_stable.js"></script>
-<style>
-/* FORCE white text in Status & Details section */
-#boardSubmittedItemsSection,
-#boardSubmittedItemsSection *:not(button),
-#boardMemberHubStatus,
-#boardMemberHubStatus *:not(button),
-#annualMeetingApprovals,
-#annualMeetingApprovals *:not(button) {
-  color: #ffffff !important;
-}
-
-/* Secondary text (slightly dimmed white) */
-#boardSubmittedItemsSection .muted,
-#boardMemberHubStatus .muted,
-#annualMeetingApprovals .muted {
-  color: rgba(255,255,255,0.75) !important;
-}
-
-/* DARK MODE — MANAGER ACTIONS FINAL */
-body.dark-mode .mh2-stat-box,
-body.dark-mode .mh2-kpi,
-body.dark-mode .mh2-mini-stat {
-  background: #f3f4f6 !important;
-  border: 1px solid rgba(255,255,255,0.08);
-}
-body.dark-mode .mh2-stat-value,
-body.dark-mode .mh2-card-value,
-body.dark-mode .mh2-kpi-value {
-  color: #0b0f14 !important;
-  font-weight: 700;
-}
-body.dark-mode .mh2-stat-label,
-body.dark-mode .mh2-card-label {
-  color: #4b5563 !important;
-}
-body.dark-mode .mh2-stat-box {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.25),
-    0 6px 16px rgba(0,0,0,0.25);
-}
-
-</style>
-<style>
-/* HARD OVERRIDE — force white text in dark section */
-.hub-zone:last-of-type,
-.hub-zone:last-of-type *:not(button):not(.badge):not(.pill) {
-  color: #ffffff !important;
-}
-
-/* Slightly softer for secondary text */
-.hub-zone:last-of-type .muted,
-.hub-zone:last-of-type p,
-.hub-zone:last-of-type span {
-  color: rgba(255,255,255,0.75) !important;
-}
-
-/* DARK MODE — MANAGER ACTIONS FINAL */
-body.dark-mode .mh2-stat-box,
-body.dark-mode .mh2-kpi,
-body.dark-mode .mh2-mini-stat {
-  background: #f3f4f6 !important;
-  border: 1px solid rgba(255,255,255,0.08);
-}
-body.dark-mode .mh2-stat-value,
-body.dark-mode .mh2-card-value,
-body.dark-mode .mh2-kpi-value {
-  color: #0b0f14 !important;
-  font-weight: 700;
-}
-body.dark-mode .mh2-stat-label,
-body.dark-mode .mh2-card-label {
-  color: #4b5563 !important;
-}
-body.dark-mode .mh2-stat-box {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.25),
-    0 6px 16px rgba(0,0,0,0.25);
-}
-
-</style>
-
-<style id="v214-resident-work-order-polish-final">
-:root{--rwo-navy:#0f3554;--rwo-gold:#f4c95d;--rwo-ink:#17324c;--rwo-muted:#60758d;}
-body#submitWorkOrderPage{background:radial-gradient(circle at 15% 0%, rgba(244,201,93,.18), transparent 34%),linear-gradient(180deg,#eef5fb 0%,#f7f9fc 100%) !important;color:var(--rwo-ink)!important;}
-body#submitWorkOrderPage .wrap{max-width:1180px!important;margin:28px auto 46px!important;padding:0 18px 56px!important;}
-body#submitWorkOrderPage #submitWorkOrderCard{background:rgba(255,255,255,.94)!important;border:1px solid rgba(15,53,84,.12)!important;border-radius:30px!important;padding:28px 30px 30px!important;box-shadow:0 22px 56px rgba(15,53,84,.12)!important;overflow:hidden!important;}
-body#submitWorkOrderPage #submitWorkOrderCard::before,body#submitWorkOrderPage #submitWorkOrderCard::after{display:none!important;content:none!important;}
-body#submitWorkOrderPage #submitWorkOrderCard>h1{margin:0!important;color:var(--rwo-navy)!important;font-size:clamp(32px,4.2vw,46px)!important;line-height:1.02!important;letter-spacing:-.04em!important;font-weight:950!important;}
-body#submitWorkOrderPage #submitWorkOrderCard>.sub{max-width:920px!important;margin:10px 0 20px!important;color:var(--rwo-muted)!important;font-size:18px!important;line-height:1.32!important;font-weight:650!important;}
-body#submitWorkOrderPage #communityContext{display:block!important;margin:8px 0 22px!important;padding:22px 24px!important;border-radius:24px!important;background:linear-gradient(135deg,rgba(244,201,93,.96),rgba(255,239,174,.92))!important;border:1px solid rgba(188,139,23,.20)!important;color:var(--rwo-ink)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 12px 26px rgba(212,175,55,.16)!important;font-size:17px!important;font-weight:800!important;}
-body#submitWorkOrderPage #communityContext::before{content:'👤 Resident Information';display:block;margin:0 0 8px;color:var(--rwo-navy);font-size:22px;font-weight:950;letter-spacing:-.02em;}
-body#submitWorkOrderPage #communityContext strong{color:var(--rwo-navy)!important;}
-body#submitWorkOrderPage #workOrderForm{display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:16px 18px!important;margin-top:0!important;padding:26px 24px 24px!important;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(250,253,255,.94))!important;border:1px solid rgba(15,53,84,.12)!important;border-radius:26px!important;box-shadow:0 14px 34px rgba(15,53,84,.07)!important;}
-body#submitWorkOrderPage #workOrderForm::before{content:'🛠️  Submit New Work Order';grid-column:1/-1;display:flex;align-items:center;min-height:42px;margin:-2px 0 2px;color:var(--rwo-navy);font-size:28px;font-weight:950;letter-spacing:-.035em;}
-body#submitWorkOrderPage #workOrderForm .field{grid-column:span 3;margin:0!important;}
-body#submitWorkOrderPage #workOrderForm .field.full,body#submitWorkOrderPage #workOrderForm .btnRow.full{grid-column:1/-1!important;}
-body#submitWorkOrderPage #residentSelectField{grid-column:1/-1!important;padding:0!important;}
-body#submitWorkOrderPage #residentSelectField label{display:none!important;}
-body#submitWorkOrderPage #residentSelect{min-height:58px!important;border-radius:20px!important;border:1px solid rgba(59,130,246,.22)!important;background:linear-gradient(180deg,#eef6ff,#f8fbff)!important;color:var(--rwo-navy)!important;font-size:18px!important;font-weight:900!important;padding:0 18px!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.85)!important;}
-body#submitWorkOrderPage .field label{color:#526a83!important;font-size:13px!important;letter-spacing:.08em!important;font-weight:950!important;margin-bottom:8px!important;}
-body#submitWorkOrderPage .field input,body#submitWorkOrderPage .field select,body#submitWorkOrderPage .field textarea{width:100%!important;min-height:58px!important;border-radius:18px!important;border:1px solid rgba(15,53,84,.14)!important;background:#fff!important;color:var(--rwo-ink)!important;font-size:17px!important;padding:13px 16px!important;box-shadow:inset 0 1px 2px rgba(15,53,84,.035)!important;}
-body#submitWorkOrderPage .field input:focus,body#submitWorkOrderPage .field select:focus,body#submitWorkOrderPage .field textarea:focus{outline:none!important;border-color:rgba(37,91,145,.55)!important;box-shadow:0 0 0 4px rgba(37,91,145,.10),inset 0 1px 2px rgba(15,53,84,.035)!important;}
-body#submitWorkOrderPage .field textarea{min-height:120px!important;resize:vertical!important;}
-body#submitWorkOrderPage #residentPhotos{display:flex!important;width:100%!important;min-height:132px!important;padding:42px 18px 20px!important;border:1.5px dashed rgba(224,170,36,.65)!important;border-radius:20px!important;background:linear-gradient(180deg,#fffefa,#fff)!important;color:var(--rwo-ink)!important;text-align:center!important;}
-body#submitWorkOrderPage #residentPhotos::file-selector-button{background:linear-gradient(180deg,var(--rwo-navy),#0b2d49)!important;color:#fff!important;border:none!important;border-radius:999px!important;padding:12px 22px!important;margin-right:12px!important;font-size:16px!important;font-weight:950!important;box-shadow:0 8px 18px rgba(15,53,84,.18)!important;}
-body#submitWorkOrderPage #residentPhotoMeta{margin-top:10px!important;color:#60758d!important;font-size:14px!important;font-weight:650!important;}
-body#submitWorkOrderPage .btnRow{display:flex!important;justify-content:flex-end!important;padding-top:2px!important;margin-top:4px!important;}
-body#submitWorkOrderPage #submitBtn{min-width:250px!important;min-height:60px!important;border-radius:18px!important;background:linear-gradient(180deg,var(--rwo-navy),#0b2d49)!important;border:0!important;color:#fff!important;font-size:18px!important;font-weight:950!important;box-shadow:0 14px 26px rgba(15,53,84,.22),inset 0 1px 0 rgba(255,255,255,.18)!important;}
-body#submitWorkOrderPage #submitBtn::before{content:'➤';margin-right:9px;font-size:16px;}
-body#submitWorkOrderPage .confirmCard{border-radius:24px!important;border:1px solid rgba(17,101,58,.18)!important;background:linear-gradient(180deg,#f6fff8,#ecf8f0)!important;}
-body#submitWorkOrderPage .historyCard{margin-top:22px!important;padding:24px!important;border-radius:26px!important;background:#fff!important;border:1px solid rgba(15,53,84,.12)!important;box-shadow:0 14px 34px rgba(15,53,84,.07)!important;}
-body#submitWorkOrderPage .historyHeader h2{color:var(--rwo-navy)!important;font-size:30px!important;font-weight:950!important;letter-spacing:-.035em!important;}
-body#submitWorkOrderPage .historyHeader h2::before{content:'📋';display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;margin-right:10px;border-radius:14px;background:linear-gradient(180deg,#eaf3ff,#fff);font-size:22px;vertical-align:middle;}
-body#submitWorkOrderPage .historyHeader p{color:#60758d!important;font-size:15px!important;font-weight:650!important;}
-body#submitWorkOrderPage .miniBtn{min-height:44px!important;padding:0 18px!important;border-radius:999px!important;border:1.5px solid rgba(15,53,84,.16)!important;color:var(--rwo-navy)!important;background:#fff!important;font-weight:950!important;box-shadow:0 8px 18px rgba(15,53,84,.06)!important;}
-body#submitWorkOrderPage .workOrderList{margin-top:18px!important;gap:10px!important;}
-body#submitWorkOrderPage .workOrderItem{border-radius:18px!important;border:1px solid rgba(15,53,84,.10)!important;background:linear-gradient(180deg,#ffffff,#fbfdff)!important;padding:16px 18px!important;box-shadow:0 8px 18px rgba(15,53,84,.045)!important;}
-body#submitWorkOrderPage .workOrderTitle{color:var(--rwo-navy)!important;font-size:18px!important;font-weight:950!important;}
-body#submitWorkOrderPage .statusPill{font-size:12px!important;padding:7px 11px!important;border-radius:999px!important;}
-body#submitWorkOrderPage .statusPill.submitted,body#submitWorkOrderPage .statusPill.manager_review{background:#fff1c9!important;color:#785700!important;}body#submitWorkOrderPage .statusPill.active,body#submitWorkOrderPage .statusPill.in_progress{background:#dbeafe!important;color:#17406f!important;}body#submitWorkOrderPage .statusPill.completed{background:#d9f2e3!important;color:#11653a!important;}
-body#submitWorkOrderPage .emptyHistory{border-radius:18px!important;background:#f8fbff!important;border:1px dashed rgba(15,53,84,.16)!important;}
-@media(max-width:900px){body#submitWorkOrderPage .wrap{margin:18px auto 40px!important;padding:0 12px 44px!important;}body#submitWorkOrderPage #submitWorkOrderCard{padding:24px 20px!important;border-radius:28px!important;}body#submitWorkOrderPage #workOrderForm{grid-template-columns:1fr 1fr!important;padding:22px 20px!important;}body#submitWorkOrderPage #workOrderForm .field{grid-column:span 1;}body#submitWorkOrderPage #workOrderForm .field.full,body#submitWorkOrderPage #residentSelectField,body#submitWorkOrderPage #workOrderForm .btnRow.full{grid-column:1/-1!important;}}
-@media(max-width:620px){body#submitWorkOrderPage #submitWorkOrderCard{padding:20px 16px!important;border-radius:24px!important;}body#submitWorkOrderPage #submitWorkOrderCard>h1{font-size:31px!important;}body#submitWorkOrderPage #submitWorkOrderCard>.sub{font-size:16px!important;}body#submitWorkOrderPage #workOrderForm{grid-template-columns:1fr!important;padding:20px 16px!important;border-radius:22px!important;}body#submitWorkOrderPage #workOrderForm .field{grid-column:1/-1!important;}body#submitWorkOrderPage #workOrderForm::before{font-size:25px!important;}body#submitWorkOrderPage .btnRow{justify-content:stretch!important;}body#submitWorkOrderPage #submitBtn{width:100%!important;min-width:0!important;}body#submitWorkOrderPage .historyCard{padding:20px 16px!important;}}
-</style>
-
-<style id="v215-resident-work-orders-app-section-design">
-body#submitWorkOrderPage{background:radial-gradient(circle at 10% 0%,rgba(37,91,145,.08),transparent 32%),linear-gradient(180deg,#f4f8fd 0%,#f7fafc 100%)!important;color:#17324c!important;}
-body#submitWorkOrderPage #zummeeHeaderMount,body#submitWorkOrderPage header.zm-header{display:none!important;visibility:hidden!important;height:0!important;min-height:0!important;max-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;box-shadow:none!important;}
-body#submitWorkOrderPage .wrap{max-width:1180px!important;margin:24px auto 46px!important;padding:0 18px 56px!important;}
-body#submitWorkOrderPage #submitWorkOrderCard{background:transparent!important;border:0!important;box-shadow:none!important;border-radius:0!important;padding:0!important;overflow:visible!important;}
-body#submitWorkOrderPage #submitWorkOrderCard:before,body#submitWorkOrderPage #submitWorkOrderCard:after{display:none!important;content:none!important;}
-body#submitWorkOrderPage #submitWorkOrderCard>h1{margin:0 0 8px!important;color:#0f3554!important;font-size:clamp(34px,4.4vw,48px)!important;line-height:1.02!important;letter-spacing:-.045em!important;font-weight:950!important;}
-body#submitWorkOrderPage #submitWorkOrderCard>.sub{max-width:960px!important;margin:0 0 20px!important;color:#597089!important;font-size:18px!important;line-height:1.34!important;font-weight:700!important;}
-body#submitWorkOrderPage #communityContext,body#submitWorkOrderPage #workOrderForm,body#submitWorkOrderPage .historyCard,body#submitWorkOrderPage #confirmCard{background:rgba(255,255,255,.96)!important;border:2px solid rgba(96,165,250,.62)!important;border-radius:28px!important;box-shadow:0 14px 34px rgba(15,53,84,.075)!important;}
-body#submitWorkOrderPage #communityContext{display:block!important;margin:0 0 18px!important;padding:24px 26px!important;color:#17324c!important;font-size:17px!important;font-weight:850!important;}
-body#submitWorkOrderPage #communityContext:before{content:'👤 Resident Information'!important;display:flex!important;align-items:center!important;gap:10px!important;margin:0 0 8px!important;color:#0f3554!important;font-size:25px!important;font-weight:950!important;letter-spacing:-.035em!important;}
-body#submitWorkOrderPage #communityContext strong{color:#0f3554!important;font-weight:950!important;}
-body#submitWorkOrderPage #workOrderForm{display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:16px 18px!important;margin:0!important;padding:26px 26px 24px!important;}
-body#submitWorkOrderPage #workOrderForm:before{content:'🛠️ Submit New Work Order'!important;grid-column:1/-1!important;display:flex!important;align-items:center!important;min-height:44px!important;margin:0 0 2px!important;color:#0f3554!important;font-size:30px!important;font-weight:950!important;letter-spacing:-.04em!important;}
-body#submitWorkOrderPage #workOrderForm .field{grid-column:span 3!important;margin:0!important;}
-body#submitWorkOrderPage #workOrderForm .field.full,body#submitWorkOrderPage #workOrderForm .btnRow.full,body#submitWorkOrderPage #residentSelectField{grid-column:1/-1!important;}
-body#submitWorkOrderPage #residentSelectField label{display:none!important;}
-body#submitWorkOrderPage #residentSelect{min-height:58px!important;border-radius:20px!important;border:1.5px solid rgba(96,165,250,.50)!important;background:linear-gradient(180deg,#f3f8ff,#fff)!important;color:#0f3554!important;font-size:18px!important;font-weight:900!important;padding:0 18px!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.9)!important;}
-body#submitWorkOrderPage .field label{color:#557089!important;font-size:13px!important;letter-spacing:.085em!important;font-weight:950!important;margin-bottom:8px!important;}
-body#submitWorkOrderPage .field input,body#submitWorkOrderPage .field select,body#submitWorkOrderPage .field textarea{width:100%!important;min-height:58px!important;border-radius:18px!important;border:1.5px solid rgba(15,53,84,.14)!important;background:#fff!important;color:#17324c!important;font-size:17px!important;padding:13px 16px!important;box-shadow:inset 0 1px 2px rgba(15,53,84,.035)!important;}
-body#submitWorkOrderPage .field input:focus,body#submitWorkOrderPage .field select:focus,body#submitWorkOrderPage .field textarea:focus{outline:none!important;border-color:rgba(37,91,145,.58)!important;box-shadow:0 0 0 4px rgba(37,91,145,.10),inset 0 1px 2px rgba(15,53,84,.035)!important;}
-body#submitWorkOrderPage .field textarea{min-height:132px!important;resize:vertical!important;}
-body#submitWorkOrderPage #residentPhotos{display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;min-height:136px!important;padding:44px 18px 20px!important;border:1.8px dashed rgba(96,165,250,.70)!important;border-radius:22px!important;background:linear-gradient(180deg,#f8fbff,#fff)!important;color:#17324c!important;text-align:center!important;}
-body#submitWorkOrderPage #residentPhotos::file-selector-button{background:linear-gradient(180deg,#0f3554,#0b2d49)!important;color:#fff!important;border:none!important;border-radius:999px!important;padding:12px 22px!important;margin-right:12px!important;font-size:16px!important;font-weight:950!important;box-shadow:0 8px 18px rgba(15,53,84,.18)!important;}
-body#submitWorkOrderPage #residentPhotoMeta{margin-top:10px!important;color:#60758d!important;font-size:14px!important;font-weight:650!important;}
-body#submitWorkOrderPage .btnRow{display:flex!important;justify-content:flex-end!important;margin-top:2px!important;padding-top:0!important;}
-body#submitWorkOrderPage #submitBtn{min-width:250px!important;min-height:60px!important;border-radius:18px!important;background:linear-gradient(180deg,#0f3554,#0b2d49)!important;border:0!important;color:#fff!important;font-size:18px!important;font-weight:950!important;box-shadow:0 14px 26px rgba(15,53,84,.22),inset 0 1px 0 rgba(255,255,255,.18)!important;}
-body#submitWorkOrderPage #submitBtn:before{content:'➤';margin-right:9px;font-size:16px;}
-body#submitWorkOrderPage .historyCard{margin-top:20px!important;padding:24px 26px!important;}
-body#submitWorkOrderPage .historyHeader h2{color:#0f3554!important;font-size:30px!important;font-weight:950!important;letter-spacing:-.04em!important;}
-body#submitWorkOrderPage .historyHeader h2:before{content:'📋';display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;margin-right:10px;border-radius:14px;background:linear-gradient(180deg,#eaf3ff,#fff);font-size:22px;vertical-align:middle;}
-body#submitWorkOrderPage .historyHeader p{color:#60758d!important;font-size:15px!important;font-weight:650!important;}
-body#submitWorkOrderPage .miniBtn{min-height:44px!important;padding:0 18px!important;border-radius:999px!important;border:1.5px solid rgba(96,165,250,.58)!important;color:#0f3554!important;background:#fff!important;font-weight:950!important;box-shadow:0 8px 18px rgba(15,53,84,.06)!important;}
-body#submitWorkOrderPage .workOrderItem,body#submitWorkOrderPage .emptyHistory{border-radius:18px!important;border:1px solid rgba(96,165,250,.38)!important;background:linear-gradient(180deg,#fff,#fbfdff)!important;padding:16px 18px!important;box-shadow:0 8px 18px rgba(15,53,84,.045)!important;}
-body#submitWorkOrderPage .workOrderTitle{color:#0f3554!important;font-size:17px!important;font-weight:950!important;}
-@media(max-width:900px){body#submitWorkOrderPage .wrap{margin:18px auto 40px!important;padding:0 14px 46px!important;}body#submitWorkOrderPage #workOrderForm{grid-template-columns:1fr 1fr!important;padding:24px 24px!important;border-radius:26px!important;}body#submitWorkOrderPage #workOrderForm .field{grid-column:span 1!important;}body#submitWorkOrderPage #workOrderForm .field.full,body#submitWorkOrderPage #workOrderForm .btnRow.full,body#submitWorkOrderPage #residentSelectField{grid-column:1/-1!important;}}
-@media(max-width:640px){body#submitWorkOrderPage .wrap{padding:0 12px 38px!important;}body#submitWorkOrderPage #submitWorkOrderCard>h1{font-size:32px!important;}body#submitWorkOrderPage #submitWorkOrderCard>.sub{font-size:16px!important;}body#submitWorkOrderPage #communityContext,body#submitWorkOrderPage #workOrderForm,body#submitWorkOrderPage .historyCard{border-radius:24px!important;padding:20px 16px!important;}body#submitWorkOrderPage #workOrderForm{grid-template-columns:1fr!important;}body#submitWorkOrderPage #workOrderForm .field{grid-column:1/-1!important;}body#submitWorkOrderPage #workOrderForm:before{font-size:26px!important;}body#submitWorkOrderPage .btnRow{justify-content:stretch!important;}body#submitWorkOrderPage #submitBtn{width:100%!important;min-width:0!important;}}
-</style>
-
-
-<style id="v221-resident-work-order-back-button">
-body#submitWorkOrderPage .residentPageTopBar{
-  display:flex!important;
-  align-items:center!important;
-  justify-content:space-between!important;
-  gap:14px!important;
-  max-width:1180px!important;
-  margin:0 auto 14px!important;
-}
-body#submitWorkOrderPage .residentBackBtn{
-  display:inline-flex!important;
-  align-items:center!important;
-  justify-content:center!important;
-  gap:8px!important;
-  min-height:46px!important;
-  padding:0 18px!important;
-  border-radius:999px!important;
-  border:2px solid #0f3554!important;
-  background:rgba(255,255,255,.94)!important;
-  color:#0f3554!important;
-  font-size:16px!important;
-  font-weight:950!important;
-  letter-spacing:-.01em!important;
-  cursor:pointer!important;
-  box-shadow:0 10px 22px rgba(15,53,84,.08)!important;
-  -webkit-tap-highlight-color:transparent!important;
-}
-body#submitWorkOrderPage .residentBackBtn:active{transform:translateY(1px)!important;opacity:.78!important;}
-body#submitWorkOrderPage .residentBackSpacer{display:none!important;}
-body#submitWorkOrderPage #zummeeHeaderMount{display:none!important;}
-body#submitWorkOrderPage .residentPageTopBar{display:none!important;}
-body#submitWorkOrderPage .wrap{max-width:1180px!important;margin:0 auto!important;padding:24px 22px 54px!important;}
-body#submitWorkOrderPage .residentWorkOrderHero{
-  background:rgba(255,255,255,.96)!important;
-  border:2px solid #9bc9ff!important;
-  border-radius:34px!important;
-  box-shadow:0 18px 46px rgba(18,50,77,.10)!important;
-  padding:24px 28px!important;
-  display:grid!important;
-  grid-template-columns:1fr auto!important;
-  gap:18px!important;
-  align-items:center!important;
-  margin-bottom:22px!important;
-}
-body#submitWorkOrderPage .residentWorkOrderHero .heroKicker{
-  font-size:13px!important;
-  font-weight:950!important;
-  letter-spacing:.16em!important;
-  text-transform:uppercase!important;
-  color:#6c7f94!important;
-  margin-bottom:4px!important;
-}
-body#submitWorkOrderPage .residentWorkOrderHero h1{
-  margin:0!important;
-  color:#12324d!important;
-  font-size:34px!important;
-  line-height:1.02!important;
-  letter-spacing:-.04em!important;
-}
-body#submitWorkOrderPage .residentWorkOrderHeroRight{
-  display:flex!important;
-  flex-direction:column!important;
-  align-items:flex-end!important;
-  justify-content:center!important;
-  gap:12px!important;
-}
-body#submitWorkOrderPage .residentWorkOrderLogo{
-  height:58px!important;
-  max-width:210px!important;
-  width:auto!important;
-  object-fit:contain!important;
-  display:none;
-}
-body#submitWorkOrderPage .residentWorkOrderLogo.is-visible{display:block!important;}
-body#submitWorkOrderPage .residentHeroBackBtn{
-  display:inline-flex!important;
-  align-items:center!important;
-  justify-content:center!important;
-  gap:8px!important;
-  min-width:126px!important;
-  min-height:50px!important;
-  padding:0 18px!important;
-  border-radius:18px!important;
-  border:2px solid #9bc9ff!important;
-  background:#fff!important;
-  color:#12324d!important;
-  font-size:15px!important;
-  font-weight:950!important;
-  cursor:pointer!important;
-  box-shadow:none!important;
-  -webkit-tap-highlight-color:transparent!important;
-}
-body#submitWorkOrderPage .residentHeroBackBtn:active{transform:translateY(1px)!important;opacity:.78!important;}
-body#submitWorkOrderPage #submitWorkOrderCard{margin-top:0!important;}
-body#submitWorkOrderPage #submitWorkOrderCard>h1,
-body#submitWorkOrderPage #submitWorkOrderCard>.sub{display:none!important;}
-@media(max-width:900px){
-  body#submitWorkOrderPage .residentWorkOrderHero{grid-template-columns:1fr auto!important;padding:22px!important;align-items:center!important;}
-  body#submitWorkOrderPage .residentWorkOrderHero h1{font-size:30px!important;}
-  body#submitWorkOrderPage .residentWorkOrderLogo{max-width:170px!important;height:46px!important;}
-  body#submitWorkOrderPage .wrap{padding:18px 14px 42px!important;}
-}
-@media(max-width:620px){
-  body#submitWorkOrderPage .residentWorkOrderHero{grid-template-columns:1fr!important;}
-  body#submitWorkOrderPage .residentWorkOrderHeroRight{align-items:flex-start!important;}
-}
-</style>
+    :root{--navy:#123759;--ink:#17324c;--muted:#61758a;--line:#b9d4ff;--gold:#f4c95d;--bg:#f3f8fd;--danger:#b42318;--ok:#11653a}
+    *{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#eef7ff 0%,#f7fafc 100%);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;color:var(--ink)}
+    .wrap{max-width:1180px;margin:28px auto;padding:0 18px 60px}.hero{background:rgba(255,255,255,.96);border:2px solid var(--line);border-radius:30px;padding:28px 30px;box-shadow:0 20px 48px rgba(18,55,89,.10)}
+    .top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px}.title h1{font-size:clamp(34px,4vw,52px);line-height:1;margin:0;color:var(--navy);letter-spacing:-.045em}.title p{margin:10px 0 0;color:var(--muted);font-size:18px;font-weight:650}.logo{height:78px;object-fit:contain;max-width:260px}.context{margin:18px 0 22px;padding:18px 20px;border-radius:22px;background:linear-gradient(135deg,#fff7d6,#fffdf3);border:1.5px solid rgba(212,175,55,.35);font-weight:850;color:var(--navy)}
+    .context small{display:block;margin-top:4px;color:var(--muted);font-weight:700}.grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px 18px}.field{grid-column:span 3}.field.full{grid-column:1/-1}label{display:block;margin:0 0 8px;color:#536b84;text-transform:uppercase;letter-spacing:.08em;font-size:13px;font-weight:950}input,select,textarea{width:100%;min-height:58px;border-radius:18px;border:1.5px solid rgba(15,53,84,.14);background:#fff;color:var(--ink);font-size:17px;padding:13px 16px;box-shadow:inset 0 1px 2px rgba(15,53,84,.035)}textarea{min-height:150px;resize:vertical}input:focus,select:focus,textarea:focus{outline:0;border-color:#78aefc;box-shadow:0 0 0 4px rgba(96,165,250,.16)}
+    .owner-meta{margin-top:8px;color:var(--muted);font-size:13px;font-weight:750;line-height:1.35}.owner-meta.is-warn{color:var(--danger)}
+    .upload{grid-column:1/-1;border:1.5px dashed #88bfff;border-radius:24px;background:#fbfdff;padding:22px}.fileInput::file-selector-button{background:var(--navy);color:#fff;border:0;border-radius:999px;padding:13px 22px;font-weight:950;margin-right:12px}.preview{display:grid;gap:10px;margin-top:12px}.preview img{width:100%;max-height:150px;object-fit:cover;border-radius:14px;border:1px solid #dbe8f7}.actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:12px;margin-top:8px}.btn{border:2px solid var(--navy);border-radius:20px;background:#fff;color:var(--navy);min-height:58px;padding:0 24px;font-size:18px;font-weight:950;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}.btn.primary{background:linear-gradient(180deg,var(--navy),#0d2f4d);color:#fff;box-shadow:0 14px 28px rgba(18,55,89,.22)}.msg{margin:18px 0 0;font-size:18px;font-weight:850}.msg.err{color:var(--danger)}.msg.ok{color:var(--ok)}
+    .history{margin-top:26px;background:#fff;border:2px solid var(--line);border-radius:28px;padding:24px;box-shadow:0 14px 34px rgba(18,55,89,.07)}.history h2{margin:0;color:var(--navy);font-size:32px}.empty{margin-top:16px;padding:18px;border:1px dashed rgba(15,53,84,.20);border-radius:18px;color:var(--muted);font-weight:750}.item{margin-top:12px;padding:16px;border:1px solid rgba(15,53,84,.12);border-radius:18px}.item strong{color:var(--navy)}.pill{display:inline-flex;padding:6px 10px;border-radius:999px;background:#fff1c9;color:#785700;font-size:12px;font-weight:950;text-transform:uppercase;letter-spacing:.06em}
+    @media(max-width:760px){.wrap{margin:18px auto;padding:0 12px 44px}.hero{padding:24px 18px;border-radius:26px}.top{display:block}.logo{margin-top:14px;height:58px}.grid{grid-template-columns:1fr}.field{grid-column:1/-1}.actions{justify-content:stretch}.btn{width:100%}}
+  </style>
 </head>
-<body id="submitWorkOrderPage" data-header-mode="simple" data-page-title="Resident Work Orders">
-  <div id="zummeeHeaderMount"></div>
+<body>
   <main class="wrap">
-
-    <section class="residentWorkOrderHero" aria-label="Resident work order page header">
-      <div>
-        <div class="heroKicker">Resident Home</div>
-        <h1>Resident Work Orders</h1>
+    <section class="hero">
+      <div class="top">
+        <div class="title"><h1>Resident Work Orders</h1><p>Submit a new maintenance request for the selected community.</p></div>
+        <img id="companyLogo" class="logo" alt="Company logo" style="display:none" />
       </div>
-      <div class="residentWorkOrderHeroRight">
-        <img id="residentWorkOrderCompanyLogo" class="residentWorkOrderLogo" alt="Company logo" loading="eager" decoding="async">
-        <button class="residentHeroBackBtn" id="residentWorkOrderBackBtn" type="button" aria-label="Back to resident home">← Back</button>
-      </div>
-    </section>
-
-    <div class="residentPageTopBar" aria-label="Resident work order navigation" hidden>
-      <button class="residentBackBtn" type="button" aria-label="Back to resident portal">← Back</button>
-      <span class="residentBackSpacer" aria-hidden="true"></span>
-    </div>
-    <section class="card" id="submitWorkOrderCard">
-      <h1>Resident Work Orders</h1>
-      <div class="sub">Submit a new maintenance request and review your existing work orders from one resident page.</div>
-      <div id="communityContext" class="communityContext" style="display:none;"></div>
-
+      <div id="communityContext" class="context">Loading selected community…</div>
       <form id="workOrderForm" class="grid">
-        <div class="field" id="communityField" style="display:none;">
-          <label for="communityId">Community ID</label>
-          <input id="communityId" name="community_id" type="text" placeholder="Community ID" />
-        </div>
-        <div class="field" id="companyField" style="display:none;">
-          <label for="companyId">Company ID</label>
-          <input id="companyId" name="company_id" type="text" placeholder="Company ID" />
-        </div>
-        <div class="field" id="residentSelectField">
-          <label for="residentSelect">Resident Information</label>
-          <select id="residentSelect" disabled autocomplete="off">
-            <option value="" selected>Select owner</option>
-          </select>
-        </div>
-        <script>
-          (function(){
-            try{
-              var s = document.getElementById('residentSelect');
-              if(s){
-                s.selectedIndex = 0;
-                s.value = '';
-              }
-            }catch(_e){}
-          })();
-        </script>
-        <div class="field" id="residentNameField" style="display:none;">
-          <label for="residentName">Resident Name</label>
-          <input id="residentName" name="resident_name" type="text" required />
-        </div>
-        <div class="field">
-          <label for="unitNumber">Unit Number</label>
-          <input id="unitNumber" name="unit_number" type="text" required />
-        </div>
-        <div class="field">
-          <label for="residentEmail">Email</label>
-          <input id="residentEmail" name="resident_email" type="email" required />
-        </div>
-        <div class="field">
-          <label for="residentPhone">Phone</label>
-          <input id="residentPhone" name="resident_phone" type="tel" />
-        </div>
-        <div class="field">
-          <label for="category">Issue Category</label>
-          <select id="category" name="category">
-            <option value="general">General</option>
-            <option value="plumbing">Plumbing</option>
-            <option value="electrical">Electrical</option>
-            <option value="hvac">HVAC</option>
-            <option value="appliance">Appliance</option>
-            <option value="grounds">Grounds</option>
-            <option value="safety">Safety</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="priority">Priority</label>
-          <select id="priority" name="priority">
-            <option value="normal">Normal</option>
-            <option value="low">Low</option>
-            <option value="high">High</option>
-            <option value="urgent">Urgent</option>
-          </select>
-        </div>
-        <div class="field full">
-          <label for="subject">Subject</label>
-          <input id="subject" name="subject" type="text" required placeholder="Sink leak in kitchen" />
-        </div>
-        <div class="field full">
-          <label for="description">Description</label>
-          <textarea id="description" name="description" required placeholder="Please describe the issue in detail."></textarea>
-        </div>
-
-        <div class="field full">
-          <label for="residentPhotos">Upload Photos</label>
-          <input id="residentPhotos" class="file-input" type="file" accept="image/*" multiple />
-          <div id="residentPhotoMeta" class="upload-meta">Optional. Add photos of the issue to help maintenance respond faster.</div>
-          <div id="residentPhotoPreview" class="upload-preview-grid"></div>
-        </div>
-
-        <div class="btnRow full">
-          <button class="btn primary" id="submitBtn" type="submit">Submit Work Order</button>
-        </div>
-      
-      
-      
-
-
-</form>
-
-      <div id="formMsg" class="message"></div>
-      <div id="confirmCard" class="confirmCard">
-        <h2 class="confirmTitle">✓ Work Order Submitted</h2>
-        <div>A manager will review your request shortly.</div>
-        <div class="confirmMeta">
-          <div class="confirmBox"><div class="confirmLabel">Request ID</div><div class="confirmValue" id="confirmRequestId">—</div></div>
-          <div class="confirmBox"><div class="confirmLabel">Community</div><div class="confirmValue" id="confirmCommunity">—</div></div>
-        </div>
-      </div>
-
-      <section class="historyCard" aria-label="Your work orders">
-        <div class="historyHeader">
-          <div>
-            <h2>Your Work Orders</h2>
-            <p>Recent requests for your unit will appear here after they are submitted.</p>
-          </div>
-          <button class="miniBtn" id="refreshResidentWorkOrdersBtn" type="button">Refresh</button>
-        </div>
-        <div id="residentWorkOrderList" class="workOrderList">
-          <div class="emptyHistory">Loading your work orders…</div>
-        </div>
-      </section>
+        <input type="hidden" id="communityId" name="community_id" />
+        <input type="hidden" id="communityName" name="community_name" />
+        <input type="hidden" id="companyId" name="company_id" />
+        <div class="field owner-field"><label for="ownerSelect">Unit / Address</label><select id="ownerSelect" name="owner_select"><option value="">Loading owners…</option></select><input id="unitNumber" name="unit_number" type="hidden" /><input id="unitManual" name="unit_manual" placeholder="Unit or address" style="display:none;margin-top:10px" /><div id="ownerMeta" class="owner-meta" aria-live="polite"></div></div>
+        <div class="field"><label for="residentName">Resident Name</label><input id="residentName" name="resident_name" placeholder="Resident name" /></div>
+        <div class="field"><label for="residentEmail">Email</label><input id="residentEmail" name="resident_email" type="email" placeholder="name@email.com" /></div>
+        <div class="field"><label for="residentPhone">Phone</label><input id="residentPhone" name="resident_phone" inputmode="tel" placeholder="555-555-5555" /></div>
+        <div class="field"><label for="category">Issue Category</label><select id="category" name="category"><option value="general">General</option><option value="plumbing">Plumbing</option><option value="electrical">Electrical</option><option value="hvac">HVAC</option><option value="landscaping">Landscaping</option><option value="common_area">Common Area</option><option value="security">Security / Access</option></select></div>
+        <div class="field"><label for="priority">Priority</label><select id="priority" name="priority"><option value="normal">Normal</option><option value="low">Low</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>
+        <div class="field full"><label for="subject">Subject</label><input id="subject" name="subject" required placeholder="Brief summary" /></div>
+        <div class="field full"><label for="description">Description</label><textarea id="description" name="description" required placeholder="Please describe the issue in detail."></textarea></div>
+        <div class="upload"><label for="residentPhotos">Upload Photos</label><input class="fileInput" id="residentPhotos" type="file" multiple accept="image/*" /><div id="photoMeta" class="empty" style="display:none"></div><div id="photoPreview" class="preview"></div></div>
+        <div class="actions"><a class="btn" id="backToRwo" href="resident_work_orders.html">Back</a><button class="btn primary" id="submitBtn" type="submit">➤ Submit Work Order</button></div>
+      </form>
+      <div id="message" class="msg"></div>
     </section>
+    <section class="history"><h2>Your Work Orders</h2><p style="color:var(--muted);font-weight:700">Recent requests for this community will appear here after they are submitted.</p><button id="refreshHistory" class="btn" type="button" style="min-height:44px;font-size:15px;padding:0 18px">Refresh</button><div id="historyList" class="empty">Loading your work orders…</div></section>
   </main>
-
-  <script>
-
-async function getSubmitSupabaseClient(){
-      try{ if(window.ZummeeResidentAuth && window.ZummeeResidentAuth.getSupabase){ return await window.ZummeeResidentAuth.getSupabase(); } }catch(_e){}
-      try{ if(typeof ensureSupabase === 'function'){ return await ensureSupabase(); } }catch(_e){}
-      return null;
-    }
-
-    function slugifyResidentCommunityName(v){
-      return String(v || '')
-        .trim()
-        .toLowerCase()
-        .replace(/&/g, ' and ')
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '');
-    }
-
-    function getResidentSubmitContext(){
-      try{
-        const params = new URLSearchParams(window.location.search || '');
-        const path = String(window.location.pathname || '');
-        const match = path.match(/\/workorder\/([^/?#]+)/i);
-        const slugFromPath = match ? String(match[1] || '').trim() : '';
-        const slugFromQuery = params.get('community_slug') || params.get('communitySlug') || '';
-
-        const queryCommunityId = String(params.get('community_id') || params.get('community') || '').trim();
-        const queryCommunityName = String(params.get('community_name') || params.get('communityLabel') || params.get('community_name_readable') || '').trim();
-        const queryCompanyId = String(params.get('company_id') || params.get('company') || '').trim();
-
-        let storedCommunityId = '';
-        let storedCommunityName = '';
-        try{
-          storedCommunityId = String(
-            localStorage.getItem('zummeeActiveCommunityId') ||
-            localStorage.getItem('activeCommunityId') ||
-            localStorage.getItem('zummee_selected_community_id') ||
-            ''
-          ).trim();
-          storedCommunityName = String(
-            localStorage.getItem('zummeeActiveCommunityName') ||
-            localStorage.getItem('activeCommunityName') ||
-            ''
-          ).trim();
-        }catch(_e){}
-
-        return {
-          communityId: queryCommunityId || storedCommunityId || '',
-          communityName: queryCommunityName || storedCommunityName || '',
-          communitySlug: slugFromPath || slugFromQuery || '',
-          companyId: queryCompanyId || ''
-        };
-      }catch(_e){
-        return { communityId:'', communityName:'', communitySlug:'', companyId:'' };
-      }
-    }
-
-    async function resolveResidentSubmitContext(){
-      const ctx = getResidentSubmitContext();
-      const cEl = document.getElementById('communityId');
-      const coEl = document.getElementById('companyId');
-      const contextBox = document.getElementById('communityContext');
-
-      if(cEl && ctx.communityId) cEl.value = ctx.communityId;
-      if(coEl && ctx.companyId) coEl.value = ctx.companyId;
-
-      if((ctx.communityId && ctx.communityName) || !ctx.communitySlug){
-        if(contextBox && (ctx.communityName || ctx.communityId)){
-          contextBox.style.display = 'block';
-          contextBox.innerHTML = '<strong>Submitting for:</strong> ' + (ctx.communityName || ctx.communityId);
-        }
-        return ctx;
-      }
-
-      try{
-        const restUrl = (window.SUPABASE_URL || 'https://slcwuuwyrgnmlmxpcaim.supabase.co') + '/rest/v1/PropertyCommunities?select=id,name,company_id&name=ilike.' + encodeURIComponent(ctx.communitySlug.replace(/-/g, '%')) + '&limit=200';
-        const res = await fetch(restUrl, {
-          headers: {
-            'apikey': String(window.SUPABASE_ANON_KEY || '')
-          }
-        });
-        if(res.ok){
-          const rows = await res.json();
-          const normalizedSlug = slugifyResidentCommunityName(ctx.communitySlug);
-          const exact = Array.isArray(rows) ? rows.find(r => slugifyResidentCommunityName(r?.name) === normalizedSlug) : null;
-          if(exact){
-            ctx.communityId = String(exact.id || '').trim();
-            ctx.communityName = String(exact.name || '').trim();
-            ctx.companyId = String(exact.company_id || '').trim();
-            if(cEl) cEl.value = ctx.communityId;
-            if(coEl) coEl.value = ctx.companyId;
-        try{ if(window.loadResidentWorkOrderHeroLogo) window.loadResidentWorkOrderHeroLogo(); }catch(_e){}
-          }
-        }
-      }catch(_e){}
-
-      if(contextBox){
-        if(ctx.communityName || ctx.communitySlug){
-          contextBox.style.display = 'block';
-          contextBox.innerHTML = '<strong>Submitting for:</strong> ' + (ctx.communityName || ctx.communitySlug.replace(/-/g, ' '));
-        } else {
-          contextBox.style.display = 'none';
-        }
-      }
-      return ctx;
-    }
-
-    let residentSubmitContext = { communityId:'', communityName:'', communitySlug:'', companyId:'' };
-    let loggedInResidentContext = null;
-
-    function setFieldLocked(id, value){
-      const el = document.getElementById(id);
-      if(!el) return;
-      if(typeof value !== 'undefined' && value !== null) el.value = String(value);
-      el.readOnly = true;
-      el.setAttribute('aria-readonly', 'true');
-      el.style.background = '#f3f7fb';
-      el.style.fontWeight = '700';
-    }
-
-    async function hydrateCompanyFromCommunityId(communityId){
-      try{
-        const community = String(communityId || '').trim();
-        if(!community) return '';
-        const sb = await getSubmitSupabaseClient();
-        if(sb && typeof sb.from === 'function'){
-          const { data, error } = await sb
-            .from('PropertyCommunities')
-            .select('company_id,name')
-            .eq('id', community)
-            .maybeSingle();
-          if(!error && data && data.company_id){
-            return String(data.company_id || '').trim();
-          }
-        }
-      }catch(_e){}
-      try{
-        const restUrl = (window.SUPABASE_URL || 'https://slcwuuwyrgnmlmxpcaim.supabase.co') + '/rest/v1/PropertyCommunities?select=company_id,name&id=eq.' + encodeURIComponent(String(communityId || '').trim()) + '&limit=1';
-        const res = await fetch(restUrl, { headers: { 'apikey': String(window.SUPABASE_ANON_KEY || '') } });
-        if(res.ok){
-          const rows = await res.json();
-          const row = Array.isArray(rows) ? rows[0] : rows;
-          return row && row.company_id ? String(row.company_id).trim() : '';
-        }
-      }catch(_e){}
-      return '';
-    }
-
-    async function initializeResidentSubmitSecurity(){
-      try{
-        if(!(window.ZummeeResidentAuth && window.ZummeeResidentAuth.getContext)) return null;
-        const ctx = await window.ZummeeResidentAuth.getContext();
-        loggedInResidentContext = ctx;
-        const resident = ctx && ctx.resident ? ctx.resident : null;
-        if(!(ctx && ctx.user && ctx.isResident && resident)) return ctx;
-
-        const residentName = resident.resident_name || ctx.user?.user_metadata?.resident_name || '';
-        const unitNumber = resident.unit_number || '';
-        const residentEmail = resident.email || ctx.user?.email || '';
-        const residentPhone = resident.phone || ctx.user?.user_metadata?.phone || '';
-
-        setFieldLocked('residentName', residentName);
-        setFieldLocked('unitNumber', unitNumber);
-        setFieldLocked('residentEmail', residentEmail);
-        if(residentPhone){
-          const phoneEl = document.getElementById('residentPhone');
-          if(phoneEl) phoneEl.value = formatPhone(residentPhone);
-        }
-        const cEl = document.getElementById('communityId');
-        const coEl = document.getElementById('companyId');
-        if(cEl && resident.community_id) cEl.value = String(resident.community_id);
-        if(coEl && resident.company_id) coEl.value = String(resident.company_id);
-        try{ if(window.loadResidentWorkOrderHeroLogo) window.loadResidentWorkOrderHeroLogo(); }catch(_e){}
-        residentSubmitContext = {
-          communityId: String(resident.community_id || residentSubmitContext.communityId || ''),
-          communityName: String(resident.community_name || residentSubmitContext.communityName || ''),
-          communitySlug: String(residentSubmitContext.communitySlug || ''),
-          companyId: String(resident.company_id || residentSubmitContext.companyId || '')
-        };
-        const contextBox = document.getElementById('communityContext');
-        if(contextBox){
-          contextBox.style.display = 'block';
-          contextBox.innerHTML = '<div class="residentInfoLine"><span class="residentInfoName">' + (residentName || 'Resident') + '</span><span class="residentInfoDot">•</span><span>Unit ' + (unitNumber || '—') + '</span>' + (resident.community_name ? '<span class="residentInfoDot">•</span><span>' + resident.community_name + '</span>' : '') + '</div>';
-        }
-        return ctx;
-      }catch(_e){ return null; }
-    }
-
-    const form = document.getElementById('workOrderForm');
-    const formMsg = document.getElementById('formMsg');
-    const submitBtn = document.getElementById('submitBtn');
-    const confirmCard = document.getElementById('confirmCard');
-    const confirmRequestId = document.getElementById('confirmRequestId');
-    const confirmCommunity = document.getElementById('confirmCommunity');
-
-    function setMsg(msg, ok){
-      formMsg.className = 'message ' + (ok ? 'ok' : 'err');
-      formMsg.textContent = msg || '';
-    }
-
-    function formatPhone(phone){
-      if(!phone) return '';
-      const digits = String(phone).replace(/\D/g, '').slice(0, 10);
-      if(!digits) return '';
-      if(digits.length <= 3) return digits;
-      if(digits.length <= 6) return digits.slice(0,3) + '-' + digits.slice(3);
-      return digits.slice(0,3) + '-' + digits.slice(3,6) + '-' + digits.slice(6);
-    }
-
-
-    async function fetchCommunityResidents(communityId){
-      const community = String(communityId || '').trim();
-      if(!community) return [];
-      try{
-        const sb = await getSubmitSupabaseClient();
-        if(sb && typeof sb.from === 'function'){
-          const { data, error } = await sb
-            .from('resident_directory')
-            .select('id,resident_name,unit_number,email,phone')
-            .eq('community_id', community)
-            .order('resident_name', { ascending: true });
-          if(!error && Array.isArray(data)) return data;
-        }
-      }catch(_e){}
-      try{
-        const restUrl = (window.SUPABASE_URL || 'https://slcwuuwyrgnmlmxpcaim.supabase.co') +
-          '/rest/v1/resident_directory?select=id,resident_name,unit_number,email,phone&community_id=eq.' +
-          encodeURIComponent(community) + '&order=resident_name.asc';
-        const res = await fetch(restUrl, {
-          headers: { 'apikey': String(window.SUPABASE_ANON_KEY || '') }
-        });
-        if(res.ok){
-          const rows = await res.json();
-          return Array.isArray(rows) ? rows : [];
-        }
-      }catch(_e){}
-      return [];
-    }
-
-    function applyResidentSelection(row){
-      if(!row) return;
-      const residentName = document.getElementById('residentName');
-      const unitNumber = document.getElementById('unitNumber');
-      const residentEmail = document.getElementById('residentEmail');
-      const residentPhone = document.getElementById('residentPhone');
-      if(residentName) residentName.value = String(row.resident_name || '').trim();
-      if(unitNumber) unitNumber.value = String(row.unit_number || '').trim();
-      if(residentEmail) residentEmail.value = String(row.email || '').trim();
-      if(residentPhone) residentPhone.value = formatPhone(row.phone || '');
-    }
-
-    async function initializeResidentOwnerDropdown(){
-      const select = document.getElementById('residentSelect');
-      const residentNameField = document.getElementById('residentNameField');
-      const residentNameInput = document.getElementById('residentName');
-      if(!select || !residentNameInput) return;
-
-      if(loggedInResidentContext && loggedInResidentContext.isResident){
-        const wrap = document.getElementById('residentSelectField');
-        if(wrap) wrap.style.display = 'none';
-        if(residentNameField) residentNameField.style.display = 'none';
-        return;
-      }
-
-      const communityId = String((residentSubmitContext && residentSubmitContext.communityId) || '').trim();
-      if(!communityId){
-        select.innerHTML = '<option value="" selected>No owners available</option>';
-        select.selectedIndex = 0;
-        select.disabled = true;
-        if(residentNameField) residentNameField.style.display = 'none';
-        return;
-      }
-
-      select.disabled = true;
-      select.innerHTML = '<option value="">Loading owners...</option>';
-
-      const rows = await fetchCommunityResidents(communityId);
-      const normalized = rows
-        .filter(r => String(r && r.resident_name || '').trim())
-        .sort((a,b) => String(a.resident_name || '').localeCompare(String(b.resident_name || '')));
-
-      if(!normalized.length){
-        select.innerHTML = '<option value="" selected>No owners found</option>';
-        select.selectedIndex = 0;
-        select.disabled = true;
-        if(residentNameField) residentNameField.style.display = '';
-        residentNameInput.readOnly = false;
-        residentNameInput.style.background = '';
-        residentNameInput.style.fontWeight = '';
-        return;
-      }
-
-      const options = ['<option value="">Select owner</option>'];
-      normalized.forEach((row, idx) => {
-        const name = String(row.resident_name || '').trim();
-        const unit = String(row.unit_number || '').trim();
-        const label = unit ? (name + ' • Unit ' + unit) : name;
-        row.__idx = idx;
-        options.push('<option value="' + idx + '">' + label.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;') + '</option>');
-      });
-      select.innerHTML = options.join('');
-      select.disabled = false;
-
-      select.addEventListener('change', function(){
-        const raw = String(select.value || '').trim();
-        if(!raw){
-          residentNameInput.value = '';
-          return;
-        }
-        const idx = Number(raw);
-        const row = normalized[idx];
-        if(row) applyResidentSelection(row);
-      }, { once:false });
-    }
-
-
-    function attachPhoneAutoFormatter(id){
-      const el = document.getElementById(id);
-      if(!el) return;
-      const applyFormat = () => {
-        const formatted = formatPhone(el.value);
-        if(el.value !== formatted) el.value = formatted;
-      };
-      el.addEventListener('input', applyFormat);
-      el.addEventListener('blur', applyFormat);
-      applyFormat();
-    }
-
-    Promise.all([
-      resolveResidentSubmitContext().then((ctx) => { residentSubmitContext = ctx || residentSubmitContext; }),
-      initializeResidentSubmitSecurity()
-    ]).then(() => {
-      initializeResidentOwnerDropdown();
-      loadResidentWorkOrderHistory();
-    });
-    document.getElementById('refreshResidentWorkOrdersBtn')?.addEventListener('click', loadResidentWorkOrderHistory);
-    attachPhoneAutoFormatter('residentPhone');
-    document.getElementById('residentPhotos')?.addEventListener('change', renderResidentPhotoPreview);
-
-    async function fileToBase64(file){
-      return await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result || ''));
-        reader.onerror = () => reject(new Error('Unable to read selected photo.'));
-        reader.readAsDataURL(file);
-      });
-    }
-
-
-    function renderResidentPhotoPreview(){
-      const input = document.getElementById('residentPhotos');
-      const preview = document.getElementById('residentPhotoPreview');
-      const meta = document.getElementById('residentPhotoMeta');
-      if(!input || !preview || !meta) return;
-      const files = Array.from(input.files || []);
-      if(!files.length){
-        preview.innerHTML = '';
-        meta.textContent = 'Optional. Add photos of the issue to help maintenance respond faster.';
-        return;
-      }
-      meta.textContent = files.length + ' photo(s) selected.';
-      preview.innerHTML = files.map(file => {
-        const url = URL.createObjectURL(file);
-        const safeName = String(file.name || 'Photo').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
-        return '<div class="upload-preview-card"><img src="' + url + '" alt="' + safeName + '"><div class="upload-preview-name">' + safeName + '</div></div>';
-      }).join('');
-    }
-
-    function escapeResidentWO(v){
-      return String(v == null ? '' : v)
-        .replaceAll('&','&amp;')
-        .replaceAll('<','&lt;')
-        .replaceAll('>','&gt;')
-        .replaceAll('"','&quot;')
-        .replaceAll("'",'&#39;');
-    }
-
-    function formatResidentWODate(value){
-      if(!value) return 'Recently submitted';
-      const d = new Date(value);
-      if(isNaN(d)) return 'Recently submitted';
-      return d.toLocaleString(undefined, { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' });
-    }
-
-    function normalizeResidentWOStatus(v){
-      const raw = String(v || 'manager_review').trim().toLowerCase().replace(/\s+/g, '_');
-      if(raw === 'submitted' || raw === 'under_review') return 'manager_review';
-      return raw;
-    }
-
-    function residentWOStatusLabel(status){
-      const s = normalizeResidentWOStatus(status);
-      if(s === 'manager_review') return 'needs manager review';
-      if(s === 'sent_to_vendor') return 'sent to vendor';
-      if(s === 'active') return 'active';
-      if(s === 'completed') return 'completed';
-      return s.replaceAll('_',' ');
-    }
-
-    function renderResidentWorkOrderHistory(rows){
-      const host = document.getElementById('residentWorkOrderList');
-      if(!host) return;
-      const list = Array.isArray(rows) ? rows : [];
-      if(!list.length){
-        host.innerHTML = '<div class="emptyHistory">No work orders yet. Submit your first request above.</div>';
-        return;
-      }
-      host.innerHTML = list.map(row => {
-        const status = normalizeResidentWOStatus(row.status);
-        const label = residentWOStatusLabel(status);
-        const title = row.subject || row.title || 'Resident work order';
-        const cat = row.category ? String(row.category).replaceAll('_',' ') : 'General';
-        const unit = row.unit_number ? ('Unit ' + row.unit_number) : 'Resident request';
-        const desc = row.description ? String(row.description).slice(0, 180) : '';
-        return '<article class="workOrderItem">' +
-          '<div class="workOrderTop"><div><div class="workOrderTitle">' + escapeResidentWO(title) + '</div>' +
-          '<div class="workOrderMeta">' + escapeResidentWO(unit) + ' • ' + escapeResidentWO(cat) + ' • ' + escapeResidentWO(formatResidentWODate(row.created_at || row.submitted_at || row.updated_at)) + '</div></div>' +
-          '<span class="statusPill ' + escapeResidentWO(status) + '">' + escapeResidentWO(label) + '</span></div>' +
-          (desc ? '<div class="workOrderMeta" style="margin-top:10px">' + escapeResidentWO(desc) + '</div>' : '') +
-        '</article>';
-      }).join('');
-    }
-
-    function escapePostgrestOrValue(value){
-      return String(value == null ? '' : value)
-        .replaceAll('\\\\','\\\\\\\\')
-        .replaceAll('"','\\"')
-        .replaceAll(',', '%2C')
-        .trim();
-    }
-
-    async function queryResidentWorkOrders(sb, identifiers){
-      // v219: resident_work_orders production schema uses resident_email/unit_number/submitted_at.
-      // Do not depend on newer resident_id or created_at columns, because older/prod rows may not have them.
-      const selectCols = 'id,subject,description,category,priority,status,unit_number,resident_email,submitted_at,updated_at,community_id';
-      let query = sb.from('resident_work_orders').select(selectCols).order('submitted_at', { ascending:false, nullsFirst:false }).limit(25);
-      if(identifiers.communityId) query = query.eq('community_id', identifiers.communityId);
-      const clauses = [];
-      if(identifiers.email) clauses.push('resident_email.eq.' + escapePostgrestOrValue(identifiers.email));
-      if(identifiers.unit) clauses.push('unit_number.eq.' + escapePostgrestOrValue(identifiers.unit));
-      if(clauses.length) query = query.or(clauses.join(','));
-      return await query;
-    }
-
-    async function queryResidentWorkOrdersFallback(sb, identifiers){
-      // Final fallback: no created_at/resident_id assumptions.
-      let query = sb.from('resident_work_orders').select('id,subject,description,category,priority,status,unit_number,resident_email,submitted_at,updated_at,community_id').order('submitted_at', { ascending:false, nullsFirst:false }).limit(25);
-      if(identifiers.communityId) query = query.eq('community_id', identifiers.communityId);
-      if(identifiers.email) query = query.eq('resident_email', identifiers.email);
-      else if(identifiers.unit) query = query.eq('unit_number', identifiers.unit);
-      return await query;
-    }
-
-    async function loadResidentWorkOrderHistory(){
-      const host = document.getElementById('residentWorkOrderList');
-      if(host) host.innerHTML = '<div class="emptyHistory">Loading your work orders…</div>';
-      try{
-        const sb = await getSubmitSupabaseClient();
-        if(!sb || typeof sb.from !== 'function') throw new Error('Supabase is not ready.');
-        const ctx = loggedInResidentContext || await initializeResidentSubmitSecurity();
-        const resident = ctx && ctx.resident ? ctx.resident : null;
-        const user = ctx && ctx.user ? ctx.user : null;
-        const identifiers = {
-          residentId: resident ? String(resident.id || resident.resident_id || user?.user_metadata?.resident_directory_id || '').trim() : '',
-          email: resident ? String(resident.email || user?.email || '').trim() : String(document.getElementById('residentEmail')?.value || '').trim(),
-          unit: resident ? String(resident.unit_number || '').trim() : String(document.getElementById('unitNumber')?.value || '').trim(),
-          communityId: resident ? String(resident.community_id || '').trim() : String((residentSubmitContext && residentSubmitContext.communityId) || document.getElementById('communityId')?.value || '').trim()
-        };
-        let result = await queryResidentWorkOrders(sb, identifiers);
-        if(result.error && /resident_id|column|schema cache/i.test(String(result.error.message || ''))){
-          result = await queryResidentWorkOrdersFallback(sb, identifiers);
-        }
-        if(result.error) throw result.error;
-        // Extra client-side protection so a resident only sees their own records when both email/unit exist.
-        let rows = result.data || [];
-        if(identifiers.email || identifiers.unit){
-          rows = rows.filter(function(r){
-            const emailOk = identifiers.email && String(r.resident_email || '').toLowerCase() === String(identifiers.email || '').toLowerCase();
-            const unitOk = identifiers.unit && String(r.unit_number || '').trim() === String(identifiers.unit || '').trim();
-            return emailOk || unitOk;
-          });
-        }
-        renderResidentWorkOrderHistory(rows);
-      }catch(err){
-        console.warn('Unable to load resident work order history:', err);
-        if(host) host.innerHTML = '<div class="emptyHistory">Unable to load existing work orders right now. You can still submit a new request above.</div>';
-      }
-    }
-
-
-    async function uploadWorkOrderPhotos(files, opts){
-      const uploaded = [];
-      for(const file of Array.from(files || [])){
-        const dataBase64 = await fileToBase64(file);
-        const res = await fetch('https://slcwuuwyrgnmlmxpcaim.supabase.co/functions/v1/upload-work-order-photo', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': String(window.SUPABASE_ANON_KEY || '')
-          },
-          body: JSON.stringify({
-            work_order_id: opts.work_order_id,
-            uploader_type: opts.uploader_type,
-            uploader_email: opts.uploader_email,
-            token: opts.token || '',
-            file_name: file.name,
-            content_type: file.type || 'image/jpeg',
-            data_base64: dataBase64
-          })
-        });
-        const raw = await res.text();
-        let parsed = null;
-        try{ parsed = raw ? JSON.parse(raw) : null; }catch(_e){ parsed = raw; }
-        if(!res.ok){
-          throw new Error((parsed && (parsed.error || parsed.message)) || 'Photo upload failed.');
-        }
-        uploaded.push(parsed);
-      }
-      return uploaded;
-    }
-
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      setMsg('', true);
-      submitBtn.disabled = true;
-      try{
-        const sb = await getSubmitSupabaseClient();
-        if(!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY){
-          throw new Error('Supabase configuration is not loaded.');
-        }
-
-        residentSubmitContext = await resolveResidentSubmitContext();
-        const resolvedCommunityId = form.community_id.value.trim() || residentSubmitContext.communityId || '';
-        let resolvedCompanyId = form.company_id.value.trim() || residentSubmitContext.companyId || '';
-        if(!resolvedCommunityId){
-          throw new Error('This work order link is missing a community. Open it from the community-specific resident link.');
-        }
-
-        const residentCtx = loggedInResidentContext || await initializeResidentSubmitSecurity();
-        const residentRow = residentCtx && residentCtx.resident ? residentCtx.resident : null;
-        const sessionEmail = (residentCtx && residentCtx.user && residentCtx.user.email)
-          ? String(residentCtx.user.email)
-          : form.resident_email.value.trim();
-        const finalCommunityId = (residentRow && residentRow.community_id) ? String(residentRow.community_id) : String(resolvedCommunityId || '');
-        let finalCompanyId = (residentRow && residentRow.company_id) ? String(residentRow.company_id) : String(resolvedCompanyId || '');
-        if(!finalCompanyId && finalCommunityId){
-          finalCompanyId = await hydrateCompanyFromCommunityId(finalCommunityId);
-          if(finalCompanyId){
-            residentSubmitContext.companyId = finalCompanyId;
-            try{ form.company_id.value = finalCompanyId; }catch(_e){}
-          }
-        }
-        const payload = {
-          company_id: finalCompanyId || null,
-          community_id: finalCommunityId || null,
-          resident_name: residentRow ? String(residentRow.resident_name || form.resident_name.value.trim()) : form.resident_name.value.trim(),
-          resident_email: sessionEmail,
-          resident_id: residentRow ? String(residentRow.id || residentRow.resident_id || residentCtx?.user?.user_metadata?.resident_directory_id || '') || null : null,
-          resident_phone: form.resident_phone.value.trim() || (residentRow ? (residentRow.phone || null) : null),
-          unit_number: residentRow ? String(residentRow.unit_number || form.unit_number.value.trim()) : form.unit_number.value.trim(),
-          subject: form.subject.value.trim(),
-          description: form.description.value.trim(),
-          category: form.category.value,
-          priority: form.priority.value,
-          status: 'manager_review',
-          vendor_id: null
-        };
-
-        if(residentRow && String(payload.community_id || '') !== String(residentRow.community_id || '')){
-          throw new Error('Resident portal security blocked a community mismatch.');
-        }
-
-        const { data: createdRows, error: insertError } = await sb
-          .from('resident_work_orders')
-          .insert([payload])
-          .select();
-
-        if(insertError){
-          throw new Error(insertError.message || 'Unable to submit work order.');
-        }
-
-        const createdRow = Array.isArray(createdRows) ? createdRows[0] : createdRows;
-
-        try{
-          if(createdRow && createdRow.id && sb && typeof sb.rpc === 'function'){
-            await sb.rpc('create_notification_event', {
-              p_event_type: 'new_work_order',
-              p_priority: 'high',
-              p_title: 'New Work Order',
-              p_message: 'A new resident work order needs review.',
-              p_link_url: 'resident_work_orders.html?open_work_order_id=' + encodeURIComponent(String(createdRow.id)),
-              p_community_id: payload.community_id || null,
-              p_actor_user_id: null,
-              p_target_user_id: null,
-              p_target_role: 'Employee',
-              p_audience_scope: 'role',
-              p_source_table: 'resident_work_orders',
-              p_source_id: String(createdRow.id),
-              p_metadata: {
-                work_order_id: createdRow.id,
-                source: 'resident_submit',
-                resident_name: payload.resident_name || null,
-                unit_number: payload.unit_number || null,
-                subject: payload.subject || null
-              }
-            });
-          }
-        }catch(notificationErr){
-          console.warn('Notification create failed after work order submit:', notificationErr);
-        }
-
-        const residentFiles = document.getElementById('residentPhotos')?.files || [];
-        let uploadedCount = 0;
-        if(createdRow && createdRow.id && residentFiles.length){
-          try{
-            const uploaded = await uploadWorkOrderPhotos(residentFiles, {
-              work_order_id: createdRow.id,
-              uploader_type: 'resident',
-              uploader_email: payload.resident_email
-            });
-            uploadedCount = uploaded.length;
-          }catch(photoErr){
-            setMsg((photoErr && photoErr.message) ? ('Work order submitted, but photo upload failed: ' + photoErr.message) : 'Work order submitted, but photo upload failed.', false);
-          }
-        }
-
-        try{
-          const clientRef = 'RWO-' + String(Date.now()).slice(-8);
-          const ctx = getResidentSubmitContext();
-          confirmRequestId.textContent = clientRef;
-          confirmCommunity.textContent = residentSubmitContext.communityName || ctx.communityName || payload.community_id || 'Assigned automatically';
-          confirmCard.classList.add('show');
-        }catch(_e){}
-
-        form.reset();
-        renderResidentPhotoPreview();
-        form.priority.value = 'normal';
-        form.category.value = 'general';
-        try{ await initializeResidentSubmitSecurity(); }catch(_e){}
-        try{ await loadResidentWorkOrderHistory(); }catch(_e){}
-        setMsg(uploadedCount ? (`Work order submitted successfully. ${uploadedCount} photo(s) uploaded.`) : 'Work order submitted successfully.', true);
-      }catch(err){
-        let msg = err?.message || 'Unable to submit work order.';
-        if(/row-level security|permission denied|new row violates row-level security/i.test(msg)){
-          msg = 'Supabase blocked the insert. Check table policies or project key restrictions.';
-        } else if(/relation .*resident_work_orders.* does not exist/i.test(msg)){
-          msg = 'The resident_work_orders table does not exist yet in Supabase.';
-        }
-        setMsg(msg, false);
-      }finally{
-        submitBtn.disabled = false;
-      }
-    });
-  </script>
-<script src="company_logo_sync.js"></script>
-<style id="v220-resident-info-card-polish">
-body#submitWorkOrderPage #communityContext{
-  padding:22px 26px!important;
-  border-radius:28px!important;
-  background:rgba(255,255,255,.96)!important;
-  border:2px solid rgba(96,165,250,.62)!important;
-  box-shadow:0 14px 34px rgba(15,53,84,.075)!important;
-}
-body#submitWorkOrderPage #communityContext:before,
-body#submitWorkOrderPage #communityContext::before{
-  content:'👤 Resident Information'!important;
-  margin:0 0 12px!important;
-  color:#0f3554!important;
-  font-size:clamp(24px,3vw,34px)!important;
-  font-weight:950!important;
-  letter-spacing:-.04em!important;
-  line-height:1.05!important;
-}
-body#submitWorkOrderPage #communityContext .residentInfoLine{
-  display:flex!important;
-  flex-wrap:wrap!important;
-  align-items:center!important;
-  gap:8px 12px!important;
-  color:#17324c!important;
-  font-size:clamp(18px,2vw,22px)!important;
-  font-weight:850!important;
-  line-height:1.25!important;
-}
-body#submitWorkOrderPage #communityContext .residentInfoName{
-  color:#0f3554!important;
-  font-weight:950!important;
-}
-body#submitWorkOrderPage #communityContext .residentInfoDot{
-  color:#6b87a3!important;
-  font-weight:950!important;
-}
-body#submitWorkOrderPage #communityContext strong{display:none!important;}
-@media(max-width:620px){
-  body#submitWorkOrderPage #communityContext{padding:20px 18px!important;border-radius:24px!important;}
-  body#submitWorkOrderPage #communityContext .residentInfoLine{font-size:18px!important;}
-}
-</style>
-
-
-
-  <script id="v222-resident-work-order-hero-logo">
-  (function(){
-    function qs(id){ return document.getElementById(id); }
-    function setHeroLogo(url){
-      var img = qs('residentWorkOrderCompanyLogo');
-      if(!img) return;
-      url = String(url || '').trim();
-      img.classList.remove('is-visible');
-      if(!url){ img.removeAttribute('src'); img.style.display='none'; return; }
-      img.onload = function(){ img.classList.add('is-visible'); img.style.display='block'; };
-      img.onerror = function(){ img.classList.remove('is-visible'); img.removeAttribute('src'); img.style.display='none'; };
-      img.src = url;
-    }
-    async function getClient(){
-      try{ if(typeof ensureSupabase === 'function'){ var c = await ensureSupabase(); if(c && c.from) return c; } }catch(_e){}
-      try{ if(window.supabaseClient && window.supabaseClient.from) return window.supabaseClient; }catch(_e){}
-      try{ if(window.sb && window.sb.from) return window.sb; }catch(_e){}
-      return null;
-    }
-    function publicLogoUrl(sb, raw){
-      raw = String(raw || '').trim();
-      if(!raw) return '';
-      if(/^https?:\/\//i.test(raw)) return raw;
-      try{ return sb.storage.from('company_logos').getPublicUrl(raw).data.publicUrl || ''; }catch(_e){ return ''; }
-    }
-    async function loadHeroLogo(){
-      try{
-        var sb = await getClient();
-        if(!sb) return;
-        var companyId = '';
-        try{ companyId = String((window.residentSubmitContext && window.residentSubmitContext.companyId) || '').trim(); }catch(_e){}
-        if(!companyId){ var co = qs('companyId'); if(co) companyId = String(co.value || '').trim(); }
-        if(!companyId){
-          try{
-            var ctx = window.loggedInResidentContext || null;
-            var r = ctx && ctx.resident ? ctx.resident : null;
-            companyId = String((r && r.company_id) || localStorage.getItem('company_id') || localStorage.getItem('zummee_company_id') || '').trim();
-          }catch(_e){}
-        }
-        if(!companyId) return;
-        var res = await sb.from('companies').select('name,logo_path').eq('id', companyId).maybeSingle();
-        var row = res && res.data ? res.data : null;
-        if(!row || !row.logo_path) return;
-        setHeroLogo(publicLogoUrl(sb, row.logo_path));
-      }catch(e){ console.warn('Resident work order hero logo skipped', e); }
-    }
-    function boot(){ loadHeroLogo(); setTimeout(loadHeroLogo, 500); setTimeout(loadHeroLogo, 1400); }
-    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true}); else boot();
-    window.loadResidentWorkOrderHeroLogo = loadHeroLogo;
-  })();
-  </script>
-<script id="v221-resident-work-order-back-button-js">
+<script>
 (function(){
-  function goBackToResidentHome(){
+  const REST = 'https://slcwuuwyrgnmlmxpcaim.supabase.co/rest/v1/';
+  const FN = 'https://slcwuuwyrgnmlmxpcaim.supabase.co/functions/v1/';
+  const $ = id => document.getElementById(id);
+  function qp(n){ try{return new URL(location.href).searchParams.get(n)||'';}catch(_e){return '';} }
+  function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+  function isJwt(v){ return /^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(String(v||'').trim()); }
+  function readStoredJwt(){
+    const keys=['sb_access_token','zummee_sb_access_token'];
+    for(const k of keys){
+      try{ const v=localStorage.getItem(k)||sessionStorage.getItem(k)||''; if(isJwt(v)) return v.trim(); }catch(_e){}
+    }
     try{
-      var ref = String(document.referrer || '');
-      if(ref && ref.indexOf(location.host) !== -1 && history.length > 1){
-        history.back();
-        return;
+      const raw=localStorage.getItem('sb-zummee-auth')||localStorage.getItem('sb-slcwuuwyrgnmlmxpcaim-auth-token')||'';
+      if(raw){ const obj=JSON.parse(raw); const s=obj.currentSession||obj.session||obj; const t=s&&s.access_token; if(isJwt(t)) return t.trim(); }
+    }catch(_e){}
+    return '';
+  }
+  async function getToken(){
+    try{
+      if(window.ZummeeAuth && typeof window.ZummeeAuth.getAccessToken==='function'){
+        const t = await window.ZummeeAuth.getAccessToken();
+        if(isJwt(t)) return String(t).trim();
       }
     }catch(_e){}
-    try{ window.location.href = 'resident_portal.html'; }
-    catch(_e){ window.location.assign('resident_portal.html'); }
+    return readStoredJwt();
   }
-  document.addEventListener('DOMContentLoaded', function(){
-    var btn = document.getElementById('residentWorkOrderBackBtn');
-    if(btn) btn.addEventListener('click', goBackToResidentHome);
-  });
-  window.goBackToResidentHome = goBackToResidentHome;
+  async function getClient(){ if(typeof window.ensureSupabase==='function') return await window.ensureSupabase(); return window.supabaseClient || window.sb || null; }
+  async function api(path, opts={}){ const token = await getToken(); const headers = Object.assign({'apikey':window.SUPABASE_ANON_KEY||'','Content-Type':'application/json','Prefer':'return=representation'}, opts.headers||{}); if(token) headers.Authorization='Bearer '+token; const res=await fetch(REST+path,{...opts,headers}); const text=await res.text(); let data=null; try{data=text?JSON.parse(text):null}catch(_e){data=text} if(!res.ok){ throw new Error((data&&(data.message||data.error_description||data.error))||text||('Request failed '+res.status)); } return data; }
+  function context(){
+    const cid = qp('community_id') || qp('cid') || localStorage.getItem('zummeeActiveCommunityId') || localStorage.getItem('activeCommunityId') || '';
+    const cname = qp('community_name') || qp('name') || localStorage.getItem('zummeeActiveCommunityName') || localStorage.getItem('activeCommunityName') || '';
+    const uid = qp('user_id') || qp('uid') || localStorage.getItem('zummee_user_id_v1') || '';
+    return {cid:String(cid||'').trim(), cname:String(cname||'').trim(), uid:String(uid||'').trim()};
+  }
+  async function hydrateCompanyLogo(){
+    try{ const cached=localStorage.getItem('zummee_company_logo_url')||localStorage.getItem('companyLogoUrl')||''; if(cached){ $('companyLogo').src=cached; $('companyLogo').style.display='block'; return; } }catch(_e){}
+    try{ const rows=await api('company_branding?select=*&limit=1',{method:'GET'}); const logo=(rows&&rows[0]&&(rows[0].logo_url||rows[0].logo||rows[0].image_url))||''; if(logo){$('companyLogo').src=logo; $('companyLogo').style.display='block';} }catch(_e){}
+  }
+  async function hydrateCompanyFromCommunityId(cid){
+    if(!cid) return '';
+    const tables=['communities','PropertyCommunities','Community'];
+    for(const t of tables){ try{ const rows=await api(t+'?select=id,company_id,company,name&limit=1&id=eq.'+encodeURIComponent(cid),{method:'GET'}); if(rows&&rows[0]) return rows[0].company_id||rows[0].company||''; }catch(_e){} }
+    return '';
+  }
+  function setMsg(msg, ok){ const el=$('message'); el.textContent=msg||''; el.className='msg '+(msg?(ok?'ok':'err'):''); }
+  function firstValue(keys){
+    for(const k of keys){
+      try{ const qv=qp(k); if(qv) return decodeURIComponent(qv); }catch(_e){}
+      try{ const lv=localStorage.getItem(k); if(lv) return lv; }catch(_e2){}
+      try{ const sv=sessionStorage.getItem(k); if(sv) return sv; }catch(_e3){}
+    }
+    return '';
+  }
+  function setIfEmpty(id, value){ const el=$(id); if(el && !String(el.value||'').trim() && String(value||'').trim()) el.value=String(value||'').trim(); }
+
+  let ownerRows = [];
+  function pick(row, keys){
+    for(const k of keys){
+      const v = row && row[k];
+      if(v !== undefined && v !== null && String(v).trim()) return String(v).trim();
+    }
+    return '';
+  }
+  function ownerUnit(row){ return pick(row, ['unit_number','unit','unit_address','address','resident_unit','resident_address','property_address','street_address','home_address']); }
+  function ownerName(row){
+    const direct = pick(row, ['owner_name','resident_name','name','full_name','profile_name','display_name','primary_owner','member_name']);
+    if(direct) return direct;
+    const first = pick(row, ['first_name','owner_first_name','resident_first_name']);
+    const last = pick(row, ['last_name','owner_last_name','resident_last_name']);
+    return String((first+' '+last).trim());
+  }
+  function ownerEmail(row){ return pick(row, ['email','resident_email','owner_email','profile_email','primary_email']); }
+  function ownerPhone(row){ return pick(row, ['phone','resident_phone','owner_phone','mobile_phone','cell_phone','primary_phone']); }
+  function ownerLabel(row){
+    const unit = ownerUnit(row);
+    const name = ownerName(row);
+    if(unit && name) return unit + ' — ' + name;
+    return unit || name || ownerEmail(row) || 'Owner record';
+  }
+  async function queryOwnerTable(table, ctx){
+    const attempts = [];
+    if(ctx.cid) attempts.push(table+'?select=*&community_id=eq.'+encodeURIComponent(ctx.cid)+'&limit=500');
+    if(ctx.cname) attempts.push(table+'?select=*&community_name=eq.'+encodeURIComponent(ctx.cname)+'&limit=500');
+    attempts.push(table+'?select=*&limit=500');
+    for(const q of attempts){
+      try{
+        const rows = await api(q, {method:'GET'});
+        if(Array.isArray(rows) && rows.length){
+          const filtered = rows.filter(r=>{
+            const rid = pick(r, ['community_id','communityId','property_id']);
+            const rname = pick(r, ['community_name','community','property_name','association_name']);
+            if(ctx.cid && rid && rid === ctx.cid) return true;
+            if(ctx.cname && rname && rname.toLowerCase() === ctx.cname.toLowerCase()) return true;
+            return !rid && !rname;
+          });
+          return filtered.length ? filtered : rows;
+        }
+      }catch(_e){}
+    }
+    return [];
+  }
+  function applyOwner(row){
+    if(!row) return;
+    const unit = ownerUnit(row);
+    const name = ownerName(row);
+    const email = ownerEmail(row);
+    const phone = ownerPhone(row);
+    if(unit){ $('unitNumber').value = unit; $('unitManual').value = unit; }
+    if(name) $('residentName').value = name;
+    if(email) $('residentEmail').value = email;
+    if(phone) $('residentPhone').value = phone;
+    const meta=[];
+    if(name) meta.push(name);
+    if(email) meta.push(email);
+    if(phone) meta.push(phone);
+    $('ownerMeta').classList.remove('is-warn');
+    $('ownerMeta').textContent = meta.length ? meta.join(' • ') : 'Owner selected.';
+  }
+  function setManualOwnerMode(message){
+    const sel=$('ownerSelect');
+    if(sel){ sel.innerHTML='<option value="__manual__">Manual / owner not listed</option>'; sel.value='__manual__'; }
+    $('unitManual').style.display='block';
+    $('unitManual').value = $('unitNumber').value || $('unitManual').value || '';
+    $('ownerMeta').classList.add('is-warn');
+    $('ownerMeta').textContent = message || 'Owner list unavailable. Enter the unit/address manually.';
+  }
+  async function loadOwnerDropdown(){
+    const ctx=context();
+    const sel=$('ownerSelect');
+    if(!sel) return;
+    sel.innerHTML='<option value="">Loading owners…</option>';
+    $('ownerMeta').textContent='';
+    $('unitManual').style.display='none';
+    ownerRows=[];
+    const tables=['resident_directory','community_residents','owners','owner_directory','residents'];
+    for(const table of tables){
+      const rows = await queryOwnerTable(table, ctx);
+      if(rows.length){ ownerRows = rows; break; }
+    }
+    ownerRows = ownerRows
+      .filter(r=>ownerUnit(r) || ownerName(r) || ownerEmail(r))
+      .sort((a,b)=>ownerLabel(a).localeCompare(ownerLabel(b), undefined, {numeric:true, sensitivity:'base'}));
+    if(!ownerRows.length){
+      setManualOwnerMode('No owner records found for this community. Enter the unit/address manually.');
+      return;
+    }
+    sel.innerHTML='<option value="">Select owner / unit…</option>' + ownerRows.map((r,i)=>'<option value="'+i+'">'+esc(ownerLabel(r))+'</option>').join('') + '<option value="__manual__">Manual / owner not listed</option>';
+    sel.onchange=function(){
+      if(sel.value==='__manual__'){
+        $('unitManual').style.display='block';
+        $('unitManual').value = $('unitNumber').value || '';
+        $('ownerMeta').classList.add('is-warn');
+        $('ownerMeta').textContent='Manual entry enabled.';
+        return;
+      }
+      $('unitManual').style.display='none';
+      const idx = Number(sel.value);
+      if(Number.isFinite(idx) && ownerRows[idx]) applyOwner(ownerRows[idx]);
+    };
+    const existingUnit = String($('unitNumber').value || $('unitManual').value || '').trim();
+    if(existingUnit){
+      const idx = ownerRows.findIndex(r=>ownerUnit(r).toLowerCase() === existingUnit.toLowerCase());
+      if(idx >= 0){ sel.value=String(idx); applyOwner(ownerRows[idx]); }
+      else { sel.value='__manual__'; $('unitManual').style.display='block'; $('unitManual').value=existingUnit; }
+    }
+  }
+  async function hydrateResidentFields(){
+    setIfEmpty('unitNumber', firstValue(['unit','unit_number','resident_unit','address','resident_address','zummeeResidentUnit','zummee_unit']));
+    setIfEmpty('residentName', firstValue(['resident_name','name','residentName','profile_name','display_name','zummeeResidentName','zummee_profile_name']));
+    setIfEmpty('residentEmail', firstValue(['resident_email','email','residentEmail','profile_email','zummeeResidentEmail','zummee_profile_email']));
+    setIfEmpty('residentPhone', firstValue(['resident_phone','phone','residentPhone','profile_phone','zummeeResidentPhone','zummee_profile_phone']));
+    try{
+      const sb=await getClient();
+      let user=null;
+      try{ const sess=await sb?.auth?.getSession?.(); user=sess?.data?.session?.user||null; }catch(_e){}
+      if(user){
+        const meta=user.user_metadata||{};
+        setIfEmpty('residentEmail', user.email||meta.email||'');
+        setIfEmpty('residentName', meta.name||meta.full_name||meta.profile_name||'');
+        setIfEmpty('residentPhone', meta.phone||'');
+        try{
+          const prof=await sb.from('profiles').select('name,email,phone,unit,unit_number,address').eq('id', user.id).maybeSingle();
+          const r=prof?.data||{};
+          setIfEmpty('residentName', r.name||'');
+          setIfEmpty('residentEmail', r.email||'');
+          setIfEmpty('residentPhone', r.phone||'');
+          setIfEmpty('unitNumber', r.unit_number||r.unit||r.address||'');
+        }catch(_e2){}
+      }
+    }catch(_e){}
+  }
+  function applyContext(){
+    const ctx=context(); $('communityId').value=ctx.cid; $('communityName').value=ctx.cname;
+    if(ctx.cid) localStorage.setItem('zummeeActiveCommunityId',ctx.cid); if(ctx.cname) localStorage.setItem('zummeeActiveCommunityName',ctx.cname);
+    $('communityContext').innerHTML = '<strong>Selected community:</strong> '+esc(ctx.cname||ctx.cid||'Not selected')+'<small>New work orders will be routed to this community.</small>';
+    const back=new URL('resident_work_orders.html', location.href); if(ctx.cid) back.searchParams.set('community_id',ctx.cid); if(ctx.cname) back.searchParams.set('community_name',ctx.cname); $('backToRwo').href=back.pathname.replace(/^\//,'')+back.search;
+    return ctx;
+  }
+  function renderPhotos(){ const files=Array.from($('residentPhotos').files||[]); $('photoMeta').style.display=files.length?'block':'none'; $('photoMeta').textContent=files.length?files.length+' photo(s) selected.':''; $('photoPreview').innerHTML=''; files.slice(0,6).forEach(f=>{ const img=document.createElement('img'); img.alt=f.name; img.src=URL.createObjectURL(f); $('photoPreview').appendChild(img); }); }
+  function fileToBase64(file){return new Promise((resolve,reject)=>{const r=new FileReader(); r.onload=()=>resolve(String(r.result||'').split(',')[1]||''); r.onerror=reject; r.readAsDataURL(file);});}
+  async function uploadPhotos(workOrderId,email){ const files=Array.from($('residentPhotos').files||[]); let count=0; const token=await getToken(); for(const file of files){ const body={work_order_id:workOrderId,uploader_type:'resident',uploader_email:email||'',filename:file.name,content_type:file.type||'image/jpeg',data_base64:await fileToBase64(file)}; const res=await fetch(FN+'upload-work-order-photo',{method:'POST',headers:{'Content-Type':'application/json','apikey':window.SUPABASE_ANON_KEY||'',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(body)}); if(res.ok) count++; else console.warn('Photo upload failed', await res.text()); } return count; }
+  async function createNotification(row,payload){ try{ const sb=await getClient(); if(!sb || typeof sb.rpc!=='function' || !row?.id) return; await sb.rpc('create_notification_event',{p_event_type:'new_work_order',p_priority:'high',p_title:'New Work Order',p_message:'A new resident work order needs review.',p_link_url:'resident_work_orders.html?open_work_order_id='+encodeURIComponent(row.id),p_community_id:payload.community_id||null,p_actor_user_id:null,p_target_user_id:null,p_target_role:'Employee',p_audience_scope:'role',p_source_table:'resident_work_orders',p_source_id:String(row.id),p_metadata:{work_order_id:row.id,source:'resident_submit',resident_name:payload.resident_name||null,unit_number:payload.unit_number||null,subject:payload.subject||null}}); }catch(e){console.warn('Notification create failed',e);} }
+  async function loadHistory(){
+    const ctx=context(); const list=$('historyList'); list.textContent='Loading your work orders…';
+    try{ let q='resident_work_orders?select=id,subject,description,category,priority,status,unit_number,resident_email,submitted_at,updated_at,community_id&limit=25'; if(ctx.cid) q+='&community_id=eq.'+encodeURIComponent(ctx.cid); const email=$('residentEmail').value.trim(); const unit=(($('ownerSelect')&&$('ownerSelect').value==='__manual__') ? $('unitManual').value : $('unitNumber').value).trim(); const rows=await api(q,{method:'GET'}); const filtered=(rows||[]).filter(r=>!email && !unit ? true : (email&&String(r.resident_email||'').toLowerCase()===email.toLowerCase()) || (unit&&String(r.unit_number||'').trim()===unit)); if(!filtered.length){list.className='empty'; list.textContent='No work orders yet. Submit your first request above.'; return;} list.className=''; list.innerHTML=filtered.map(r=>'<div class="item"><strong>'+esc(r.subject||'Resident work order')+'</strong><div style="margin-top:6px;color:var(--muted)">'+esc(r.unit_number||'Resident request')+' · '+esc(r.category||'General')+' · '+esc(r.submitted_at||'Recently submitted')+'</div><div style="margin-top:8px"><span class="pill">'+esc(r.status||'manager_review')+'</span></div></div>').join(''); }catch(e){list.className='empty'; list.textContent='Unable to load existing work orders right now. You can still submit a new request above.'; console.warn(e);}
+  }
+  async function submit(e){
+    e.preventDefault(); setMsg('',true); const btn=$('submitBtn'); btn.disabled=true;
+    try{
+      const ctx=applyContext(); if(!ctx.cid) throw new Error('This work order link is missing a community. Open it from the selected community.');
+      let companyId=$('companyId').value.trim(); if(!companyId) companyId=await hydrateCompanyFromCommunityId(ctx.cid);
+      const unitValue=(($('ownerSelect')&&$('ownerSelect').value==='__manual__') ? $('unitManual').value : $('unitNumber').value).trim(); const payload={company_id:companyId||null,community_id:ctx.cid,community_name:ctx.cname||null,resident_name:$('residentName').value.trim(),resident_email:$('residentEmail').value.trim(),resident_phone:$('residentPhone').value.trim(),unit_number:unitValue,subject:$('subject').value.trim(),description:$('description').value.trim(),category:$('category').value,priority:$('priority').value,status:'manager_review',vendor_id:null};
+      if(!payload.subject || !payload.description) throw new Error('Please enter a subject and description.');
+      // Canonical schema lock: resident_id is intentionally NOT sent. RWO supports resident, employee, board, and manager-created records.
+      const rows=await api('resident_work_orders?select=id,community_id,subject,submitted_at',{method:'POST',body:JSON.stringify([payload])});
+      const row=Array.isArray(rows)?rows[0]:rows;
+      const uploads=row?.id ? await uploadPhotos(row.id,payload.resident_email) : 0;
+      await createNotification(row,payload);
+      $('workOrderForm').reset(); applyContext(); await loadOwnerDropdown(); renderPhotos(); setMsg('Work order submitted successfully.'+(uploads?' '+uploads+' photo(s) uploaded.':''), true); await loadHistory();
+    }catch(err){ let msg=err?.message||'Unable to submit work order.'; if(/resident_id|schema cache/i.test(msg)) msg='Work order schema mismatch fixed: resident_id is not used. Please refresh and try again.'; if(/Expected 3 parts in JWT|jwt/i.test(msg)) msg='Work order session token was invalid. Refresh this page from the Manager Hub and try again.'; setMsg(msg,false); }
+    finally{btn.disabled=false;}
+  }
+  async function init(){ try{ await getClient(); }catch(_e){} applyContext(); await hydrateCompanyLogo(); await hydrateResidentFields(); await loadOwnerDropdown(); renderPhotos(); await loadHistory(); }
+  document.addEventListener('DOMContentLoaded', init, {once:true}); $('residentPhotos').addEventListener('change',renderPhotos); $('workOrderForm').addEventListener('submit',submit); $('refreshHistory').addEventListener('click',loadHistory);
 })();
 </script>
-
-
-  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
 </body>
 </html>
