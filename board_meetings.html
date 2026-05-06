@@ -2,7 +2,7 @@
 
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-06-v512-new-business-vendors-lock";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-06-v513-vendors-source-of-truth-lock";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <script>
 // v840: ensureSupabase Promise shim (clean)
 function ensureSupabaseSync(){
@@ -5048,6 +5048,48 @@ body.dark-mode .mh2-stat-box {
       else el.value = '';
     });
   }
+
+  async function nbMigrateLegacyVendorsToSupabase(sb, cid, existing){
+    try{
+      var key = 'dailyOpsV2:vendors:' + cid;
+      var raw = localStorage.getItem(key) || '[]';
+      var legacy = JSON.parse(raw);
+      if(!Array.isArray(legacy) || !legacy.length) return false;
+      var seen = {};
+      (existing || []).forEach(function(v){
+        var sig = [v.name, v.type || v.category, v.phone, v.email].map(function(x){ return text(x).toLowerCase(); }).join('|');
+        seen[sig] = true;
+      });
+      var authUser = null;
+      try{ var au = await sb.auth.getUser(); authUser = au && au.data && au.data.user; }catch(e){}
+      var rows = legacy.map(function(v){
+        v = v || {};
+        return {
+          company: null,
+          community_id: cid,
+          name: text(v.name || v.vendor),
+          type: text(v.type || v.category),
+          contact_name: text(v.contact_name || v.contact || v.vendor_contact),
+          phone: text(v.phone),
+          email: text(v.email),
+          user_id: authUser && authUser.id ? authUser.id : null,
+          updated_at: new Date().toISOString()
+        };
+      }).filter(function(v){
+        if(!v.name) return false;
+        var sig = [v.name, v.type, v.phone, v.email].map(function(x){ return text(x).toLowerCase(); }).join('|');
+        if(seen[sig]) return false;
+        seen[sig] = true;
+        return true;
+      });
+      if(!rows.length) return false;
+      var ins = await sb.from('Vendors').insert(rows).select('id');
+      if(ins.error){ console.warn('[BM v513 Vendors] legacy migration failed', ins.error); return false; }
+      console.log('[BM v513 Vendors] migrated legacy Daily Ops vendors', rows.length);
+      return true;
+    }catch(e){ console.warn('[BM v513 Vendors] legacy migration unexpected error', e); return false; }
+  }
+
   async function nbLoadVendors(reason){
     var sb = window.supabaseClient || window.sb || window.supabase;
     var cid = communityId();
@@ -5065,7 +5107,7 @@ body.dark-mode .mh2-stat-box {
     try{
       var res = await sb
         .from('Vendors')
-        .select('id, name, type, phone, email, community_id')
+        .select('id, name, type, contact_name, phone, email, community_id')
         .eq('community_id', cid)
         .order('name', { ascending: true });
       if(token !== nbVendorLoadToken) return [];
@@ -5074,7 +5116,18 @@ body.dark-mode .mh2-stat-box {
         nbSetVendorOptions([]);
         return [];
       }
-      var vendors = (res.data || []).filter(function(v){ return text(v.email); });
+      var rawVendors = (res.data || []);
+      var migrated = await nbMigrateLegacyVendorsToSupabase(sb, cid, rawVendors);
+      if(migrated){
+        res = await sb
+          .from('Vendors')
+          .select('id, name, type, contact_name, phone, email, community_id')
+          .eq('community_id', cid)
+          .order('name', { ascending: true });
+        if(res.error){ console.warn('[BM v513 Vendors] reload after migration failed', res.error); }
+        rawVendors = res.data || rawVendors;
+      }
+      var vendors = rawVendors.filter(function(v){ return text(v.email); });
       nbVendorCacheByCommunity[cid] = vendors;
       nbSetVendorOptions(vendors);
       console.log('[BM v512 Vendors] loaded', cid, vendors.length, reason || '');
