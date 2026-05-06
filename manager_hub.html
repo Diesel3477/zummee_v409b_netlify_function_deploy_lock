@@ -259,10 +259,18 @@ window.__MH_VERSION = 'v527_syntax_restore_from_v526';
       if(changed) writeCache(cached);
     }
     function markReady(){
+      // v528: single-fire ready lock. Prevents duplicate smart-alert reveal/render cycles
+      // that caused the Annual Meeting Approval empty-state text to flash twice.
+      if(state.readyLocked) return;
+      state.readyLocked = true;
+      if(state.readyTimer){
+        clearTimeout(state.readyTimer);
+        state.readyTimer = null;
+      }
       captureStableCards();
       state.allowReady = true;
       try{ originalSetAttribute.call(document.documentElement, READY_ATTR, '1'); }catch(_e){}
-      try{ console.info('[v522 smart alerts] stable render ready', state.lastStable); }catch(_e2){}
+      try{ console.info('[v528 smart alerts] stable render ready locked', state.lastStable); }catch(_e2){}
     }
     function scheduleReadyCheck(delay){
       clearTimeout(state.readyTimer);
