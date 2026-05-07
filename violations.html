@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Zummee Violations</title>
   <script>
-    window.ZUMMEE_VIOLATIONS_BUILD = 'v540c-covenant-preview-readonly';
+    window.ZUMMEE_VIOLATIONS_BUILD = 'v540d-start-inspection-write-only';
     (function(){
       try{
         var stored = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || 'light';
@@ -111,6 +111,15 @@
     html[data-theme="dark"] .info-box{background:rgba(255,255,255,.05);}
     .info-box .k{font-size:11px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:var(--z-muted);}
     .info-box .v{margin-top:5px;font-size:18px;font-weight:950;letter-spacing:-.03em;}
+
+    .inspection-box{margin-top:14px;border:1px solid var(--z-line);border-radius:20px;background:linear-gradient(180deg,rgba(238,246,255,.78),rgba(255,255,255,.66));padding:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+    html[data-theme="dark"] .inspection-box{background:rgba(255,255,255,.05);}
+    .inspection-box strong{display:block;font-size:15px;font-weight:950;letter-spacing:-.02em;margin-bottom:4px;}
+    .inspection-box span:not(.inspection-pill){display:block;color:var(--z-muted);font-size:12px;font-weight:750;line-height:1.35;}
+    .inspection-pill{display:inline-flex;align-items:center;justify-content:center;border:1px solid rgba(37,99,235,.25);background:rgba(37,99,235,.10);color:var(--z-blue-dark);border-radius:999px;padding:7px 10px;font-size:11px;font-weight:950;white-space:nowrap;}
+    .inspection-pill.good{border-color:rgba(22,163,74,.32);background:rgba(22,163,74,.12);color:#166534;}
+    html[data-theme="dark"] .inspection-pill{color:#9fc5ff;}
+    html[data-theme="dark"] .inspection-pill.good{color:#90eead;}
     .category-list{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px;}
     .category-chip{border:1px solid var(--z-line);border-radius:16px;background:var(--z-soft);padding:11px 12px;}
     .category-chip strong{display:block;font-size:13px;margin-bottom:4px;}
@@ -146,7 +155,7 @@
         <div class="mark" aria-hidden="true">Z</div>
         <div>
           <h1>Violations</h1>
-          <div class="subtitle" id="pageSubtitle">Loading assigned communities, categories, and covenant preview</div>
+          <div class="subtitle" id="pageSubtitle">Loading assigned communities, categories, covenant preview, and inspection status</div>
         </div>
       </div>
       <div class="top-actions">
@@ -154,7 +163,7 @@
           <option value="">Loading communities…</option>
         </select>
         <a class="btn" href="manager_hub.html">Back to Hub</a>
-        <button class="btn primary" type="button" disabled>Start Inspection</button>
+        <button id="startInspectionBtn" class="btn primary" type="button">Start Inspection</button>
       </div>
     </header>
 
@@ -162,7 +171,7 @@
       <article class="card">
         <div id="loadStatus" class="status-pill warn"><span class="dot"></span> Loading Supabase reads</div>
         <h2>New Violation Case</h2>
-        <p>This build safely reads assigned communities, violation categories, and matching covenant preview text only. Case saving, photos, and letters are still locked until this read layer is confirmed stable on iPad.</p>
+        <p>This build safely reads assigned communities, categories, and covenant language. The only write enabled is Start Inspection, which creates an inspection session in Supabase. Case saving, photos, and letters are still locked.</p>
 
         <div class="info-row">
           <div class="info-box">
@@ -173,6 +182,14 @@
             <div class="k">Loaded Categories</div>
             <div class="v" id="categoryCountLabel">—</div>
           </div>
+        </div>
+
+        <div class="inspection-box" id="inspectionStatusBox" aria-live="polite">
+          <div>
+            <strong id="inspectionStatusTitle">No active inspection</strong>
+            <span id="inspectionStatusDetail">Tap Start Inspection when you are ready to begin a community walk-through.</span>
+          </div>
+          <span class="inspection-pill" id="inspectionStatusPill">Not started</span>
         </div>
 
         <div class="form-shell readonly-note" aria-disabled="true">
@@ -217,11 +234,12 @@
 
       <aside class="card">
         <h2>Read Layer Test</h2>
-        <p>Three live reads are enabled: assigned communities from the existing shared data layer, active categories from <strong>violation_categories</strong>, and matching covenant text from <strong>community_covenants</strong>.</p>
+        <p>Three live reads are enabled, plus one narrow write: <strong>Start Inspection</strong> creates a row in <strong>violation_inspections</strong>. Violation cases are still locked.</p>
         <div class="grid">
           <div class="mini"><strong>Communities</strong><span id="communityReadNote">Waiting for shared data layer…</span></div>
           <div class="mini"><strong>Categories</strong><span id="categoryReadNote">Waiting for Supabase…</span></div>
           <div class="mini"><strong>Covenants</strong><span id="covenantReadNote">Select a category to preview covenant language.</span></div>
+          <div class="mini"><strong>Inspection</strong><span id="inspectionReadNote">No inspection session loaded yet.</span></div>
         </div>
 
         <div id="categoryPreviewList" class="category-list" aria-label="Loaded violation categories"></div>
@@ -230,8 +248,8 @@
 
     <section class="card" style="margin-top:14px;">
       <h2>Open Violations</h2>
-      <p>Open cases will appear here after save logic is added in the next step.</p>
-      <div class="list-placeholder">No case records are loaded or written in v540c. This is intentional.</div>
+      <p>Open cases will appear here after case save logic is added in a later step.</p>
+      <div class="list-placeholder">No violation case records are loaded or written in v540d. Only the inspection session write is enabled.</div>
     </section>
   </main>
 
@@ -241,7 +259,7 @@
   <script>
     (function(){
       'use strict';
-      var state = { communities: [], categories: [], covenants: [], selectedCommunityId: '', selectedCommunityName: '', selectedCategoryId: '' };
+      var state = { communities: [], categories: [], covenants: [], selectedCommunityId: '', selectedCommunityName: '', selectedCategoryId: '', currentInspection: null, isStartingInspection: false };
       var els = {};
       function $(id){ return document.getElementById(id); }
       function clean(v){ return String(v == null ? '' : v).replace(/\s+/g,' ').trim(); }
@@ -251,6 +269,23 @@
         if(!el) return;
         el.className = 'status-pill ' + (kind || 'warn');
         el.innerHTML = '<span class="dot"></span> ' + text;
+      }
+
+      function formatDateTime(value){
+        try{ return new Date(value).toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }); }catch(_e){ return clean(value); }
+      }
+      function setInspectionStatus(kind, title, detail, pill){
+        setText('inspectionStatusTitle', title || 'No active inspection');
+        setText('inspectionStatusDetail', detail || 'Tap Start Inspection when you are ready to begin a community walk-through.');
+        var p = $('inspectionStatusPill');
+        if(p){ p.className = 'inspection-pill ' + (kind === 'good' ? 'good' : ''); p.textContent = pill || 'Not started'; }
+        setText('inspectionReadNote', detail || 'No inspection session loaded yet.');
+      }
+      function setStartButton(isBusy){
+        var btn = $('startInspectionBtn');
+        if(!btn) return;
+        btn.disabled = !!isBusy || !state.selectedCommunityId;
+        btn.textContent = isBusy ? 'Starting…' : (state.currentInspection ? 'Inspection Active' : 'Start Inspection');
       }
       function option(text, value){ var o=document.createElement('option'); o.textContent=text; o.value=value || ''; return o; }
       function getUrlCommunityId(){ try{ return clean(new URLSearchParams(location.search).get('community_id') || ''); }catch(_e){ return ''; } }
@@ -311,7 +346,9 @@
             window.ZummeeDataLayer.syncCommunityContext(id, name, push ? 'push' : 'none');
           }
         }catch(_e){}
-        if(state.selectedCategoryId) loadCovenantPreview().catch(function(e){ console.error('[Zummee Violations v540c] covenant refresh failed', e); renderNoCovenant('Covenant preview unavailable.'); });
+        setStartButton(false);
+        loadCurrentInspection().catch(function(e){ console.error('[Zummee Violations v540d] inspection refresh failed', e); setInspectionStatus('', 'Inspection status unavailable', clean(e && e.message) || 'Unable to read inspection status.', 'Needs attention'); });
+        if(state.selectedCategoryId) loadCovenantPreview().catch(function(e){ console.error('[Zummee Violations v540d] covenant refresh failed', e); renderNoCovenant('Covenant preview unavailable.'); });
       }
       async function getClient(){
         if(window.ensureSupabase && typeof window.ensureSupabase === 'function') return await window.ensureSupabase();
@@ -412,14 +449,86 @@
         renderCovenant(rows[0]);
       }
 
+
+      async function loadCurrentInspection(){
+        if(!state.selectedCommunityId){
+          state.currentInspection = null;
+          setInspectionStatus('', 'No active inspection', 'Select a community before starting an inspection.', 'Not started');
+          setStartButton(false);
+          return;
+        }
+        var sb = await getClient();
+        if(!sb || typeof sb.from !== 'function') throw new Error('Supabase client unavailable');
+        var res = await sb.from('violation_inspections')
+          .select('id, community_id, community_name, inspection_date, inspection_status, started_at, created_at')
+          .eq('community_id', state.selectedCommunityId)
+          .eq('inspection_status', 'in_progress')
+          .order('started_at', { ascending:false })
+          .limit(1);
+        if(res.error) throw res.error;
+        var rows = Array.isArray(res.data) ? res.data : [];
+        state.currentInspection = rows[0] || null;
+        if(state.currentInspection){
+          setInspectionStatus('good', 'Inspection in progress', 'Started ' + formatDateTime(state.currentInspection.started_at || state.currentInspection.created_at) + ' for ' + (state.selectedCommunityName || 'selected community') + '.', 'In progress');
+        }else{
+          setInspectionStatus('', 'No active inspection', 'Tap Start Inspection when you are ready to begin a community walk-through.', 'Not started');
+        }
+        setStartButton(false);
+      }
+
+      async function startInspection(){
+        if(state.isStartingInspection) return;
+        if(!state.selectedCommunityId){
+          setStatus('error','Select a community first');
+          setInspectionStatus('', 'Community required', 'Select a community before starting an inspection.', 'Needs community');
+          return;
+        }
+        if(state.currentInspection){
+          setStatus('good','Inspection already active');
+          return;
+        }
+        state.isStartingInspection = true;
+        setStartButton(true);
+        setStatus('warn','Starting inspection');
+        try{
+          var sb = await getClient();
+          if(!sb || typeof sb.from !== 'function') throw new Error('Supabase client unavailable');
+          var payload = {
+            community_id: state.selectedCommunityId,
+            community_name: state.selectedCommunityName || state.selectedCommunityId,
+            inspection_status: 'in_progress',
+            inspection_date: new Date().toISOString().slice(0,10),
+            notes: 'Started from Zummee Violations page.'
+          };
+          var res = await sb.from('violation_inspections')
+            .insert(payload)
+            .select('id, community_id, community_name, inspection_date, inspection_status, started_at, created_at')
+            .single();
+          if(res.error) throw res.error;
+          state.currentInspection = res.data || null;
+          if(state.currentInspection){
+            setInspectionStatus('good', 'Inspection in progress', 'Started ' + formatDateTime(state.currentInspection.started_at || state.currentInspection.created_at) + ' for ' + (state.selectedCommunityName || 'selected community') + '.', 'In progress');
+            setStatus('good','Inspection started');
+          }
+        }catch(e){
+          console.error('[Zummee Violations v540d] start inspection failed', e);
+          setStatus('error','Inspection write needs attention');
+          setInspectionStatus('', 'Could not start inspection', clean(e && e.message) || 'Supabase insert failed.', 'Failed');
+        }finally{
+          state.isStartingInspection = false;
+          setStartButton(false);
+        }
+      }
+
       async function boot(){
         try{
           setStatus('warn','Loading Supabase reads');
           await loadCommunities();
           await loadCategories();
-          setStatus('good','Read layer connected');
+          await loadCurrentInspection();
+          setStatus('good','Read/write layer connected');
         }catch(e){
-          console.error('[Zummee Violations v540c] boot failed', e);
+          console.error('[Zummee Violations v540d] boot failed', e);
           setStatus('error','Read layer needs attention');
           setText('pageSubtitle','Unable to complete read test');
           if(!state.communities.length) setText('communityReadNote', clean(e && e.message) || 'Community read failed.');
@@ -431,9 +540,11 @@
         if(els.communitySelect){
           els.communitySelect.addEventListener('change', function(){ applyCommunitySelection(true); });
         }
+        var startBtn = $('startInspectionBtn');
+        if(startBtn){ startBtn.addEventListener('click', startInspection); }
         var catSelect = $('violationCategorySelect');
         if(catSelect){
-          catSelect.addEventListener('change', function(){ state.selectedCategoryId = clean(catSelect.value); loadCovenantPreview().catch(function(e){ console.error('[Zummee Violations v540c] covenant load failed', e); renderNoCovenant(clean(e && e.message) || 'Covenant preview failed.'); }); });
+          catSelect.addEventListener('change', function(){ state.selectedCategoryId = clean(catSelect.value); loadCovenantPreview().catch(function(e){ console.error('[Zummee Violations v540d] covenant load failed', e); renderNoCovenant(clean(e && e.message) || 'Covenant preview failed.'); }); });
         }
         boot();
       });
