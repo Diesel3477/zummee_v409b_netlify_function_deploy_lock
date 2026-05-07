@@ -2,7 +2,7 @@
 
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-06-v522-resend-vendor-email-lock";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-07-v616-board-meetings-native-community-state";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <script>
 // v840: ensureSupabase Promise shim (clean)
 function ensureSupabaseSync(){
@@ -1272,6 +1272,8 @@ body.dark-mode .mh2-stat-box {
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
 </script>
 <script src="shared/supabase-client.js?v=2026-05-06-v500-production-auth"></script>
+<script src="shared/community-state.js?v=2026-05-07-v616"></script>
+<script src="shared/input-undo-guard.js?v=2026-05-07-v616"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
 
@@ -5630,4 +5632,238 @@ body.dark-mode .mh2-stat-box {
   else boot();
 })();
 </script>
+
+<script id="zummee-board-meetings-native-community-state-v616">
+/*
+  Board Meetings native community-state integration
+  Build: 2026-05-07-v616
+
+  Purpose:
+  - Keep Board Meetings on the same selected community as Manager Hub / Board Hub / Operations.
+  - shared/community-state.js is canonical.
+  - Stale URL params are fallback only.
+  - Existing agenda, minutes, attendance, history, transcript, board members, and new business logic remain intact.
+*/
+(function(){
+  if(window.__BoardMeetingsNativeCommunityStateV616) return;
+  window.__BoardMeetingsNativeCommunityStateV616 = true;
+
+  var UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  function isUuid(v){ return UUID_RE.test(String(v||'').trim()); }
+  function parse(raw){ try{return raw?JSON.parse(raw):null;}catch(_e){return null;} }
+  function s(v){ return String(v == null ? "" : v).trim(); }
+  function qs(){ try{return new URLSearchParams(location.search);}catch(_e){return new URLSearchParams();} }
+
+  function getCanonical(){
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === "function"){
+        var a = window.ZummeeCommunityState.getActiveCommunity();
+        if(a && isUuid(a.id)) return { id:s(a.id), name:s(a.name) };
+      }
+    }catch(_e){}
+
+    try{
+      var raw = localStorage.getItem("zummee_active_community_v601") || sessionStorage.getItem("zummee_active_community_v601") || "";
+      var parsed = parse(raw);
+      if(parsed && isUuid(parsed.id)) return { id:s(parsed.id), name:s(parsed.name) };
+    }catch(_e){}
+
+    var p = qs();
+    var urlId = s(p.get("community_id") || p.get("cid"));
+    var urlName = s(p.get("community_name") || p.get("name"));
+    if(isUuid(urlId)) return { id:urlId, name:urlName };
+
+    var id = s(localStorage.getItem("zummee_active_community_id") || localStorage.getItem("activeCommunityId") || localStorage.getItem("currentCommunityId") || sessionStorage.getItem("zummee_active_community_id") || sessionStorage.getItem("activeCommunityId") || sessionStorage.getItem("currentCommunityId"));
+    var name = s(localStorage.getItem("zummee_active_community_name") || localStorage.getItem("activeCommunityName") || localStorage.getItem("currentCommunityName") || sessionStorage.getItem("zummee_active_community_name") || sessionStorage.getItem("activeCommunityName") || sessionStorage.getItem("currentCommunityName"));
+    if(isUuid(id)) return { id:id, name:name };
+    return null;
+  }
+
+  function writeCanonical(active, source, silent){
+    if(!active || !isUuid(active.id)) return null;
+    var id=s(active.id), name=s(active.name);
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.setActiveCommunity === "function"){
+        window.ZummeeCommunityState.setActiveCommunity(id, name, { source:source || "board-meetings-v616", silent: silent !== false });
+      }
+    }catch(_e){}
+
+    var state = { id:id, name:name, updatedAt:Date.now(), source:source || "board-meetings-v616" };
+    try{
+      localStorage.setItem("zummee_active_community_v601", JSON.stringify(state));
+      sessionStorage.setItem("zummee_active_community_v601", JSON.stringify(state));
+    }catch(_e){}
+
+    [
+      "zummee_active_community_id",
+      "zummee_selected_community_id",
+      "zummeeActiveCommunityId",
+      "activeCommunityId",
+      "currentCommunityId",
+      "zummee_community_id",
+      "zummee_selected_community_v1"
+    ].forEach(function(k){
+      try{ localStorage.setItem(k,id); sessionStorage.setItem(k,id); }catch(_e){}
+    });
+
+    if(name){
+      [
+        "zummee_active_community_name",
+        "zummee_selected_community_name",
+        "zummeeCurrentCommunityName",
+        "currentCommunityName",
+        "activeCommunityName",
+        "zummee_community"
+      ].forEach(function(k){
+        try{ localStorage.setItem(k,name); sessionStorage.setItem(k,name); }catch(_e){}
+      });
+    }
+
+    try{
+      window.selectedCommunityId = id;
+      window.activeCommunityId = id;
+      window.currentCommunityId = id;
+      window.__zummeeActiveCommunityId = id;
+      if(name){
+        window.selectedCommunityName = name;
+        window.currentCommunityName = name;
+      }
+    }catch(_e){}
+
+    return state;
+  }
+
+  function updateLinks(active){
+    if(!active || !isUuid(active.id)) return;
+    var p = qs();
+    var user = s(p.get("user_id") || p.get("uid") || localStorage.getItem("zummee_user_id_v1") || localStorage.getItem("zummeeUserId") || localStorage.getItem("activeUserId") || localStorage.getItem("currentUserId"));
+    var q = "?community_id=" + encodeURIComponent(active.id);
+    if(active.name) q += "&community_name=" + encodeURIComponent(active.name);
+    if(isUuid(user)) q += "&user_id=" + encodeURIComponent(user);
+
+    document.querySelectorAll('a[href*="manager_hub.html"], a[href*="board_member_hub_v2.html"], a[href*="board_member_hub.html"]').forEach(function(a){
+      try{
+        var href = a.getAttribute("href") || "";
+        if(href.indexOf("manager_hub.html") !== -1) a.setAttribute("href", "manager_hub.html" + q);
+        else if(href.indexOf("board_member_hub_v2.html") !== -1) a.setAttribute("href", "board_member_hub_v2.html" + q);
+        else if(href.indexOf("board_member_hub.html") !== -1) a.setAttribute("href", "board_member_hub_v2.html" + q);
+      }catch(_e){}
+    });
+
+    try{
+      var url = new URL(location.href);
+      url.searchParams.set("community_id", active.id);
+      if(active.name) url.searchParams.set("community_name", active.name);
+      if(isUuid(user)) url.searchParams.set("user_id", user);
+      history.replaceState(null, "", url.toString());
+    }catch(_e){}
+  }
+
+  function findNativeSelect(){
+    return document.getElementById("zummeeCommunitySelect") ||
+      document.getElementById("communitySelect") ||
+      document.querySelector('select[id*="community" i]');
+  }
+
+  function decodeSelectValue(sel){
+    var id = s(sel && sel.value);
+    var name = s(sel && sel.selectedOptions && sel.selectedOptions[0] ? sel.selectedOptions[0].textContent : "");
+    if(id && id.charAt(0)==="%"){
+      try{
+        var obj = JSON.parse(decodeURIComponent(id));
+        id = s(obj.id || obj.community_id || obj.communityId || id);
+        name = s(obj.name || obj.community_name || obj.communityName || name);
+      }catch(_e){}
+    }else if(id && id.charAt(0)==="{"){
+      try{
+        var obj2 = JSON.parse(id);
+        id = s(obj2.id || obj2.community_id || obj2.communityId || id);
+        name = s(obj2.name || obj2.community_name || obj2.communityName || name);
+      }catch(_e){}
+    }
+    return { id:id, name:name };
+  }
+
+  function applyCanonicalToVisibleSelect(active){
+    var sel = findNativeSelect();
+    if(!sel || !active || !isUuid(active.id)) return;
+    var opts = Array.from(sel.options || []);
+    var hit = opts.find(function(o){
+      if(String(o.value || "") === String(active.id)) return true;
+      try{
+        var obj = JSON.parse(decodeURIComponent(String(o.value || "")));
+        return String(obj.id || obj.community_id || obj.communityId || "") === String(active.id);
+      }catch(_e){ return false; }
+    });
+    if(hit && sel.value !== hit.value){
+      sel.value = hit.value;
+    }
+  }
+
+  function firePageRefresh(){
+    [
+      "loadBoardMembers",
+      "renderBoardMembers",
+      "loadOpenItems",
+      "loadMeetingHistory",
+      "loadMeetings",
+      "loadAgenda",
+      "refreshAgenda",
+      "loadHomeownerForum",
+      "loadNewBusiness",
+      "renderNewBusiness",
+      "loadMonthlyActionItems",
+      "renderMonthlyActionItems"
+    ].forEach(function(fn){
+      try{ if(typeof window[fn] === "function") window[fn](); }catch(_e){}
+    });
+  }
+
+  function init(){
+    var active = getCanonical();
+    if(active && isUuid(active.id)){
+      writeCanonical(active, "board-meetings-init-v616", true);
+      updateLinks(active);
+      applyCanonicalToVisibleSelect(active);
+    }
+
+    var sel = findNativeSelect();
+    if(sel && !sel.__boardMeetingsCommunityStateV616Bound){
+      sel.__boardMeetingsCommunityStateV616Bound = true;
+      sel.addEventListener("change", function(){
+        var next = decodeSelectValue(sel);
+        if(!isUuid(next.id)) return;
+        writeCanonical(next, "board-meetings-dropdown-v616", false);
+        updateLinks(next);
+        firePageRefresh();
+        try{
+          window.dispatchEvent(new CustomEvent("zummee:community-changed", {
+            detail:{ id:next.id, community_id:next.id, name:next.name, source:"board-meetings-dropdown-v616" }
+          }));
+        }catch(_e){}
+      });
+    }
+  }
+
+  function syncFromCanonical(){
+    var active = getCanonical();
+    if(!active || !isUuid(active.id)) return;
+    writeCanonical(active, "board-meetings-sync-v616", true);
+    updateLinks(active);
+    applyCanonicalToVisibleSelect(active);
+  }
+
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", function(){ setTimeout(init, 80); }, { once:true });
+  else setTimeout(init, 80);
+
+  // Header/dropdown scripts may populate later. Re-sync after they settle.
+  setTimeout(init, 800);
+  setTimeout(init, 1800);
+
+  window.addEventListener("pageshow", function(){ setTimeout(init, 100); setTimeout(syncFromCanonical, 500); });
+  window.addEventListener("focus", syncFromCanonical);
+  document.addEventListener("visibilitychange", function(){ if(!document.hidden) syncFromCanonical(); });
+})();
+</script>
+
 </body></html>
