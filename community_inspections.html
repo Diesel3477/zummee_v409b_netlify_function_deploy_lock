@@ -4,7 +4,7 @@
 <head>
 <script>window.ZUMMEE_BUILD="2026-03-27-1";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
-<!-- ZUMMEE_PATCH v2114: header check removed + assigned dropdown name dedupe lock -->
+<!-- ZUMMEE_PATCH v2115: stable single-mount header + assigned dropdown no-jump lock -->
 <!-- ZUMMEE_PATCH v2074: inspections reads vendors from actual ops localStorage keys -->
 <!-- ZUMMEE_PATCH v2064: offline drafts (IndexedDB) for inspections -->
 <!-- ZUMMEE_PATCH v2061: latest polish bundle -->
@@ -12964,7 +12964,10 @@ body#inspectionsPage [data-page-error]{
     var wrap = document.querySelector('.wrap');
     if(!wrap || !wrap.parentNode) return;
     var existing = document.getElementById('ciPremiumHeader');
-    if(existing) existing.remove();
+    if(existing){
+      // v2115: do not remove/reinsert the header on delayed timers; that caused visible iPad jump.
+      return existing;
+    }
     var h = document.createElement('div');
     h.id = 'ciPremiumHeader';
     h.className = 'ci-header-v2110';
@@ -12983,9 +12986,9 @@ body#inspectionsPage [data-page-error]{
     try{ if(window.ZummeeCompanyLogoSync && typeof window.ZummeeCompanyLogoSync.sync === 'function') window.ZummeeCompanyLogoSync.sync(); }catch(e){}
     loadCommunities();
   }
-  function boot(){ rebuildHeader(); setTimeout(rebuildHeader, 250); setTimeout(rebuildHeader, 1000); }
+  function boot(){ rebuildHeader(); }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
-  window.addEventListener('load', function(){ setTimeout(rebuildHeader, 50); });
+  window.addEventListener('load', function(){ if(!document.getElementById('ciPremiumHeader')) setTimeout(rebuildHeader, 50); });
 })();
 </script>
 
@@ -13679,9 +13682,9 @@ body#inspectionsPage .draftRow{
   #ciPremiumHeader .ci-icon,
   #ciPremiumHeader .ci-header-icon{display:none !important;}
 </style>
-<script id="communityInspectionsAssignedDropdownNameDedupeLock_v2114">
+<script id="communityInspectionsAssignedDropdownStableLock_v2115">
 (function(){
-  var BUILD = 'v2114';
+  var BUILD = 'v2115';
   var SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
   var SUPABASE_KEY = "sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864";
   var locked = null;
@@ -13910,8 +13913,8 @@ body#inspectionsPage .draftRow{
   }
 
   function bindSelect(sel){
-    if(!sel || sel.__ciV2114Bound) return;
-    sel.__ciV2114Bound = true;
+    if(!sel || sel.__ciV2115Bound) return;
+    sel.__ciV2115Bound = true;
     sel.addEventListener('change', function(){
       persistSelection(sel);
       try{ document.dispatchEvent(new Event('community:changed')); }catch(e){}
@@ -13954,8 +13957,8 @@ body#inspectionsPage .draftRow{
 
   function installObserver(){
     var sel = getSelect();
-    if(!sel || sel.__ciV2114Observer) return;
-    sel.__ciV2114Observer = true;
+    if(!sel || sel.__ciV2115Observer) return;
+    sel.__ciV2115Observer = true;
     try{
       var mo = new MutationObserver(function(){ setTimeout(repairIfOverwritten, 0); });
       mo.observe(sel, { childList:true, subtree:true, attributes:true, attributeFilter:['disabled'] });
@@ -13977,10 +13980,24 @@ body#inspectionsPage .draftRow{
   }
 
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
-  window.addEventListener('load', function(){ setTimeout(boot, 50); setTimeout(boot, 600); setTimeout(boot, 1800); setTimeout(boot, 4200); });
-  setTimeout(boot, 120);
-  setTimeout(boot, 900);
-  setTimeout(boot, 2500);
-  setTimeout(boot, 6000);
+  window.addEventListener('load', function(){ setTimeout(function(){ removeTitleCheck(); installObserver(); repairIfOverwritten(); }, 80); });
+  // v2115: no delayed full reload loops. The header is single-mounted and the dropdown only repairs if overwritten.
 })();
 </script>
+<style id="communityInspectionsHeaderNoJump_v2115">
+  /* Reserve the final header geometry immediately so iPad refresh does not jump while auth/dropdown finishes. */
+  #ciPremiumHeader,
+  .ci-header-v2110{
+    min-height:188px !important;
+    box-sizing:border-box !important;
+    contain:layout paint !important;
+  }
+  #ciPremiumHeader .ci-v2110-top{min-height:62px !important;}
+  #ciPremiumHeader .ci-v2110-controls{min-height:50px !important;}
+  #ciPremiumHeader #zummeeCommunitySelect{height:50px !important;}
+  #ciPremiumHeader .ci-v2110-logo{min-width:150px !important;min-height:50px !important;}
+  @media(max-width:560px){
+    #ciPremiumHeader,.ci-header-v2110{min-height:244px !important;}
+    #ciPremiumHeader .ci-v2110-logo{min-width:132px !important;}
+  }
+</style>
