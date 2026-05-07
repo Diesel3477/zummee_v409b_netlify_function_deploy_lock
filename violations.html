@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Zummee Violations</title>
   <script>
-    window.ZUMMEE_VIOLATIONS_BUILD = 'v540g-letter-preview-layer';
+    window.ZUMMEE_VIOLATIONS_BUILD = 'v540g2-ipad-undo-typing-stabilized';
     (function(){
       try{
         var stored = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || 'light';
@@ -198,7 +198,7 @@
         <div class="mark" aria-hidden="true">Z</div>
         <div>
           <h1>Violations</h1>
-          <div class="subtitle" id="pageSubtitle">Loading communities, categories, covenants, inspections, open cases, and letter preview</div>
+          <div class="subtitle" id="pageSubtitle">Loading communities, categories, covenants, inspections, open cases, and stabilized letter preview</div>
         </div>
       </div>
       <div class="top-actions">
@@ -351,7 +351,22 @@
       function clean(v){ return String(v == null ? '' : v).replace(/\s+/g,' ').trim(); }
       function escapeHtml(v){ return String(v == null ? '' : v).replace(/[&<>"']/g,function(ch){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'})[ch] || ch; }); }
       function prettyStatus(v){ return clean(v || 'open').replace(/_/g,' '); }
-      function setText(id, text){ var el=$(id); if(el) el.textContent = text; }
+      function setText(id, text){ var el=$(id); if(el && el.textContent !== String(text == null ? '' : text)) el.textContent = text; }
+      function safeSetValue(el, value){
+        if(!el) return;
+        var next = clean(value || '');
+        if(document.activeElement === el) return;
+        if(el.value !== next) el.value = next;
+      }
+      function debounce(fn, wait){
+        var timer = null;
+        return function(){
+          var args = arguments;
+          clearTimeout(timer);
+          timer = setTimeout(function(){ fn.apply(null, args); }, wait || 150);
+        };
+      }
+      var scheduleLetterPreview = debounce(function(){ updateLetterPreview(); }, 220);
       function setStatus(kind, text){
         var el = $('loadStatus');
         if(!el) return;
@@ -435,10 +450,10 @@
           }
         }catch(_e){}
         setStartButton(false);
-        loadProperties().catch(function(e){ console.error('[Zummee Violations v540g] property directory refresh failed', e); setText('propertyReadNote', clean(e && e.message) || 'Property directory failed to load.'); });
-        loadCurrentInspection().catch(function(e){ console.error('[Zummee Violations v540g] inspection refresh failed', e); setInspectionStatus('', 'Inspection status unavailable', clean(e && e.message) || 'Unable to read inspection status.', 'Needs attention'); });
-        if(state.selectedCategoryId) loadCovenantPreview().catch(function(e){ console.error('[Zummee Violations v540g] covenant refresh failed', e); renderNoCovenant('Covenant preview unavailable.'); });
-        loadOpenCases().catch(function(e){ console.error('[Zummee Violations v540g] open cases refresh failed', e); setText('openCasesReadNote', clean(e && e.message) || 'Open cases failed to load.'); });
+        loadProperties().catch(function(e){ console.error('[Zummee Violations v540g2] property directory refresh failed', e); setText('propertyReadNote', clean(e && e.message) || 'Property directory failed to load.'); });
+        loadCurrentInspection().catch(function(e){ console.error('[Zummee Violations v540g2] inspection refresh failed', e); setInspectionStatus('', 'Inspection status unavailable', clean(e && e.message) || 'Unable to read inspection status.', 'Needs attention'); });
+        if(state.selectedCategoryId) loadCovenantPreview().catch(function(e){ console.error('[Zummee Violations v540g2] covenant refresh failed', e); renderNoCovenant('Covenant preview unavailable.'); });
+        loadOpenCases().catch(function(e){ console.error('[Zummee Violations v540g2] open cases refresh failed', e); setText('openCasesReadNote', clean(e && e.message) || 'Open cases failed to load.'); });
       }
       async function getClient(){
         if(window.ensureSupabase && typeof window.ensureSupabase === 'function') return await window.ensureSupabase();
@@ -502,13 +517,11 @@
       }
       function setPropertyInputsFromSelection(){
         var p = state.selectedProperty || {};
-        var owner = $('homeownerNameInput');
-        var unit = $('unitInput');
-        var addr = $('propertyAddressInput');
-        if(owner) owner.value = clean(p.owner_name || '');
-        if(unit) unit.value = clean(p.unit || '');
-        if(addr) addr.value = clean(p.property_address || '');
+        safeSetValue($('homeownerNameInput'), p.owner_name || '');
+        safeSetValue($('unitInput'), p.unit || '');
+        safeSetValue($('propertyAddressInput'), p.property_address || '');
         renderOwnerPreview();
+        scheduleLetterPreview();
       }
       function renderStreetOptions(){
         var select = $('streetSelect');
@@ -595,7 +608,7 @@
         setText('covenantLanguage', message || 'No active covenant language has been added for this community and category yet.');
         setText('requiredAction','Required Action: Add covenant language in Supabase or choose another category.');
         setText('covenantReadNote','No matching covenant row found yet.');
-        updateLetterPreview();
+        scheduleLetterPreview();
       }
       function renderCovenant(c){
         state.currentCovenant = c || null;
@@ -605,7 +618,7 @@
         setText('covenantLanguage', clean(c.covenant_language || 'No covenant language has been added yet.'));
         setText('requiredAction', 'Required Action: ' + clean(c.default_required_action || c.manager_summary || 'Review the violation and determine the appropriate corrective action.'));
         setText('covenantReadNote','Matching covenant preview loaded.');
-        updateLetterPreview();
+        scheduleLetterPreview();
       }
       async function loadCovenantPreview(){
         state.selectedCategoryId = clean(($('violationCategorySelect') || {}).value || state.selectedCategoryId || '');
@@ -695,7 +708,7 @@
             setStatus('good','Inspection started');
           }
         }catch(e){
-          console.error('[Zummee Violations v540g] start inspection failed', e);
+          console.error('[Zummee Violations v540g2] start inspection failed', e);
           setStatus('error','Inspection write needs attention');
           setInspectionStatus('', 'Could not start inspection', clean(e && e.message) || 'Supabase insert failed.', 'Failed');
         }finally{
@@ -872,7 +885,7 @@
           setText('caseSaveNote','Saved. The open violations list has been refreshed from Supabase.');
           await loadOpenCases();
         }catch(e){
-          console.error('[Zummee Violations v540g] save case failed', e);
+          console.error('[Zummee Violations v540g2] save case failed', e);
           setStatus('error','Case save needs attention');
           setText('caseSaveNote', clean(e && e.message) || 'Supabase insert failed.');
         }finally{
@@ -891,7 +904,7 @@
           await loadOpenCases();
           setStatus('good','Read/write layer connected');
         }catch(e){
-          console.error('[Zummee Violations v540g] boot failed', e);
+          console.error('[Zummee Violations v540g2] boot failed', e);
           setStatus('error','Read layer needs attention');
           setText('pageSubtitle','Unable to complete read test');
           if(!state.communities.length) setText('communityReadNote', clean(e && e.message) || 'Community read failed.');
@@ -913,13 +926,22 @@
         if(propertySelect){ propertySelect.addEventListener('change', handlePropertyChange); }
         var catSelect = $('violationCategorySelect');
         if(catSelect){
-          catSelect.addEventListener('change', function(){ state.selectedCategoryId = clean(catSelect.value); loadCovenantPreview().catch(function(e){ console.error('[Zummee Violations v540g] covenant load failed', e); renderNoCovenant(clean(e && e.message) || 'Covenant preview failed.'); }); updateLetterPreview(); });
+          catSelect.addEventListener('change', function(){
+            state.selectedCategoryId = clean(catSelect.value);
+            loadCovenantPreview().catch(function(e){ console.error('[Zummee Violations v540g2] covenant load failed', e); renderNoCovenant(clean(e && e.message) || 'Covenant preview failed.'); });
+          });
         }
-        ['offenseNumberSelect','homeownerNameInput','unitInput','propertyAddressInput','managerNotesInput'].forEach(function(id){
+        ['homeownerNameInput','unitInput','propertyAddressInput','managerNotesInput'].forEach(function(id){
           var el = $(id);
-          if(el){ el.addEventListener('input', updateLetterPreview); el.addEventListener('change', updateLetterPreview); }
+          if(el){
+            el.addEventListener('input', scheduleLetterPreview);
+            el.addEventListener('change', scheduleLetterPreview);
+            el.addEventListener('blur', scheduleLetterPreview);
+          }
         });
-        boot().then(function(){ updateLetterPreview(); });
+        var offenseSelect = $('offenseNumberSelect');
+        if(offenseSelect){ offenseSelect.addEventListener('change', scheduleLetterPreview); }
+        boot().then(function(){ scheduleLetterPreview(); });
       });
     })();
   </script>
