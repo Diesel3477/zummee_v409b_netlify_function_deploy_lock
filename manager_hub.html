@@ -1,7 +1,89 @@
 <!doctype html>
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-07-v603-manager-hub-dropdown-single-owner";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-07-v608-manager-hub-canonical-preboot-no-flash";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+
+<script id="zummee-manager-canonical-preboot-v608">
+/*
+  v608 — Manager Hub canonical community preboot.
+  Runs before Manager Hub weather/smart-alert/header scripts.
+
+  Purpose:
+  - Prevent Manager Hub from flashing an old legacy community such as Emory Chase.
+  - The canonical shared state wins before any older Manager Hub script reads localStorage.
+*/
+(function(){
+  try{
+    var UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    function parse(raw){ try{return raw?JSON.parse(raw):null;}catch(_e){return null;} }
+    function s(v){ return String(v == null ? "" : v).trim(); }
+
+    var canonical = parse(localStorage.getItem("zummee_active_community_v601") || sessionStorage.getItem("zummee_active_community_v601") || "");
+    var id = s(canonical && canonical.id);
+    var name = s(canonical && canonical.name);
+
+    // If canonical object is missing but canonical scalar exists, rebuild the object once.
+    if(!UUID_RE.test(id)){
+      id = s(localStorage.getItem("zummee_active_community_id") || sessionStorage.getItem("zummee_active_community_id") || "");
+      name = s(localStorage.getItem("zummee_active_community_name") || sessionStorage.getItem("zummee_active_community_name") || "");
+      if(UUID_RE.test(id)){
+        canonical = { id:id, name:name, updatedAt:Date.now(), source:"manager-preboot-rebuilt-canonical" };
+        try{
+          localStorage.setItem("zummee_active_community_v601", JSON.stringify(canonical));
+          sessionStorage.setItem("zummee_active_community_v601", JSON.stringify(canonical));
+        }catch(_e){}
+      }
+    }
+
+    if(UUID_RE.test(id)){
+      var idKeys=[
+        "zummee_active_community_id",
+        "zummee_selected_community_id",
+        "zummeeActiveCommunityId",
+        "activeCommunityId",
+        "currentCommunityId",
+        "zummee_community_id",
+        "zummee_selected_community_v1"
+      ];
+      var nameKeys=[
+        "zummee_active_community_name",
+        "zummeeCurrentCommunityName",
+        "currentCommunityName",
+        "activeCommunityName",
+        "zummeeCurrentCommunityName",
+        "zummee_community",
+        "zummee_selected_community_name"
+      ];
+
+      idKeys.forEach(function(k){
+        try{ localStorage.setItem(k,id); sessionStorage.setItem(k,id); }catch(_e){}
+      });
+      if(name){
+        nameKeys.forEach(function(k){
+          try{ localStorage.setItem(k,name); sessionStorage.setItem(k,name); }catch(_e){}
+        });
+      }
+
+      window.currentCommunityId = id;
+      window.activeCommunityId = id;
+      window.selectedCommunityId = id;
+      window.zummeeSelectedCommunityId = id;
+      if(name) window.currentCommunityName = name;
+
+      // Make URL non-authoritative but visually consistent to prevent later URL readers from seeing stale params.
+      try{
+        var url = new URL(location.href);
+        url.searchParams.set("community_id", id);
+        if(name) url.searchParams.set("community_name", name);
+        history.replaceState(null, "", url.toString());
+      }catch(_e){}
+    }
+  }catch(err){
+    console.warn("[Manager Hub v608] canonical preboot failed", err);
+  }
+})();
+</script>
+
 <style id="zummee-v412-smart-alert-early-hide-css">
   html:not([data-zummee-smart-alerts-v426-ready="1"]) #smartAlertStrip .mh2-alert{visibility:hidden!important;opacity:0!important;}
 
@@ -122,7 +204,7 @@
     })();
   </script>
   <script>
-window.__MH_VERSION = 'v603_clean_dropdown_single_owner';
+window.__MH_VERSION = 'v608_canonical_preboot_no_flash';
 
     (function(){
       try{
@@ -6895,6 +6977,58 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
   window.addEventListener('pageshow', function(){ setTimeout(buildCleanDropdown, 80); setTimeout(forceLatestIntoDropdown, 450); });
   window.addEventListener('focus', forceLatestIntoDropdown);
   document.addEventListener('visibilitychange', function(){ if(!document.hidden) forceLatestIntoDropdown(); });
+})();
+</script>
+
+
+<script id="zummee-manager-pageshow-canonical-correction-v608">
+/*
+  v608 — pageshow/focus canonical correction.
+  Keeps Manager Hub from briefly using stale legacy keys after returning from another page.
+*/
+(function(){
+  if(window.__ManagerHubCanonicalCorrectionV608) return;
+  window.__ManagerHubCanonicalCorrectionV608 = true;
+
+  function parse(raw){ try{return raw?JSON.parse(raw):null;}catch(_e){return null;} }
+  function sync(){
+    try{
+      var state = parse(localStorage.getItem("zummee_active_community_v601") || sessionStorage.getItem("zummee_active_community_v601") || "");
+      if(!state || !state.id) return;
+      var id = String(state.id || "").trim();
+      var name = String(state.name || "").trim();
+
+      ["zummee_active_community_id","zummee_selected_community_id","zummeeActiveCommunityId","activeCommunityId","currentCommunityId","zummee_community_id","zummee_selected_community_v1"].forEach(function(k){
+        try{ localStorage.setItem(k,id); sessionStorage.setItem(k,id); }catch(_e){}
+      });
+      if(name){
+        ["zummee_active_community_name","zummeeCurrentCommunityName","currentCommunityName","activeCommunityName","zummee_community","zummee_selected_community_name"].forEach(function(k){
+          try{ localStorage.setItem(k,name); sessionStorage.setItem(k,name); }catch(_e){}
+        });
+      }
+
+      window.currentCommunityId = id;
+      window.activeCommunityId = id;
+      window.selectedCommunityId = id;
+      if(name) window.currentCommunityName = name;
+
+      var sel = document.getElementById("zummeeCommunitySelect");
+      if(sel && sel.value !== id){
+        try{ sel.value = id; }catch(_e){}
+      }
+
+      try{
+        var url = new URL(location.href);
+        url.searchParams.set("community_id", id);
+        if(name) url.searchParams.set("community_name", name);
+        history.replaceState(null, "", url.toString());
+      }catch(_e){}
+    }catch(_e){}
+  }
+
+  window.addEventListener("pageshow", function(){ sync(); setTimeout(sync, 80); setTimeout(sync, 300); });
+  window.addEventListener("focus", sync);
+  document.addEventListener("visibilitychange", function(){ if(!document.hidden) sync(); });
 })();
 </script>
 
