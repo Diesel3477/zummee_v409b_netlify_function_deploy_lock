@@ -4,7 +4,7 @@
 <head>
 <script>window.ZUMMEE_BUILD="2026-03-27-1";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
-<!-- ZUMMEE_PATCH v2112: header check removed + dropdown locked to manager hub assigned communities -->
+<!-- ZUMMEE_PATCH v2113: header check removed + resilient assigned-community dropdown recovery lock -->
 <!-- ZUMMEE_PATCH v2074: inspections reads vendors from actual ops localStorage keys -->
 <!-- ZUMMEE_PATCH v2064: offline drafts (IndexedDB) for inspections -->
 <!-- ZUMMEE_PATCH v2061: latest polish bundle -->
@@ -13669,3 +13669,304 @@ body#inspectionsPage .draftRow{
 </script>
 
 
+
+
+<style id="communityInspectionsNoTitleCheck_v2113">
+  #ciPremiumHeader .ci-v2110-title::before,
+  #ciPremiumHeader .ci-title::before{content:none !important;display:none !important;}
+  #ciPremiumHeader .ci-title-check,
+  #ciPremiumHeader .ci-v2110-check,
+  #ciPremiumHeader .ci-icon,
+  #ciPremiumHeader .ci-header-icon{display:none !important;}
+</style>
+<script id="communityInspectionsAssignedDropdownRecoveryLock_v2113">
+(function(){
+  var BUILD = 'v2113';
+  var SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
+  var SUPABASE_KEY = "sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864";
+  var locked = null;
+  var restoring = false;
+
+  function log(){ try{ console.log.apply(console, ['Community Inspections '+BUILD+':'].concat([].slice.call(arguments))); }catch(e){} }
+  function warn(){ try{ console.warn.apply(console, ['Community Inspections '+BUILD+':'].concat([].slice.call(arguments))); }catch(e){} }
+  function byId(id){ return document.getElementById(id); }
+  function asText(v){ return String(v == null ? '' : v).trim(); }
+  function unique(arr){ var s={}; return (arr||[]).filter(function(x){ x=asText(x); if(!x || s[x]) return false; s[x]=true; return true; }); }
+
+  function getSelect(){ return byId('zummeeCommunitySelect'); }
+
+  function normalizeName(row, fallback){
+    row = row || {};
+    return asText(row.name || row.community_name || row.communityName || row.label || row.title || row.text || fallback || 'Community');
+  }
+  function normalizeId(row){
+    row = row || {};
+    return asText(row.id || row.community_id || row.communityId || row.property_community_id || row.propertyCommunityId || row.value || row.uuid || row.community || '');
+  }
+  function normalizeCommunityRows(rows){
+    var seen = {};
+    var list = [];
+    (rows||[]).forEach(function(r){
+      if(!r) return;
+      if(typeof r === 'string') r = { id:r, name:r };
+      var id = normalizeId(r);
+      var name = normalizeName(r, id);
+      if(!id && name) id = name;
+      if(!id) return;
+      var key = String(id);
+      if(seen[key]) return;
+      seen[key] = true;
+      list.push({ id:id, name:name || id });
+    });
+    list.sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||'')); });
+    return list;
+  }
+
+  async function waitForSupabase(){
+    var start = Date.now();
+    while(Date.now() - start < 7000){
+      try{
+        if(window.sb && window.sb.auth && window.sb.from) return window.sb;
+        if(window.supabase && window.supabase.createClient){
+          window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+            auth:{ storageKey:'sb-zummee-auth', storage:window.localStorage, persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }
+          });
+          if(window.sb && window.sb.auth && window.sb.from) return window.sb;
+        }
+      }catch(e){}
+      await new Promise(function(resolve){ setTimeout(resolve, 120); });
+    }
+    return null;
+  }
+
+  async function getIdentity(sb){
+    var out = { uid:'', email:'' };
+    try{
+      var u = await sb.auth.getUser();
+      if(u && u.data && u.data.user){ out.uid = asText(u.data.user.id); out.email = asText(u.data.user.email); }
+    }catch(e){}
+    if(!out.uid){
+      try{
+        var s = await sb.auth.getSession();
+        var user = s && s.data && s.data.session && s.data.session.user;
+        if(user){ out.uid = asText(user.id); out.email = asText(user.email); }
+      }catch(e){}
+    }
+    if(!out.uid){ try{ out.uid = asText(window.ZummeeAuth && window.ZummeeAuth.getUserId && window.ZummeeAuth.getUserId()); }catch(e){} }
+    if(!out.uid){ try{ out.uid = asText(localStorage.getItem('zummee_user_id_v1')); }catch(e){} }
+    if(!out.email){
+      try{
+        var raw = sessionStorage.getItem('zummee_session_v1') || localStorage.getItem('zummee_session_v1') || '';
+        var obj = raw ? JSON.parse(raw) : null;
+        out.email = asText(obj && (obj.email || obj.userEmail));
+      }catch(e){}
+    }
+    return out;
+  }
+
+  async function getAssignmentRows(sb, ident){
+    var rows = [];
+    // Most reliable first: select all visible rows, then filter locally. RLS should already limit to the signed-in user.
+    try{
+      var q = await sb.from('community_assignments').select('*');
+      if(!q.error && Array.isArray(q.data)) rows = q.data;
+    }catch(e){ warn('assignment select all failed', e); }
+
+    function rowMatches(r){
+      if(!r) return false;
+      var vals = [r.user_id, r.profile_id, r.employee_id, r.assigned_user_id, r.manager_id, r.userId, r.profileId, r.employeeId].map(asText);
+      var emails = [r.email, r.user_email, r.employee_email, r.assigned_email].map(function(v){ return asText(v).toLowerCase(); });
+      if(ident.uid && vals.indexOf(asText(ident.uid)) >= 0) return true;
+      if(ident.email && emails.indexOf(asText(ident.email).toLowerCase()) >= 0) return true;
+      // If RLS returned only a small assignment set and no obvious owner columns exist, accept the visible rows.
+      var hasOwnerColumn = vals.some(Boolean) || emails.some(Boolean);
+      return !hasOwnerColumn;
+    }
+    rows = (rows||[]).filter(rowMatches);
+
+    // If the unrestricted/RLS read was empty, try known user_id filter.
+    if(!rows.length && ident.uid){
+      try{
+        var byUid = await sb.from('community_assignments').select('*').eq('user_id', ident.uid);
+        if(!byUid.error && Array.isArray(byUid.data)) rows = byUid.data;
+      }catch(e){}
+    }
+    return rows || [];
+  }
+
+  function extractCommunityIds(assignments){
+    var ids = [];
+    (assignments||[]).forEach(function(r){
+      ids.push(r.community_id, r.property_community_id, r.propertyCommunityId, r.communityId, r.community, r.community_uuid);
+    });
+    return unique(ids);
+  }
+
+  async function fetchCommunityRows(sb, ids, assignmentRows){
+    var list = [];
+    if(ids && ids.length){
+      try{
+        var pc = await sb.from('PropertyCommunities').select('id,name,community_name,label').in('id', ids);
+        if(!pc.error && Array.isArray(pc.data)) list = list.concat(pc.data);
+      }catch(e){ warn('PropertyCommunities lookup failed', e); }
+      if(!list.length){
+        try{
+          var pc2 = await sb.from('property_communities').select('id,name,community_name,label').in('id', ids);
+          if(!pc2.error && Array.isArray(pc2.data)) list = list.concat(pc2.data);
+        }catch(e){}
+      }
+    }
+    // If assignment rows already carry community names, use them as fallback.
+    if(!list.length){
+      list = (assignmentRows||[]).map(function(r){
+        return {
+          id: asText(r.community_id || r.property_community_id || r.propertyCommunityId || r.communityId || r.community || r.id),
+          name: asText(r.community_name || r.communityName || r.property_community_name || r.name || r.label)
+        };
+      });
+    }
+    return normalizeCommunityRows(list);
+  }
+
+  function localStorageFallback(ident){
+    var keys = [];
+    if(ident && ident.uid){
+      keys.push('zummee_communities_v1__user__' + ident.uid);
+      keys.push('zummee_communities_v1__user_' + ident.uid);
+      keys.push('mh2_assigned_communities__' + ident.uid);
+      keys.push('manager_hub_assigned_communities__' + ident.uid);
+    }
+    keys = keys.concat([
+      'mh2_assigned_communities',
+      'manager_hub_assigned_communities',
+      'zummee_assigned_communities_v1',
+      'zummee_communities_v1'
+    ]);
+    for(var i=0;i<keys.length;i++){
+      try{
+        var raw = localStorage.getItem(keys[i]);
+        if(!raw) continue;
+        var parsed = JSON.parse(raw);
+        var arr = Array.isArray(parsed) ? parsed : (parsed && (parsed.communities || parsed.list || parsed.data));
+        var list = normalizeCommunityRows(arr);
+        // Prefer a likely assigned list. Avoid accepting the old 6-community company master when better sources fail.
+        if(list.length && list.length <= 5){ log('using local fallback', keys[i], list.length); return list; }
+      }catch(e){}
+    }
+    return [];
+  }
+
+  function renderDropdown(list){
+    var sel = getSelect();
+    if(!sel) return false;
+    list = normalizeCommunityRows(list);
+    if(!list.length){
+      sel.innerHTML = '<option value="">Community unavailable</option>';
+      sel.disabled = true;
+      locked = null;
+      return false;
+    }
+
+    var previous = asText(sel.value || localStorage.getItem('activeCommunityId') || localStorage.getItem('zummee_selected_community_id'));
+    sel.innerHTML = '';
+    list.forEach(function(c){
+      var opt = document.createElement('option');
+      opt.value = String(c.id);
+      opt.textContent = String(c.name || c.id);
+      sel.appendChild(opt);
+    });
+    if(previous && Array.prototype.some.call(sel.options, function(o){ return String(o.value) === previous; })) sel.value = previous;
+    if(!sel.value && sel.options.length) sel.value = sel.options[0].value;
+    sel.disabled = false;
+    persistSelection(sel);
+    locked = { html: sel.innerHTML, value: sel.value, count: sel.options.length };
+    bindSelect(sel);
+    log('loaded assigned communities', locked.count);
+    return true;
+  }
+
+  function persistSelection(sel){
+    sel = sel || getSelect();
+    var v = asText(sel && sel.value);
+    if(!v) return;
+    try{ localStorage.setItem('activeCommunityId', v); }catch(e){}
+    try{ localStorage.setItem('zummee_selected_community_id', v); }catch(e){}
+    try{ localStorage.setItem('zummee_selected_community_v1', v); }catch(e){}
+    try{ window.currentCommunityId = v; }catch(e){}
+  }
+
+  function bindSelect(sel){
+    if(!sel || sel.__ciV2113Bound) return;
+    sel.__ciV2113Bound = true;
+    sel.addEventListener('change', function(){
+      persistSelection(sel);
+      try{ document.dispatchEvent(new Event('community:changed')); }catch(e){}
+      try{ document.dispatchEvent(new Event('communities:changed')); }catch(e){}
+      try{ window.dispatchEvent(new CustomEvent('zummee:community-changed', { detail:{ communityId:sel.value } })); }catch(e){}
+    });
+  }
+
+  async function loadAssignedDropdown(){
+    var sel = getSelect();
+    if(!sel) return false;
+    if(!locked) sel.innerHTML = '<option value="">Loading communities...</option>';
+    var sb = await waitForSupabase();
+    var ident = { uid:'', email:'' };
+    var list = [];
+    if(sb){
+      ident = await getIdentity(sb);
+      var rows = await getAssignmentRows(sb, ident);
+      var ids = extractCommunityIds(rows);
+      list = await fetchCommunityRows(sb, ids, rows);
+    }
+    if(!list.length) list = localStorageFallback(ident);
+    return renderDropdown(list);
+  }
+
+  function repairIfOverwritten(){
+    var sel = getSelect();
+    if(!sel || !locked || restoring) return;
+    var text = (sel.textContent || '').toLowerCase();
+    if(sel.options.length !== locked.count || text.indexOf('community unavailable') >= 0 || text.indexOf('loading communities') >= 0 || text.indexOf('no communities') >= 0){
+      restoring = true;
+      sel.innerHTML = locked.html;
+      if(Array.prototype.some.call(sel.options, function(o){ return o.value === locked.value; })) sel.value = locked.value;
+      sel.disabled = false;
+      bindSelect(sel);
+      persistSelection(sel);
+      restoring = false;
+    }
+  }
+
+  function installObserver(){
+    var sel = getSelect();
+    if(!sel || sel.__ciV2113Observer) return;
+    sel.__ciV2113Observer = true;
+    try{
+      var mo = new MutationObserver(function(){ setTimeout(repairIfOverwritten, 0); });
+      mo.observe(sel, { childList:true, subtree:true, attributes:true, attributeFilter:['disabled'] });
+    }catch(e){}
+  }
+
+  function removeTitleCheck(){
+    try{
+      var titles = document.querySelectorAll('#ciPremiumHeader h1, #ciPremiumHeader .ci-v2110-title, #ciPremiumHeader .ci-title');
+      titles.forEach(function(t){ t.textContent = String(t.textContent || '').replace(/^[\s✓✔✅☑]+/, '').replace('✅','').replace('✓','').replace('✔','').trim(); });
+      var icons = document.querySelectorAll('#ciPremiumHeader .ci-title-check, #ciPremiumHeader .ci-v2110-check, #ciPremiumHeader .ci-icon, #ciPremiumHeader .ci-header-icon');
+      icons.forEach(function(el){ el.style.display = 'none'; });
+    }catch(e){}
+  }
+
+  function boot(){
+    removeTitleCheck();
+    loadAssignedDropdown().then(function(){ installObserver(); repairIfOverwritten(); });
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+  window.addEventListener('load', function(){ setTimeout(boot, 50); setTimeout(boot, 600); setTimeout(boot, 1800); setTimeout(boot, 4200); });
+  setTimeout(boot, 120);
+  setTimeout(boot, 900);
+  setTimeout(boot, 2500);
+  setTimeout(boot, 6000);
+})();
+</script>
