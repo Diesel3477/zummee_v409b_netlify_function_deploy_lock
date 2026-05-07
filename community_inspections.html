@@ -4,6 +4,7 @@
 <head>
 <script>window.ZUMMEE_BUILD="2026-03-27-1";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
+<!-- ZUMMEE_PATCH v2112: header check removed + dropdown locked to manager hub assigned communities -->
 <!-- ZUMMEE_PATCH v2074: inspections reads vendors from actual ops localStorage keys -->
 <!-- ZUMMEE_PATCH v2064: offline drafts (IndexedDB) for inspections -->
 <!-- ZUMMEE_PATCH v2061: latest polish bundle -->
@@ -5969,6 +5970,20 @@ body.dark-mode .mh2-stat-box {
 
 </style>
 
+
+<style id="communityInspectionsHeaderAssignedSource_v2112">
+/* v2112 — remove decorative check icon and keep title clean */
+#ciPremiumHeader .ci-icon,
+#ciPremiumHeader .ci-v2110-icon,
+.ci-premium-header .ci-icon,
+.ci-header-v2110 .ci-v2110-icon{
+  display:none !important;
+}
+#ciPremiumHeader .ci-v2110-left,
+.ci-premium-header .ci-header-left{
+  gap:0 !important;
+}
+</style>
 </head>
 <body data-header-mode="simple" id="inspectionsPage" class="inspections-page zummee-shell-theme">
 <div id="zummeeHeaderMount"></div>
@@ -7925,7 +7940,7 @@ body.dark-mode .mh2-stat-box {
       const { data } = await sb.auth.getSession();
       const uid = data?.session?.user?.id;
       if(!uid) return;
-      const a = await sb.from('CommunityAssignments').select('community_id').eq('user_id', uid);
+      const a = await sb.from('community_assignments').select('community_id').eq('user_id', uid);
       if(a.error) throw a.error;
       const ids = (a.data||[]).map(r=>r.community_id).filter(Boolean);
       if(!ids.length) return;
@@ -8238,7 +8253,7 @@ body.dark-mode .mh2-stat-box {
     // Employees only see assigned communities
     if(String(ctx.role || '').toLowerCase() === 'employee'){
       try{
-        const qa = await window.sb.from('CommunityAssignments').select('community_id').eq('user_id', ctx.uid);
+        const qa = await window.sb.from('community_assignments').select('community_id').eq('user_id', ctx.uid);
         if(!qa.error){
           const allowed = new Set((qa.data||[]).map(x=>String(x.community_id)));
           list = (list||[]).filter(c => allowed.has(String(c.id)));
@@ -12370,7 +12385,6 @@ document.addEventListener('DOMContentLoaded', function(){
       h.innerHTML=''+
         '<div class="ci-header-main">'+
           '<div class="ci-header-left">'+
-            '<div class="ci-icon" aria-hidden="true">✓</div>'+
             '<div><h1 class="ci-title">Community Inspections</h1><div class="ci-subtitle">Create inspection records, vendor walks, drafts, photos, and follow-up work orders.</div></div>'+
           '</div>'+
           '<div class="ci-header-topRight">'+
@@ -12411,7 +12425,7 @@ document.addEventListener('DOMContentLoaded', function(){
         sel.innerHTML = '<option value="">No communities</option>';
         return;
       }
-      var a = await sb.from('CommunityAssignments').select('community_id').eq('user_id', uid);
+      var a = await sb.from('community_assignments').select('community_id').eq('user_id', uid);
       if(a.error) throw a.error;
       var ids = (a.data||[]).map(function(r){ return r.community_id; }).filter(Boolean);
       if(!ids.length){
@@ -12909,7 +12923,7 @@ body#inspectionsPage [data-page-error]{
       var ses = await sb.auth.getSession();
       var uid = ses && ses.data && ses.data.session && ses.data.session.user && ses.data.session.user.id;
       if(!uid){ sel.innerHTML = '<option value="">No communities</option>'; return; }
-      var a = await sb.from('CommunityAssignments').select('community_id').eq('user_id', uid);
+      var a = await sb.from('community_assignments').select('community_id').eq('user_id', uid);
       if(a.error) throw a.error;
       var ids = (a.data || []).map(function(r){ return r.community_id; }).filter(Boolean);
       if(!ids.length){ sel.innerHTML = '<option value="">No communities</option>'; return; }
@@ -12957,7 +12971,6 @@ body#inspectionsPage [data-page-error]{
     h.innerHTML = ''+
       '<div class="ci-v2110-top">'+
         '<div class="ci-v2110-left">'+
-          '<div class="ci-v2110-icon" aria-hidden="true">✓</div>'+
           '<div><h1 class="ci-v2110-title">Community Inspections</h1><div class="ci-v2110-subtitle">Create inspection records, vendor walks, drafts, photos, and follow-up work orders.</div></div>'+
         '</div>'+
         '<img id="ciCompanyLogo" class="company-logo ci-v2110-logo" alt="Company logo" />'+
