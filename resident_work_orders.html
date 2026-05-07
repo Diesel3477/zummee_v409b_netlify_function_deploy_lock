@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-04-v488-rwo-loader-community-token-lock";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-07-v489-rwo-live-status-refresh";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <script id="rwo-v478-scroll-reset">
 (function(){
   try{ if('scrollRestoration' in history) history.scrollRestoration='manual'; }catch(_e){}
@@ -2315,6 +2315,147 @@ function statusClass(rowOrStatus){
       }
     }catch(_e){}
     loadWorkOrders({ clearSelection: new URLSearchParams(window.location.search || '').get('new_work_order') === '1' });
+
+    /* ZUMMEE_PATCH v489 — Resident Work Orders live status refresh
+       Purpose:
+       - When a vendor accepts a job from email/vendor_accept.html, the work order status updates in Supabase.
+       - This page now refreshes its data automatically when the tab regains focus, becomes visible,
+         receives a local work-order change event, or receives a Supabase Realtime row update.
+       - This prevents "Sent to Vendor" from staying on screen until manual refresh.
+    */
+    (function setupResidentWorkOrdersLiveRefresh(){
+      if(window.__rwoLiveStatusRefreshV489) return;
+      window.__rwoLiveStatusRefreshV489 = true;
+
+      var refreshTimer = null;
+      var lastRefreshAt = 0;
+      var realtimeChannel = null;
+
+      function activeCommunity(){
+        try{
+          return String(getStoredActiveCommunityId() || window.activeCommunityId || window.currentCommunityId || '').trim();
+        }catch(_e){
+          return '';
+        }
+      }
+
+      function selectedCommunityName(){
+        try{
+          var sel = headerCommunitySelect && headerCommunitySelect();
+          if(sel && sel.selectedOptions && sel.selectedOptions[0]){
+            return String(sel.selectedOptions[0].textContent || '').trim();
+          }
+        }catch(_e){}
+        try{
+          return String(localStorage.getItem('activeCommunityName') || localStorage.getItem('zummeeActiveCommunityName') || '').trim();
+        }catch(_e){
+          return '';
+        }
+      }
+
+      function shouldReloadForRow(row){
+        try{
+          var cid = activeCommunity();
+          if(!cid) return true;
+          var rowCid = String(row && row.community_id || '').trim();
+          return !rowCid || rowCid === cid;
+        }catch(_e){
+          return true;
+        }
+      }
+
+      function scheduleResidentWorkOrdersRefresh(reason, row){
+        try{
+          if(row && !shouldReloadForRow(row)) return;
+          var cid = activeCommunity();
+          if(!cid) return;
+
+          clearTimeout(refreshTimer);
+          refreshTimer = setTimeout(async function(){
+            try{
+              var now = Date.now();
+              if(now - lastRefreshAt < 850) return;
+              lastRefreshAt = now;
+
+              // Preserve current selected row/detail pane if possible; do not clear selection.
+              if(typeof loadWorkOrders === 'function'){
+                await loadWorkOrders({
+                  communityId: cid,
+                  communityName: selectedCommunityName(),
+                  preserveSelection: true,
+                  liveRefreshReason: reason || 'live-refresh'
+                });
+              }
+            }catch(err){
+              console.warn('[RWO v489] Live refresh failed:', err);
+            }
+          }, 350);
+        }catch(err){
+          console.warn('[RWO v489] Could not schedule live refresh:', err);
+        }
+      }
+
+      window.ZummeeResidentWorkOrdersRefresh = function(reason){
+        scheduleResidentWorkOrdersRefresh(reason || 'manual');
+      };
+
+      // Refresh when returning from vendor_accept.html or another tab/app.
+      document.addEventListener('visibilitychange', function(){
+        if(!document.hidden){
+          scheduleResidentWorkOrdersRefresh('visibilitychange');
+        }
+      });
+
+      window.addEventListener('focus', function(){
+        scheduleResidentWorkOrdersRefresh('window-focus');
+      });
+
+      // Local app events used by delete/vendor routing/status changes.
+      [
+        'resident-work-orders:changed',
+        'zummee:resident-work-orders-changed',
+        'zummee:work-order-status-updated',
+        'zummee:vendor-job-accepted',
+        'storage'
+      ].forEach(function(eventName){
+        window.addEventListener(eventName, function(){
+          scheduleResidentWorkOrdersRefresh(eventName);
+        });
+        document.addEventListener(eventName, function(){
+          scheduleResidentWorkOrdersRefresh(eventName);
+        });
+      });
+
+      async function setupRealtime(){
+        try{
+          var client = await getResidentWorkOrdersClient();
+          if(!client || typeof client.channel !== 'function') return;
+          if(realtimeChannel) return;
+
+          realtimeChannel = client
+            .channel('rwo_live_status_refresh_v489')
+            .on(
+              'postgres_changes',
+              { event: '*', schema: 'public', table: 'resident_work_orders' },
+              function(payload){
+                var row = (payload && (payload.new || payload.old)) || null;
+                scheduleResidentWorkOrdersRefresh('supabase-realtime', row);
+              }
+            )
+            .subscribe(function(status){
+              if(status === 'SUBSCRIBED'){
+                console.log('[RWO v489] Realtime status refresh subscribed');
+              }
+            });
+        }catch(err){
+          console.warn('[RWO v489] Realtime subscribe skipped:', err);
+        }
+      }
+
+      setTimeout(setupRealtime, 900);
+      setTimeout(function(){ scheduleResidentWorkOrdersRefresh('initial-stabilize'); }, 1800);
+    })();
+
   </script>
 <script>
 (function(){
