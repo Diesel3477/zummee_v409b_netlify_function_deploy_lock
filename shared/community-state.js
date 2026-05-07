@@ -1,6 +1,6 @@
 /*
   Zummee Shared Community State
-  Build: 2026-05-07-v605-native-community-state
+  Build: 2026-05-07-v601-community-persistence-last-write-wins
 
   Purpose:
   - One app-wide selected community that persists across pages.
@@ -13,9 +13,9 @@
   - zummee_active_community_name
 */
 (function(){
-  if(window.ZummeeCommunityState && window.ZummeeCommunityState.version === "2026-05-07-v605") return;
+  if(window.ZummeeCommunityState && window.ZummeeCommunityState.version === "2026-05-07-v601") return;
 
-  const VERSION = "2026-05-07-v605";
+  const VERSION = "2026-05-07-v601";
   const SUPABASE_URL = window.SUPABASE_URL || "https://slcwuuwyrgnmlmxpcaim.supabase.co";
   const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864";
 
@@ -505,37 +505,6 @@
     });
   }
 
-
-  async function bindNativeDropdown(selectOrSelector, opts={}){
-    const select = typeof selectOrSelector === "string"
-      ? document.querySelector(selectOrSelector)
-      : selectOrSelector;
-
-    if(!select) return null;
-
-    const result = await hydrateCommunityDropdown(select, {
-      source: opts.source || "native-bind",
-      force: !!opts.force
-    });
-
-    if(!select.__zummeeNativeCommunityBoundV605){
-      select.__zummeeNativeCommunityBoundV605 = true;
-      select.addEventListener("change", function(){
-        const opt = select.selectedOptions && select.selectedOptions[0] ? select.selectedOptions[0] : null;
-        const id = str(select.value);
-        const name = str(opt ? opt.textContent : "");
-        if(!id) return;
-        const active = setActiveCommunity(id, name, { source: opts.source || "native-dropdown" });
-        if(typeof opts.onChange === "function"){
-          try{ opts.onChange(active || { id, name }); }catch(err){ console.warn("[ZummeeCommunityState] onChange failed", err); }
-        }
-      });
-    }
-
-    return result;
-  }
-
-
   window.ZummeeCommunityState = {
     version: VERSION,
     getActiveCommunity,
@@ -543,7 +512,6 @@
     ensureActiveCommunity,
     loadAssignedCommunities,
     hydrateCommunityDropdown,
-    bindNativeDropdown,
     bindExistingDropdowns,
     getActiveCommunityId(){ return readStoredId(); },
     getActiveCommunityName(){ return readStoredName(); },
