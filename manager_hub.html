@@ -2,29 +2,48 @@
 <html lang="en">
 <head>
 
-<style id="zummee-manager-bfcache-snapshot-guard-css-v609">
+<style id="zummee-manager-smooth-return-css-v611">
   /*
-    v609: Hide stale back/forward-cache snapshots.
-    When Manager Hub is stored in BFCache, Safari/Chrome can briefly show the old DOM
-    before pageshow JavaScript corrects the canonical community. This prevents the old
-    community from flashing.
+    v611: Smooth Manager Hub return.
+    Replaces hard body hide/reveal with a soft overlay so returning from
+    Inspections/Work Orders does not visually jump.
   */
-  html[data-zummee-manager-cache-hidden="1"] body{
-    opacity:0!important;
-    visibility:hidden!important;
-    pointer-events:none!important;
+  #zummeeManagerReturnShield{
+    position:fixed;
+    inset:0;
+    z-index:2147483647;
+    pointer-events:none;
+    opacity:0;
+    visibility:hidden;
+    background:
+      radial-gradient(circle at top left, rgba(255,255,255,.98), rgba(247,251,255,.95) 38%, rgba(237,243,248,.96) 100%);
+    transition:opacity .18s ease, visibility .18s ease;
   }
-  html[data-zummee-manager-syncing="1"] body{
-    opacity:0!important;
-    visibility:hidden!important;
-    pointer-events:none!important;
+  html[data-zummee-manager-return-shield="1"] #zummeeManagerReturnShield{
+    opacity:1;
+    visibility:visible;
+    pointer-events:auto;
   }
-  body{
-    transition:opacity .08s ease;
+  #zummeeManagerReturnShield::after{
+    content:"";
+    position:absolute;
+    left:50%;
+    top:50%;
+    width:44px;
+    height:44px;
+    margin:-22px 0 0 -22px;
+    border-radius:50%;
+    border:3px solid rgba(47,91,143,.16);
+    border-top-color:rgba(47,91,143,.58);
+    animation:zummeeReturnSpin .7s linear infinite;
+    opacity:.72;
   }
+  @keyframes zummeeReturnSpin{to{transform:rotate(360deg)}}
 </style>
 
-<script>window.ZUMMEE_BUILD="2026-05-07-v609-manager-hub-bfcache-snapshot-guard";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+
+
+<script>window.ZUMMEE_BUILD="2026-05-07-v611-manager-hub-smooth-return-no-jump";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <script id="zummee-manager-canonical-preboot-v608">
 /*
@@ -227,7 +246,7 @@
     })();
   </script>
   <script>
-window.__MH_VERSION = 'v609_bfcache_snapshot_guard';
+window.__MH_VERSION = 'v611_smooth_return_no_jump';
 
     (function(){
       try{
@@ -7056,28 +7075,52 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
 </script>
 
 
-<script id="zummee-manager-bfcache-snapshot-guard-v609">
+
+
+<script id="zummee-manager-smooth-return-v611">
 /*
-  v609 — Manager Hub BFCache snapshot guard.
+  v611 — Manager Hub smooth return guard.
 
-  Problem:
-  - Returning from Community Inspections can restore a stale Manager Hub DOM snapshot.
-  - The snapshot can show an old community such as Emory Chase for a moment.
-  - Then shared community-state corrects to Biltmore/The Mews.
+  Keeps the v609 benefit:
+  - no stale Emory/old-community flash when returning from another page.
 
-  Fix:
-  - On pagehide, mark Manager Hub as cache-hidden before BFCache stores the snapshot.
-  - On pageshow/focus/visibility, sync canonical community into legacy keys/dropdown/URL.
-  - Reveal the page only after sync finishes.
+  Improves UX:
+  - does not hide/reveal the entire body abruptly.
+  - uses a soft overlay while canonical community sync finishes.
+  - fades the overlay out after the Manager Hub has corrected legacy keys/dropdown/URL.
 */
 (function(){
-  if(window.__ManagerHubBFCacheSnapshotGuardV609) return;
-  window.__ManagerHubBFCacheSnapshotGuardV609 = true;
+  if(window.__ManagerHubSmoothReturnV611) return;
+  window.__ManagerHubSmoothReturnV611 = true;
 
   var UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   function parse(raw){ try{return raw?JSON.parse(raw):null;}catch(_e){return null;} }
   function s(v){ return String(v == null ? "" : v).trim(); }
+
+  function ensureShield(){
+    var shield = document.getElementById("zummeeManagerReturnShield");
+    if(shield) return shield;
+    shield = document.createElement("div");
+    shield.id = "zummeeManagerReturnShield";
+    shield.setAttribute("aria-hidden", "true");
+    document.body.appendChild(shield);
+    return shield;
+  }
+
+  function showShield(){
+    try{
+      if(document.body) ensureShield();
+      document.documentElement.setAttribute("data-zummee-manager-return-shield", "1");
+    }catch(_e){}
+  }
+
+  function hideShield(){
+    try{
+      document.documentElement.removeAttribute("data-zummee-manager-return-shield");
+    }catch(_e){}
+  }
+
   function canonical(){
     var state = parse(localStorage.getItem("zummee_active_community_v601") || sessionStorage.getItem("zummee_active_community_v601") || "");
     if(state && UUID_RE.test(s(state.id))) return { id:s(state.id), name:s(state.name) };
@@ -7091,7 +7134,7 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
   function writeAll(state){
     if(!state || !UUID_RE.test(s(state.id))) return null;
     var id=s(state.id), name=s(state.name);
-    var full = { id:id, name:name, updatedAt:Date.now(), source:"manager-bfcache-guard-v609" };
+    var full = { id:id, name:name, updatedAt:Date.now(), source:"manager-smooth-return-v611" };
 
     try{
       localStorage.setItem("zummee_active_community_v601", JSON.stringify(full));
@@ -7146,57 +7189,65 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     return full;
   }
 
-  function revealSoon(){
-    requestAnimationFrame(function(){
-      requestAnimationFrame(function(){
-        document.documentElement.removeAttribute("data-zummee-manager-cache-hidden");
-        document.documentElement.removeAttribute("data-zummee-manager-syncing");
-      });
-    });
-  }
-
-  function syncAndReveal(reason){
+  function sync(reason){
+    var state = null;
     try{
-      document.documentElement.setAttribute("data-zummee-manager-syncing", "1");
-      var state = canonical();
+      state = canonical();
       if(state) writeAll(state);
 
-      // Let existing Manager Hub community logic redraw based on corrected keys.
-      try{
-        if(typeof window.bootstrapCommunityGlobals === "function") window.bootstrapCommunityGlobals();
-      }catch(_e){}
-      try{
-        if(typeof window.applyWeatherContext === "function") window.applyWeatherContext();
-      }catch(_e){}
+      try{ if(typeof window.bootstrapCommunityGlobals === "function") window.bootstrapCommunityGlobals(); }catch(_e){}
+      try{ if(typeof window.applyWeatherContext === "function") window.applyWeatherContext(); }catch(_e){}
 
-      try{ console.info("[Manager Hub v609] canonical sync before reveal", reason, state); }catch(_e){}
+      try{ console.info("[Manager Hub v611] smooth return sync", reason, state); }catch(_e){}
     }catch(err){
-      console.warn("[Manager Hub v609] sync failed", err);
-    }finally{
-      revealSoon();
+      console.warn("[Manager Hub v611] sync failed", err);
     }
+    return state;
   }
 
-  // If this document is restored from BFCache, it will still have the cache-hidden attr
-  // that was set on pagehide. That is intentional.
+  function smoothReturn(reason){
+    showShield();
+
+    // Sync immediately, then again after a small delay to catch any late legacy writer.
+    sync(reason + ":immediate");
+    setTimeout(function(){ sync(reason + ":settle-80"); }, 80);
+
+    // Fade out after the app has had a moment to paint the corrected community.
+    setTimeout(function(){
+      requestAnimationFrame(function(){
+        hideShield();
+      });
+    }, 150);
+  }
+
   window.addEventListener("pagehide", function(){
-    document.documentElement.setAttribute("data-zummee-manager-cache-hidden", "1");
+    // Store the BFCache snapshot with the overlay already present instead of stale content visible.
+    showShield();
   });
 
   window.addEventListener("pageshow", function(e){
-    syncAndReveal(e && e.persisted ? "pageshow-bfcache" : "pageshow");
-    setTimeout(function(){ syncAndReveal("pageshow-120"); }, 120);
+    smoothReturn(e && e.persisted ? "pageshow-bfcache" : "pageshow");
   });
 
-  window.addEventListener("focus", function(){ syncAndReveal("focus"); });
+  window.addEventListener("focus", function(){
+    // Do not show shield on every normal focus, only sync quietly.
+    sync("focus");
+  });
+
   document.addEventListener("visibilitychange", function(){
-    if(!document.hidden) syncAndReveal("visible");
+    if(!document.hidden) sync("visible");
   });
 
   if(document.readyState === "loading"){
-    document.addEventListener("DOMContentLoaded", function(){ syncAndReveal("domcontentloaded"); }, { once:true });
+    document.addEventListener("DOMContentLoaded", function(){
+      ensureShield();
+      sync("domcontentloaded");
+      hideShield();
+    }, { once:true });
   }else{
-    syncAndReveal("already-loaded");
+    ensureShield();
+    sync("already-loaded");
+    hideShield();
   }
 })();
 </script>
