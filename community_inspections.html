@@ -2,7 +2,7 @@
 
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-03-27-1";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-07-v2116-date-native-input";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <!-- ZUMMEE_PATCH v2115: stable single-mount header + assigned dropdown no-jump lock -->
 <!-- ZUMMEE_PATCH v2074: inspections reads vendors from actual ops localStorage keys -->
@@ -8439,7 +8439,7 @@ body.dark-mode .mh2-stat-box {
       <label for="inspDate">Date</label>
       <div class="zm-datePillWrap">
         <button class="zm-datePill" id="inspDatePill" type="button">Select date</button>
-        <input aria-hidden="true" class="zm-input zm-input zm-dateHidden" id="inspDate" readonly="readonly" tabindex="-1" type="date"/>
+        <input aria-hidden="false" class="zm-input zm-input zm-dateHidden" id="inspDate" type="date"/>
       </div>
     </div>
     <div class="field">
@@ -12992,6 +12992,77 @@ body#inspectionsPage [data-page-error]{
 })();
 </script>
 
+
+
+<!-- ZUMMEE_PATCH v2116: use native working inspection date input; keep visual pill style -->
+<style id="ZUMMEE_DATE_NATIVE_FIX_v2116">
+  /* v2116: the former display-only pill made the date feel like a button but blocked the picker.
+     Use the native date input as the actual control so iPad/Safari can open the date picker reliably. */
+  body#inspectionsPage #newInspectionCard #inspDatePill,
+  #newInspectionCard #inspDatePill{
+    display:none !important;
+  }
+  body#inspectionsPage #newInspectionCard #inspDate.zm-dateHidden,
+  #newInspectionCard #inspDate.zm-dateHidden{
+    position:static !important;
+    inset:auto !important;
+    width:100% !important;
+    height:72px !important;
+    min-height:72px !important;
+    opacity:1 !important;
+    pointer-events:auto !important;
+    z-index:auto !important;
+    display:block !important;
+    visibility:visible !important;
+    cursor:pointer !important;
+    text-align:center !important;
+    border-radius:22px !important;
+    border:2px solid rgba(180,211,255,.98) !important;
+    background:rgba(255,255,255,.88) !important;
+    color:#10243d !important;
+    font-size:20px !important;
+    font-weight:950 !important;
+    padding:0 18px !important;
+    box-sizing:border-box !important;
+    -webkit-appearance:auto !important;
+    appearance:auto !important;
+  }
+  body#inspectionsPage #newInspectionCard #inspDate.zm-dateHidden:focus,
+  #newInspectionCard #inspDate.zm-dateHidden:focus{
+    outline:none !important;
+    border-color:rgba(43,95,153,.56) !important;
+    box-shadow:0 0 0 4px rgba(127,167,211,.22), 0 6px 16px rgba(23,50,77,.08) !important;
+  }
+</style>
+<script id="ZUMMEE_DATE_NATIVE_FIX_JS_v2116">
+(function(){
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function todayISO(){
+    var d = new Date();
+    return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+  }
+  function enableNativeInspectionDate(){
+    var inp = document.getElementById('inspDate');
+    var pill = document.getElementById('inspDatePill');
+    if(!inp) return;
+    try{ inp.removeAttribute('readonly'); }catch(_e){}
+    try{ inp.removeAttribute('tabindex'); }catch(_e){}
+    try{ inp.setAttribute('aria-hidden','false'); }catch(_e){}
+    try{ inp.disabled = false; }catch(_e){}
+    try{ if(!inp.value) inp.value = todayISO(); }catch(_e){}
+    if(pill){
+      pill.style.display = 'none';
+      pill.addEventListener('click', function(){
+        try{ inp.showPicker && inp.showPicker(); return; }catch(_e){}
+        try{ inp.focus(); inp.click(); }catch(_e2){}
+      });
+    }
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', enableNativeInspectionDate);
+  else enableNativeInspectionDate();
+  window.addEventListener('load', function(){ setTimeout(enableNativeInspectionDate, 60); });
+})();
+</script>
 </body>
 </html>
 <style>
