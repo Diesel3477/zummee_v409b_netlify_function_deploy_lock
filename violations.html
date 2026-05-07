@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Zummee Violations</title>
+  <script>
+    (function(){
+      try{
+        var stored = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || 'light';
+        var resolved = stored === 'auto' ? ((window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light') : stored;
+        document.documentElement.setAttribute('data-theme', resolved || 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme', 'light'); }
+    })();
+  </script>
+  <style>
+    :root{
+      --z-bg:#f5f8fc;
+      --z-card:#ffffff;
+      --z-ink:#102033;
+      --z-muted:#617188;
+      --z-line:#d7e7fb;
+      --z-blue:#2563eb;
+      --z-blue-dark:#1e4fd2;
+      --z-gold:#f4b63f;
+      --z-soft:#eef6ff;
+      --z-shadow:0 18px 50px rgba(18,45,78,.10);
+      --z-radius:24px;
+    }
+    html[data-theme="dark"]{
+      --z-bg:#07111f;
+      --z-card:#0f1d31;
+      --z-ink:#edf5ff;
+      --z-muted:#a9bad2;
+      --z-line:rgba(128,177,255,.24);
+      --z-soft:rgba(37,99,235,.13);
+      --z-shadow:0 20px 60px rgba(0,0,0,.32);
+    }
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Arial,sans-serif;
+      background:linear-gradient(180deg,var(--z-bg),#fff 52%,var(--z-bg));
+      color:var(--z-ink);
+      min-height:100vh;
+    }
+    html[data-theme="dark"] body{background:linear-gradient(180deg,#07111f,#0a1626 55%,#07111f);}
+    .page{
+      width:min(1180px,calc(100% - 32px));
+      margin:0 auto;
+      padding:20px 0 44px;
+    }
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      background:rgba(255,255,255,.88);
+      border:1px solid var(--z-line);
+      border-radius:26px;
+      box-shadow:var(--z-shadow);
+      padding:16px 18px;
+      position:sticky;
+      top:12px;
+      z-index:5;
+      backdrop-filter:blur(16px);
+    }
+    html[data-theme="dark"] .topbar{background:rgba(15,29,49,.88);}
+    .brand{display:flex;align-items:center;gap:14px;min-width:0;}
+    .mark{
+      width:46px;height:46px;border-radius:16px;
+      display:grid;place-items:center;
+      background:linear-gradient(145deg,#eef6ff,#ffffff);
+      border:1px solid var(--z-line);
+      color:var(--z-blue);
+      font-weight:900;
+      letter-spacing:-.04em;
+      box-shadow:0 10px 22px rgba(37,99,235,.11);
+      flex:0 0 auto;
+    }
+    html[data-theme="dark"] .mark{background:rgba(255,255,255,.08);}
+    h1{font-size:28px;line-height:1.05;margin:0;letter-spacing:-.04em;}
+    .subtitle{margin:5px 0 0;color:var(--z-muted);font-size:13px;font-weight:700;}
+    .top-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
+    .select-shell,.btn{
+      min-height:42px;
+      border-radius:14px;
+      border:1px solid var(--z-line);
+      background:var(--z-card);
+      color:var(--z-ink);
+      font-weight:800;
+      font-size:13px;
+      padding:0 14px;
+      box-shadow:0 8px 18px rgba(18,45,78,.06);
+    }
+    .select-shell{display:flex;align-items:center;min-width:220px;color:var(--z-muted);}
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;
+      text-decoration:none;
+      cursor:pointer;
+      appearance:none;
+    }
+    .btn.primary{background:linear-gradient(180deg,#2f74ff,#1e55dc);color:#fff;border-color:rgba(37,99,235,.42);}
+    .hero{
+      margin-top:16px;
+      display:grid;
+      grid-template-columns:1.04fr .96fr;
+      gap:14px;
+      align-items:stretch;
+    }
+    .card{
+      background:var(--z-card);
+      border:1px solid var(--z-line);
+      border-radius:var(--z-radius);
+      box-shadow:var(--z-shadow);
+      padding:18px;
+      min-width:0;
+    }
+    .card h2{margin:0 0 8px;font-size:18px;letter-spacing:-.025em;}
+    .card p{margin:0;color:var(--z-muted);line-height:1.45;font-size:14px;}
+    .status-pill{
+      display:inline-flex;align-items:center;gap:8px;
+      margin-bottom:12px;
+      padding:8px 11px;
+      border-radius:999px;
+      background:rgba(244,182,63,.14);
+      border:1px solid rgba(244,182,63,.42);
+      color:#8b5a00;
+      font-weight:900;
+      font-size:12px;
+      letter-spacing:.01em;
+    }
+    html[data-theme="dark"] .status-pill{color:#ffd98a;background:rgba(244,182,63,.12);}
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--z-gold);box-shadow:0 0 0 4px rgba(244,182,63,.16);}
+    .grid{
+      margin-top:14px;
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:12px;
+    }
+    .mini{
+      border:1px solid var(--z-line);
+      background:var(--z-soft);
+      border-radius:18px;
+      padding:14px;
+      min-height:96px;
+    }
+    .mini strong{display:block;font-size:14px;margin-bottom:6px;}
+    .mini span{display:block;color:var(--z-muted);font-size:12px;font-weight:700;line-height:1.35;}
+    .form-shell{
+      margin-top:14px;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+    .field{display:flex;flex-direction:column;gap:6px;}
+    .field.full{grid-column:1 / -1;}
+    label{font-size:12px;font-weight:900;color:var(--z-muted);}
+    input,select,textarea{
+      width:100%;
+      border:1px solid var(--z-line);
+      border-radius:14px;
+      background:rgba(255,255,255,.88);
+      color:var(--z-ink);
+      font:inherit;
+      font-size:14px;
+      padding:12px 13px;
+      outline:none;
+    }
+    html[data-theme="dark"] input,html[data-theme="dark"] select,html[data-theme="dark"] textarea{background:rgba(255,255,255,.06);}
+    textarea{min-height:88px;resize:vertical;}
+    .disabled-note{opacity:.72;}
+    .list-placeholder{
+      margin-top:14px;
+      border:1px dashed rgba(37,99,235,.35);
+      border-radius:20px;
+      padding:18px;
+      background:var(--z-soft);
+      color:var(--z-muted);
+      font-weight:750;
+      line-height:1.4;
+    }
+    @media (max-width:880px){
+      .page{width:min(100% - 22px,1180px);padding-top:12px;}
+      .topbar{position:relative;top:auto;align-items:flex-start;}
+      .hero{grid-template-columns:1fr;}
+      .grid{grid-template-columns:1fr;}
+      .form-shell{grid-template-columns:1fr;}
+      .top-actions{width:100%;justify-content:flex-start;}
+      .select-shell{min-width:100%;}
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="topbar" aria-label="Violations page header">
+      <div class="brand">
+        <div class="mark" aria-hidden="true">Z</div>
+        <div>
+          <h1>Violations</h1>
+          <div class="subtitle">Inspection workflow shell · Supabase wiring comes next</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <div class="select-shell" aria-label="Community selector placeholder">Selected Community</div>
+        <a class="btn" href="manager_hub.html">Back to Hub</a>
+        <button class="btn primary" type="button" disabled>Start Inspection</button>
+      </div>
+    </header>
+
+    <section class="hero" aria-label="Violations build shell">
+      <article class="card">
+        <div class="status-pill"><span class="dot"></span> Step 1 Shell Ready</div>
+        <h2>New Violation Case</h2>
+        <p>This first build intentionally adds the page shell only, so we can confirm the route and layout on the working iPad baseline before adding Supabase save logic.</p>
+
+        <div class="form-shell disabled-note" aria-disabled="true">
+          <div class="field">
+            <label>Violation Category</label>
+            <select disabled><option>Categories load in Step 2</option></select>
+          </div>
+          <div class="field">
+            <label>Offense Number</label>
+            <select disabled><option>1st offense warning</option></select>
+          </div>
+          <div class="field">
+            <label>Homeowner</label>
+            <input disabled placeholder="Homeowner name" />
+          </div>
+          <div class="field">
+            <label>Unit</label>
+            <input disabled placeholder="Optional" />
+          </div>
+          <div class="field full">
+            <label>Property Address</label>
+            <input disabled placeholder="Property address" />
+          </div>
+          <div class="field full">
+            <label>Manager Notes</label>
+            <textarea disabled placeholder="Inspection notes"></textarea>
+          </div>
+        </div>
+      </article>
+
+      <aside class="card">
+        <h2>Build Roadmap</h2>
+        <p>We are keeping this module isolated first so it cannot disturb Manager Hub, Weather Hub, Smart Alerts, or the stable top-button spacing.</p>
+        <div class="grid">
+          <div class="mini"><strong>Step 1</strong><span>Page shell and Manager Hub route test.</span></div>
+          <div class="mini"><strong>Step 2</strong><span>Assigned community dropdown only.</span></div>
+          <div class="mini"><strong>Step 3</strong><span>Categories and covenant preview from Supabase.</span></div>
+          <div class="mini"><strong>Step 4</strong><span>Save violation case and render open cases.</span></div>
+          <div class="mini"><strong>Step 5</strong><span>Photos, letter preview, PDF generation.</span></div>
+          <div class="mini"><strong>Step 6</strong><span>Email delivery and archive workflow.</span></div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="card" style="margin-top:14px;">
+      <h2>Open Violations</h2>
+      <p>Open cases will appear here after Supabase case saving is added in a later step.</p>
+      <div class="list-placeholder">No live data is loaded in this shell build. This is intentional for the first stability test.</div>
+    </section>
+  </main>
+</body>
+</html>
