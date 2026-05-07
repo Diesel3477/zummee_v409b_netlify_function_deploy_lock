@@ -14807,3 +14807,125 @@ body#inspectionsPage .draftRow{
   window.addEventListener('load', function(){ setTimeout(init,50); setTimeout(init,300); setTimeout(init,900); });
 })();
 </script>
+
+<!-- ZUMMEE_PATCH v2121: center New Inspection form body + action stack cleanup -->
+<style id="communityInspectionsFormCenteringCleanup_v2121">
+  body#inspectionsPage #newInspectionCard{
+    box-sizing:border-box !important;
+  }
+
+  /* Keep the full form panel visually centered under the inspection type buttons */
+  body#inspectionsPage #newInspectionCard .zm-cardBody,
+  body#inspectionsPage #newInspectionCard .z-card-panel{
+    width:min(100%, 900px) !important;
+    max-width:900px !important;
+    margin:18px auto 0 !important;
+    box-sizing:border-box !important;
+  }
+
+  /* Balance the two-column form so neither side feels pushed off center */
+  body#inspectionsPage #newInspectionCard .inspFormGrid{
+    width:100% !important;
+    max-width:100% !important;
+    margin:0 auto !important;
+    grid-template-columns:repeat(2, minmax(0, 1fr)) !important;
+    column-gap:18px !important;
+    row-gap:12px !important;
+    box-sizing:border-box !important;
+  }
+
+  body#inspectionsPage #newInspectionCard .inspFormGrid .field,
+  body#inspectionsPage #newInspectionCard .inspFormGrid > *{
+    min-width:0 !important;
+    max-width:100% !important;
+    box-sizing:border-box !important;
+  }
+
+  /* Center full-width rows and prevent inherited inline styles from nudging them */
+  body#inspectionsPage #newInspectionCard .inspFormGrid .field:has(#inspNotes),
+  body#inspectionsPage #newInspectionCard .inspFormGrid .field:has(.photoUploadBlock),
+  body#inspectionsPage #newInspectionCard .inspFormGrid .field:has(.photoUploadBlockInline){
+    grid-column:1 / -1 !important;
+    width:100% !important;
+    margin-left:auto !important;
+    margin-right:auto !important;
+  }
+
+  body#inspectionsPage #newInspectionCard textarea#inspNotes,
+  body#inspectionsPage #newInspectionCard #inspNotes,
+  body#inspectionsPage #newInspectionCard .photoUploadBlock,
+  body#inspectionsPage #newInspectionCard .photoUploadBlockInline,
+  body#inspectionsPage #newInspectionCard .fieldActions{
+    width:100% !important;
+    max-width:100% !important;
+    margin-left:auto !important;
+    margin-right:auto !important;
+    box-sizing:border-box !important;
+  }
+
+  /* Make the photos panel feel centered, not left-heavy */
+  body#inspectionsPage #newInspectionCard .photoUploadInlineRow{
+    width:100% !important;
+    max-width:100% !important;
+    margin:0 auto !important;
+    display:grid !important;
+    grid-template-columns:minmax(180px, 300px) minmax(0, 1fr) !important;
+    align-items:center !important;
+    justify-content:center !important;
+    column-gap:14px !important;
+    box-sizing:border-box !important;
+  }
+
+  body#inspectionsPage #newInspectionCard .photoUploadBtn{
+    width:100% !important;
+    max-width:300px !important;
+    justify-self:start !important;
+  }
+
+  body#inspectionsPage #newInspectionCard .photoUploadStatus{
+    align-self:center !important;
+    justify-self:start !important;
+    margin:0 !important;
+  }
+
+  /* Action buttons should align to the same centered form width */
+  body#inspectionsPage #newInspectionCard .fieldActions,
+  body#inspectionsPage #newInspectionCard .vendorActionRow{
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:10px !important;
+    padding-top:18px !important;
+    margin-top:18px !important;
+    border-top:1px solid rgba(185,214,255,.78) !important;
+  }
+
+  body#inspectionsPage #btnCreateMaintAd,
+  body#inspectionsPage #btnSaveOfflineDraft,
+  body#inspectionsPage #btnOpenOfflineDrafts{
+    width:100% !important;
+    max-width:100% !important;
+    margin-left:auto !important;
+    margin-right:auto !important;
+    justify-self:center !important;
+    box-sizing:border-box !important;
+  }
+
+  @media(max-width:720px){
+    body#inspectionsPage #newInspectionCard .zm-cardBody,
+    body#inspectionsPage #newInspectionCard .z-card-panel{
+      width:100% !important;
+      max-width:100% !important;
+      margin-top:16px !important;
+    }
+    body#inspectionsPage #newInspectionCard .inspFormGrid,
+    body#inspectionsPage #newInspectionCard .photoUploadInlineRow{
+      grid-template-columns:1fr !important;
+    }
+    body#inspectionsPage #newInspectionCard .photoUploadBtn,
+    body#inspectionsPage #newInspectionCard .photoUploadStatus{
+      justify-self:stretch !important;
+      max-width:100% !important;
+      text-align:center !important;
+    }
+  }
+</style>
