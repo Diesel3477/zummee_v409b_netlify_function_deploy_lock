@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-07-v600-community-persistence";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-07-v605-native-community-state";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Live Maintenance Updates</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="shared/community-state.js?v=2026-05-07-v605"></script>
+<script src="shared/input-undo-guard.js?v=2026-05-07-v605"></script>
+
 <script src="shared/supabase-client.js?v=2026-04-29-v337"></script>
 <script src="shared/maintenance-data.js?v=2026-05-07-v500"></script>
-<script src="shared/community-state.js?v=2026-05-07-v600"></script>
 <script src="zummee_clean_bootstrap.js?v=clean-2026-04-28"></script>
   <script src="shared/header.js?v=2026-04-08-2"></script>
   <link rel="stylesheet" href="shared/header.css?v=2026-03-27-1">
@@ -2737,42 +2739,135 @@ body.live-maintenance-no-blue-header .maintenance-inline-controls #zummeeHdrHub{
 
 
 
-<script id="zummee-community-persistence-live-maintenance-v600">
-/* v600 — Community persistence bridge for Live Maintenance */
-(function(){
-  if(window.__liveMaintenanceCommunityPersistenceV600) return;
-  window.__liveMaintenanceCommunityPersistenceV600 = true;
 
-  async function hydrate(){
+
+
+
+
+
+<script id="zummee-native-community-controller-v605">
+/*
+  v605 native community controller.
+  Long-term pattern:
+  - page dropdown is hydrated by shared/community-state.js
+  - no dropdown cloning
+  - no bridge patches
+  - no page-specific default-to-first-community behavior
+*/
+(function(){
+  if(window.__ZummeeNativeCommunityControllerV605) return;
+  window.__ZummeeNativeCommunityControllerV605 = true;
+
+  function findCommunitySelect(){
+    return document.getElementById("zummeeCommunitySelect") ||
+      document.getElementById("maintenanceCommunitySelect") ||
+      document.getElementById("communitySelect") ||
+      document.querySelector('select[id*="community" i]');
+  }
+
+  function pageName(){
+    var path = String(location.pathname || "").toLowerCase();
+    if(path.indexOf("manager_hub") >= 0) return "manager-hub";
+    if(path.indexOf("community_inspections") >= 0) return "community-inspections";
+    if(path.indexOf("resident_work_orders") >= 0) return "work-orders";
+    if(path.indexOf("maintenance_updates") >= 0) return "live-maintenance";
+    return "zummee-page";
+  }
+
+  function refreshPageData(active){
+    active = active || {};
+    var id = active.id || active.community_id || "";
+    var name = active.name || active.community_name || "";
     try{
-      if(!window.ZummeeCommunityState) return;
-      var sel = document.getElementById("maintenanceCommunitySelect") || document.getElementById("zummeeCommunitySelect") || document.querySelector('select[id*="community" i]');
-      if(sel){
-        await window.ZummeeCommunityState.hydrateCommunityDropdown(sel, { source:"live-maintenance" });
-      }else{
-        await window.ZummeeCommunityState.ensureActiveCommunity({ silent:true });
+      window.currentCommunityId = id;
+      window.activeCommunityId = id;
+      window.selectedCommunityId = id;
+      if(name) window.currentCommunityName = name;
+    }catch(_e){}
+
+    // Manager Hub known surfaces.
+    if(pageName() === "manager-hub"){
+      [
+        "bootstrapCommunityGlobals",
+        "applyWeatherContext",
+        "loadWeather",
+        "loadWeatherForCommunity",
+        "loadSmartAlerts",
+        "refreshSmartAlerts",
+        "loadActivityFeed",
+        "refreshActivityFeed",
+        "loadBoardSubmittedItems",
+        "refreshBoardStatus",
+        "loadApprovalSummary",
+        "refreshAnnualAlert",
+        "loadManagerHubData"
+      ].forEach(function(fn){
+        try{ if(typeof window[fn] === "function") window[fn](); }catch(_e){}
+      });
+    }
+
+    // Work Orders / Maintenance / Inspections.
+    [
+      "loadWorkOrders",
+      "loadUpdates",
+      "loadEvents",
+      "populateVendorSelect",
+      "populateVendorDropdown",
+      "loadInspectionData",
+      "refreshVendorDropdownForActiveCommunity"
+    ].forEach(function(fn){
+      try{
+        if(typeof window[fn] === "function"){
+          if(fn === "loadWorkOrders") window[fn]({ clearSelection:true, liveRefreshReason:"community-v605" });
+          else window[fn]();
+        }
+      }catch(_e){}
+    });
+
+    try{ window.dispatchEvent(new CustomEvent("zummee:community-changed", { detail:{ id:id, community_id:id, name:name, source:pageName() } })); }catch(_e){}
+    try{ document.dispatchEvent(new CustomEvent("community:changed", { detail:{ community_id:id, communityId:id, name:name } })); }catch(_e){}
+  }
+
+  async function init(){
+    if(!window.ZummeeCommunityState) return;
+    var select = findCommunitySelect();
+
+    // Not every page has a visible dropdown yet, but the page still needs active state.
+    if(!select){
+      var activeOnly = await window.ZummeeCommunityState.ensureActiveCommunity({ silent:true });
+      if(activeOnly) refreshPageData(activeOnly);
+      return;
+    }
+
+    await window.ZummeeCommunityState.bindNativeDropdown(select, {
+      source: pageName(),
+      onChange: refreshPageData
+    });
+
+    var active = window.ZummeeCommunityState.getActiveCommunity();
+    if(active && active.id){
+      if(select.value !== active.id){
+        try{ select.value = active.id; }catch(_e){}
       }
-      var active = window.ZummeeCommunityState.getActiveCommunity();
-      if(active && active.id){
-        try{ window.currentCommunityId = active.id; }catch(_e){}
-      }
-      try{ if(typeof loadUpdates === "function") loadUpdates(); }catch(_e){}
-    }catch(err){
-      console.warn("[Live Maintenance v600] community hydrate failed", err);
+      refreshPageData(active);
     }
   }
 
-  window.addEventListener("zummee:community-changed", function(){
+  function syncVisibleSelect(){
     try{
-      if(window.ZummeeMaintenanceData) window.ZummeeMaintenanceData.clearVendorCache?.();
-      if(typeof loadUpdates === "function") loadUpdates();
-      if(typeof loadEvents === "function") loadEvents();
+      if(!window.ZummeeCommunityState) return;
+      var active = window.ZummeeCommunityState.getActiveCommunity();
+      var select = findCommunitySelect();
+      if(active && active.id && select && select.value !== active.id) select.value = active.id;
     }catch(_e){}
-  });
+  }
 
-  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", hydrate, { once:true });
-  else setTimeout(hydrate, 80);
-  setTimeout(hydrate, 1000);
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once:true });
+  else setTimeout(init, 60);
+
+  window.addEventListener("pageshow", function(){ setTimeout(init, 80); setTimeout(syncVisibleSelect, 350); });
+  window.addEventListener("focus", syncVisibleSelect);
+  document.addEventListener("visibilitychange", function(){ if(!document.hidden) syncVisibleSelect(); });
 })();
 </script>
 
