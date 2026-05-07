@@ -2,7 +2,7 @@
 
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-07-v2116-date-native-input";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-07-v2119-date-selector-premium-fix";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <!-- ZUMMEE_PATCH v2115: stable single-mount header + assigned dropdown no-jump lock -->
 <!-- ZUMMEE_PATCH v2074: inspections reads vendors from actual ops localStorage keys -->
@@ -13258,6 +13258,135 @@ body#inspectionsPage [data-page-error]{
     #newInspectionCard .z-card-panel{padding:18px 16px !important;}
   }
 </style>
+
+
+
+<!-- ZUMMEE_PATCH v2119: Premium date selector fix — use compact display pill with invisible native date input overlay -->
+<style id="communityInspectionsDateSelectorPremiumFix_v2119">
+  body#inspectionsPage #newInspectionCard .zm-datePillWrap{
+    position:relative !important;
+    display:block !important;
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    height:42px !important;
+    min-height:42px !important;
+    overflow:hidden !important;
+    border-radius:14px !important;
+    border:1.5px solid rgba(194,219,255,.92) !important;
+    background:#fff !important;
+    box-shadow:0 1px 0 rgba(15,47,74,.018) !important;
+    box-sizing:border-box !important;
+  }
+  body#inspectionsPage #newInspectionCard .zm-datePillWrap:focus-within{
+    border-color:rgba(43,95,153,.58) !important;
+    box-shadow:0 0 0 4px rgba(127,167,211,.18) !important;
+  }
+  body#inspectionsPage #newInspectionCard #inspDatePill,
+  body#inspectionsPage #newInspectionCard .zm-datePill{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    gap:10px !important;
+    width:100% !important;
+    height:100% !important;
+    min-height:0 !important;
+    margin:0 !important;
+    padding:0 13px !important;
+    border:0 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    color:#10243d !important;
+    font-size:15px !important;
+    font-weight:850 !important;
+    line-height:1 !important;
+    text-align:left !important;
+    box-shadow:none !important;
+    box-sizing:border-box !important;
+    pointer-events:none !important;
+    position:relative !important;
+    z-index:1 !important;
+  }
+  body#inspectionsPage #newInspectionCard #inspDatePill::after{
+    content:"▾" !important;
+    font-size:15px !important;
+    line-height:1 !important;
+    color:#10243d !important;
+    opacity:.82 !important;
+    transform:translateY(-1px) !important;
+  }
+  body#inspectionsPage #newInspectionCard #inspDate,
+  body#inspectionsPage #newInspectionCard #inspDate.zm-dateHidden{
+    position:absolute !important;
+    inset:0 !important;
+    display:block !important;
+    width:100% !important;
+    height:100% !important;
+    min-height:0 !important;
+    margin:0 !important;
+    padding:0 !important;
+    border:0 !important;
+    border-radius:14px !important;
+    background:transparent !important;
+    color:transparent !important;
+    opacity:.01 !important;
+    pointer-events:auto !important;
+    cursor:pointer !important;
+    z-index:3 !important;
+    box-shadow:none !important;
+    -webkit-appearance:none !important;
+    appearance:none !important;
+  }
+  body#inspectionsPage #newInspectionCard #inspDate::-webkit-date-and-time-value,
+  body#inspectionsPage #newInspectionCard #inspDate::-webkit-datetime-edit,
+  body#inspectionsPage #newInspectionCard #inspDate::-webkit-datetime-edit-fields-wrapper,
+  body#inspectionsPage #newInspectionCard #inspDate::-webkit-calendar-picker-indicator{
+    opacity:0 !important;
+    color:transparent !important;
+  }
+  @media (max-width:720px){
+    body#inspectionsPage #newInspectionCard .zm-datePillWrap{height:44px !important;}
+  }
+</style>
+<script id="communityInspectionsDateSelectorPremiumFixJS_v2119">
+(function(){
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function todayISO(){ var d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+  function formatDate(iso){
+    if(!iso) return 'Select date';
+    var parts=String(iso).split('-');
+    if(parts.length!==3) return iso;
+    var y=parseInt(parts[0],10), m=parseInt(parts[1],10), d=parseInt(parts[2],10);
+    if(!y || !m || !d) return iso;
+    try{
+      return new Date(y,m-1,d).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+    }catch(_e){ return iso; }
+  }
+  function initPremiumDate(){
+    var input=document.getElementById('inspDate');
+    var pill=document.getElementById('inspDatePill');
+    var wrap=input && input.closest ? input.closest('.zm-datePillWrap') : null;
+    if(!input || !pill || !wrap) return;
+    try{ input.type='date'; }catch(_e){}
+    try{ input.disabled=false; input.removeAttribute('readonly'); input.removeAttribute('tabindex'); input.setAttribute('aria-hidden','false'); }catch(_e){}
+    if(!input.value){ try{ input.value=todayISO(); }catch(_e){} }
+    function sync(){ pill.textContent=formatDate(input.value); }
+    sync();
+    if(!input.__zummeeDatePremiumBound){
+      input.__zummeeDatePremiumBound=true;
+      input.addEventListener('change', sync);
+      input.addEventListener('input', sync);
+      wrap.addEventListener('click', function(){
+        try{ if(input.showPicker){ input.showPicker(); return; } }catch(_e){}
+        try{ input.focus(); input.click(); }catch(_e2){}
+      });
+    }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', initPremiumDate);
+  else initPremiumDate();
+  window.addEventListener('load', function(){ setTimeout(initPremiumDate,60); setTimeout(initPremiumDate,350); });
+})();
+</script>
 
 </body>
 </html>
