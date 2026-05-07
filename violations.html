@@ -180,6 +180,7 @@
     .letter-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;}
     .letter-title{font-size:16px;font-weight:950;letter-spacing:-.02em;margin:0;}
     .letter-type-pill{display:inline-flex;align-items:center;border:1px solid rgba(37,99,235,.26);background:rgba(37,99,235,.10);color:var(--z-blue-dark);border-radius:999px;padding:7px 10px;font-size:11px;font-weight:950;white-space:nowrap;}
+    #generateLetterBtn:disabled{opacity:.48;filter:grayscale(.2);cursor:not-allowed;box-shadow:none;}
     html[data-theme="dark"] .letter-type-pill{color:#9fc5ff;}
     .letter-subject{font-size:13px;font-weight:950;color:var(--z-ink);margin:4px 0 10px;}
     .letter-body{border:1px solid rgba(128,177,255,.24);background:rgba(255,255,255,.56);border-radius:16px;padding:12px;color:var(--z-ink);max-height:620px;overflow:auto;}
@@ -209,6 +210,14 @@
     .letter-warning{margin-top:10px;color:var(--z-muted);font-size:12px;font-weight:750;line-height:1.35;}
     .letter-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;}
     .letter-save-note{color:var(--z-muted);font-size:12px;font-weight:800;line-height:1.35;}
+    .letter-ready-checklist{border:1px solid #dbe6f5;background:#f8fbff;border-radius:14px;padding:10px;margin:10px 0 12px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;}
+    .letter-check-item{border:1px solid #e3eaf5;background:#fff;border-radius:12px;padding:8px 9px;font-size:11px;font-weight:900;color:#71829a;display:flex;align-items:center;gap:7px;min-height:36px;}
+    .letter-check-item .check-dot{width:10px;height:10px;border-radius:999px;background:#d8e2ef;flex:0 0 auto;}
+    .letter-check-item.good{color:#0b7a3f;border-color:#bbe7cb;background:#f1fbf5;}
+    .letter-check-item.good .check-dot{background:#25c46b;}
+    .letter-check-item.bad{color:#8b5a00;border-color:#f4d69a;background:#fff9eb;}
+    .letter-check-item.bad .check-dot{background:#f4b63f;}
+    .btn.primary:disabled{opacity:.55;cursor:not-allowed;filter:saturate(.7);}
     .window-side .letter-photo-caption{text-align:left;}
     @media print{
       body{background:#fff!important;}
@@ -375,9 +384,15 @@
           </div>
           <div class="letter-subject" id="letterSubject">Select a property, category, and offense number to preview the notice.</div>
           <div class="letter-body" id="letterBody">The preview will update automatically as the manager completes the violation case fields. This preview is not saved, downloaded, or emailed yet.</div>
+          <div id="letterReadyChecklist" class="letter-ready-checklist" aria-live="polite">
+            <div id="letterCheckProperty" class="letter-check-item bad"><span class="check-dot"></span><span>Property selected</span></div>
+            <div id="letterCheckCategory" class="letter-check-item bad"><span class="check-dot"></span><span>Category selected</span></div>
+            <div id="letterCheckCovenant" class="letter-check-item bad"><span class="check-dot"></span><span>Covenant loaded</span></div>
+            <div id="letterCheckCase" class="letter-check-item bad"><span class="check-dot"></span><span>Case saved</span></div>
+          </div>
           <div class="letter-actions">
-            <button id="generateLetterBtn" class="btn primary" type="button">Generate Letter Record</button>
-            <span id="letterSaveNote" class="letter-save-note">Save the violation case first, then generate the permanent letter record.</span>
+            <button id="generateLetterBtn" class="btn primary" type="button" onclick="window.zummeeGenerateLetterRecord && window.zummeeGenerateLetterRecord()" disabled>Generate Letter Record</button>
+            <span id="letterSaveNote" class="letter-save-note">Complete the checklist above before generating the permanent letter record.</span>
           </div>
           <div class="letter-warning">Preview only. This layout is formatted for a standard #10 window envelope. PDF generation and email delivery remain locked until the next phases.</div>
         </div>
@@ -670,7 +685,10 @@
         var select = $('propertySelect');
         state.selectedPropertyId = clean(select && select.value);
         state.selectedProperty = state.properties.find(function(p){ return clean(p.id) === state.selectedPropertyId; }) || null;
+        state.lastSavedCase = null;
+        state.lastGeneratedLetter = null;
         setPropertyInputsFromSelection();
+        renderLetterReadiness();
       }
 
       function getSelectedCategoryName(){
@@ -686,6 +704,7 @@
         setText('requiredAction','Required Action: Add covenant language in Supabase or choose another category.');
         setText('covenantReadNote','No matching covenant row found yet.');
         scheduleLetterPreview();
+        renderLetterReadiness();
       }
       function renderCovenant(c){
         state.currentCovenant = c || null;
@@ -696,16 +715,19 @@
         setText('requiredAction', 'Required Action: ' + clean(c.default_required_action || c.manager_summary || 'Review the violation and determine the appropriate corrective action.'));
         setText('covenantReadNote','Matching covenant preview loaded.');
         scheduleLetterPreview();
+        renderLetterReadiness();
       }
       async function loadCovenantPreview(){
         state.selectedCategoryId = clean(($('violationCategorySelect') || {}).value || state.selectedCategoryId || '');
         if(!state.selectedCategoryId){
+          state.currentCovenant = null;
           setText('covenantTitle','Covenant Preview');
           setText('covenantReference','Waiting');
           setText('covenantSection','Select a category');
           setText('covenantLanguage','Choose a violation category to display matching covenant language for the selected community.');
           setText('requiredAction','Required Action: Not selected yet.');
           setText('covenantReadNote','Select a category to preview covenant language.');
+          renderLetterReadiness();
           return;
         }
         var sb = await getClient();
@@ -999,6 +1021,7 @@
         setHTML('letterBody', renderLetterHtml(data));
         setText('letterReadNote', 'Branded mailing-ready preview ready: ' + letterType + '. Generate Letter Record saves it before PDF/email phases.');
         try{ if(window.zummeeSyncCompanyLogo) window.zummeeSyncCompanyLogo(); }catch(_e){}
+        renderLetterReadiness();
       }
 
       function renderOpenCases(){
@@ -1100,6 +1123,7 @@
           state.lastSavedCase = res.data || null;
           state.lastGeneratedLetter = null;
           setText('letterSaveNote','Case saved. Generate the letter record when the preview is ready.');
+          renderLetterReadiness();
           var photoMessage = '';
           if(state.primaryPhotoFile){
             try{
@@ -1127,17 +1151,72 @@
       }
 
 
+      function getLetterReadiness(){
+        var propertyAddress = clean(($('propertyAddressInput') || {}).value || '');
+        var categoryId = clean(($('violationCategorySelect') || {}).value || state.selectedCategoryId || '');
+        var covenantId = clean((state.currentCovenant || {}).id || '');
+        var caseId = clean((state.lastSavedCase || {}).id || '');
+        var caseMatchesCurrent = false;
+        if(caseId){
+          var savedAddress = clean((state.lastSavedCase || {}).property_address || '');
+          var savedCategory = clean((state.lastSavedCase || {}).category_id || '');
+          var savedCovenant = clean((state.lastSavedCase || {}).covenant_id || '');
+          var currentCovenant = clean((state.currentCovenant || {}).id || '');
+          caseMatchesCurrent = (!propertyAddress || savedAddress === propertyAddress) && (!categoryId || savedCategory === categoryId) && (!!currentCovenant && savedCovenant === currentCovenant);
+        }
+        var items = [
+          { key:'property', id:'letterCheckProperty', ok:!!propertyAddress, label:'Property selected', target:'propertySelect', message:'Select a street and property address first.' },
+          { key:'category', id:'letterCheckCategory', ok:!!categoryId, label:'Category selected', target:'violationCategorySelect', message:'Select a violation category first.' },
+          { key:'covenant', id:'letterCheckCovenant', ok:!!covenantId, label:'Covenant loaded', target:'violationCategorySelect', message:'Choose a category with an active covenant preview.' },
+          { key:'case', id:'letterCheckCase', ok:!!caseId && caseMatchesCurrent, label:'Case saved', target:'saveCaseBtn', message:'Save the violation case first.' }
+        ];
+        var firstMissing = items.find(function(item){ return !item.ok; }) || null;
+        return { items:items, ready:!firstMissing, firstMissing:firstMissing };
+      }
+
+      function renderLetterReadiness(){
+        var readiness = getLetterReadiness();
+        readiness.items.forEach(function(item){
+          var el = $(item.id);
+          if(!el) return;
+          el.className = 'letter-check-item ' + (item.ok ? 'good' : 'bad');
+          el.innerHTML = '<span class="check-dot"></span><span>' + escapeHtml((item.ok ? '✓ ' : '') + item.label) + '</span>';
+        });
+        var btn = $('generateLetterBtn');
+        if(btn) btn.disabled = !readiness.ready || state.isGeneratingLetter;
+        if(readiness.ready){
+          if(!state.lastGeneratedLetter) setText('letterSaveNote','Ready. Generate the permanent letter record when the preview looks correct.');
+        }else if(!state.isGeneratingLetter){
+          setText('letterSaveNote','Complete the checklist above before generating the permanent letter record. Next: ' + readiness.firstMissing.message);
+        }
+        return readiness;
+      }
+
+      function focusLetterMissingField(readiness){
+        var missing = readiness && readiness.firstMissing;
+        if(!missing) return;
+        var target = $(missing.target);
+        if(target && typeof target.scrollIntoView === 'function'){
+          try{ target.scrollIntoView({ behavior:'smooth', block:'center' }); }catch(_e){ target.scrollIntoView(); }
+        }
+        try{ if(target && typeof target.focus === 'function') target.focus({ preventScroll:true }); }catch(_e){}
+        setText('letterSaveNote', missing.message);
+      }
+
       function buildPlainLetterText(){
         var el = $('letterBody');
         return clean(el ? (el.innerText || el.textContent || '') : '');
       }
       async function generateLetterRecord(){
         if(state.isGeneratingLetter) return;
-        if(!state.lastSavedCase || !state.lastSavedCase.id){
-          setStatus('error','Save case first');
-          setText('letterSaveNote','Save the violation case before generating the permanent letter record.');
+        var readiness = renderLetterReadiness();
+        if(!readiness.ready || !state.currentCovenant || !state.currentCovenant.id){
+          setStatus('warn','Complete letter checklist');
+          setText('letterSaveNote', 'A letter record cannot be generated until a property, category, active covenant, and matching saved case are complete.');
+          focusLetterMissingField(readiness);
           return;
         }
+        setText('letterSaveNote','Generate Letter Record clicked. Saving permanent letter record…');
         var categoryId = clean(($('violationCategorySelect') || {}).value || state.selectedCategoryId || '');
         var categoryName = getSelectedCategoryName() || 'Violation Notice';
         var offenseNumber = parseInt((($('offenseNumberSelect') || {}).value || '1'),10) || 1;
@@ -1194,9 +1273,12 @@
           setText('letterSaveNote', clean(e && e.message) || 'Supabase insert failed.');
         }finally{
           state.isGeneratingLetter = false;
-          if(btn){ btn.disabled = false; btn.textContent = 'Generate Letter Record'; }
+          if(btn){ btn.textContent = 'Generate Letter Record'; }
+          renderLetterReadiness();
         }
       }
+
+      window.zummeeGenerateLetterRecord = generateLetterRecord;
 
       async function boot(){
         try{
@@ -1207,6 +1289,7 @@
           await loadCurrentInspection();
           await loadOpenCases();
           setStatus('good','Read/write layer connected');
+          renderLetterReadiness();
         }catch(e){
           console.error('[Zummee Violations v540i] boot failed', e);
           setStatus('error','Read layer needs attention');
@@ -1225,7 +1308,7 @@
         var saveBtn = $('saveCaseBtn');
         if(saveBtn){ saveBtn.addEventListener('click', saveViolationCase); }
         var generateBtn = $('generateLetterBtn');
-        if(generateBtn){ generateBtn.addEventListener('click', generateLetterRecord); }
+        if(generateBtn){ generateBtn.onclick = generateLetterRecord; }
         var streetSelect = $('streetSelect');
         if(streetSelect){ streetSelect.addEventListener('change', handleStreetChange); }
         var propertySelect = $('propertySelect');
@@ -1234,7 +1317,12 @@
         if(catSelect){
           catSelect.addEventListener('change', function(){
             state.selectedCategoryId = clean(catSelect.value);
-            loadCovenantPreview().catch(function(e){ console.error('[Zummee Violations v540i] covenant load failed', e); renderNoCovenant(clean(e && e.message) || 'Covenant preview failed.'); });
+            state.currentCovenant = null;
+            state.lastSavedCase = null;
+            state.lastGeneratedLetter = null;
+            setText('letterSaveNote','Checking covenant. Generate Letter Record will unlock after the active covenant and saved case match this selection.');
+            renderLetterReadiness();
+            loadCovenantPreview().catch(function(e){ console.error('[Zummee Violations v540j4] covenant load failed', e); renderNoCovenant(clean(e && e.message) || 'Covenant preview failed.'); });
           });
         }
         ['homeownerNameInput','unitInput','propertyAddressInput','managerNotesInput'].forEach(function(id){
