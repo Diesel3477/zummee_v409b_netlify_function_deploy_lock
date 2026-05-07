@@ -6295,13 +6295,14 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     }
   }
   window.mh2RefreshAnnualApprovalSmartAlert = refreshAnnualAlert;
-  // v530: disable legacy Annual hard-lock auto-paints.
-  // The annual smart card is now owned by loadApprovalSummary() + the smart alert stability controller.
-  // These old boot/change/interval timers were writing the temporary "No active items" state after the card had settled.
-  function schedule(){ /* intentionally disabled v530 */ }
+  function schedule(){ setTimeout(refreshAnnualAlert,250); setTimeout(refreshAnnualAlert,1200); setTimeout(refreshAnnualAlert,3500); }
   document.addEventListener('DOMContentLoaded', function(){
-    // intentionally no auto-refresh here; loadApprovalSummary handles initial + community-change updates.
+    schedule();
+    var sel=$('zummeeCommunitySelect');
+    if(sel) sel.addEventListener('change', function(){ setTimeout(refreshAnnualAlert,150); setTimeout(refreshAnnualAlert,1000); });
+    setInterval(refreshAnnualAlert, 15000);
   });
+  if(document.readyState !== 'loading') schedule();
 })();
 </script>
 
@@ -6822,8 +6823,75 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
 </script>
 
 
-<!-- v530 removed v526 annual text micro-lock; source writer disabled instead. -->
+<script id="zummee-v526-annual-approval-text-micro-lock">
+(function(){
+  var BLOCK_TEXT = 'No active Annual Meeting Approval Items';
+  var lastGoodByElement = new WeakMap();
+  var armedAt = Date.now();
+  var active = true;
 
+  function isAnnualNode(el){
+    if(!el || el.nodeType !== 1) return false;
+    var card = el.closest && el.closest('.mh2-alert');
+    if(!card) return false;
+    var all = (card.textContent || '').toLowerCase();
+    return all.indexOf('annual') !== -1 && (all.indexOf('meeting') !== -1 || all.indexOf('approval') !== -1);
+  }
+
+  function rememberGood(el){
+    try{
+      if(!el || !isAnnualNode(el)) return;
+      var txt = (el.textContent || '').trim();
+      if(!txt || txt === BLOCK_TEXT) return;
+      lastGoodByElement.set(el, txt);
+      el.style.opacity = '';
+    }catch(_e){}
+  }
+
+  function inspect(el){
+    try{
+      if(!active || !el || el.nodeType !== 1 || !isAnnualNode(el)) return;
+      var txt = (el.textContent || '').trim();
+      if(txt === BLOCK_TEXT){
+        var prior = lastGoodByElement.get(el);
+        if(prior){
+          el.textContent = prior;
+          el.style.opacity = '';
+        }else if(Date.now() - armedAt < 6500){
+          el.style.opacity = '0';
+        }
+        return;
+      }
+      rememberGood(el);
+    }catch(_e){}
+  }
+
+  function start(){
+    var strip = document.getElementById('smartAlertStrip');
+    if(!strip) return;
+    strip.querySelectorAll('*').forEach(rememberGood);
+    var obs = new MutationObserver(function(mutations){
+      mutations.forEach(function(m){
+        var target = m.target && (m.target.nodeType === 3 ? m.target.parentElement : m.target);
+        inspect(target);
+        if(m.addedNodes){
+          m.addedNodes.forEach(function(n){
+            if(n.nodeType === 1){
+              inspect(n);
+              if(n.querySelectorAll) n.querySelectorAll('*').forEach(inspect);
+            }
+          });
+        }
+      });
+    });
+    obs.observe(strip, { childList:true, subtree:true, characterData:true });
+    setTimeout(function(){ active = false; strip.querySelectorAll('*').forEach(function(el){ if(el.style && el.style.opacity === '0') el.style.opacity = ''; }); }, 8000);
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
+})();
+</script>
 
 </body>
 </html>
