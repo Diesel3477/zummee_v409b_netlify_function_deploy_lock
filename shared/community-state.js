@@ -1,6 +1,6 @@
 /*
   Zummee Shared Community State
-  Build: 2026-05-07-v600-community-persistence
+  Build: 2026-05-07-v601-community-persistence-last-write-wins
 
   Purpose:
   - One app-wide selected community that persists across pages.
@@ -13,9 +13,9 @@
   - zummee_active_community_name
 */
 (function(){
-  if(window.ZummeeCommunityState && window.ZummeeCommunityState.version === "2026-05-07-v600") return;
+  if(window.ZummeeCommunityState && window.ZummeeCommunityState.version === "2026-05-07-v601") return;
 
-  const VERSION = "2026-05-07-v600";
+  const VERSION = "2026-05-07-v601";
   const SUPABASE_URL = window.SUPABASE_URL || "https://slcwuuwyrgnmlmxpcaim.supabase.co";
   const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864";
 
@@ -37,6 +37,38 @@
     "zummeeCurrentCommunityName",
     "zummee_selected_community_name"
   ];
+
+  const CANONICAL_STATE_KEY = "zummee_active_community_v601";
+
+  function readCanonicalState(){
+    try{
+      const raw = localStorage.getItem(CANONICAL_STATE_KEY) || sessionStorage.getItem(CANONICAL_STATE_KEY) || "";
+      const parsed = safeJson(raw, null);
+      if(parsed && parsed.id){
+        return {
+          id: str(parsed.id),
+          name: str(parsed.name),
+          updatedAt: Number(parsed.updatedAt || parsed.ts || 0) || 0,
+          source: str(parsed.source || "")
+        };
+      }
+    }catch(_e){}
+    return null;
+  }
+
+  function writeCanonicalState(id, name, opts={}){
+    const state = {
+      id: str(id),
+      name: str(name),
+      updatedAt: Number(opts.updatedAt || Date.now()),
+      source: str(opts.source || "unknown")
+    };
+    try{
+      localStorage.setItem(CANONICAL_STATE_KEY, JSON.stringify(state));
+      sessionStorage.setItem(CANONICAL_STATE_KEY, JSON.stringify(state));
+    }catch(_e){}
+    return state;
+  }
 
   let assignedCache = null;
   let assignedCacheAt = 0;
@@ -211,6 +243,9 @@
   }
 
   function readStoredId(){
+    const canonical = readCanonicalState();
+    if(canonical && canonical.id) return canonical.id;
+
     for(const key of ID_KEYS){
       try{
         const v = str(localStorage.getItem(key) || sessionStorage.getItem(key));
@@ -221,6 +256,9 @@
   }
 
   function readStoredName(){
+    const canonical = readCanonicalState();
+    if(canonical && canonical.name) return canonical.name;
+
     for(const key of NAME_KEYS){
       try{
         const v = str(localStorage.getItem(key) || sessionStorage.getItem(key));
@@ -236,6 +274,7 @@
     if(!id) return null;
 
     const previousId = readStoredId();
+    const canonicalState = writeCanonicalState(id, name, { source: opts.source || "unknown", updatedAt: opts.updatedAt });
 
     ID_KEYS.forEach(key => {
       try{ localStorage.setItem(key, id); sessionStorage.setItem(key, id); }catch(_e){}
@@ -262,7 +301,7 @@
     if(!opts.silent && previousId !== id){
       try{ window.dispatchEvent(new CustomEvent("zummee:community-changed", { detail })); }catch(_e){}
       try{ document.dispatchEvent(new CustomEvent("zummee:community-changed", { detail })); }catch(_e){}
-      try{ localStorage.setItem("zummee_community_change_ping", JSON.stringify({ id, name, at: Date.now() })); }catch(_e){}
+      try{ localStorage.setItem("zummee_community_change_ping", JSON.stringify({ id, name, at: canonicalState.updatedAt, source: opts.source || "unknown" })); }catch(_e){}
     }
     return { id, name };
   }
@@ -452,10 +491,16 @@
 
   function listenForCrossTabChanges(){
     window.addEventListener("storage", function(e){
-      if(!e || e.key !== "zummee_community_change_ping" || !e.newValue) return;
+      if(!e || !e.newValue) return;
+      if(e.key !== "zummee_community_change_ping" && e.key !== CANONICAL_STATE_KEY) return;
       const data = safeJson(e.newValue, null);
       if(!data || !data.id) return;
-      setActiveCommunity(data.id, data.name || "", { source:"storage", silent:true });
+
+      const incomingAt = Number(data.at || data.updatedAt || 0) || Date.now();
+      const current = readCanonicalState();
+      if(current && current.updatedAt && current.updatedAt > incomingAt) return;
+
+      setActiveCommunity(data.id, data.name || "", { source:"storage", silent:true, updatedAt: incomingAt });
       try{ window.dispatchEvent(new CustomEvent("zummee:community-changed", { detail:{ id:data.id, name:data.name || "", source:"storage" } })); }catch(_e){}
     });
   }
@@ -471,6 +516,15 @@
     getActiveCommunityId(){ return readStoredId(); },
     getActiveCommunityName(){ return readStoredName(); },
     getSelectedCommunityId(){ return readStoredId(); },
+    readCanonicalState,
+    forceSyncDropdown(selectOrSelector){
+      const select = typeof selectOrSelector === "string" ? document.querySelector(selectOrSelector) : selectOrSelector;
+      const active = getActiveCommunity();
+      if(select && active && active.id && select.value !== active.id){
+        try{ select.value = active.id; }catch(_e){}
+      }
+      return active;
+    },
     clearCache(){ assignedCache = null; assignedCacheAt = 0; },
     rest,
     getAccessToken,
