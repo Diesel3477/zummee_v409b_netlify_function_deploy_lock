@@ -2,7 +2,7 @@
 
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-07-v605-native-community-state";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-07-v606-community-inspections-native-community-state";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <!-- ZUMMEE_PATCH v2115: stable single-mount header + assigned dropdown no-jump lock -->
 <!-- ZUMMEE_PATCH v2074: inspections reads vendors from actual ops localStorage keys -->
@@ -8214,11 +8214,11 @@ body.dark-mode .mh2-stat-box {
   })();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="shared/community-state.js?v=2026-05-07-v605"></script>
-<script src="shared/input-undo-guard.js?v=2026-05-07-v605"></script>
-
 <script src="shared/supabase-client.js?v=2026-04-08-2"></script>
 <script src="shared/maintenance-data.js?v=2026-05-07-v500"></script>
+<script src="shared/community-state.js?v=2026-05-07-v606"></script>
+<script src="shared/input-undo-guard.js?v=2026-05-07-v606"></script>
+
 <script>
   // Supabase init (shared)
   var SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
@@ -13686,109 +13686,78 @@ body#inspectionsPage [data-page-error]{
 </script>
 
 
-
-
-
-
-
-
-<script id="zummee-native-community-controller-v605">
+<script id="zummee-community-inspections-native-community-state-v606">
 /*
-  v605 native community controller.
-  Long-term pattern:
-  - page dropdown is hydrated by shared/community-state.js
-  - no dropdown cloning
-  - no bridge patches
-  - no page-specific default-to-first-community behavior
+  Community Inspections native community-state integration
+  Build: 2026-05-07-v606
+
+  Long-term rule:
+  - shared/community-state.js owns selected community persistence.
+  - This page uses hydrateCommunityDropdown() directly.
+  - No clone controller.
+  - No bridge script.
+  - Vendor dropdown reloads from public.Vendors after community changes.
 */
 (function(){
-  if(window.__ZummeeNativeCommunityControllerV605) return;
-  window.__ZummeeNativeCommunityControllerV605 = true;
+  if(window.__CommunityInspectionsNativeCommunityStateV606) return;
+  window.__CommunityInspectionsNativeCommunityStateV606 = true;
 
   function findCommunitySelect(){
     return document.getElementById("zummeeCommunitySelect") ||
-      document.getElementById("maintenanceCommunitySelect") ||
       document.getElementById("communitySelect") ||
       document.querySelector('select[id*="community" i]');
   }
 
-  function pageName(){
-    var path = String(location.pathname || "").toLowerCase();
-    if(path.indexOf("manager_hub") >= 0) return "manager-hub";
-    if(path.indexOf("community_inspections") >= 0) return "community-inspections";
-    if(path.indexOf("resident_work_orders") >= 0) return "work-orders";
-    if(path.indexOf("maintenance_updates") >= 0) return "live-maintenance";
-    return "zummee-page";
-  }
-
-  function refreshPageData(active){
+  function setGlobals(active){
     active = active || {};
-    var id = active.id || active.community_id || "";
-    var name = active.name || active.community_name || "";
+    var id = String(active.id || active.community_id || "").trim();
+    var name = String(active.name || active.community_name || "").trim();
+    if(!id) return;
     try{
       window.currentCommunityId = id;
       window.activeCommunityId = id;
       window.selectedCommunityId = id;
       if(name) window.currentCommunityName = name;
     }catch(_e){}
+  }
 
-    // Manager Hub known surfaces.
-    if(pageName() === "manager-hub"){
-      [
-        "bootstrapCommunityGlobals",
-        "applyWeatherContext",
-        "loadWeather",
-        "loadWeatherForCommunity",
-        "loadSmartAlerts",
-        "refreshSmartAlerts",
-        "loadActivityFeed",
-        "refreshActivityFeed",
-        "loadBoardSubmittedItems",
-        "refreshBoardStatus",
-        "loadApprovalSummary",
-        "refreshAnnualAlert",
-        "loadManagerHubData"
-      ].forEach(function(fn){
-        try{ if(typeof window[fn] === "function") window[fn](); }catch(_e){}
-      });
-    }
+  function reloadInspectionCommunityData(active){
+    setGlobals(active);
 
-    // Work Orders / Maintenance / Inspections.
-    [
-      "loadWorkOrders",
-      "loadUpdates",
-      "loadEvents",
-      "populateVendorSelect",
-      "populateVendorDropdown",
-      "loadInspectionData",
-      "refreshVendorDropdownForActiveCommunity"
-    ].forEach(function(fn){
-      try{
-        if(typeof window[fn] === "function"){
-          if(fn === "loadWorkOrders") window[fn]({ clearSelection:true, liveRefreshReason:"community-v605" });
-          else window[fn]();
+    try{
+      if(window.ZummeeMaintenanceData && typeof window.ZummeeMaintenanceData.clearVendorCache === "function"){
+        window.ZummeeMaintenanceData.clearVendorCache();
+      }
+    }catch(_e){}
+
+    // Existing, verified vendor flow remains intact. We only refresh the community-scoped vendor list.
+    try{
+      if(typeof window.populateVendorSelect === "function") window.populateVendorSelect();
+    }catch(_e){}
+
+    try{
+      if(typeof window.refreshInspectionVendors === "function") window.refreshInspectionVendors();
+    }catch(_e){}
+
+    try{
+      window.dispatchEvent(new CustomEvent("zummee:community-changed", {
+        detail: {
+          id: active && active.id,
+          community_id: active && active.id,
+          name: active && active.name,
+          source: "community-inspections-native-v606"
         }
-      }catch(_e){}
-    });
-
-    try{ window.dispatchEvent(new CustomEvent("zummee:community-changed", { detail:{ id:id, community_id:id, name:name, source:pageName() } })); }catch(_e){}
-    try{ document.dispatchEvent(new CustomEvent("community:changed", { detail:{ community_id:id, communityId:id, name:name } })); }catch(_e){}
+      }));
+    }catch(_e){}
   }
 
   async function init(){
-    if(!window.ZummeeCommunityState) return;
     var select = findCommunitySelect();
+    if(!window.ZummeeCommunityState || !select) return;
 
-    // Not every page has a visible dropdown yet, but the page still needs active state.
-    if(!select){
-      var activeOnly = await window.ZummeeCommunityState.ensureActiveCommunity({ silent:true });
-      if(activeOnly) refreshPageData(activeOnly);
-      return;
-    }
-
-    await window.ZummeeCommunityState.bindNativeDropdown(select, {
-      source: pageName(),
-      onChange: refreshPageData
+    await window.ZummeeCommunityState.hydrateCommunityDropdown(select, {
+      source: "community-inspections-native-v606",
+      force: false
     });
 
     var active = window.ZummeeCommunityState.getActiveCommunity();
@@ -13796,7 +13765,23 @@ body#inspectionsPage [data-page-error]{
       if(select.value !== active.id){
         try{ select.value = active.id; }catch(_e){}
       }
-      refreshPageData(active);
+      reloadInspectionCommunityData(active);
+    }
+
+    if(!select.__ciNativeCommunityStateV606Bound){
+      select.__ciNativeCommunityStateV606Bound = true;
+      select.addEventListener("change", function(){
+        var opt = select.selectedOptions && select.selectedOptions[0] ? select.selectedOptions[0] : null;
+        var id = String(select.value || "").trim();
+        var name = String(opt ? opt.textContent : "").trim();
+        if(!id) return;
+
+        var active = window.ZummeeCommunityState.setActiveCommunity(id, name, {
+          source: "community-inspections-dropdown-v606"
+        }) || { id:id, name:name };
+
+        reloadInspectionCommunityData(active);
+      });
     }
   }
 
@@ -13805,16 +13790,24 @@ body#inspectionsPage [data-page-error]{
       if(!window.ZummeeCommunityState) return;
       var active = window.ZummeeCommunityState.getActiveCommunity();
       var select = findCommunitySelect();
-      if(active && active.id && select && select.value !== active.id) select.value = active.id;
+      if(active && active.id && select && select.value !== active.id){
+        select.value = active.id;
+        reloadInspectionCommunityData(active);
+      }
     }catch(_e){}
   }
 
-  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once:true });
-  else setTimeout(init, 60);
+  if(document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", init, { once:true });
+  }else{
+    setTimeout(init, 60);
+  }
 
-  window.addEventListener("pageshow", function(){ setTimeout(init, 80); setTimeout(syncVisibleSelect, 350); });
+  window.addEventListener("pageshow", function(){ setTimeout(init, 80); });
   window.addEventListener("focus", syncVisibleSelect);
-  document.addEventListener("visibilitychange", function(){ if(!document.hidden) syncVisibleSelect(); });
+  document.addEventListener("visibilitychange", function(){
+    if(!document.hidden) syncVisibleSelect();
+  });
 })();
 </script>
 
