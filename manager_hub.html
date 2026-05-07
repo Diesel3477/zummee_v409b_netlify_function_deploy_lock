@@ -109,7 +109,7 @@
     })();
   </script>
   <script>
-window.__MH_VERSION = 'v527_syntax_restore_from_v526';
+window.__MH_VERSION = 'v523_smart_alert_layout_reserve_lock';
 
     (function(){
       try{
@@ -259,18 +259,10 @@ window.__MH_VERSION = 'v527_syntax_restore_from_v526';
       if(changed) writeCache(cached);
     }
     function markReady(){
-      // v528: single-fire ready lock. Prevents duplicate smart-alert reveal/render cycles
-      // that caused the Annual Meeting Approval empty-state text to flash twice.
-      if(state.readyLocked) return;
-      state.readyLocked = true;
-      if(state.readyTimer){
-        clearTimeout(state.readyTimer);
-        state.readyTimer = null;
-      }
       captureStableCards();
       state.allowReady = true;
       try{ originalSetAttribute.call(document.documentElement, READY_ATTR, '1'); }catch(_e){}
-      try{ console.info('[v528 smart alerts] stable render ready locked', state.lastStable); }catch(_e2){}
+      try{ console.info('[v522 smart alerts] stable render ready', state.lastStable); }catch(_e2){}
     }
     function scheduleReadyCheck(delay){
       clearTimeout(state.readyTimer);
@@ -305,7 +297,7 @@ window.__MH_VERSION = 'v527_syntax_restore_from_v526';
     document.addEventListener('community:changed', resetForCommunityChange);
     window.addEventListener('zummee:community-changed', resetForCommunityChange);
   })();
-  </script>
+  
 
   <script>
     (function(){
@@ -6505,11 +6497,7 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     try{ console.info('[MH v405] URL community authority applied after '+reason, id, name); }catch(e){}
     return true;
   }
-  function schedule(){
-    // v529: remove legacy delayed 1500/3000ms authority re-applies.
-    // Those late timers were re-triggering Smart Alert writers after the first stable render.
-    [0,80,250,700].forEach(function(ms){setTimeout(function(){apply('timer-'+ms);},ms);});
-  }
+  function schedule(){ [0,80,250,700,1500,3000].forEach(function(ms){setTimeout(function(){apply('timer-'+ms);},ms);}); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', schedule, {once:true}); else schedule();
   window.addEventListener('pageshow', schedule);
 })();
@@ -6696,200 +6684,6 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     try{ console.info('[v500 board no-flash lock] legacy board smart writer disabled'); }catch(_e){}
   }
   window.__ZUMMEE_V462_BOARD_SMART_LOCK_DISABLED__ = true;
-})();
-</script>
-
-
-
-<style id="zummee-v524-annual-alert-visual-freeze-css">
-  /* v524: Annual approval card visual freeze. Layout stays reserved; only the card's paint is delayed until stable. */
-  #mh2AlertApprovals{
-    min-height:96px !important;
-    contain:layout paint !important;
-    transform:translateZ(0);
-    transition:opacity .16s ease, border-color .16s ease, box-shadow .16s ease, background .16s ease;
-  }
-  html[data-zummee-annual-alert-freezing="1"] #mh2AlertApprovals{
-    opacity:0 !important;
-    visibility:hidden !important;
-  }
-  html[data-zummee-annual-alert-freezing="0"] #mh2AlertApprovals{
-    opacity:1 !important;
-    visibility:visible !important;
-  }
-</style>
-<script id="zummee-v524-annual-alert-single-card-stability-lock">
-(function(){
-  'use strict';
-  if(window.__ZUMMEE_V524_ANNUAL_ALERT_LOCK__) return;
-  window.__ZUMMEE_V524_ANNUAL_ALERT_LOCK__ = true;
-
-  var CARD_ID = 'mh2AlertApprovals';
-  var FREEZE_ATTR = 'data-zummee-annual-alert-freezing';
-  var lastKey = '';
-  var settleTimer = null;
-  var observer = null;
-
-  function isUuid(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||'').trim()); }
-  function card(){ return document.getElementById(CARD_ID); }
-  function selectedCommunityId(){
-    var sel=document.getElementById('zummeeCommunitySelect');
-    if(sel && isUuid(sel.value)) return String(sel.value).trim();
-    try{
-      var keys=['zummee_selected_community_id','zummeeActiveCommunityId','activeCommunityId','currentCommunityId'];
-      for(var i=0;i<keys.length;i++){ var v=localStorage.getItem(keys[i]); if(isUuid(v)) return String(v).trim(); }
-    }catch(e){}
-    return 'default';
-  }
-  function storageKey(){ return 'mh2:v524:annual-alert:snapshot:' + selectedCommunityId(); }
-  function snapshot(){
-    var el=card();
-    if(!el) return null;
-    return { html: el.innerHTML, className: el.className, href: el.getAttribute('href') || '', ts: Date.now() };
-  }
-  function applySnapshot(snap){
-    var el=card();
-    if(!el || !snap || !snap.html) return false;
-    try{
-      if(snap.className) el.className = snap.className;
-      if(snap.href) el.setAttribute('href', snap.href);
-      el.innerHTML = snap.html;
-      return true;
-    }catch(e){ return false; }
-  }
-  function readSnapshot(){
-    try{ return JSON.parse(sessionStorage.getItem(storageKey()) || localStorage.getItem(storageKey()) || 'null'); }catch(e){ return null; }
-  }
-  function writeSnapshot(){
-    var snap=snapshot();
-    if(!snap || !snap.html) return;
-    try{ sessionStorage.setItem(storageKey(), JSON.stringify(snap)); }catch(e){}
-    try{ localStorage.setItem(storageKey(), JSON.stringify(snap)); }catch(e){}
-  }
-  function freeze(){ document.documentElement.setAttribute(FREEZE_ATTR,'1'); }
-  function unfreeze(){ document.documentElement.setAttribute(FREEZE_ATTR,'0'); writeSnapshot(); }
-
-  function scheduleSettle(delay){
-    clearTimeout(settleTimer);
-    settleTimer=setTimeout(function(){ unfreeze(); }, delay || 360);
-  }
-  function refreshAnnual(){
-    try{
-      if(typeof window.mh2RefreshAnnualApprovalSmartAlert === 'function'){
-        var out=window.mh2RefreshAnnualApprovalSmartAlert();
-        if(out && typeof out.then === 'function') out.finally(function(){ scheduleSettle(220); });
-        else scheduleSettle(360);
-      } else {
-        scheduleSettle(520);
-      }
-    }catch(e){ scheduleSettle(520); }
-  }
-  function beginCycle(){
-    var key=storageKey();
-    var changed = key !== lastKey;
-    lastKey = key;
-    var snap=readSnapshot();
-    if(snap && !changed) applySnapshot(snap);
-    freeze();
-    refreshAnnual();
-    // Hard fallback: never leave it hidden if a query stalls.
-    setTimeout(function(){ if(document.documentElement.getAttribute(FREEZE_ATTR)==='1') unfreeze(); }, 1400);
-  }
-  function installObserver(){
-    var el=card();
-    if(!el || observer) return;
-    observer=new MutationObserver(function(){
-      // Annual card has several legacy writers. Let them finish, then store only the final settled state.
-      if(document.documentElement.getAttribute(FREEZE_ATTR)==='1') scheduleSettle(260);
-      else { clearTimeout(settleTimer); settleTimer=setTimeout(writeSnapshot, 220); }
-    });
-    observer.observe(el,{childList:true,subtree:true,attributes:true,attributeFilter:['class','href']});
-  }
-
-  function boot(){
-    installObserver();
-    beginCycle();
-    var sel=document.getElementById('zummeeCommunitySelect');
-    if(sel && !sel.__zummeeV524AnnualLock){
-      sel.__zummeeV524AnnualLock=true;
-      sel.addEventListener('change', function(){ setTimeout(beginCycle,80); }, true);
-    }
-    window.addEventListener('pageshow', function(){ setTimeout(beginCycle,80); });
-  }
-
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
-  else boot();
-})();
-</script>
-
-
-<script id="zummee-v526-annual-approval-text-micro-lock">
-(function(){
-  var BLOCK_TEXT = 'No active Annual Meeting Approval Items';
-  var lastGoodByElement = new WeakMap();
-  var armedAt = Date.now();
-  var active = true;
-
-  function isAnnualNode(el){
-    if(!el || el.nodeType !== 1) return false;
-    var card = el.closest && el.closest('.mh2-alert');
-    if(!card) return false;
-    var all = (card.textContent || '').toLowerCase();
-    return all.indexOf('annual') !== -1 && (all.indexOf('meeting') !== -1 || all.indexOf('approval') !== -1);
-  }
-
-  function rememberGood(el){
-    try{
-      if(!el || !isAnnualNode(el)) return;
-      var txt = (el.textContent || '').trim();
-      if(!txt || txt === BLOCK_TEXT) return;
-      lastGoodByElement.set(el, txt);
-      el.style.opacity = '';
-    }catch(_e){}
-  }
-
-  function inspect(el){
-    try{
-      if(!active || !el || el.nodeType !== 1 || !isAnnualNode(el)) return;
-      var txt = (el.textContent || '').trim();
-      if(txt === BLOCK_TEXT){
-        var prior = lastGoodByElement.get(el);
-        if(prior){
-          el.textContent = prior;
-          el.style.opacity = '';
-        }else if(Date.now() - armedAt < 6500){
-          el.style.opacity = '0';
-        }
-        return;
-      }
-      rememberGood(el);
-    }catch(_e){}
-  }
-
-  function start(){
-    var strip = document.getElementById('smartAlertStrip');
-    if(!strip) return;
-    strip.querySelectorAll('*').forEach(rememberGood);
-    var obs = new MutationObserver(function(mutations){
-      mutations.forEach(function(m){
-        var target = m.target && (m.target.nodeType === 3 ? m.target.parentElement : m.target);
-        inspect(target);
-        if(m.addedNodes){
-          m.addedNodes.forEach(function(n){
-            if(n.nodeType === 1){
-              inspect(n);
-              if(n.querySelectorAll) n.querySelectorAll('*').forEach(inspect);
-            }
-          });
-        }
-      });
-    });
-    obs.observe(strip, { childList:true, subtree:true, characterData:true });
-    setTimeout(function(){ active = false; strip.querySelectorAll('*').forEach(function(el){ if(el.style && el.style.opacity === '0') el.style.opacity = ''; }); }, 8000);
-  }
-
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
-  else start();
 })();
 </script>
 
