@@ -6256,16 +6256,29 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
   function paint(openCount, overdueCount, ctx){
     var el=$('mh2AlertApprovals');
     if(!el) return;
+    ctx = ctx || {};
     var tone = overdueCount>0 ? 'is-urgent' : (openCount>0 ? 'is-attention' : 'is-good');
-    el.classList.remove('is-urgent','is-attention','is-good');
-    el.classList.add(tone);
-    el.setAttribute('href', (window.mh2IsPrivileged ? 'annual_meeting_approvals.html' : 'annual_meeting_status.html'));
     var badge = overdueCount>0 ? (String(overdueCount)+' OVERDUE') : (openCount>0 ? (String(openCount)+' OPEN') : 'CLEAR');
     var copy = overdueCount>0
       ? (String(overdueCount)+' annual meeting approval item'+(overdueCount===1?' has':'s have')+' been open more than 2 days for '+(ctx.name||'the selected community')+'.')
       : (openCount>0 ? (String(openCount)+' annual meeting approval item'+(openCount===1?' is':'s are')+' still in progress for '+(ctx.name||'the selected community')+'.') : 'No active items');
+
+    // v537: allow the first paint and any real community/data change, but do not rebuild
+    // the Annual card DOM when the exact same community + payload is repainted by legacy timers.
+    // This stops the visible text blink while preserving community switching.
+    var communityKey = String(ctx.id || '') + '|' + String(ctx.name || '');
+    var renderKey = JSON.stringify({ community: communityKey, tone: tone, badge: badge, copy: copy, open: openCount, overdue: overdueCount });
+    if(window.__mh2AnnualApprovalLastRenderKey === renderKey){
+      try{ window.__mh2AnnualApprovalDuplicatePaintBlocked = (window.__mh2AnnualApprovalDuplicatePaintBlocked || 0) + 1; }catch(_e){}
+      return;
+    }
+    window.__mh2AnnualApprovalLastRenderKey = renderKey;
+
+    el.classList.remove('is-urgent','is-attention','is-good');
+    el.classList.add(tone);
+    el.setAttribute('href', (window.mh2IsPrivileged ? 'annual_meeting_approvals.html' : 'annual_meeting_status.html'));
     el.innerHTML = '<div class="mh2-alert-top"><div class="mh2-alert-title">Annual meeting approvals</div><div class="mh2-alert-badge">'+esc(badge)+'</div></div><div class="mh2-alert-copy">'+esc(copy)+'</div>';
-    try{ window.__mh2AnnualApprovalAlertDebug={community:ctx,open:openCount,overdue:overdueCount,paintedAt:new Date().toISOString()}; }catch(e){}
+    try{ window.__mh2AnnualApprovalAlertDebug={community:ctx,open:openCount,overdue:overdueCount,paintedAt:new Date().toISOString(),renderKey:renderKey}; }catch(e){}
   }
   async function refreshAnnualAlert(){
     var sb=getSb();
