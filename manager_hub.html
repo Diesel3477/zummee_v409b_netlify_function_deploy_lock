@@ -1,7 +1,30 @@
 <!doctype html>
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-07-v608-manager-hub-canonical-preboot-no-flash";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+
+<style id="zummee-manager-bfcache-snapshot-guard-css-v609">
+  /*
+    v609: Hide stale back/forward-cache snapshots.
+    When Manager Hub is stored in BFCache, Safari/Chrome can briefly show the old DOM
+    before pageshow JavaScript corrects the canonical community. This prevents the old
+    community from flashing.
+  */
+  html[data-zummee-manager-cache-hidden="1"] body{
+    opacity:0!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+  }
+  html[data-zummee-manager-syncing="1"] body{
+    opacity:0!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+  }
+  body{
+    transition:opacity .08s ease;
+  }
+</style>
+
+<script>window.ZUMMEE_BUILD="2026-05-07-v609-manager-hub-bfcache-snapshot-guard";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <script id="zummee-manager-canonical-preboot-v608">
 /*
@@ -204,7 +227,7 @@
     })();
   </script>
   <script>
-window.__MH_VERSION = 'v608_canonical_preboot_no_flash';
+window.__MH_VERSION = 'v609_bfcache_snapshot_guard';
 
     (function(){
       try{
@@ -7029,6 +7052,152 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
   window.addEventListener("pageshow", function(){ sync(); setTimeout(sync, 80); setTimeout(sync, 300); });
   window.addEventListener("focus", sync);
   document.addEventListener("visibilitychange", function(){ if(!document.hidden) sync(); });
+})();
+</script>
+
+
+<script id="zummee-manager-bfcache-snapshot-guard-v609">
+/*
+  v609 — Manager Hub BFCache snapshot guard.
+
+  Problem:
+  - Returning from Community Inspections can restore a stale Manager Hub DOM snapshot.
+  - The snapshot can show an old community such as Emory Chase for a moment.
+  - Then shared community-state corrects to Biltmore/The Mews.
+
+  Fix:
+  - On pagehide, mark Manager Hub as cache-hidden before BFCache stores the snapshot.
+  - On pageshow/focus/visibility, sync canonical community into legacy keys/dropdown/URL.
+  - Reveal the page only after sync finishes.
+*/
+(function(){
+  if(window.__ManagerHubBFCacheSnapshotGuardV609) return;
+  window.__ManagerHubBFCacheSnapshotGuardV609 = true;
+
+  var UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  function parse(raw){ try{return raw?JSON.parse(raw):null;}catch(_e){return null;} }
+  function s(v){ return String(v == null ? "" : v).trim(); }
+  function canonical(){
+    var state = parse(localStorage.getItem("zummee_active_community_v601") || sessionStorage.getItem("zummee_active_community_v601") || "");
+    if(state && UUID_RE.test(s(state.id))) return { id:s(state.id), name:s(state.name) };
+
+    var id = s(localStorage.getItem("zummee_active_community_id") || sessionStorage.getItem("zummee_active_community_id") || "");
+    var name = s(localStorage.getItem("zummee_active_community_name") || sessionStorage.getItem("zummee_active_community_name") || "");
+    if(UUID_RE.test(id)) return { id:id, name:name };
+    return null;
+  }
+
+  function writeAll(state){
+    if(!state || !UUID_RE.test(s(state.id))) return null;
+    var id=s(state.id), name=s(state.name);
+    var full = { id:id, name:name, updatedAt:Date.now(), source:"manager-bfcache-guard-v609" };
+
+    try{
+      localStorage.setItem("zummee_active_community_v601", JSON.stringify(full));
+      sessionStorage.setItem("zummee_active_community_v601", JSON.stringify(full));
+    }catch(_e){}
+
+    [
+      "zummee_active_community_id",
+      "zummee_selected_community_id",
+      "zummeeActiveCommunityId",
+      "activeCommunityId",
+      "currentCommunityId",
+      "zummee_community_id",
+      "zummee_selected_community_v1"
+    ].forEach(function(k){
+      try{ localStorage.setItem(k,id); sessionStorage.setItem(k,id); }catch(_e){}
+    });
+
+    if(name){
+      [
+        "zummee_active_community_name",
+        "zummeeCurrentCommunityName",
+        "currentCommunityName",
+        "activeCommunityName",
+        "zummee_community",
+        "zummee_selected_community_name"
+      ].forEach(function(k){
+        try{ localStorage.setItem(k,name); sessionStorage.setItem(k,name); }catch(_e){}
+      });
+    }
+
+    try{
+      window.currentCommunityId=id;
+      window.activeCommunityId=id;
+      window.selectedCommunityId=id;
+      window.zummeeSelectedCommunityId=id;
+      if(name) window.currentCommunityName=name;
+    }catch(_e){}
+
+    var sel = document.getElementById("zummeeCommunitySelect");
+    if(sel && sel.value !== id){
+      try{ sel.value = id; }catch(_e){}
+    }
+
+    try{
+      var url = new URL(location.href);
+      url.searchParams.set("community_id", id);
+      if(name) url.searchParams.set("community_name", name);
+      history.replaceState(null, "", url.toString());
+    }catch(_e){}
+
+    return full;
+  }
+
+  function revealSoon(){
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
+        document.documentElement.removeAttribute("data-zummee-manager-cache-hidden");
+        document.documentElement.removeAttribute("data-zummee-manager-syncing");
+      });
+    });
+  }
+
+  function syncAndReveal(reason){
+    try{
+      document.documentElement.setAttribute("data-zummee-manager-syncing", "1");
+      var state = canonical();
+      if(state) writeAll(state);
+
+      // Let existing Manager Hub community logic redraw based on corrected keys.
+      try{
+        if(typeof window.bootstrapCommunityGlobals === "function") window.bootstrapCommunityGlobals();
+      }catch(_e){}
+      try{
+        if(typeof window.applyWeatherContext === "function") window.applyWeatherContext();
+      }catch(_e){}
+
+      try{ console.info("[Manager Hub v609] canonical sync before reveal", reason, state); }catch(_e){}
+    }catch(err){
+      console.warn("[Manager Hub v609] sync failed", err);
+    }finally{
+      revealSoon();
+    }
+  }
+
+  // If this document is restored from BFCache, it will still have the cache-hidden attr
+  // that was set on pagehide. That is intentional.
+  window.addEventListener("pagehide", function(){
+    document.documentElement.setAttribute("data-zummee-manager-cache-hidden", "1");
+  });
+
+  window.addEventListener("pageshow", function(e){
+    syncAndReveal(e && e.persisted ? "pageshow-bfcache" : "pageshow");
+    setTimeout(function(){ syncAndReveal("pageshow-120"); }, 120);
+  });
+
+  window.addEventListener("focus", function(){ syncAndReveal("focus"); });
+  document.addEventListener("visibilitychange", function(){
+    if(!document.hidden) syncAndReveal("visible");
+  });
+
+  if(document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", function(){ syncAndReveal("domcontentloaded"); }, { once:true });
+  }else{
+    syncAndReveal("already-loaded");
+  }
 })();
 </script>
 
