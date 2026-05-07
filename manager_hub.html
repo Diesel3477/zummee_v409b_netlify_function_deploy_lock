@@ -297,7 +297,7 @@ window.__MH_VERSION = 'v523_smart_alert_layout_reserve_lock';
     document.addEventListener('community:changed', resetForCommunityChange);
     window.addEventListener('zummee:community-changed', resetForCommunityChange);
   })();
-  </script>
+  
 
   <script>
     (function(){
@@ -6257,28 +6257,15 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     var el=$('mh2AlertApprovals');
     if(!el) return;
     var tone = overdueCount>0 ? 'is-urgent' : (openCount>0 ? 'is-attention' : 'is-good');
-    var href = (window.mh2IsPrivileged ? 'annual_meeting_approvals.html' : 'annual_meeting_status.html');
+    el.classList.remove('is-urgent','is-attention','is-good');
+    el.classList.add(tone);
+    el.setAttribute('href', (window.mh2IsPrivileged ? 'annual_meeting_approvals.html' : 'annual_meeting_status.html'));
     var badge = overdueCount>0 ? (String(overdueCount)+' OVERDUE') : (openCount>0 ? (String(openCount)+' OPEN') : 'CLEAR');
     var copy = overdueCount>0
       ? (String(overdueCount)+' annual meeting approval item'+(overdueCount===1?' has':'s have')+' been open more than 2 days for '+(ctx.name||'the selected community')+'.')
       : (openCount>0 ? (String(openCount)+' annual meeting approval item'+(openCount===1?' is':'s are')+' still in progress for '+(ctx.name||'the selected community')+'.') : 'No active items');
-
-    // v536: Annual smart-card repaint guard.
-    // The old hard-lock refresh can run repeatedly (250/1200/3500ms and interval).
-    // Do not rebuild the DOM when the computed annual state is unchanged; that DOM rebuild
-    // is what makes the copy line visibly blink while the other smart cards stay still.
-    var sig = [tone, badge, copy, href, String(ctx && (ctx.id || ctx.name || ''))].join('|');
-    if(el.dataset.mh2AnnualPaintSig === sig){
-      try{ window.__mh2AnnualApprovalAlertDebug={community:ctx,open:openCount,overdue:overdueCount,paintedAt:new Date().toISOString(), skippedDuplicate:true}; }catch(e){}
-      return;
-    }
-    el.dataset.mh2AnnualPaintSig = sig;
-
-    el.classList.remove('is-urgent','is-attention','is-good');
-    el.classList.add(tone);
-    el.setAttribute('href', href);
     el.innerHTML = '<div class="mh2-alert-top"><div class="mh2-alert-title">Annual meeting approvals</div><div class="mh2-alert-badge">'+esc(badge)+'</div></div><div class="mh2-alert-copy">'+esc(copy)+'</div>';
-    try{ window.__mh2AnnualApprovalAlertDebug={community:ctx,open:openCount,overdue:overdueCount,paintedAt:new Date().toISOString(), sig:sig}; }catch(e){}
+    try{ window.__mh2AnnualApprovalAlertDebug={community:ctx,open:openCount,overdue:overdueCount,paintedAt:new Date().toISOString()}; }catch(e){}
   }
   async function refreshAnnualAlert(){
     var sb=getSb();
