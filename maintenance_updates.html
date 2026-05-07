@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-07-v502-live-maintenance-native-community-dropdown";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-07-v503-live-maintenance-vendors-community-source";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Live Maintenance Updates</title>
@@ -2482,18 +2482,20 @@ body.live-maintenance-no-blue-header .maintenance-inline-controls #zummeeHdrHub{
 </script>
 
 
-<script id="live-maintenance-native-community-dropdown-v502-script">
-/* v502 — Native Live Maintenance community dropdown.
+
+<script id="live-maintenance-native-community-dropdown-v503-script">
+/* v503 — Live Maintenance community dropdown source authority.
    Source priority:
-   1. community_assignments for authenticated user
-   2. fallback selected/local communities only when assignments are not available
-   Behavior:
-   - writes same active community keys used across Zummee
-   - reloads Live Maintenance immediately on change
+   1. public.Vendors distinct community_id
+   2. public.resident_work_orders distinct community_id
+   3. local saved community as emergency fallback
+   Reason:
+   - Live Maintenance is a maintenance/vendor page.
+   - It should show communities represented in the Vendors / maintenance data source, even if community_assignments is empty or mismatched.
 */
 (function(){
-  if(window.__liveMaintenanceNativeCommunityDropdownV502) return;
-  window.__liveMaintenanceNativeCommunityDropdownV502 = true;
+  if(window.__liveMaintenanceNativeCommunityDropdownV503) return;
+  window.__liveMaintenanceNativeCommunityDropdownV503 = true;
 
   const SUPABASE_URL_NATIVE = window.SUPABASE_URL || "https://slcwuuwyrgnmlmxpcaim.supabase.co";
   const SUPABASE_ANON_NATIVE = window.SUPABASE_ANON_KEY || "sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864";
@@ -2548,91 +2550,86 @@ body.live-maintenance-no-blue-header .maintenance-inline-controls #zummeeHdrHub{
     return data;
   }
 
-  async function getCurrentUserId(){
-    try{
-      const c = window.sb || window.supabaseClient || (typeof ensureSupabase === "function" ? await ensureSupabase() : null);
-      if(c?.auth?.getSession){
-        const s = await c.auth.getSession();
-        const id = s?.data?.session?.user?.id;
-        if(id) return String(id);
-      }
-    }catch(_e){}
-
-    try{
-      const token = await getNativeToken();
-      if(token){
-        const res = await fetch(SUPABASE_URL_NATIVE + "/auth/v1/user", {
-          headers:{ apikey: SUPABASE_ANON_NATIVE, Authorization:"Bearer " + token }
-        });
-        const data = await res.json();
-        if(data && data.id) return String(data.id);
-      }
-    }catch(_e){}
-
-    try{
-      const raw = localStorage.getItem("zummee_session_v1") || sessionStorage.getItem("zummee_session_v1") || "";
-      const parsed = safeJson(raw, null);
-      return String(parsed?.userId || parsed?.user?.id || "");
-    }catch(_e){}
-    return "";
+  function uniqueCommunityIds(rows){
+    const out = [];
+    const seen = new Set();
+    (Array.isArray(rows) ? rows : []).forEach(r => {
+      const id = String(r?.community_id || r?.communityId || "").trim();
+      if(!id || seen.has(id)) return;
+      seen.add(id);
+      out.push(id);
+    });
+    return out;
   }
 
-  async function loadAssignedCommunities(){
-    const userId = await getCurrentUserId();
-    let assignments = [];
-    if(userId){
-      try{
-        assignments = await nativeRest(
-          "community_assignments?select=community_id&user_id=eq." + encodeURIComponent(userId)
-        );
-      }catch(err){
-        console.warn("[Live Maintenance v502] community_assignments read failed", err);
-      }
-    }
+  async function lookupCommunityNames(ids){
+    ids = [...new Set((ids || []).map(id => String(id || "").trim()).filter(Boolean))];
+    if(!ids.length) return [];
 
-    const ids = [...new Set((Array.isArray(assignments) ? assignments : [])
-      .map(r => String(r.community_id || "").trim())
-      .filter(Boolean))];
+    const fallback = ids.map(id => ({ id, name:id }));
 
-    if(ids.length){
-      try{
-        const idList = ids.map(encodeURIComponent).join(",");
-        let communities = await nativeRest(
-          "PropertyCommunities?select=id,name,community_name,label&id=in.(" + idList + ")"
-        );
-        communities = Array.isArray(communities) ? communities : [];
-        const byId = new Map();
-        communities.forEach(c => {
-          const id = String(c.id || "").trim();
-          if(!id) return;
-          byId.set(id, {
-            id,
-            name: String(c.name || c.community_name || c.label || id).trim()
-          });
-        });
-        return ids.map(id => byId.get(id) || { id, name:id });
-      }catch(err){
-        console.warn("[Live Maintenance v502] PropertyCommunities name lookup failed", err);
-        return ids.map(id => ({ id, name:id }));
-      }
-    }
-
-    // Fallback only if assignment read has no data.
-    const fallback = [];
     try{
-      const keys = ["zummee_header_communities","zummee_communities_v1","communities"];
-      keys.forEach(key => {
-        const raw = localStorage.getItem(key);
-        const parsed = safeJson(raw, []);
-        const arr = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.communities) ? parsed.communities : []);
-        arr.forEach(c => {
-          const id = String(c?.id || c?.community_id || c?.value || "").trim();
-          const name = String(c?.name || c?.community_name || c?.label || c?.text || id).trim();
-          if(id && !fallback.some(x => x.id === id)) fallback.push({ id, name });
+      const idList = ids.map(encodeURIComponent).join(",");
+      const rows = await nativeRest("PropertyCommunities?select=*&id=in.(" + idList + ")");
+      const byId = new Map();
+      (Array.isArray(rows) ? rows : []).forEach(c => {
+        const id = String(c?.id || c?.community_id || "").trim();
+        if(!id) return;
+        byId.set(id, {
+          id,
+          name: String(
+            c?.community_name ||
+            c?.name ||
+            c?.label ||
+            c?.title ||
+            c?.property_name ||
+            id
+          ).trim()
         });
       });
-    }catch(_e){}
-    return fallback;
+      return ids.map(id => byId.get(id) || { id, name:id });
+    }catch(err){
+      console.warn("[Live Maintenance v503] community name lookup failed; using ids", err);
+      return fallback;
+    }
+  }
+
+  async function loadMaintenanceCommunities(){
+    let ids = [];
+
+    // Primary: Vendors table.
+    try{
+      const vendorRows = await nativeRest("Vendors?select=community_id&limit=1000");
+      ids = uniqueCommunityIds(vendorRows);
+    }catch(err){
+      console.warn("[Live Maintenance v503] Vendors community lookup failed", err);
+    }
+
+    // Secondary: resident_work_orders table.
+    if(!ids.length){
+      try{
+        const workOrderRows = await nativeRest("resident_work_orders?select=community_id&limit=1000");
+        ids = uniqueCommunityIds(workOrderRows);
+      }catch(err){
+        console.warn("[Live Maintenance v503] resident_work_orders community lookup failed", err);
+      }
+    }
+
+    // Emergency fallback: currently saved community.
+    if(!ids.length){
+      try{
+        const id = String(
+          localStorage.getItem("activeCommunityId") ||
+          localStorage.getItem("zummeeActiveCommunityId") ||
+          localStorage.getItem("currentCommunityId") ||
+          localStorage.getItem("zummee_selected_community_id") ||
+          ""
+        ).trim();
+        if(id) ids = [id];
+      }catch(_e){}
+    }
+
+    return lookupCommunityNames(ids);
   }
 
   function saveCommunity(id, name){
@@ -2663,13 +2660,17 @@ body.live-maintenance-no-blue-header .maintenance-inline-controls #zummeeHdrHub{
     const select = document.getElementById("maintenanceCommunitySelect");
     if(!select) return;
 
-    let communities = await loadAssignedCommunities();
+    select.innerHTML = '<option value="">Loading communities…</option>';
+
+    let communities = await loadMaintenanceCommunities();
     communities = communities
       .filter(c => c && c.id)
       .sort((a,b) => String(a.name || a.id).localeCompare(String(b.name || b.id), undefined, { sensitivity:"base" }));
 
     if(!communities.length){
-      select.innerHTML = '<option value="">No assigned communities found</option>';
+      select.innerHTML = '<option value="">No vendor communities found</option>';
+      const state = document.getElementById("feedState");
+      if(state) state.textContent = "No communities found in Vendors or resident work orders.";
       return;
     }
 
@@ -2708,6 +2709,7 @@ body.live-maintenance-no-blue-header .maintenance-inline-controls #zummeeHdrHub{
   }
 })();
 </script>
+
 
 </body>
 </html>
