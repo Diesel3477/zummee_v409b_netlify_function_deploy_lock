@@ -2889,6 +2889,20 @@ html[data-theme="dark"] .mh2-ask-close,html[data-theme="dark"] .mh2-ask-modal .m
 </style>
 
   <script src="shared/zummee-board-data.js?v=463-manager-hub-notification-events-hard-lock"></script>
+
+<style id="zummee-v532-annual-copy-visual-settle-lock">
+  /* v532: visual-only protection for Annual Meeting Approval copy flicker.
+     Does not touch smart-card counts, layout, classes, queries, or render timing. */
+  html[data-zummee-annual-copy-settling="1"] #mh2AlertApprovals .mh2-alert-copy{
+    opacity:0 !important;
+    visibility:hidden !important;
+    transition:none !important;
+  }
+  #mh2AlertApprovals .mh2-alert-copy{
+    transition:opacity .18s ease !important;
+  }
+</style>
+
 </head>
 <body class="manager-hub-page">
   <main class="mh2-page">
@@ -6684,6 +6698,31 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     try{ console.info('[v500 board no-flash lock] legacy board smart writer disabled'); }catch(_e){}
   }
   window.__ZUMMEE_V462_BOARD_SMART_LOCK_DISABLED__ = true;
+})();
+</script>
+
+
+<script id="zummee-v532-annual-copy-visual-settle-lock-js">
+(function(){
+  try{
+    document.documentElement.setAttribute('data-zummee-annual-copy-settling','1');
+    var release=function(){
+      try{ document.documentElement.removeAttribute('data-zummee-annual-copy-settling'); }catch(_e){}
+    };
+    // Hold only the Annual approval copy line through the legacy delayed repaint window.
+    // v523 still performs delayed community-authority checks; this avoids visible text flash without touching the cards.
+    if(document.readyState==='loading'){
+      document.addEventListener('DOMContentLoaded', function(){ setTimeout(release, 4200); }, {once:true});
+    }else{
+      setTimeout(release, 4200);
+    }
+    window.addEventListener('pageshow', function(){
+      try{
+        document.documentElement.setAttribute('data-zummee-annual-copy-settling','1');
+        setTimeout(release, 4200);
+      }catch(_e){}
+    });
+  }catch(_e){}
 })();
 </script>
 
