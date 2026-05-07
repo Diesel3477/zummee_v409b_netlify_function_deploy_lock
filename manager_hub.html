@@ -298,6 +298,7 @@ window.__MH_VERSION = 'v523_smart_alert_layout_reserve_lock';
     window.addEventListener('zummee:community-changed', resetForCommunityChange);
   })();
   </script>
+
   <script>
     (function(){
       try{
@@ -6256,15 +6257,28 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     var el=$('mh2AlertApprovals');
     if(!el) return;
     var tone = overdueCount>0 ? 'is-urgent' : (openCount>0 ? 'is-attention' : 'is-good');
-    el.classList.remove('is-urgent','is-attention','is-good');
-    el.classList.add(tone);
-    el.setAttribute('href', (window.mh2IsPrivileged ? 'annual_meeting_approvals.html' : 'annual_meeting_status.html'));
+    var href = (window.mh2IsPrivileged ? 'annual_meeting_approvals.html' : 'annual_meeting_status.html');
     var badge = overdueCount>0 ? (String(overdueCount)+' OVERDUE') : (openCount>0 ? (String(openCount)+' OPEN') : 'CLEAR');
     var copy = overdueCount>0
       ? (String(overdueCount)+' annual meeting approval item'+(overdueCount===1?' has':'s have')+' been open more than 2 days for '+(ctx.name||'the selected community')+'.')
       : (openCount>0 ? (String(openCount)+' annual meeting approval item'+(openCount===1?' is':'s are')+' still in progress for '+(ctx.name||'the selected community')+'.') : 'No active items');
+
+    // v536: Annual smart-card repaint guard.
+    // The old hard-lock refresh can run repeatedly (250/1200/3500ms and interval).
+    // Do not rebuild the DOM when the computed annual state is unchanged; that DOM rebuild
+    // is what makes the copy line visibly blink while the other smart cards stay still.
+    var sig = [tone, badge, copy, href, String(ctx && (ctx.id || ctx.name || ''))].join('|');
+    if(el.dataset.mh2AnnualPaintSig === sig){
+      try{ window.__mh2AnnualApprovalAlertDebug={community:ctx,open:openCount,overdue:overdueCount,paintedAt:new Date().toISOString(), skippedDuplicate:true}; }catch(e){}
+      return;
+    }
+    el.dataset.mh2AnnualPaintSig = sig;
+
+    el.classList.remove('is-urgent','is-attention','is-good');
+    el.classList.add(tone);
+    el.setAttribute('href', href);
     el.innerHTML = '<div class="mh2-alert-top"><div class="mh2-alert-title">Annual meeting approvals</div><div class="mh2-alert-badge">'+esc(badge)+'</div></div><div class="mh2-alert-copy">'+esc(copy)+'</div>';
-    try{ window.__mh2AnnualApprovalAlertDebug={community:ctx,open:openCount,overdue:overdueCount,paintedAt:new Date().toISOString()}; }catch(e){}
+    try{ window.__mh2AnnualApprovalAlertDebug={community:ctx,open:openCount,overdue:overdueCount,paintedAt:new Date().toISOString(), sig:sig}; }catch(e){}
   }
   async function refreshAnnualAlert(){
     var sb=getSb();
@@ -6496,7 +6510,7 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     try{ console.info('[MH v405] URL community authority applied after '+reason, id, name); }catch(e){}
     return true;
   }
-  function schedule(){ [0,80,250,700].forEach(function(ms){setTimeout(function(){apply('timer-'+ms);},ms);}); }
+  function schedule(){ [0,80,250,700,1500,3000].forEach(function(ms){setTimeout(function(){apply('timer-'+ms);},ms);}); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', schedule, {once:true}); else schedule();
   window.addEventListener('pageshow', schedule);
 })();
