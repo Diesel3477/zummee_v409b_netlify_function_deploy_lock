@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-07-v490-rwo-realtime-polling-fallback";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-07-v500-maintenance-data-layer";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <script id="rwo-v478-scroll-reset">
 (function(){
   try{ if('scrollRestoration' in history) history.scrollRestoration='manual'; }catch(_e){}
@@ -36,6 +36,7 @@
   <title>Resident Work Orders</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="shared/supabase-client.js?v=2026-05-04-v488"></script>
+  <script src="shared/maintenance-data.js?v=2026-05-07-v500"></script>
   <script src="shared/auth.js?v=2026-05-04-v488"></script>
   <script src="shared/zummee-auth.js?v=2026-05-04-v488"></script>
   
@@ -921,50 +922,42 @@ body.resident-work-orders-new-layout #zummeeCommunitySelect{
     let workOrders = [];
     let filtered = [];
     let selected = null;
-    function getVendorCacheForCommunity(communityId){
-      try{
-        if(!communityId) return [];
-        const key = 'daily_ops_vendors_cache_v1::' + String(communityId);
-        const raw = localStorage.getItem(key);
-        if(!raw) return [];
-        const parsed = JSON.parse(raw);
-        const vendors = Array.isArray(parsed?.vendors) ? parsed.vendors : [];
-        return vendors.map(v => ({
-          name: String(v?.name || '').trim(),
-          email: String(v?.email || '').trim(),
-          phone: String(v?.phone || '').trim(),
-          type: String(v?.type || '').trim()
-        })).filter(v => v.name);
-      }catch(_e){
-        return [];
-      }
-    }
+    // v500: Vendors are loaded from shared maintenance data layer only.
+    // Source of truth: public.Vendors filtered by community_id.
+    let __rwoVendorList = [];
 
-    function populateVendorDropdown(){
+    async function populateVendorDropdown(){
       const select = document.getElementById('vendorName');
       const emailEl = document.getElementById('vendorEmail');
       if(!select) return;
-      const communityId = (selected && selected.community_id) || getStoredActiveCommunityId() || '';
-      const vendors = getVendorCacheForCommunity(communityId);
 
-      const currentValue = select.value || '';
+      const communityId = (selected && selected.community_id) || getStoredActiveCommunityId() || '';
+      const priorValue = String(select.value || selected?.assigned_vendor_name || '').trim();
+
+      select.disabled = true;
+      select.innerHTML = '<option value="">Loading vendors…</option>';
+
+      try{
+        __rwoVendorList = await window.ZummeeMaintenanceData.getVendorsForCommunity(communityId);
+      }catch(err){
+        console.warn('[RWO v500] Vendor load failed:', err);
+        __rwoVendorList = [];
+      }
+
       select.innerHTML = '<option value="">Select vendor</option>';
-      vendors.forEach((v, idx) => {
+      __rwoVendorList.forEach((v) => {
         const opt = document.createElement('option');
         opt.value = v.name;
         opt.textContent = v.type ? (v.name + ' — ' + v.type) : v.name;
         opt.dataset.email = v.email || '';
         opt.dataset.phone = v.phone || '';
+        opt.dataset.id = v.id || '';
         select.appendChild(opt);
       });
 
-      // restore selected vendor if possible
-      if(selected?.assigned_vendor_name){
-        const match = Array.from(select.options).find(o => o.value === selected.assigned_vendor_name);
-        if(match) select.value = selected.assigned_vendor_name;
-      } else if(currentValue){
-        const match = Array.from(select.options).find(o => o.value === currentValue);
-        if(match) select.value = currentValue;
+      if(priorValue){
+        const match = Array.from(select.options).find(o => o.value === priorValue);
+        if(match) select.value = priorValue;
       }
 
       const chosen = select.selectedOptions && select.selectedOptions[0] ? select.selectedOptions[0] : null;
@@ -973,9 +966,17 @@ body.resident-work-orders-new-layout #zummeeCommunitySelect{
           emailEl.value = chosen.dataset.email || '';
         } else if(selected?.assigned_vendor_email){
           emailEl.value = selected.assigned_vendor_email || '';
+        } else if(!priorValue){
+          emailEl.value = '';
         }
       }
+
+      if(!__rwoVendorList.length){
+        select.innerHTML = '<option value="">No vendors found for selected community</option>';
+      }
+      select.disabled = false;
     }
+
     const headerCommunitySelect = () => document.getElementById('zummeeCommunitySelect');
 
     function safeJsonParse(v, fallback){
@@ -1955,14 +1956,9 @@ function statusClass(rowOrStatus){
         let rows = null;
         let lastError = null;
 
-        // v480 source lock: use the same REST token path that restored the working manager view.
-        // Do not use supabaseClient.from() here because auth.getSession() may be null even when
-        // the Zummee stored token is available; that client path causes 401 and then zero-overwrites.
-        const restPath = 'resident_work_orders?select=*'
-          + '&community_id=eq.' + encodeURIComponent(activeCommunityId)
-          + '&limit=500';
+        // v500 source authority: shared maintenance data layer owns work-order reads.
         try{
-          rows = await residentApi(restPath, { method:'GET' });
+          rows = await window.ZummeeMaintenanceData.getWorkOrdersForCommunity(activeCommunityId, { limit: 500 });
         }catch(err){
           lastError = err;
           rows = null;
@@ -2040,129 +2036,53 @@ function statusClass(rowOrStatus){
       }
       const vendorName = document.getElementById('vendorName').value.trim();
       const vendorEmail = document.getElementById('vendorEmail').value.trim();
-      const statusVal = document.getElementById('assignStatus').value || document.getElementById('detailStatus')?.value || 'sent_to_vendor';
       const notes = document.getElementById('assignNotes').value.trim();
 
       if(!vendorName){
-        setMsg('Enter a vendor name first.', false);
+        setMsg('Choose a vendor first.', false);
+        return;
+      }
+      if(!vendorEmail){
+        setMsg('The selected vendor does not have an email address.', false);
         return;
       }
 
       assignBtn.disabled = true;
       try{
-        // Update resident work order with vendor fields if those columns exist
-        let updatePayload = {
-          status: statusVal,
-          assigned_vendor_name: vendorName,
-          assigned_vendor_email: vendorEmail || null,
-          manager_approved_at: new Date().toISOString(),
-          manager_approved_by: getCurrentUserId()
+        const vendor = {
+          name: vendorName,
+          email: vendorEmail,
+          phone: (document.getElementById('vendorName').selectedOptions?.[0]?.dataset?.phone || '')
         };
-        try{
-          const updated = await residentApi("resident_work_orders?id=eq." + encodeURIComponent(String(selected.id)) + "&select=*", {
-            method: 'PATCH',
-            headers: { 'Prefer': 'return=representation' },
-            body: JSON.stringify(updatePayload)
-          });
-          selected = Array.isArray(updated) ? (updated[0] || selected) : (updated || selected);
-        }catch(_e){
-          const fallback = await residentApi("resident_work_orders?id=eq." + encodeURIComponent(String(selected.id)) + "&select=*", {
-            method: 'PATCH',
-            headers: { 'Prefer': 'return=representation' },
-            body: JSON.stringify({ status: statusVal })
-          });
-          selected = Array.isArray(fallback) ? (fallback[0] || selected) : (fallback || selected);
+
+        const communityName = String(localStorage.getItem('activeCommunityName') || localStorage.getItem('zummeeActiveCommunityName') || '');
+        const result = await window.ZummeeMaintenanceData.routeWorkOrderToVendor(selected, vendor, {
+          vendor_note: notes || '',
+          community_name: communityName || '',
+          community_id: selected.community_id || getStoredActiveCommunityId() || null,
+          manager_name: getCurrentManagerName(),
+          manager_phone: getCurrentManagerPhone(),
+          manager_email: '',
+          company_name: getCurrentCompanyName(),
+          resident_name: selected.resident_name || '',
+          resident_email: selected.resident_email || '',
+          resident_phone: selected.resident_phone || '',
+          unit_number: selected.unit_number || '',
+          subject: selected.subject || 'Resident Work Order',
+          description: selected.description || '',
+          priority: selected.priority || ''
+        });
+
+        if(result && result.ok){
+          setMsg(result.resident_email_sent ? 'Approved and routed. Vendor and resident notified by email.' : 'Approved and routed. Vendor notified by email with Accept Job button.', true);
+        }else{
+          setMsg('Approved and routed. Vendor email function returned without a success flag.', true);
         }
 
-        // Best-effort create linked maintenance request if table exists
-        try{
-          const maintenancePayload = {
-            subject: selected.subject || 'Resident Work Order',
-            html: `<p><strong>Resident:</strong> ${esc(selected.resident_name || '')}</p><p><strong>Unit:</strong> ${esc(selected.unit_number || '')}</p><p>${esc(selected.description || '')}</p>` + (notes ? `<p><strong>Note to Vendor:</strong> ${esc(notes)}</p>` : ''),
-            status: 'sent',
-            community_id: selected.community_id || null,
-            vendor_email: vendorEmail || null,
-            resident_work_order_id: selected.id || null,
-            unit_number: selected.unit_number || null,
-            resident_name: selected.resident_name || null,
-            resident_email: selected.resident_email || null
-          };
-          let mr = null;
-          try{
-            const created = await residentApi("maintenance_requests?select=*", {
-              method: 'POST',
-              headers: { 'Prefer': 'return=representation' },
-              body: JSON.stringify(maintenancePayload)
-            });
-            mr = Array.isArray(created) ? created[0] : created;
-          }catch(_e){
-            const fallbackPayload = {
-              subject: maintenancePayload.subject,
-              html: maintenancePayload.html,
-              status: maintenancePayload.status,
-              community_id: maintenancePayload.community_id,
-              vendor_email: maintenancePayload.vendor_email
-            };
-            try{
-              const created2 = await residentApi("maintenance_requests?select=*", {
-                method: 'POST',
-                headers: { 'Prefer': 'return=representation' },
-                body: JSON.stringify(fallbackPayload)
-              });
-              mr = Array.isArray(created2) ? created2[0] : created2;
-            }catch(_e2){}
-          }
-          if(mr && mr.id){
-            try{
-              await residentApi("resident_work_orders?id=eq." + encodeURIComponent(String(selected.id)) + "&select=*", {
-                method: 'PATCH',
-                headers: { 'Prefer': 'return=representation' },
-                body: JSON.stringify({
-                  status: statusVal,
-                  linked_maintenance_request_id: mr.id
-                })
-              });
-            }catch(_e){}
-            selected.linked_maintenance_request_id = mr.id;
-          }
-        }catch(_e){}
-
-        let emailNotice = 'Approved and routed to vendor.';
-        try{
-          const communityName = String(localStorage.getItem('activeCommunityName') || localStorage.getItem('zummeeActiveCommunityName') || '');
-          const emailResult = await invokeEdgeFunction('assign-vendor-email', {
-            work_order_id: selected.id || null,
-            vendor_email: vendorEmail || null,
-            vendor_name: vendorName || '',
-            manager_name: getCurrentManagerName(),
-            manager_phone: getCurrentManagerPhone(),
-            company_name: getCurrentCompanyName(),
-            vendor_note: notes || '',
-            community_name: communityName || '',
-            community_id: selected.community_id || null,
-            resident_name: selected.resident_name || '',
-            resident_email: selected.resident_email || '',
-            resident_phone: selected.resident_phone || '',
-            unit_number: selected.unit_number || '',
-            subject: selected.subject || 'Resident Work Order',
-            description: selected.description || '',
-            priority: selected.priority || '',
-            status: statusVal || 'assigned'
-          });
-          if(emailResult && emailResult.ok){
-            emailNotice = emailResult && emailResult.resident_email_sent ? 'Approved and routed. Vendor and resident notified by email.' : 'Approved and routed. Vendor notified by email with Accept Job button.';
-          } else if(emailResult && emailResult.warning){
-            emailNotice = 'Approved and routed. ' + String(emailResult.warning);
-          }
-        }catch(emailErr){
-          emailNotice = 'Approved and routed, but vendor email was not sent: ' + (emailErr?.message || 'Function error');
-        }
-
-        setMsg(emailNotice, true);
         notifyHubResidentWorkOrdersChanged();
-        await loadWorkOrders();
+        await loadWorkOrders({ preserveSelection:true });
       }catch(err){
-        setMsg(err?.message || 'Unable to save vendor assignment.', false);
+        setMsg(err?.message || 'Unable to route vendor assignment.', false);
       }finally{
         assignBtn.disabled = false;
       }
@@ -2316,214 +2236,61 @@ function statusClass(rowOrStatus){
     }catch(_e){}
     loadWorkOrders({ clearSelection: new URLSearchParams(window.location.search || '').get('new_work_order') === '1' });
 
-    /* ZUMMEE_PATCH v490 — Resident Work Orders live status polling fallback
-       Why:
-       - Supabase Realtime may not be enabled or may not fire under the current RLS/session path.
-       - Vendor Accept updates can happen in a different tab/device, so focus/visibility alone is not enough.
-       Long-term behavior:
-       - Keep Realtime/focus refresh where available.
-       - Add a quiet, token-safe REST polling fallback every few seconds while this page is visible.
-       - Update the existing in-memory rows and rerender without requiring a full browser refresh.
-    */
-    (function setupResidentWorkOrdersRealtimeAndPolling(){
-      if(window.__rwoLivePollingFallbackV490) return;
-      window.__rwoLivePollingFallbackV490 = true;
+    /* v500: shared maintenance subscription owns status refresh.
+       Uses Realtime when available and REST polling fallback every 4 seconds. */
+    (function setupRwoV500Subscription(){
+      if(window.__rwoV500Subscription) return;
+      window.__rwoV500Subscription = true;
+      let sub = null;
 
-      var pollTimer = null;
-      var realtimeChannel = null;
-      var pollInFlight = false;
-      var lastDigest = "";
-      var lastPollAt = 0;
-
-      function activeCommunity(){
-        try{
-          return String(getStoredActiveCommunityId() || window.activeCommunityId || window.currentCommunityId || '').trim();
-        }catch(_e){
-          return '';
-        }
+      function currentCommunity(){
+        try{ return getStoredActiveCommunityId() || window.activeCommunityId || ''; }catch(_e){ return ''; }
       }
 
-      function activeCommunityName(){
+      function applyRows(rows, meta){
         try{
-          var sel = headerCommunitySelect && headerCommunitySelect();
-          if(sel && sel.selectedOptions && sel.selectedOptions[0]){
-            return String(sel.selectedOptions[0].textContent || '').trim();
-          }
-        }catch(_e){}
-        try{
-          return String(localStorage.getItem('activeCommunityName') || localStorage.getItem('zummeeActiveCommunityName') || localStorage.getItem('zummeeCurrentCommunityName') || '').trim();
-        }catch(_e){
-          return '';
-        }
-      }
-
-      function sortRows(rows){
-        rows = Array.isArray(rows) ? rows.slice() : [];
-        rows.sort(function(a,b){
-          var ad = new Date(a.submitted_at || a.created_at || a.updated_at || 0).getTime() || 0;
-          var bd = new Date(b.submitted_at || b.created_at || b.updated_at || 0).getTime() || 0;
-          return bd - ad;
-        });
-        return rows;
-      }
-
-      function digestRows(rows){
-        try{
-          return (rows || []).map(function(r){
-            return [
-              r.id || '',
-              r.status || '',
-              r.updated_at || '',
-              r.vendor_response_status || '',
-              r.vendor_accepted_at || '',
-              r.vendor_email_status || '',
-              r.assigned_vendor_name || '',
-              r.assigned_vendor_email || ''
-            ].join(':');
-          }).join('|');
-        }catch(_e){
-          return String(Date.now());
-        }
-      }
-
-      function rerenderFromRows(rows, reason){
-        try{
-          var selectedId = selected && selected.id ? String(selected.id) : '';
-          workOrders = sortRows(rows);
+          const selectedId = selected && selected.id ? String(selected.id) : '';
+          workOrders = Array.isArray(rows) ? rows.slice() : [];
+          workOrders.sort(function(a,b){
+            const ad = new Date(a.submitted_at || a.created_at || a.updated_at || 0).getTime() || 0;
+            const bd = new Date(b.submitted_at || b.created_at || b.updated_at || 0).getTime() || 0;
+            return bd - ad;
+          });
           if(selectedId){
-            selected = workOrders.find(function(r){ return String(r.id || '') === selectedId; }) || selected;
+            selected = workOrders.find(r => String(r.id || '') === selectedId) || selected;
           }
           applyFilters();
-          if(selected && workOrders.some(function(r){ return String(r.id || '') === String(selected.id || ''); })){
+          if(selected && workOrders.some(r => String(r.id || '') === String(selected.id || ''))){
             renderDetail(selected);
             populateVendorDropdown();
           }
-          var cname = activeCommunityName();
-          if(statusLine){
-            statusLine.textContent = 'Resident work orders loaded' + (cname ? (' for ' + cname) : '') + '.';
-          }
-          try{ console.log('[RWO v490] refreshed from', reason || 'poll'); }catch(_e){}
         }catch(err){
-          console.warn('[RWO v490] rerender failed:', err);
+          console.warn('[RWO v500] subscription render failed:', err);
         }
       }
 
-      async function quietRefresh(reason, force){
-        if(pollInFlight) return;
-        var cid = activeCommunity();
+      function resubscribe(){
+        const cid = currentCommunity();
         if(!cid) return;
-        if(document.hidden && !force) return;
-
-        var now = Date.now();
-        if(!force && now - lastPollAt < 3000) return;
-        lastPollAt = now;
-
-        pollInFlight = true;
-        try{
-          var restPath = 'resident_work_orders?select=*'
-            + '&community_id=eq.' + encodeURIComponent(cid)
-            + '&limit=500';
-
-          var rows = await residentApi(restPath, { method:'GET' });
-          if(!Array.isArray(rows)) rows = [];
-
-          var nextDigest = digestRows(rows);
-          if(force || nextDigest !== lastDigest){
-            lastDigest = nextDigest;
-            rerenderFromRows(rows, reason || 'quiet-refresh');
-          }
-        }catch(err){
-          console.warn('[RWO v490] quiet refresh skipped:', err);
-        }finally{
-          pollInFlight = false;
-        }
+        if(sub && sub.communityId === cid) return;
+        try{ if(sub && sub.unsubscribe) sub.unsubscribe(); }catch(_e){}
+        sub = window.ZummeeMaintenanceData.subscribeToWorkOrders(cid, applyRows, {
+          intervalMs: 4000,
+          onError: (err) => console.warn('[RWO v500] subscription refresh failed:', err)
+        });
+        sub.communityId = cid;
       }
 
-      function startPolling(){
-        if(pollTimer) return;
-        pollTimer = setInterval(function(){
-          quietRefresh('polling-fallback', false);
-        }, 4000);
+      document.addEventListener('visibilitychange', function(){ if(!document.hidden) resubscribe(); });
+      window.addEventListener('focus', resubscribe);
+      const communitySelect = headerCommunitySelect && headerCommunitySelect();
+      if(communitySelect){
+        communitySelect.addEventListener('change', function(){
+          try{ window.ZummeeMaintenanceData.clearVendorCache(); }catch(_e){}
+          setTimeout(function(){ populateVendorDropdown(); resubscribe(); }, 250);
+        });
       }
-
-      function stopPolling(){
-        if(pollTimer){
-          clearInterval(pollTimer);
-          pollTimer = null;
-        }
-      }
-
-      function shouldReloadForRow(row){
-        try{
-          var cid = activeCommunity();
-          if(!cid) return true;
-          var rowCid = String(row && row.community_id || '').trim();
-          return !rowCid || rowCid === cid;
-        }catch(_e){
-          return true;
-        }
-      }
-
-      async function setupRealtime(){
-        try{
-          var client = await getResidentWorkOrdersClient();
-          if(!client || typeof client.channel !== 'function') return;
-          if(realtimeChannel) return;
-
-          realtimeChannel = client
-            .channel('rwo_live_status_refresh_v490')
-            .on(
-              'postgres_changes',
-              { event: '*', schema: 'public', table: 'resident_work_orders' },
-              function(payload){
-                var row = (payload && (payload.new || payload.old)) || null;
-                if(shouldReloadForRow(row)){
-                  quietRefresh('supabase-realtime', true);
-                }
-              }
-            )
-            .subscribe(function(status){
-              try{ console.log('[RWO v490] realtime status:', status); }catch(_e){}
-            });
-        }catch(err){
-          console.warn('[RWO v490] realtime subscribe skipped:', err);
-        }
-      }
-
-      window.ZummeeResidentWorkOrdersRefresh = function(reason){
-        return quietRefresh(reason || 'manual', true);
-      };
-
-      document.addEventListener('visibilitychange', function(){
-        if(document.hidden){
-          stopPolling();
-        }else{
-          startPolling();
-          quietRefresh('visibilitychange', true);
-        }
-      });
-
-      window.addEventListener('focus', function(){
-        quietRefresh('window-focus', true);
-      });
-
-      [
-        'resident-work-orders:changed',
-        'zummee:resident-work-orders-changed',
-        'zummee:work-order-status-updated',
-        'zummee:vendor-job-accepted',
-        'storage'
-      ].forEach(function(eventName){
-        window.addEventListener(eventName, function(){ quietRefresh(eventName, true); });
-        document.addEventListener(eventName, function(){ quietRefresh(eventName, true); });
-      });
-
-      setTimeout(function(){
-        try{ lastDigest = digestRows(workOrders || []); }catch(_e){}
-        setupRealtime();
-        startPolling();
-        quietRefresh('initial-v490', true);
-      }, 1200);
+      setTimeout(resubscribe, 1200);
     })();
 
   </script>
