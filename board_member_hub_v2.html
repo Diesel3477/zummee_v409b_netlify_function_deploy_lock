@@ -17,6 +17,8 @@
   <script src="shared/supabase-client.js?v=2026-04-29-v327"></script>
   <script src="shared/data-layer-v409.js?v=2026-04-30-v409-server-board-photo-upload"></script>
   <script src="shared/zummee-board-data.js?v=2026-05-05-v517-calendar-collapsible-order-lock"></script>
+  <script src="shared/community-state.js?v=2026-05-07-v614"></script>
+  <script src="shared/input-undo-guard.js?v=2026-05-07-v614"></script>
   <script src="company_logo_sync.js"></script>
   <style>
     :root{--navy:#17365f;--line:#a9c8ff;--soft:#f7fbff;--gold1:#fff8d8;--gold2:#f6d66c;--muted:#64748b;--ink:#143052;--green:#16a34a;--red:#dc2626;}
@@ -896,7 +898,7 @@
 <script>
 (function(){
   'use strict';
-  window.ZUMMEE_BOARD_HUB_BUILD='2026-05-04-v502-notification-events-direct-lock';
+  window.ZUMMEE_BOARD_HUB_BUILD='2026-05-07-v614-board-hub-native-community-state';
   const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const $=(id)=>document.getElementById(id);
   let sb=null, userId='', selectedCommunityId='', selectedCommunityName='', currentUserRole='', communities=[], submittedRows=[], archivedRows=[], annualDocsRows=[], activeModalItem=null;
@@ -1007,11 +1009,28 @@
     return '<article class="'+cls+'" role="button" tabindex="0" '+idxAttr+'="'+index+'" aria-label="'+esc(label+(row.title||''))+'"><div class="n">'+(index+1)+'</div><div class="boardItemMain"><div class="boardItemTop"><h3>'+title+'</h3><span class="boardStatusPill">'+status+'</span></div><p class="boardItemCopy">'+copy+'</p><div class="boardItemMetaRow">'+(date?'<span class="boardDatePill">'+esc(date)+'</span>':'')+(photos?'<span class="photoBadge">📷 '+photos+' photo'+(photos===1?'':'s')+'</span>':'')+'</div></div><div class="chev">›</div></article>';
   }
   function directContext(){
-    // v403: URL is the page-to-page source of truth. Local storage may identify user,
-    // but it must not override the community passed in the route.
-    const cid=qp('community_id')||qp('cid');
+    // v614: canonical shared community-state is the source of truth.
+    // URL params are fallback only so stale route params cannot override the app-wide active community.
+    let canonicalId='', canonicalName='';
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const active = window.ZummeeCommunityState.getActiveCommunity();
+        if(active && isUuid(active.id)){
+          canonicalId=String(active.id||'').trim();
+          canonicalName=String(active.name||'').trim();
+        }
+      }
+    }catch(e){}
+    if(!canonicalId){
+      try{
+        const raw=localStorage.getItem('zummee_active_community_v601')||sessionStorage.getItem('zummee_active_community_v601')||'';
+        const parsed=raw?JSON.parse(raw):null;
+        if(parsed && isUuid(parsed.id)){ canonicalId=String(parsed.id||'').trim(); canonicalName=String(parsed.name||'').trim(); }
+      }catch(e){}
+    }
+    const cid=canonicalId || qp('community_id') || qp('cid');
     const uid=qp('user_id')||qp('uid')||getStore(['zummee_user_id_v1','zummeeUserId','activeUserId','currentUserId']);
-    const name=decodeURIComponent(qp('community_name')||qp('name')||'');
+    const name=canonicalName || decodeURIComponent(qp('community_name')||qp('name')||'');
     return {cid:isUuid(cid)?cid:'', uid:isUuid(uid)?uid:'', name};
   }
   function rememberContext(){
@@ -1021,10 +1040,15 @@
       window.activeCommunityId=selectedCommunityId;
       window.__zummeeActiveCommunityId=selectedCommunityId;
       window.selectedCommunityName=selectedCommunityName||'';
+      try{
+        if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.setActiveCommunity === 'function'){
+          window.ZummeeCommunityState.setActiveCommunity(selectedCommunityId, selectedCommunityName || '', { source:'board-hub-v614', silent:true });
+        }
+      }catch(e){}
       if(window.ZummeeDataLayer && typeof window.ZummeeDataLayer.syncCommunityContext==='function') window.ZummeeDataLayer.syncCommunityContext(selectedCommunityId, selectedCommunityName, 'replace');
       else {
-        ['zummeeActiveCommunityId','activeCommunityId','currentCommunityId','zummee_selected_community_id','zummee_community_id'].forEach(k=>putStore(k,selectedCommunityId));
-        if(selectedCommunityName){ ['zummeeCurrentCommunityName','currentCommunityName','activeCommunityName','zummee_community'].forEach(k=>putStore(k,selectedCommunityName)); }
+        ['zummee_active_community_id','zummeeActiveCommunityId','activeCommunityId','currentCommunityId','zummee_selected_community_id','zummee_community_id'].forEach(k=>putStore(k,selectedCommunityId));
+        if(selectedCommunityName){ ['zummee_active_community_name','zummeeCurrentCommunityName','currentCommunityName','activeCommunityName','zummee_community'].forEach(k=>putStore(k,selectedCommunityName)); }
       }
     }
   }
@@ -1088,9 +1112,16 @@
     const rows=[];
     const add=(arr)=>{ (arr||[]).forEach(r=>{ const id=String(r.community_id||r.id||'').trim(); const name=String(r.name||r.community_name||r.community||'').trim(); if(isUuid(id)&&!rows.some(x=>x.id===id)) rows.push({id,name:name||id}); }); };
 
-    // v402b: primary source of truth is the shared strict assignment loader.
-    // It reads community_assignments by employee id/email, matching Manager Hub's strict source.
-    if(window.ZummeeDataLayer && typeof window.ZummeeDataLayer.getAssignedCommunities==='function'){
+    // v614: primary source of truth is the app-wide shared community-state loader.
+    if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.loadAssignedCommunities==='function'){
+      try{
+        const sharedStateCommunities=await window.ZummeeCommunityState.loadAssignedCommunities({force:false});
+        add(sharedStateCommunities);
+      }catch(e){ console.warn('[BoardHub V2 v614] shared community-state loader failed; falling back safely', e); }
+    }
+
+    // Legacy fallback only if community-state returns nothing.
+    if(!rows.length && window.ZummeeDataLayer && typeof window.ZummeeDataLayer.getAssignedCommunities==='function'){
       try{
         const shared=await window.ZummeeDataLayer.getAssignedCommunities({userId:userId});
         add(shared);
@@ -1135,14 +1166,22 @@
   }
   function resolveBoardCommunityContext(){
     const sel=$('communitySelect');
+    let canonicalId='';
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const active = window.ZummeeCommunityState.getActiveCommunity();
+        if(active && isUuid(active.id)) canonicalId=String(active.id||'').trim();
+      }
+    }catch(e){}
     const values=[
+      canonicalId,
       selectedCommunityId,
       sel && sel.value,
       window.selectedCommunityId,
       window.activeCommunityId,
       window.__zummeeActiveCommunityId,
-      new URLSearchParams(location.search).get('community_id'),
-      new URLSearchParams(location.search).get('cid'),
+      localStorage.getItem('zummee_active_community_id'),
+      sessionStorage.getItem('zummee_active_community_id'),
       localStorage.getItem('zummeeActiveCommunityId'),
       sessionStorage.getItem('zummeeActiveCommunityId'),
       localStorage.getItem('activeCommunityId'),
@@ -1178,18 +1217,34 @@
   }
   function renderCommunitySelect(){
     const sel=$('communitySelect'); if(!sel) return;
-    if(!communities.length){ sel.innerHTML='<option value="">Open from Manager Hub</option>'; return; }
+    if(!communities.length){
+      sel.innerHTML='<option value="">No assigned communities</option>';
+      return;
+    }
+
+    let active=null;
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        active=window.ZummeeCommunityState.getActiveCommunity();
+      }
+    }catch(e){}
+
+    const activeId = isUuid(active && active.id) ? String(active.id).trim() : selectedCommunityId;
+    const match = communities.find(c=>c.id===activeId) || communities.find(c=>c.id===selectedCommunityId) || communities[0];
+
+    selectedCommunityId=match.id;
+    selectedCommunityName=match.name||match.id;
+
     sel.innerHTML=communities.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name||c.id)+'</option>').join('');
-    if(isUuid(selectedCommunityId) && communities.some(c=>c.id===selectedCommunityId)) sel.value=selectedCommunityId;
-    else { selectedCommunityId=communities[0].id; sel.value=selectedCommunityId; }
-    const opt=sel.options[sel.selectedIndex]; if(opt){ selectedCommunityId=sel.value; selectedCommunityName=opt.textContent.trim(); syncWindowCommunityContext(); rememberContext(); }
-    sel.onchange=function(){
-      selectedCommunityId=sel.value;
-      const o=sel.options[sel.selectedIndex]; selectedCommunityName=o?o.textContent.trim():'';
-      syncWindowCommunityContext(); rememberContext(); updateBackLink();
-      const url=new URL(location.href); url.searchParams.set('community_id', selectedCommunityId); if(selectedCommunityName) url.searchParams.set('community_name', selectedCommunityName); if(isUuid(userId)) url.searchParams.set('user_id', userId);
-      window.location.href=url.toString();
-    };
+    sel.value=selectedCommunityId;
+
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.setActiveCommunity === 'function'){
+        window.ZummeeCommunityState.setActiveCommunity(selectedCommunityId, selectedCommunityName || '', { source:'board-hub-render-v614', silent:true });
+      }
+    }catch(e){}
+
+    rememberContext();
     updateBackLink();
   }
   function fmtDate(v){ try{ if(!v) return ''; return new Date(v).toLocaleString(); }catch(e){ return String(v||''); } }
@@ -2302,6 +2357,51 @@
   });
 })();
 </script>
+
+<script id="zummee-board-hub-native-community-state-v614">
+/*
+  Board Member Hub V2 native community-state integration
+  Build: 2026-05-07-v614
+
+  Purpose:
+  - Board Hub participates in the same app-wide community persistence as Manager Hub,
+    Operations, Community Inspections, Work Orders, and Live Maintenance.
+  - Canonical community-state wins over stale URL params.
+  - Existing Board Hub loaders, submitted items, calendar, archive, and annual approvals remain intact.
+*/
+(function(){
+  if(window.__BoardHubNativeCommunityStateV614) return;
+  window.__BoardHubNativeCommunityStateV614 = true;
+
+  function syncFromCanonical(){
+    try{
+      if(!window.ZummeeCommunityState || typeof window.ZummeeCommunityState.getActiveCommunity !== 'function') return;
+      const active = window.ZummeeCommunityState.getActiveCommunity();
+      if(!active || !active.id) return;
+      if(window.selectedCommunityId === active.id) return;
+
+      window.selectedCommunityId = active.id;
+      window.activeCommunityId = active.id;
+      window.__zummeeActiveCommunityId = active.id;
+      if(active.name) window.selectedCommunityName = active.name;
+
+      const sel = document.getElementById('communitySelect');
+      if(sel && Array.from(sel.options || []).some(o => String(o.value) === String(active.id))){
+        sel.value = active.id;
+      }
+
+      if(typeof window.loadAll === 'function') window.loadAll();
+    }catch(e){
+      console.warn('[BoardHub v614] canonical sync failed', e);
+    }
+  }
+
+  window.addEventListener('pageshow', () => setTimeout(syncFromCanonical, 120));
+  window.addEventListener('focus', syncFromCanonical);
+  document.addEventListener('visibilitychange', () => { if(!document.hidden) syncFromCanonical(); });
+})();
+</script>
+
 </body>
 </html>
 
