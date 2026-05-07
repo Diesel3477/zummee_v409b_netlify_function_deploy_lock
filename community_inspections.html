@@ -2,10 +2,9 @@
 
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-07-v2124-create-work-order-sends-vendor";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-07-v2125-email-deliverability-audit";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
-<!-- ZUMMEE_PATCH v2121: assigned dropdown single owner + selected-community state authority -->
-<!-- ZUMMEE_PATCH v2123: exact Daily Ops Vendors table authority -->
+<!-- ZUMMEE_PATCH v2115: stable single-mount header + assigned dropdown no-jump lock -->
 <!-- ZUMMEE_PATCH v2074: inspections reads vendors from actual ops localStorage keys -->
 <!-- ZUMMEE_PATCH v2064: offline drafts (IndexedDB) for inspections -->
 <!-- ZUMMEE_PATCH v2061: latest polish bundle -->
@@ -10970,8 +10969,6 @@ async function collectData(){
     const rawDate = getVal("inspDate");
     const date = rawDate ? new Date(rawDate + "T00:00:00").toLocaleDateString(undefined,{month:"long", day:"numeric", year:"numeric"}) : "";
     const inspType = getSelText("inspType");
-    const vendorSelectEl = document.getElementById("inspVendorId");
-    const vendorId = String(vendorSelectEl && vendorSelectEl.value ? vendorSelectEl.value : "").trim();
     const vendorName = getSelText("inspVendorId");
     const vendorPhone = getLinkText("inspVendorPhoneLink");
     const vendorEmail = getLinkText("inspVendorEmailLink");
@@ -10986,7 +10983,6 @@ async function collectData(){
       date,
       ticketNumber: __maintAdState.ticketNumber || null,
       inspType,
-      vendorId,
       vendorName,
       vendorPhone,
       vendorEmail,
@@ -11136,6 +11132,62 @@ if (accessToken) {
   return parsed;
 }
 
+
+  // ZUMMEE_PATCH v2125 — Long-term vendor email audit tracking
+  function inspectionEmailWasAccepted(emailResult){
+    if (!emailResult) return false;
+    if (emailResult.ok === true) return true;
+    if (emailResult.success === true) return true;
+    if (emailResult.sent === true) return true;
+    if (emailResult.email_sent === true) return true;
+    if (emailResult.vendor_email_sent === true) return true;
+    if (emailResult.id || emailResult.message_id || emailResult.messageId) return true;
+    return false;
+  }
+
+  function inspectionEmailResponseSummary(emailResult){
+    try{
+      if (!emailResult) return '';
+      if (typeof emailResult === 'string') return emailResult.slice(0, 500);
+      return JSON.stringify(emailResult).slice(0, 1000);
+    }catch(_e){
+      return 'Unable to summarize email response';
+    }
+  }
+
+  async function updateInspectionWorkOrderEmailStatus(supabase, workOrderId, status, fields){
+    if (!supabase || !workOrderId) return false;
+
+    const payload = Object.assign({
+      status: status
+    }, fields || {});
+
+    try{
+      const res = await supabase
+        .from('resident_work_orders')
+        .update(payload)
+        .eq('id', workOrderId)
+        .select()
+        .maybeSingle();
+
+      if (res && !res.error) return true;
+      if (res && res.error) console.warn('Email audit update failed; trying status-only fallback', res.error);
+    }catch(err){
+      console.warn('Email audit update failed; trying status-only fallback', err);
+    }
+
+    // Backward-compatible fallback if the new audit columns have not been added yet.
+    try{
+      await supabase
+        .from('resident_work_orders')
+        .update({ status: status })
+        .eq('id', workOrderId);
+      return true;
+    }catch(_fallbackErr){
+      return false;
+    }
+  }
+
   async function createInspectionWorkOrder(){
     const data = await collectData();
     const supabase = await ensureSupabase();
@@ -11155,23 +11207,9 @@ if (accessToken) {
 
     const inspTypeText = String(data.inspType || "Inspection").trim() || "Inspection";
     const communityText = String(data.community || "Community").trim() || "Community";
-    const vendorIdText = String(data.vendorId || "").trim();
-    const vendorNameText = (window.normalizeInspectionVendorName || function(rawName, vendorId){ const t = String(rawName || '').trim(); const id = String(vendorId || '').trim(); if (!id) return ''; if (!t) return ''; return t.toLowerCase().includes('select vendor') ? '' : t; })(data.vendorName || '', vendorIdText);
+    const vendorNameText = (window.normalizeInspectionVendorName || function(rawName, vendorId){ const t = String(rawName || '').trim(); const id = String(vendorId || '').trim(); if (!id) return ''; if (!t) return ''; return t.toLowerCase().includes('select vendor') ? '' : t; })(data.vendorName || '', data.vendorId || '');
     const vendorPhoneText = String(data.vendorPhone || "").trim();
     const vendorEmailText = String(data.vendorEmail || "").trim();
-
-    // Long-term workflow rule: the Community Inspections Create Work Order action
-    // is a vendor-send action, not a manager-review submission. Require a selected
-    // vendor with an email so the created resident_work_orders row is immediately
-    // stored as sent_to_vendor and the vendor email function can run.
-    if (!vendorIdText || !vendorNameText){
-      openZummeeAlert("Please choose a vendor before creating the work order.", "Vendor required");
-      return;
-    }
-    if (!vendorEmailText){
-      openZummeeAlert("The selected vendor does not have an email address. Add the vendor email in Operations first, then create the work order.", "Vendor email required");
-      return;
-    }
     let currentEmployeeEmail = String((authUser && authUser.email) || "").trim();
     let currentEmployeeName = String(data.senderName || authUser?.email || "Manager").trim();
 
@@ -11195,7 +11233,9 @@ if (accessToken) {
     const senderPhoneText = String(data.senderPhone || "").trim();
     const dateText = String(data.date || "").trim();
 
-    const subject = `${inspTypeText} issue - ${vendorNameText}`;
+    const subject = vendorNameText
+      ? `${inspTypeText} issue - ${vendorNameText}`
+      : `${inspTypeText} issue`;
 
     const descriptionParts = [
       `Created from Community Inspection.`,
@@ -11222,7 +11262,7 @@ ${notesText}` : ""
       description: descriptionParts.join("\n"),
       category: "general",
       priority: "normal",
-      status: "sent_to_vendor",
+      status: vendorNameText ? "vendor_email_pending" : "submitted",
 
       // Employee reporting snapshot (long-term fix)
       employee_user_id: (authUser && authUser.id) || null,
@@ -11230,11 +11270,11 @@ ${notesText}` : ""
       employee_name: currentEmployeeName || null
     };
 
-    const vendorPayload = {
+    const vendorPayload = vendorNameText ? {
       assigned_vendor_name: vendorNameText,
       assigned_vendor_email: vendorEmailText || null,
       assigned_vendor_note: notesText || null
-    };
+    } : {};
 
     let createdRow = null;
     let insertErr = null;
@@ -11274,9 +11314,11 @@ ${notesText}` : ""
       if (createdRow && createdRow.id && supabase && typeof supabase.rpc === 'function'){
         const notif = await supabase.rpc('create_notification_event', {
           p_event_type: 'new_work_order',
-          p_priority: 'high',
-          p_title: 'New Work Order Sent to Vendor',
-          p_message: 'A new inspection work order was created and sent to a vendor.', 
+          p_priority: vendorNameText ? 'high' : 'normal',
+          p_title: vendorNameText ? 'New Work Order Vendor Email Pending' : 'New Work Order',
+          p_message: vendorNameText
+            ? 'A new inspection work order was created and the vendor email is being processed.'
+            : 'A new inspection work order needs review.',
           p_link_url: 'resident_work_orders.html?open_work_order_id=' + encodeURIComponent(String(createdRow.id)),
           p_community_id: (createdRow.community_id || communityId || null),
           p_actor_user_id: (authUser && authUser.id) || null,
@@ -11301,9 +11343,20 @@ ${notesText}` : ""
       console.error('Inspection notification create failed:', notificationErr);
     }
 
-    let successMessage = 'Work order created and vendor assignment saved.';
+    let successMessage = vendorNameText
+      ? 'Work order created and vendor assignment saved.'
+      : 'Work order created.';
 
-    if (createdRow){
+    if (createdRow && vendorNameText){
+      if (!vendorEmailText){
+        successMessage = 'Work order created and vendor assignment saved, but vendor email was not sent because the selected vendor does not have an email address.';
+        try{
+          await updateInspectionWorkOrderEmailStatus(supabase, createdRow.id, 'vendor_email_failed', {
+            vendor_email_status: 'failed',
+            vendor_email_error: 'Selected vendor does not have an email address.'
+          });
+        }catch(_missingVendorEmailAuditErr){}
+      } else {
       try{
         const selectedFiles = Array.prototype.slice.call((document.getElementById("inspPhotos") && document.getElementById("inspPhotos").files) ? document.getElementById("inspPhotos").files : []).filter(function(f){ return f && /^image\//i.test(f.type||''); }).slice(0,5);
         if (createdRow && createdRow.id && selectedFiles.length){
@@ -11350,26 +11403,48 @@ ${notesText}` : ""
           subject: createdRow.subject || subject || 'Resident Work Order',
           description: createdRow.description || descriptionParts.join("\n"),
           priority: createdRow.priority || 'normal',
-          status: 'sent_to_vendor',
+          status: createdRow.status || 'assigned',
           photos: Array.isArray(data.photos) ? data.photos : []
         });
 
-        try{
-          await supabase
-            .from('resident_work_orders')
-            .update({ status: 'sent_to_vendor' })
-            .eq('id', createdRow.id);
-        }catch(_statusErr){}
+        const emailAccepted = inspectionEmailWasAccepted(emailResult);
 
-        if (emailResult && emailResult.ok){
+        if (emailAccepted){
+          await updateInspectionWorkOrderEmailStatus(supabase, createdRow.id, 'sent_to_vendor', {
+            vendor_email_status: 'sent',
+            vendor_email_sent_at: new Date().toISOString(),
+            vendor_email_error: null,
+            vendor_email_provider_response: inspectionEmailResponseSummary(emailResult)
+          });
+
           successMessage = emailResult && emailResult.resident_email_sent
             ? 'Work order created and vendor notified by email. Resident was also notified.'
             : 'Work order created and vendor notified by email.';
-        } else if (emailResult && emailResult.warning){
-          successMessage = 'Work order created. ' + String(emailResult.warning);
+        } else {
+          const warningText = (emailResult && (emailResult.warning || emailResult.error || emailResult.message))
+            ? String(emailResult.warning || emailResult.error || emailResult.message)
+            : 'Email function returned without a confirmed sent response.';
+
+          await updateInspectionWorkOrderEmailStatus(supabase, createdRow.id, 'vendor_email_failed', {
+            vendor_email_status: 'failed',
+            vendor_email_error: warningText,
+            vendor_email_provider_response: inspectionEmailResponseSummary(emailResult)
+          });
+
+          successMessage = 'Work order created, but vendor email needs attention: ' + warningText;
         }
       }catch(emailErr){
-        successMessage = 'Work order created and vendor assignment saved, but vendor email was not sent: ' + (emailErr?.message || 'Function error');
+        const emailErrorText = (emailErr && emailErr.message) ? emailErr.message : 'Function error';
+
+        try{
+          await updateInspectionWorkOrderEmailStatus(supabase, createdRow.id, 'vendor_email_failed', {
+            vendor_email_status: 'failed',
+            vendor_email_error: emailErrorText
+          });
+        }catch(_auditErr){}
+
+        successMessage = 'Work order created and vendor assignment saved, but vendor email was not sent: ' + emailErrorText;
+      }
       }
     }
 
@@ -13403,264 +13478,6 @@ body#inspectionsPage [data-page-error]{
 })();
 </script>
 
-
-<script id="communityInspectionsVendorsTableAuthority_v2123">
-/* ZUMMEE_PATCH v2123 — Daily Ops Vendors Table Authority
-   Long-term source of truth:
-   - Daily Ops / Operations saves vendors in public."Vendors".
-   - Community Inspections reads ONLY public."Vendors".
-   - No blended fallback to old vendor tables.
-   - Vendor rows are filtered by the selected community_id from the inspections header.
-*/
-(function(){
-  if(window.__ZUMMEE_CI_VENDORS_TABLE_AUTHORITY_V2123__) return;
-  window.__ZUMMEE_CI_VENDORS_TABLE_AUTHORITY_V2123__ = true;
-
-  var VERSION = 'v2123';
-  var requestSeq = 0;
-
-  function $(id){ return document.getElementById(id); }
-  function str(v){ return (v == null ? '' : String(v)).trim(); }
-  function lower(v){ return str(v).toLowerCase(); }
-  function compact(v){ return lower(v).replace(/&/g,'and').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim(); }
-
-  function getSB(){
-    try{ if(window.sb) return window.sb; }catch(_e){}
-    try{ if(window.supabaseClient) return window.supabaseClient; }catch(_e){}
-    try{ if(window.ZummeeSupabaseClient) return window.ZummeeSupabaseClient; }catch(_e){}
-    try{ if(typeof ensureSupabaseSync === 'function') return ensureSupabaseSync(); }catch(_e){}
-    return null;
-  }
-
-  function getCurrentCompany(){
-    var keys = ['zummee_company','zummee_selected_company','zummee_management_company','selectedCompany','zummee_company_name','managementCompanyName'];
-    for(var i=0;i<keys.length;i++){
-      try{ var v = str(localStorage.getItem(keys[i])); if(v) return v; }catch(_e){}
-    }
-    try{ if(window.__zummeeCompany) return str(window.__zummeeCompany); }catch(_e){}
-    return '';
-  }
-
-  function selectedCommunity(){
-    var sel = $('zummeeCommunitySelect') || $('communitySelect') || $('communityDropdown');
-    var id = str(sel && sel.value);
-    var name = '';
-    try{
-      var opt = sel && sel.options ? sel.options[sel.selectedIndex] : null;
-      name = str(opt && (opt.textContent || opt.label));
-    }catch(_e){}
-    if(!id){
-      var keys = [
-        (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.SELECTED_COMMUNITY_KEY) || '',
-        'zummee_selected_community_v1',
-        'zummee_selected_community_id',
-        'activeCommunityId',
-        'managerHubSelectedCommunityId'
-      ];
-      for(var i=0;i<keys.length;i++){
-        try{ var v = str(localStorage.getItem(keys[i])); if(v){ id = v; break; } }catch(_e){}
-      }
-    }
-    return { id:id, name:name, idKey:lower(id), nameKey:compact(name) };
-  }
-
-  function selectedVendorType(){ return str($('inspVendorType') && $('inspVendorType').value); }
-
-  function normVendor(row){
-    row = row || {};
-    var name = str(row.name) || str(row.vendor_name) || str(row.vendorName) || str(row.business_name) || str(row.company_name) || str(row.company);
-    var email = str(row.email) || str(row.vendor_email) || str(row.vendorEmail) || str(row.contact_email) || str(row.primary_email);
-    var phone = str(row.phone) || str(row.vendor_phone) || str(row.vendorPhone) || str(row.contact_phone) || str(row.primary_phone);
-    var type = str(row.type) || str(row.vendor_type) || str(row.vendorType) || str(row.category) || str(row.service_type) || str(row.trade);
-    var communityId = str(row.community_id) || str(row.communityId) || str(row.property_community_id) || str(row.propertyCommunityId);
-    var communityName = str(row.community_name) || str(row.communityName) || str(row.community) || str(row.property_name) || str(row.propertyName);
-    var company = str(row.company) || str(row.company_name) || str(row.companyName) || str(row.management_company);
-    var id = str(row.id) || str(row.vendor_id) || str(row.vendorId) || str(row.uuid);
-    if(!id){
-      var base = [name,email,phone,type,communityId,communityName,company].join('|').toLowerCase();
-      var h = 0;
-      for(var i=0;i<base.length;i++){ h = ((h << 5) - h) + base.charCodeAt(i); h |= 0; }
-      id = 'vendor_' + ((h >>> 0).toString(16));
-    }
-    return { id:id, name:name, email:email, phone:phone, type:type, community_id:communityId, community_name:communityName, company:company, raw:row };
-  }
-
-  function vendorMatchesType(v, selectedType){
-    selectedType = str(selectedType);
-    if(!selectedType) return true;
-    var vt = str(v.type);
-    if(!vt) return true;
-    var a = compact(vt), b = compact(selectedType);
-    return a === b || a.indexOf(b) >= 0 || b.indexOf(a) >= 0;
-  }
-
-  function dedupe(vendors){
-    var seen = new Map();
-    vendors.forEach(function(v){
-      v = normVendor(v);
-      if(!(v.name || v.email || v.phone)) return;
-      var key = lower(v.id) || [compact(v.name), lower(v.email), lower(v.phone), lower(v.community_id)].join('|');
-      if(!seen.has(key)) seen.set(key, v);
-    });
-    return Array.from(seen.values()).sort(function(a,b){ return str(a.name || a.email || a.phone).localeCompare(str(b.name || b.email || b.phone), undefined, {sensitivity:'base'}); });
-  }
-
-  async function readDailyOpsVendorsTable(community){
-    var sb = getSB();
-    if(!sb || !community || !community.id) return [];
-    var res = await sb.from('Vendors').select('*').eq('community_id', community.id).limit(1000);
-    if(res && res.error){
-      console.warn('[CI Vendors v2123] public.Vendors read failed:', res.error);
-      return [];
-    }
-    var rows = Array.isArray(res && res.data) ? res.data : [];
-    var vendors = rows.map(normVendor);
-    var company = getCurrentCompany();
-    if(company){
-      var cKey = compact(company);
-      var scoped = vendors.filter(function(v){ return !v.company || compact(v.company) === cKey; });
-      if(scoped.length) vendors = scoped;
-    }
-    return dedupe(vendors);
-  }
-
-  function setContactLinkSafe(el, value, kind){
-    if(!el) return;
-    if(typeof window.setContactLink === 'function') return window.setContactLink(el, value, kind);
-    if(typeof setContactLink === 'function') return setContactLink(el, value, kind);
-    value = str(value);
-    if(!value){
-      el.textContent = '—';
-      el.href = 'javascript:void(0)';
-      el.style.opacity = '0.65';
-      el.style.pointerEvents = 'none';
-      return;
-    }
-    el.textContent = value;
-    el.style.opacity = '1';
-    el.style.pointerEvents = 'auto';
-    el.href = kind === 'phone' ? ('tel:' + value.replace(/[^0-9+]/g,'')) : (kind === 'email' ? ('mailto:' + value) : '#');
-  }
-
-  function clearVendorUI(message){
-    var sel = $('inspVendorId');
-    if(sel){
-      sel.innerHTML = '<option value="">' + (message || '— Select vendor —') + '</option>';
-      sel.value = '';
-      sel.disabled = false;
-    }
-    window.__inspVendorLookup = new Map();
-    setContactLinkSafe($('inspVendorPhoneLink'), '', 'phone');
-    setContactLinkSafe($('inspVendorEmailLink'), '', 'email');
-    var emailBtn = $('btnEmailInspNote');
-    if(emailBtn){ emailBtn.disabled = true; emailBtn.style.opacity = '0.6'; }
-  }
-
-  function syncLegacyVendorCache(vendors){
-    try{
-      window.vendorCache = window.vendorCache || { byType:{}, byId:{} };
-      if(typeof vendorCache !== 'undefined'){
-        vendorCache.byId = {};
-        vendorCache.byType = {};
-        vendors.forEach(function(v){
-          vendorCache.byId[v.id] = v;
-          var t = str(v.type);
-          vendorCache.byType[t] = vendorCache.byType[t] || [];
-          vendorCache.byType[t].push(v);
-        });
-      }
-    }catch(_e){}
-  }
-
-  function populateVendorUI(vendors){
-    var sel = $('inspVendorId');
-    if(!sel) return;
-    sel.innerHTML = '<option value="">— Select vendor —</option>';
-    var map = new Map();
-    vendors.forEach(function(v){
-      map.set(v.id, v);
-      var opt = document.createElement('option');
-      opt.value = v.id;
-      opt.textContent = v.name || v.email || v.phone || 'Vendor';
-      if(v.type) opt.setAttribute('data-type', v.type);
-      opt.setAttribute('data-source', 'public.Vendors');
-      sel.appendChild(opt);
-    });
-    window.__inspVendorLookup = map;
-    syncLegacyVendorCache(vendors);
-    sel.disabled = false;
-  }
-
-  function applyVendorDetails(id){
-    var lookup = window.__inspVendorLookup || new Map();
-    var v = lookup.get(id);
-    setContactLinkSafe($('inspVendorPhoneLink'), v && v.phone, 'phone');
-    setContactLinkSafe($('inspVendorEmailLink'), v && v.email, 'email');
-    var emailBtn = $('btnEmailInspNote');
-    if(emailBtn){
-      var hasEmail = !!(v && str(v.email));
-      emailBtn.disabled = !hasEmail;
-      emailBtn.style.opacity = hasEmail ? '1' : '0.6';
-    }
-  }
-
-  async function refresh(reason){
-    var community = selectedCommunity();
-    if(!community.id){ clearVendorUI('Select a community first'); return; }
-    var seq = ++requestSeq;
-    var selectedType = selectedVendorType();
-    clearVendorUI('Loading vendors…');
-    var all = await readDailyOpsVendorsTable(community);
-    if(seq !== requestSeq) return;
-    var filtered = all.filter(function(v){ return vendorMatchesType(v, selectedType); });
-    var shown = filtered.length ? filtered : all;
-    if(!shown.length){
-      clearVendorUI('No vendors found in Daily Ops');
-      syncLegacyVendorCache([]);
-      return;
-    }
-    populateVendorUI(shown);
-  }
-
-  function wire(){
-    var communitySel = $('zummeeCommunitySelect') || $('communitySelect') || $('communityDropdown');
-    var typeSel = $('inspVendorType');
-    var vendorSel = $('inspVendorId');
-    if(communitySel && !communitySel.__zummeeVendorsAuthorityBound){
-      communitySel.__zummeeVendorsAuthorityBound = true;
-      communitySel.addEventListener('change', function(){ refresh('community-change'); }, true);
-    }
-    if(typeSel && !typeSel.__zummeeVendorsAuthorityBound){
-      typeSel.__zummeeVendorsAuthorityBound = true;
-      typeSel.addEventListener('change', function(){ refresh('type-change'); }, true);
-    }
-    if(vendorSel && !vendorSel.__zummeeVendorsAuthorityDetailBound){
-      vendorSel.__zummeeVendorsAuthorityDetailBound = true;
-      vendorSel.addEventListener('change', function(e){ applyVendorDetails(e.target.value); }, true);
-    }
-  }
-
-  function start(){
-    wire();
-    setTimeout(function(){ wire(); refresh('initial'); }, 0);
-    setTimeout(function(){ wire(); refresh('late-header'); }, 700);
-    setTimeout(function(){ wire(); refresh('late-data'); }, 1800);
-  }
-
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once:true });
-  else start();
-  window.addEventListener('load', function(){ wire(); refresh('window-load'); });
-  window.addEventListener('zummee:selected-community-updated', function(){ refresh('selected-community-event'); });
-
-  window.ZummeeVendorsTableAuthority = {
-    version: VERSION,
-    refresh: refresh,
-    read: function(){ return readDailyOpsVendorsTable(selectedCommunity()); },
-    selectedCommunity: selectedCommunity
-  };
-})();
-</script>
-
 </body>
 </html>
 <style>
@@ -14351,9 +14168,9 @@ body#inspectionsPage .draftRow{
   #ciPremiumHeader .ci-icon,
   #ciPremiumHeader .ci-header-icon{display:none !important;}
 </style>
-<script id="communityInspectionsAssignedDropdownAuthority_v2121">
+<script id="communityInspectionsAssignedDropdownStableLock_v2115">
 (function(){
-  var BUILD = 'v2121';
+  var BUILD = 'v2115';
   var SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
   var SUPABASE_KEY = "sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864";
   var locked = null;
@@ -14542,57 +14359,6 @@ body#inspectionsPage .draftRow{
     return [];
   }
 
-  function selectedStorageKeys(){
-    var keys = [
-      'activeCommunityId',
-      'zummee_selected_community_id',
-      'zummee_selected_community_v1',
-      'managerHubSelectedCommunityId'
-    ];
-    try{
-      var scoped = window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.SELECTED_COMMUNITY_KEY;
-      if(scoped) keys.unshift(scoped);
-    }catch(e){}
-    // De-dupe while preserving priority.
-    var seen = {};
-    return keys.filter(function(k){ k = asText(k); if(!k || seen[k]) return false; seen[k]=true; return true; });
-  }
-
-  function getSavedSelection(){
-    var keys = selectedStorageKeys();
-    for(var i=0;i<keys.length;i++){
-      try{
-        var v = asText(localStorage.getItem(keys[i]));
-        if(v) return v;
-      }catch(e){}
-    }
-    return '';
-  }
-
-  function optionExists(sel, value){
-    value = asText(value);
-    if(!sel || !value) return false;
-    return Array.prototype.some.call(sel.options || [], function(o){ return String(o.value) === value; });
-  }
-
-  function setAuthoritativeSelection(sel, value, persist){
-    sel = sel || getSelect();
-    if(!sel) return '';
-    value = asText(value);
-    if(value && optionExists(sel, value)){
-      sel.value = value;
-    }else if(!sel.value && sel.options && sel.options.length){
-      sel.value = sel.options[0].value;
-    }
-    if(persist !== false) persistSelection(sel);
-    if(locked){
-      locked.value = asText(sel.value);
-      locked.html = sel.innerHTML;
-      locked.count = sel.options ? sel.options.length : 0;
-    }
-    return asText(sel.value);
-  }
-
   function renderDropdown(list){
     var sel = getSelect();
     if(!sel) return false;
@@ -14604,10 +14370,7 @@ body#inspectionsPage .draftRow{
       return false;
     }
 
-    // v2121: selected-community state is authoritative. Do not prefer the
-    // current select value because older loaders may have already reset it
-    // to the first assignment before this owner script runs.
-    var desired = getSavedSelection() || asText(sel.value);
+    var previous = asText(sel.value || localStorage.getItem('activeCommunityId') || localStorage.getItem('zummee_selected_community_id'));
     sel.innerHTML = '';
     list.forEach(function(c){
       var opt = document.createElement('option');
@@ -14615,11 +14378,13 @@ body#inspectionsPage .draftRow{
       opt.textContent = String(c.name || c.id);
       sel.appendChild(opt);
     });
-    setAuthoritativeSelection(sel, desired, true);
+    if(previous && Array.prototype.some.call(sel.options, function(o){ return String(o.value) === previous; })) sel.value = previous;
+    if(!sel.value && sel.options.length) sel.value = sel.options[0].value;
     sel.disabled = false;
+    persistSelection(sel);
     locked = { html: sel.innerHTML, value: sel.value, count: sel.options.length };
     bindSelect(sel);
-    log('loaded assigned communities', locked.count, 'selected', locked.value);
+    log('loaded assigned communities', locked.count);
     return true;
   }
 
@@ -14627,23 +14392,16 @@ body#inspectionsPage .draftRow{
     sel = sel || getSelect();
     var v = asText(sel && sel.value);
     if(!v) return;
-    selectedStorageKeys().forEach(function(key){
-      try{ localStorage.setItem(key, v); }catch(e){}
-    });
+    try{ localStorage.setItem('activeCommunityId', v); }catch(e){}
+    try{ localStorage.setItem('zummee_selected_community_id', v); }catch(e){}
+    try{ localStorage.setItem('zummee_selected_community_v1', v); }catch(e){}
     try{ window.currentCommunityId = v; }catch(e){}
-    if(locked){
-      locked.value = v;
-      locked.html = sel.innerHTML;
-      locked.count = sel.options ? sel.options.length : 0;
-    }
   }
 
   function bindSelect(sel){
-    if(!sel || sel.__ciV2121Bound) return;
-    sel.__ciV2121Bound = true;
-    try{ sel.__ciV2115Bound = true; }catch(e){}
+    if(!sel || sel.__ciV2115Bound) return;
+    sel.__ciV2115Bound = true;
     sel.addEventListener('change', function(){
-      // v2121: user choice immediately becomes the source of truth.
       persistSelection(sel);
       try{ document.dispatchEvent(new Event('community:changed')); }catch(e){}
       try{ document.dispatchEvent(new Event('communities:changed')); }catch(e){}
@@ -14672,17 +14430,13 @@ body#inspectionsPage .draftRow{
     var sel = getSelect();
     if(!sel || !locked || restoring) return;
     var text = (sel.textContent || '').toLowerCase();
-    var saved = getSavedSelection() || locked.value;
-    var needsListRepair = (sel.options.length !== locked.count || text.indexOf('community unavailable') >= 0 || text.indexOf('loading communities') >= 0 || text.indexOf('no communities') >= 0);
-    var needsValueRepair = !!(saved && optionExists(sel, saved) && asText(sel.value) !== saved);
-    if(needsListRepair || needsValueRepair){
+    if(sel.options.length !== locked.count || text.indexOf('community unavailable') >= 0 || text.indexOf('loading communities') >= 0 || text.indexOf('no communities') >= 0){
       restoring = true;
-      if(needsListRepair){
-        sel.innerHTML = locked.html;
-      }
-      setAuthoritativeSelection(sel, saved, true);
+      sel.innerHTML = locked.html;
+      if(Array.prototype.some.call(sel.options, function(o){ return o.value === locked.value; })) sel.value = locked.value;
       sel.disabled = false;
       bindSelect(sel);
+      persistSelection(sel);
       restoring = false;
     }
   }
@@ -14713,7 +14467,7 @@ body#inspectionsPage .draftRow{
 
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
   window.addEventListener('load', function(){ setTimeout(function(){ removeTitleCheck(); installObserver(); repairIfOverwritten(); }, 80); });
-  // v2121: no external lock file. Assigned dropdown is single-owned here and selected-community state is authoritative.
+  // v2115: no delayed full reload loops. The header is single-mounted and the dropdown only repairs if overwritten.
 })();
 </script>
 <style id="communityInspectionsHeaderNoJump_v2115">
