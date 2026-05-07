@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Zummee Violations</title>
   <script>
-    window.ZUMMEE_VIOLATIONS_BUILD = 'v540b-community-categories-readonly';
+    window.ZUMMEE_VIOLATIONS_BUILD = 'v540c-covenant-preview-readonly';
     (function(){
       try{
         var stored = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || 'light';
@@ -115,6 +115,18 @@
     .category-chip{border:1px solid var(--z-line);border-radius:16px;background:var(--z-soft);padding:11px 12px;}
     .category-chip strong{display:block;font-size:13px;margin-bottom:4px;}
     .category-chip span{display:block;color:var(--z-muted);font-size:12px;font-weight:700;line-height:1.3;}
+
+    .covenant-card{margin-top:14px;border:1px solid var(--z-line);border-radius:20px;background:linear-gradient(180deg,rgba(238,246,255,.78),rgba(255,255,255,.66));padding:15px;}
+    html[data-theme="dark"] .covenant-card{background:rgba(255,255,255,.05);}
+    .covenant-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;}
+    .covenant-title{font-size:16px;font-weight:950;letter-spacing:-.02em;margin:0;}
+    .covenant-ref{display:inline-flex;align-items:center;border:1px solid rgba(244,182,63,.45);background:rgba(244,182,63,.14);color:#8b5a00;border-radius:999px;padding:7px 10px;font-size:11px;font-weight:950;white-space:nowrap;}
+    html[data-theme="dark"] .covenant-ref{color:#ffd98a;}
+    .covenant-section{font-size:12px;color:var(--z-muted);font-weight:900;text-transform:uppercase;letter-spacing:.045em;margin-bottom:8px;}
+    .covenant-language{font-size:14px;line-height:1.5;color:var(--z-ink);white-space:pre-wrap;}
+    .required-action{margin-top:12px;border-top:1px solid var(--z-line);padding-top:12px;color:var(--z-muted);font-size:13px;line-height:1.42;}
+    .required-action strong{color:var(--z-ink);}
+
     @media (max-width:880px){
       .page{width:min(100% - 22px,1180px);padding-top:12px;}
       .topbar{position:relative;top:auto;align-items:flex-start;flex-direction:column;}
@@ -134,7 +146,7 @@
         <div class="mark" aria-hidden="true">Z</div>
         <div>
           <h1>Violations</h1>
-          <div class="subtitle" id="pageSubtitle">Loading assigned communities and violation categories</div>
+          <div class="subtitle" id="pageSubtitle">Loading assigned communities, categories, and covenant preview</div>
         </div>
       </div>
       <div class="top-actions">
@@ -150,7 +162,7 @@
       <article class="card">
         <div id="loadStatus" class="status-pill warn"><span class="dot"></span> Loading Supabase reads</div>
         <h2>New Violation Case</h2>
-        <p>This build safely reads assigned communities and violation categories only. Case saving, photos, and letters are still locked until this read layer is confirmed stable on iPad.</p>
+        <p>This build safely reads assigned communities, violation categories, and matching covenant preview text only. Case saving, photos, and letters are still locked until this read layer is confirmed stable on iPad.</p>
 
         <div class="info-row">
           <div class="info-box">
@@ -191,15 +203,25 @@
             <textarea disabled placeholder="Inspection notes"></textarea>
           </div>
         </div>
+
+        <div id="covenantPreviewCard" class="covenant-card" aria-live="polite">
+          <div class="covenant-head">
+            <h3 class="covenant-title" id="covenantTitle">Covenant Preview</h3>
+            <span class="covenant-ref" id="covenantReference">Waiting</span>
+          </div>
+          <div class="covenant-section" id="covenantSection">Select a category</div>
+          <div class="covenant-language" id="covenantLanguage">Choose a violation category to display matching covenant language for the selected community.</div>
+          <div class="required-action" id="requiredAction"><strong>Required Action:</strong> Not selected yet.</div>
+        </div>
       </article>
 
       <aside class="card">
         <h2>Read Layer Test</h2>
-        <p>Only two live reads are enabled: assigned communities from the existing shared data layer, and active categories from <strong>violation_categories</strong>.</p>
+        <p>Three live reads are enabled: assigned communities from the existing shared data layer, active categories from <strong>violation_categories</strong>, and matching covenant text from <strong>community_covenants</strong>.</p>
         <div class="grid">
           <div class="mini"><strong>Communities</strong><span id="communityReadNote">Waiting for shared data layer…</span></div>
           <div class="mini"><strong>Categories</strong><span id="categoryReadNote">Waiting for Supabase…</span></div>
-          <div class="mini"><strong>Writes</strong><span>No case saving is enabled in this build.</span></div>
+          <div class="mini"><strong>Covenants</strong><span id="covenantReadNote">Select a category to preview covenant language.</span></div>
         </div>
 
         <div id="categoryPreviewList" class="category-list" aria-label="Loaded violation categories"></div>
@@ -209,7 +231,7 @@
     <section class="card" style="margin-top:14px;">
       <h2>Open Violations</h2>
       <p>Open cases will appear here after save logic is added in the next step.</p>
-      <div class="list-placeholder">No case records are loaded or written in v540b. This is intentional.</div>
+      <div class="list-placeholder">No case records are loaded or written in v540c. This is intentional.</div>
     </section>
   </main>
 
@@ -219,7 +241,7 @@
   <script>
     (function(){
       'use strict';
-      var state = { communities: [], categories: [], selectedCommunityId: '', selectedCommunityName: '' };
+      var state = { communities: [], categories: [], covenants: [], selectedCommunityId: '', selectedCommunityName: '', selectedCategoryId: '' };
       var els = {};
       function $(id){ return document.getElementById(id); }
       function clean(v){ return String(v == null ? '' : v).replace(/\s+/g,' ').trim(); }
@@ -289,6 +311,7 @@
             window.ZummeeDataLayer.syncCommunityContext(id, name, push ? 'push' : 'none');
           }
         }catch(_e){}
+        if(state.selectedCategoryId) loadCovenantPreview().catch(function(e){ console.error('[Zummee Violations v540c] covenant refresh failed', e); renderNoCovenant('Covenant preview unavailable.'); });
       }
       async function getClient(){
         if(window.ensureSupabase && typeof window.ensureSupabase === 'function') return await window.ensureSupabase();
@@ -342,6 +365,53 @@
           box.appendChild(div);
         });
       }
+
+      function getSelectedCategoryName(){
+        var found = state.categories.find(function(c){ return clean(c.id) === clean(state.selectedCategoryId); }) || {};
+        return clean(found.category_name || 'Selected category');
+      }
+      function renderNoCovenant(message){
+        setText('covenantTitle','No covenant added yet');
+        setText('covenantReference','Not found');
+        setText('covenantSection', state.selectedCommunityName && state.selectedCategoryId ? (state.selectedCommunityName + ' • ' + getSelectedCategoryName()) : 'Select a category');
+        setText('covenantLanguage', message || 'No active covenant language has been added for this community and category yet.');
+        setText('requiredAction','Required Action: Add covenant language in Supabase or choose another category.');
+        setText('covenantReadNote','No matching covenant row found yet.');
+      }
+      function renderCovenant(c){
+        setText('covenantTitle', clean(c.covenant_title || 'Covenant Preview'));
+        setText('covenantReference', clean(c.covenant_reference || 'Reference not set'));
+        setText('covenantSection', clean((state.selectedCommunityName || 'Community') + ' • ' + (c.covenant_section || getSelectedCategoryName())));
+        setText('covenantLanguage', clean(c.covenant_language || 'No covenant language has been added yet.'));
+        setText('requiredAction', 'Required Action: ' + clean(c.default_required_action || c.manager_summary || 'Review the violation and determine the appropriate corrective action.'));
+        setText('covenantReadNote','Matching covenant preview loaded.');
+      }
+      async function loadCovenantPreview(){
+        state.selectedCategoryId = clean(($('violationCategorySelect') || {}).value || state.selectedCategoryId || '');
+        if(!state.selectedCategoryId){
+          setText('covenantTitle','Covenant Preview');
+          setText('covenantReference','Waiting');
+          setText('covenantSection','Select a category');
+          setText('covenantLanguage','Choose a violation category to display matching covenant language for the selected community.');
+          setText('requiredAction','Required Action: Not selected yet.');
+          setText('covenantReadNote','Select a category to preview covenant language.');
+          return;
+        }
+        var sb = await getClient();
+        if(!sb || typeof sb.from !== 'function') throw new Error('Supabase client unavailable');
+        setText('covenantReadNote','Looking for matching covenant language…');
+        var query = sb.from('community_covenants')
+          .select('id, community_id, community_name, category_id, covenant_title, covenant_reference, covenant_section, covenant_language, manager_summary, default_required_action, is_active')
+          .eq('category_id', state.selectedCategoryId)
+          .eq('is_active', true)
+          .order('created_at', { ascending:false });
+        var res = await query.or('community_id.eq.' + state.selectedCommunityId + ',community_name.eq.' + state.selectedCommunityName);
+        if(res.error) throw res.error;
+        var rows = Array.isArray(res.data) ? res.data : [];
+        if(!rows.length){ renderNoCovenant('No active covenant language has been added for ' + (state.selectedCommunityName || 'this community') + ' under ' + getSelectedCategoryName() + '.'); return; }
+        renderCovenant(rows[0]);
+      }
+
       async function boot(){
         try{
           setStatus('warn','Loading Supabase reads');
@@ -349,7 +419,7 @@
           await loadCategories();
           setStatus('good','Read layer connected');
         }catch(e){
-          console.error('[Zummee Violations v540b] boot failed', e);
+          console.error('[Zummee Violations v540c] boot failed', e);
           setStatus('error','Read layer needs attention');
           setText('pageSubtitle','Unable to complete read test');
           if(!state.communities.length) setText('communityReadNote', clean(e && e.message) || 'Community read failed.');
@@ -360,6 +430,10 @@
         els.communitySelect = $('violationsCommunitySelect');
         if(els.communitySelect){
           els.communitySelect.addEventListener('change', function(){ applyCommunitySelection(true); });
+        }
+        var catSelect = $('violationCategorySelect');
+        if(catSelect){
+          catSelect.addEventListener('change', function(){ state.selectedCategoryId = clean(catSelect.value); loadCovenantPreview().catch(function(e){ console.error('[Zummee Violations v540c] covenant load failed', e); renderNoCovenant(clean(e && e.message) || 'Covenant preview failed.'); }); });
         }
         boot();
       });
