@@ -4218,6 +4218,26 @@ body.dark-mode .mh2-stat-box {
   .ci-back-btn{height:46px;border-radius:16px;border:1px solid var(--ci-line);background:#fff;color:var(--ci-ink);padding:0 18px;font-weight:950;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 10px 22px rgba(18,45,78,.07);}
   .ci-back-btn:hover{background:#f7fbff;}
 
+  .ci-premium-header{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;}
+  .ci-header-main{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;width:100%;}
+  .ci-header-topRight{display:flex;align-items:flex-start;justify-content:flex-end;flex:0 0 auto;min-width:120px;}
+  .ci-page-logo{height:56px;max-width:220px;object-fit:contain;display:block;}
+  .ci-header-bottomRow{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;width:100%;}
+  .ci-community-wrap{display:flex;align-items:flex-end;gap:10px;flex:1 1 auto;min-width:0;}
+  .ci-community-label{font-size:13px;font-weight:900;color:var(--ci-muted);letter-spacing:.03em;text-transform:uppercase;padding-bottom:13px;white-space:nowrap;}
+  .ci-community-select{appearance:auto;height:56px;min-width:280px;max-width:420px;width:100%;border-radius:16px;border:1px solid var(--ci-line);background:#fff;color:var(--ci-ink);padding:0 14px;font-size:16px;font-weight:800;box-shadow:0 10px 22px rgba(18,45,78,.07);}
+  .ci-back-btn{height:56px;min-width:210px;}
+  @media (max-width: 820px){
+    .ci-premium-header{padding:18px;}
+    .ci-header-main{flex-direction:row;align-items:flex-start;}
+    .ci-page-logo{height:48px;max-width:160px;}
+    .ci-header-bottomRow{flex-direction:column;align-items:stretch;}
+    .ci-community-wrap{flex-direction:column;align-items:stretch;gap:8px;width:100%;}
+    .ci-community-label{padding-bottom:0;}
+    .ci-community-select{max-width:none;min-width:0;}
+    .ci-back-btn{width:100%;min-width:0;}
+  }
+
   .wrap > .card,
   .wrap .card,
   .wrap .zm-card,
@@ -10499,7 +10519,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
 
-<script id="zummee-community-inspections-premium-header-v2104">
+<script id="zummee-community-inspections-premium-header-v2106">
 (function(){
   function addHeader(){
     try{
@@ -10511,19 +10531,96 @@ document.addEventListener('DOMContentLoaded', function(){
       h.id='ciPremiumHeader';
       h.className='ci-premium-header';
       h.innerHTML=''+
-        '<div class="ci-header-left">'+
-          '<div class="ci-icon" aria-hidden="true">✓</div>'+
-          '<div><h1 class="ci-title">Community Inspections</h1><div class="ci-subtitle">Create inspection records, vendor walks, drafts, photos, and follow-up work orders.</div></div>'+
+        '<div class="ci-header-main">'+
+          '<div class="ci-header-left">'+
+            '<div class="ci-icon" aria-hidden="true">✓</div>'+
+            '<div><h1 class="ci-title">Community Inspections</h1><div class="ci-subtitle">Create inspection records, vendor walks, drafts, photos, and follow-up work orders.</div></div>'+
+          '</div>'+
+          '<div class="ci-header-topRight">'+
+            '<img id="ciCompanyLogo" class="company-logo ci-page-logo" alt="Company logo" />'+
+          '</div>'+
         '</div>'+
-        '<div class="ci-header-actions">'+
-          '<img id="ciCompanyLogo" class="company-logo ci-page-logo" alt="Company logo" />'+
+        '<div class="ci-header-bottomRow">'+
+          '<div class="ci-community-wrap">'+
+            '<label class="ci-community-label" for="zummeeCommunitySelect">Community</label>'+
+            '<select id="zummeeCommunitySelect" class="ci-community-select" aria-label="Select community"></select>'+
+          '</div>'+
           '<a class="ci-back-btn" href="manager_hub.html">Back to Hub</a>'+
         '</div>';
       wrap.parentNode.insertBefore(h, wrap);
       try{
         if(window.ZummeeCompanyLogoSync && typeof window.ZummeeCompanyLogoSync.sync==='function') window.ZummeeCompanyLogoSync.sync();
       }catch(_e){}
+      try{ loadHeaderCommunities(); }catch(_e){}
     }catch(e){ console.warn('Community inspections premium header failed', e); }
+  }
+
+  async function loadHeaderCommunities(){
+    try{
+      var sel = document.getElementById('zummeeCommunitySelect');
+      if(!sel) return;
+      sel.innerHTML = '<option value="">Loading communities...</option>';
+      var SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
+      var SUPABASE_KEY = "sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864";
+      if(!window.sb && window.supabase && window.supabase.createClient){
+        window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+          auth: { storageKey:'sb-zummee-auth', storage: window.localStorage, persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }
+        });
+      }
+      var sb = window.sb;
+      if(!sb || !sb.auth || !sb.from) return;
+      var sessionResp = await sb.auth.getSession();
+      var uid = sessionResp?.data?.session?.user?.id;
+      if(!uid){
+        sel.innerHTML = '<option value="">No communities</option>';
+        return;
+      }
+      var a = await sb.from('CommunityAssignments').select('community_id').eq('user_id', uid);
+      if(a.error) throw a.error;
+      var ids = (a.data||[]).map(function(r){ return r.community_id; }).filter(Boolean);
+      if(!ids.length){
+        sel.innerHTML = '<option value="">No communities</option>';
+        return;
+      }
+      var pc = await sb.from('PropertyCommunities').select('id,name').in('id', ids);
+      if(pc.error) throw pc.error;
+      var list = (pc.data||[]).slice().sort(function(x,y){ return String(x.name||'').localeCompare(String(y.name||'')); });
+      sel.innerHTML='';
+      list.forEach(function(c){
+        var opt=document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name;
+        sel.appendChild(opt);
+      });
+      var desired = (localStorage.getItem('activeCommunityId') || localStorage.getItem('zummee_selected_community_id') || '').toString().trim();
+      if(desired){
+        var has = Array.from(sel.options).some(function(o){ return String(o.value)===String(desired); });
+        if(has) sel.value = desired;
+      }
+      if(!sel.value && sel.options.length) sel.value = sel.options[0].value;
+      if(sel.value){
+        localStorage.setItem('activeCommunityId', String(sel.value));
+        localStorage.setItem('zummee_selected_community_id', String(sel.value));
+      }
+      if(!sel.__ciBound){
+        sel.__ciBound = true;
+        sel.addEventListener('change', function(){
+          var v = String(sel.value || '').trim();
+          if(v){
+            localStorage.setItem('activeCommunityId', v);
+            localStorage.setItem('zummee_selected_community_id', v);
+          }
+          try{ sel.dispatchEvent(new Event('zummee:community-changed')); }catch(e){}
+        });
+      }
+      try{ sel.dispatchEvent(new Event('change', {bubbles:true})); }catch(e){}
+    }catch(e){
+      console.warn('Community inspections header communities failed', e);
+      var sel = document.getElementById('zummeeCommunitySelect');
+      if(sel && !sel.options.length){
+        sel.innerHTML = '<option value="">Community unavailable</option>';
+      }
+    }
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', addHeader); else addHeader();
   window.addEventListener('load', addHeader);
