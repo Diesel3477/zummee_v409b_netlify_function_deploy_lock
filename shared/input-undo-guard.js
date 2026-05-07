@@ -1,6 +1,6 @@
 /*
   Zummee Global Input Guard
-  Build: 2026-05-07-v605-input-undo-guard
+  Build: 2026-05-07-v601-input-undo-guard
 
   Purpose:
   - Reduce accidental iPad/Safari Undo Typing popups caused by gestures on non-text UI.
