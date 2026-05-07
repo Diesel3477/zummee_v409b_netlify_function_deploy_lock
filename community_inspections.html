@@ -2,7 +2,7 @@
 
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-07-v502-clean-create-work-order-vendor-contract";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-07-v600-community-persistence";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <!-- ZUMMEE_PATCH v2115: stable single-mount header + assigned dropdown no-jump lock -->
 <!-- ZUMMEE_PATCH v2074: inspections reads vendors from actual ops localStorage keys -->
@@ -8216,6 +8216,7 @@ body.dark-mode .mh2-stat-box {
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="shared/supabase-client.js?v=2026-04-08-2"></script>
 <script src="shared/maintenance-data.js?v=2026-05-07-v500"></script>
+<script src="shared/community-state.js?v=2026-05-07-v600"></script>
 <script>
   // Supabase init (shared)
   var SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
@@ -10970,27 +10971,9 @@ async function collectData(){
     const rawDate = getVal("inspDate");
     const date = rawDate ? new Date(rawDate + "T00:00:00").toLocaleDateString(undefined,{month:"long", day:"numeric", year:"numeric"}) : "";
     const inspType = getSelText("inspType");
-    const vendorSelect = document.getElementById("inspVendorId");
-    const vendorId = (vendorSelect && vendorSelect.value ? String(vendorSelect.value).trim() : "");
-    const vendorOption = vendorSelect && vendorSelect.selectedOptions && vendorSelect.selectedOptions[0] ? vendorSelect.selectedOptions[0] : null;
-    const vendorRecord =
-      (vendorId && window.vendorCache && window.vendorCache.byId && window.vendorCache.byId[vendorId]) ||
-      null;
-    const vendorName = (
-      (vendorRecord && vendorRecord.name) ||
-      (vendorOption && vendorOption.textContent ? String(vendorOption.textContent).replace(/\s+—\s+.*$/, "").trim() : "") ||
-      ""
-    );
-    const vendorPhone = (
-      (vendorRecord && vendorRecord.phone) ||
-      (vendorOption && vendorOption.dataset ? vendorOption.dataset.phone : "") ||
-      getLinkText("inspVendorPhoneLink")
-    );
-    const vendorEmail = (
-      (vendorRecord && vendorRecord.email) ||
-      (vendorOption && vendorOption.dataset ? vendorOption.dataset.email : "") ||
-      getLinkText("inspVendorEmailLink")
-    );
+    const vendorName = getSelText("inspVendorId");
+    const vendorPhone = getLinkText("inspVendorPhoneLink");
+    const vendorEmail = getLinkText("inspVendorEmailLink");
     const notes = getVal("inspNotes");
     const photoInput = document.getElementById("inspPhotos");
     const photos = await filesToDataUrls(photoInput?.files);
@@ -11002,7 +10985,6 @@ async function collectData(){
       date,
       ticketNumber: __maintAdState.ticketNumber || null,
       inspType,
-      vendorId,
       vendorName,
       vendorPhone,
       vendorEmail,
@@ -13560,13 +13542,10 @@ body#inspectionsPage [data-page-error]{
 
     // Keep legacy lookup/cache compatible with existing Create Work Order code.
     window.vendorCache = window.vendorCache || { byType:{}, byId:{} };
-    try{ if(typeof vendorCache === "undefined") window.vendorCache = window.vendorCache; }catch(_e){}
-    const vc = window.vendorCache;
-    vc.byId = vc.byId || {};
-    latestVendors.forEach(vv => {
-      if(vv.id) vc.byId[vv.id] = vv;
-      if(vv.name) vc.byId[vv.name] = vv;
-    });
+    if(typeof vendorCache !== "undefined"){
+      vendorCache.byId = vendorCache.byId || {};
+      latestVendors.forEach(vv => vendorCache.byId[vv.id] = vv);
+    }
   }
 
   async function refreshInspectionVendors(){
@@ -13580,11 +13559,9 @@ body#inspectionsPage [data-page-error]{
 
     try{
       latestVendors = await window.ZummeeMaintenanceData.getVendorsForCommunity(cid);
-      window.__ciLatestVendors = latestVendors.slice();
     }catch(err){
       console.warn("[CI v500] Vendor load failed:", err);
       latestVendors = [];
-      window.__ciLatestVendors = [];
     }
 
     const filtered = latestVendors.filter(v => typeMatches(v.type, wantedType));
@@ -13597,7 +13574,6 @@ body#inspectionsPage [data-page-error]{
       opt.textContent = v.type ? `${v.name} — ${v.type}` : v.name;
       opt.dataset.email = v.email || "";
       opt.dataset.phone = v.phone || "";
-      opt.dataset.vendorId = v.id || "";
       sel.appendChild(opt);
     });
 
@@ -13618,8 +13594,7 @@ body#inspectionsPage [data-page-error]{
       vendorCache.byType = {};
       vendorCache.byId = {};
       latestVendors.forEach(v => {
-        if(v.id) vendorCache.byId[v.id] = v;
-        if(v.name) vendorCache.byId[v.name] = v;
+        vendorCache.byId[v.id] = v;
         const t = v.type || "";
         if(!vendorCache.byType[t]) vendorCache.byType[t] = [];
         vendorCache.byType[t].push(v);
@@ -13705,6 +13680,48 @@ body#inspectionsPage [data-page-error]{
 
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind, { once:true });
   else bind();
+})();
+</script>
+
+
+<script id="zummee-community-persistence-inspections-v600">
+/* v600 — Community persistence bridge for Community Inspections */
+(function(){
+  if(window.__ciCommunityPersistenceV600) return;
+  window.__ciCommunityPersistenceV600 = true;
+
+  function selectEl(){
+    return document.getElementById("zummeeCommunitySelect") || document.getElementById("communitySelect") || document.querySelector('select[id*="community" i]');
+  }
+
+  async function hydrate(){
+    try{
+      if(!window.ZummeeCommunityState) return;
+      var sel = selectEl();
+      if(!sel) return;
+      await window.ZummeeCommunityState.hydrateCommunityDropdown(sel, { source:"community-inspections" });
+      var active = window.ZummeeCommunityState.getActiveCommunity();
+      if(active && active.id){
+        try{ window.currentCommunityId = active.id; window.activeCommunityId = active.id; }catch(_e){}
+      }
+      try{
+        if(typeof window.populateVendorSelect === "function") window.populateVendorSelect();
+      }catch(_e){}
+    }catch(err){
+      console.warn("[CI v600] community hydrate failed", err);
+    }
+  }
+
+  window.addEventListener("zummee:community-changed", function(){
+    try{
+      if(window.ZummeeMaintenanceData) window.ZummeeMaintenanceData.clearVendorCache?.();
+      if(typeof window.populateVendorSelect === "function") window.populateVendorSelect();
+    }catch(_e){}
+  });
+
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", hydrate, { once:true });
+  else setTimeout(hydrate, 80);
+  setTimeout(hydrate, 1000);
 })();
 </script>
 
