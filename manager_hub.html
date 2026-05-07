@@ -109,7 +109,7 @@
     })();
   </script>
   <script>
-window.__MH_VERSION = 'v523_smart_alert_layout_reserve_lock';
+window.__MH_VERSION = 'v533_annual_stable_cache_lock';
 
     (function(){
       try{
@@ -2889,20 +2889,6 @@ html[data-theme="dark"] .mh2-ask-close,html[data-theme="dark"] .mh2-ask-modal .m
 </style>
 
   <script src="shared/zummee-board-data.js?v=463-manager-hub-notification-events-hard-lock"></script>
-
-<style id="zummee-v532-annual-copy-visual-settle-lock">
-  /* v532: visual-only protection for Annual Meeting Approval copy flicker.
-     Does not touch smart-card counts, layout, classes, queries, or render timing. */
-  html[data-zummee-annual-copy-settling="1"] #mh2AlertApprovals .mh2-alert-copy{
-    opacity:0 !important;
-    visibility:hidden !important;
-    transition:none !important;
-  }
-  #mh2AlertApprovals .mh2-alert-copy{
-    transition:opacity .18s ease !important;
-  }
-</style>
-
 </head>
 <body class="manager-hub-page">
   <main class="mh2-page">
@@ -6231,6 +6217,36 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     if(!name){ try{ name=String(localStorage.getItem('currentCommunityName')||localStorage.getItem('zummeeCurrentCommunityName')||'').trim(); }catch(e){} }
     return {id:id,name:name};
   }
+  function annualCacheKey(ctx){
+    ctx = ctx || selectedCommunity();
+    return 'zummee_manager_annual_alert_stable_v533:' + String(ctx.id || norm(ctx.name) || 'default');
+  }
+  function readAnnualCache(ctx){
+    try{ return JSON.parse(sessionStorage.getItem(annualCacheKey(ctx)) || localStorage.getItem(annualCacheKey(ctx)) || 'null'); }catch(e){ return null; }
+  }
+  function writeAnnualCache(ctx, snap){
+    if(!snap || !snap.copy) return;
+    try{ sessionStorage.setItem(annualCacheKey(ctx), JSON.stringify(snap)); }catch(e){}
+    try{ localStorage.setItem(annualCacheKey(ctx), JSON.stringify(snap)); }catch(e){}
+  }
+  function paintAnnualSnapshot(snap){
+    var el=$('mh2AlertApprovals');
+    if(!el || !snap) return;
+    el.classList.remove('is-urgent','is-attention','is-good');
+    el.classList.add(snap.tone || 'is-good');
+    if(snap.href) el.setAttribute('href', snap.href);
+    var title = el.querySelector('.mh2-alert-title');
+    var badge = el.querySelector('.mh2-alert-badge');
+    var copy = el.querySelector('.mh2-alert-copy');
+    if(title) title.textContent = snap.title || 'Annual meeting approvals';
+    if(badge) badge.textContent = snap.badge || 'CLEAR';
+    if(copy) copy.textContent = snap.copy || 'No active items';
+  }
+  function restoreAnnualAlertFromCache(){
+    var ctx = selectedCommunity();
+    var snap = readAnnualCache(ctx);
+    if(snap && snap.copy) paintAnnualSnapshot(snap);
+  }
   function norm(v){ return String(v||'').toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' '); }
   function statusIsOpen(row){
     var st=String((row&&row.status)||'').toLowerCase().trim().replace(/[\s-]+/g,'_');
@@ -6271,15 +6287,15 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     var el=$('mh2AlertApprovals');
     if(!el) return;
     var tone = overdueCount>0 ? 'is-urgent' : (openCount>0 ? 'is-attention' : 'is-good');
-    el.classList.remove('is-urgent','is-attention','is-good');
-    el.classList.add(tone);
-    el.setAttribute('href', (window.mh2IsPrivileged ? 'annual_meeting_approvals.html' : 'annual_meeting_status.html'));
+    var href = (window.mh2IsPrivileged ? 'annual_meeting_approvals.html' : 'annual_meeting_status.html');
     var badge = overdueCount>0 ? (String(overdueCount)+' OVERDUE') : (openCount>0 ? (String(openCount)+' OPEN') : 'CLEAR');
     var copy = overdueCount>0
       ? (String(overdueCount)+' annual meeting approval item'+(overdueCount===1?' has':'s have')+' been open more than 2 days for '+(ctx.name||'the selected community')+'.')
       : (openCount>0 ? (String(openCount)+' annual meeting approval item'+(openCount===1?' is':'s are')+' still in progress for '+(ctx.name||'the selected community')+'.') : 'No active items');
-    el.innerHTML = '<div class="mh2-alert-top"><div class="mh2-alert-title">Annual meeting approvals</div><div class="mh2-alert-badge">'+esc(badge)+'</div></div><div class="mh2-alert-copy">'+esc(copy)+'</div>';
-    try{ window.__mh2AnnualApprovalAlertDebug={community:ctx,open:openCount,overdue:overdueCount,paintedAt:new Date().toISOString()}; }catch(e){}
+    var snap = { title:'Annual meeting approvals', tone:tone, href:href, badge:badge, copy:copy };
+    paintAnnualSnapshot(snap);
+    writeAnnualCache(ctx, snap);
+    try{ window.__mh2AnnualApprovalAlertDebug={community:ctx,open:openCount,overdue:overdueCount,paintedAt:new Date().toISOString(), cached:true}; }catch(e){}
   }
   async function refreshAnnualAlert(){
     var sb=getSb();
@@ -6303,12 +6319,16 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
   window.mh2RefreshAnnualApprovalSmartAlert = refreshAnnualAlert;
   function schedule(){ setTimeout(refreshAnnualAlert,250); setTimeout(refreshAnnualAlert,1200); setTimeout(refreshAnnualAlert,3500); }
   document.addEventListener('DOMContentLoaded', function(){
+    restoreAnnualAlertFromCache();
     schedule();
     var sel=$('zummeeCommunitySelect');
-    if(sel) sel.addEventListener('change', function(){ setTimeout(refreshAnnualAlert,150); setTimeout(refreshAnnualAlert,1000); });
+    if(sel) sel.addEventListener('change', function(){ restoreAnnualAlertFromCache(); setTimeout(refreshAnnualAlert,150); setTimeout(refreshAnnualAlert,1000); });
     setInterval(refreshAnnualAlert, 15000);
   });
-  if(document.readyState !== 'loading') schedule();
+  if(document.readyState !== 'loading'){
+    restoreAnnualAlertFromCache();
+    schedule();
+  }
 })();
 </script>
 
@@ -6698,31 +6718,6 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     try{ console.info('[v500 board no-flash lock] legacy board smart writer disabled'); }catch(_e){}
   }
   window.__ZUMMEE_V462_BOARD_SMART_LOCK_DISABLED__ = true;
-})();
-</script>
-
-
-<script id="zummee-v532-annual-copy-visual-settle-lock-js">
-(function(){
-  try{
-    document.documentElement.setAttribute('data-zummee-annual-copy-settling','1');
-    var release=function(){
-      try{ document.documentElement.removeAttribute('data-zummee-annual-copy-settling'); }catch(_e){}
-    };
-    // Hold only the Annual approval copy line through the legacy delayed repaint window.
-    // v523 still performs delayed community-authority checks; this avoids visible text flash without touching the cards.
-    if(document.readyState==='loading'){
-      document.addEventListener('DOMContentLoaded', function(){ setTimeout(release, 4200); }, {once:true});
-    }else{
-      setTimeout(release, 4200);
-    }
-    window.addEventListener('pageshow', function(){
-      try{
-        document.documentElement.setAttribute('data-zummee-annual-copy-settling','1');
-        setTimeout(release, 4200);
-      }catch(_e){}
-    });
-  }catch(_e){}
 })();
 </script>
 
