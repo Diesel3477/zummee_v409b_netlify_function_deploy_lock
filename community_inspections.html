@@ -2,7 +2,7 @@
 
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-07-v2123-vendors-table-authority";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-07-v2124-create-work-order-sends-vendor";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <!-- ZUMMEE_PATCH v2121: assigned dropdown single owner + selected-community state authority -->
 <!-- ZUMMEE_PATCH v2123: exact Daily Ops Vendors table authority -->
@@ -10970,6 +10970,8 @@ async function collectData(){
     const rawDate = getVal("inspDate");
     const date = rawDate ? new Date(rawDate + "T00:00:00").toLocaleDateString(undefined,{month:"long", day:"numeric", year:"numeric"}) : "";
     const inspType = getSelText("inspType");
+    const vendorSelectEl = document.getElementById("inspVendorId");
+    const vendorId = String(vendorSelectEl && vendorSelectEl.value ? vendorSelectEl.value : "").trim();
     const vendorName = getSelText("inspVendorId");
     const vendorPhone = getLinkText("inspVendorPhoneLink");
     const vendorEmail = getLinkText("inspVendorEmailLink");
@@ -10984,6 +10986,7 @@ async function collectData(){
       date,
       ticketNumber: __maintAdState.ticketNumber || null,
       inspType,
+      vendorId,
       vendorName,
       vendorPhone,
       vendorEmail,
@@ -11152,9 +11155,23 @@ if (accessToken) {
 
     const inspTypeText = String(data.inspType || "Inspection").trim() || "Inspection";
     const communityText = String(data.community || "Community").trim() || "Community";
-    const vendorNameText = (window.normalizeInspectionVendorName || function(rawName, vendorId){ const t = String(rawName || '').trim(); const id = String(vendorId || '').trim(); if (!id) return ''; if (!t) return ''; return t.toLowerCase().includes('select vendor') ? '' : t; })(data.vendorName || '', data.vendorId || '');
+    const vendorIdText = String(data.vendorId || "").trim();
+    const vendorNameText = (window.normalizeInspectionVendorName || function(rawName, vendorId){ const t = String(rawName || '').trim(); const id = String(vendorId || '').trim(); if (!id) return ''; if (!t) return ''; return t.toLowerCase().includes('select vendor') ? '' : t; })(data.vendorName || '', vendorIdText);
     const vendorPhoneText = String(data.vendorPhone || "").trim();
     const vendorEmailText = String(data.vendorEmail || "").trim();
+
+    // Long-term workflow rule: the Community Inspections Create Work Order action
+    // is a vendor-send action, not a manager-review submission. Require a selected
+    // vendor with an email so the created resident_work_orders row is immediately
+    // stored as sent_to_vendor and the vendor email function can run.
+    if (!vendorIdText || !vendorNameText){
+      openZummeeAlert("Please choose a vendor before creating the work order.", "Vendor required");
+      return;
+    }
+    if (!vendorEmailText){
+      openZummeeAlert("The selected vendor does not have an email address. Add the vendor email in Operations first, then create the work order.", "Vendor email required");
+      return;
+    }
     let currentEmployeeEmail = String((authUser && authUser.email) || "").trim();
     let currentEmployeeName = String(data.senderName || authUser?.email || "Manager").trim();
 
@@ -11178,9 +11195,7 @@ if (accessToken) {
     const senderPhoneText = String(data.senderPhone || "").trim();
     const dateText = String(data.date || "").trim();
 
-    const subject = vendorNameText
-      ? `${inspTypeText} issue - ${vendorNameText}`
-      : `${inspTypeText} issue`;
+    const subject = `${inspTypeText} issue - ${vendorNameText}`;
 
     const descriptionParts = [
       `Created from Community Inspection.`,
@@ -11207,7 +11222,7 @@ ${notesText}` : ""
       description: descriptionParts.join("\n"),
       category: "general",
       priority: "normal",
-      status: vendorNameText ? "sent_to_vendor" : "submitted",
+      status: "sent_to_vendor",
 
       // Employee reporting snapshot (long-term fix)
       employee_user_id: (authUser && authUser.id) || null,
@@ -11215,11 +11230,11 @@ ${notesText}` : ""
       employee_name: currentEmployeeName || null
     };
 
-    const vendorPayload = vendorNameText ? {
+    const vendorPayload = {
       assigned_vendor_name: vendorNameText,
       assigned_vendor_email: vendorEmailText || null,
       assigned_vendor_note: notesText || null
-    } : {};
+    };
 
     let createdRow = null;
     let insertErr = null;
@@ -11259,11 +11274,9 @@ ${notesText}` : ""
       if (createdRow && createdRow.id && supabase && typeof supabase.rpc === 'function'){
         const notif = await supabase.rpc('create_notification_event', {
           p_event_type: 'new_work_order',
-          p_priority: vendorNameText ? 'high' : 'normal',
-          p_title: vendorNameText ? 'New Work Order Sent to Vendor' : 'New Work Order',
-          p_message: vendorNameText
-            ? 'A new inspection work order was created and sent to a vendor.'
-            : 'A new inspection work order needs review.',
+          p_priority: 'high',
+          p_title: 'New Work Order Sent to Vendor',
+          p_message: 'A new inspection work order was created and sent to a vendor.', 
           p_link_url: 'resident_work_orders.html?open_work_order_id=' + encodeURIComponent(String(createdRow.id)),
           p_community_id: (createdRow.community_id || communityId || null),
           p_actor_user_id: (authUser && authUser.id) || null,
@@ -11288,14 +11301,9 @@ ${notesText}` : ""
       console.error('Inspection notification create failed:', notificationErr);
     }
 
-    let successMessage = vendorNameText
-      ? 'Work order created and vendor assignment saved.'
-      : 'Work order created.';
+    let successMessage = 'Work order created and vendor assignment saved.';
 
-    if (createdRow && vendorNameText){
-      if (!vendorEmailText){
-        successMessage = 'Work order created and vendor assignment saved, but vendor email was not sent because the selected vendor does not have an email address.';
-      } else {
+    if (createdRow){
       try{
         const selectedFiles = Array.prototype.slice.call((document.getElementById("inspPhotos") && document.getElementById("inspPhotos").files) ? document.getElementById("inspPhotos").files : []).filter(function(f){ return f && /^image\//i.test(f.type||''); }).slice(0,5);
         if (createdRow && createdRow.id && selectedFiles.length){
@@ -11342,9 +11350,16 @@ ${notesText}` : ""
           subject: createdRow.subject || subject || 'Resident Work Order',
           description: createdRow.description || descriptionParts.join("\n"),
           priority: createdRow.priority || 'normal',
-          status: createdRow.status || 'assigned',
+          status: 'sent_to_vendor',
           photos: Array.isArray(data.photos) ? data.photos : []
         });
+
+        try{
+          await supabase
+            .from('resident_work_orders')
+            .update({ status: 'sent_to_vendor' })
+            .eq('id', createdRow.id);
+        }catch(_statusErr){}
 
         if (emailResult && emailResult.ok){
           successMessage = emailResult && emailResult.resident_email_sent
@@ -11355,7 +11370,6 @@ ${notesText}` : ""
         }
       }catch(emailErr){
         successMessage = 'Work order created and vendor assignment saved, but vendor email was not sent: ' + (emailErr?.message || 'Function error');
-      }
       }
     }
 
