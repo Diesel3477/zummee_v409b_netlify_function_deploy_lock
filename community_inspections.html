@@ -2,9 +2,9 @@
 
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-07-v2120-date-centering-cleanup";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-07-v2121-dropdown-state-authority";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
-<!-- ZUMMEE_PATCH v2115: stable single-mount header + assigned dropdown no-jump lock -->
+<!-- ZUMMEE_PATCH v2121: assigned dropdown single owner + selected-community state authority -->
 <!-- ZUMMEE_PATCH v2074: inspections reads vendors from actual ops localStorage keys -->
 <!-- ZUMMEE_PATCH v2064: offline drafts (IndexedDB) for inspections -->
 <!-- ZUMMEE_PATCH v2061: latest polish bundle -->
@@ -14078,9 +14078,9 @@ body#inspectionsPage .draftRow{
   #ciPremiumHeader .ci-icon,
   #ciPremiumHeader .ci-header-icon{display:none !important;}
 </style>
-<script id="communityInspectionsAssignedDropdownStableLock_v2115">
+<script id="communityInspectionsAssignedDropdownAuthority_v2121">
 (function(){
-  var BUILD = 'v2115';
+  var BUILD = 'v2121';
   var SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
   var SUPABASE_KEY = "sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864";
   var locked = null;
@@ -14269,6 +14269,57 @@ body#inspectionsPage .draftRow{
     return [];
   }
 
+  function selectedStorageKeys(){
+    var keys = [
+      'activeCommunityId',
+      'zummee_selected_community_id',
+      'zummee_selected_community_v1',
+      'managerHubSelectedCommunityId'
+    ];
+    try{
+      var scoped = window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.SELECTED_COMMUNITY_KEY;
+      if(scoped) keys.unshift(scoped);
+    }catch(e){}
+    // De-dupe while preserving priority.
+    var seen = {};
+    return keys.filter(function(k){ k = asText(k); if(!k || seen[k]) return false; seen[k]=true; return true; });
+  }
+
+  function getSavedSelection(){
+    var keys = selectedStorageKeys();
+    for(var i=0;i<keys.length;i++){
+      try{
+        var v = asText(localStorage.getItem(keys[i]));
+        if(v) return v;
+      }catch(e){}
+    }
+    return '';
+  }
+
+  function optionExists(sel, value){
+    value = asText(value);
+    if(!sel || !value) return false;
+    return Array.prototype.some.call(sel.options || [], function(o){ return String(o.value) === value; });
+  }
+
+  function setAuthoritativeSelection(sel, value, persist){
+    sel = sel || getSelect();
+    if(!sel) return '';
+    value = asText(value);
+    if(value && optionExists(sel, value)){
+      sel.value = value;
+    }else if(!sel.value && sel.options && sel.options.length){
+      sel.value = sel.options[0].value;
+    }
+    if(persist !== false) persistSelection(sel);
+    if(locked){
+      locked.value = asText(sel.value);
+      locked.html = sel.innerHTML;
+      locked.count = sel.options ? sel.options.length : 0;
+    }
+    return asText(sel.value);
+  }
+
   function renderDropdown(list){
     var sel = getSelect();
     if(!sel) return false;
@@ -14280,7 +14331,10 @@ body#inspectionsPage .draftRow{
       return false;
     }
 
-    var previous = asText(sel.value || localStorage.getItem('activeCommunityId') || localStorage.getItem('zummee_selected_community_id'));
+    // v2121: selected-community state is authoritative. Do not prefer the
+    // current select value because older loaders may have already reset it
+    // to the first assignment before this owner script runs.
+    var desired = getSavedSelection() || asText(sel.value);
     sel.innerHTML = '';
     list.forEach(function(c){
       var opt = document.createElement('option');
@@ -14288,13 +14342,11 @@ body#inspectionsPage .draftRow{
       opt.textContent = String(c.name || c.id);
       sel.appendChild(opt);
     });
-    if(previous && Array.prototype.some.call(sel.options, function(o){ return String(o.value) === previous; })) sel.value = previous;
-    if(!sel.value && sel.options.length) sel.value = sel.options[0].value;
+    setAuthoritativeSelection(sel, desired, true);
     sel.disabled = false;
-    persistSelection(sel);
     locked = { html: sel.innerHTML, value: sel.value, count: sel.options.length };
     bindSelect(sel);
-    log('loaded assigned communities', locked.count);
+    log('loaded assigned communities', locked.count, 'selected', locked.value);
     return true;
   }
 
@@ -14302,16 +14354,23 @@ body#inspectionsPage .draftRow{
     sel = sel || getSelect();
     var v = asText(sel && sel.value);
     if(!v) return;
-    try{ localStorage.setItem('activeCommunityId', v); }catch(e){}
-    try{ localStorage.setItem('zummee_selected_community_id', v); }catch(e){}
-    try{ localStorage.setItem('zummee_selected_community_v1', v); }catch(e){}
+    selectedStorageKeys().forEach(function(key){
+      try{ localStorage.setItem(key, v); }catch(e){}
+    });
     try{ window.currentCommunityId = v; }catch(e){}
+    if(locked){
+      locked.value = v;
+      locked.html = sel.innerHTML;
+      locked.count = sel.options ? sel.options.length : 0;
+    }
   }
 
   function bindSelect(sel){
-    if(!sel || sel.__ciV2115Bound) return;
-    sel.__ciV2115Bound = true;
+    if(!sel || sel.__ciV2121Bound) return;
+    sel.__ciV2121Bound = true;
+    try{ sel.__ciV2115Bound = true; }catch(e){}
     sel.addEventListener('change', function(){
+      // v2121: user choice immediately becomes the source of truth.
       persistSelection(sel);
       try{ document.dispatchEvent(new Event('community:changed')); }catch(e){}
       try{ document.dispatchEvent(new Event('communities:changed')); }catch(e){}
@@ -14340,13 +14399,17 @@ body#inspectionsPage .draftRow{
     var sel = getSelect();
     if(!sel || !locked || restoring) return;
     var text = (sel.textContent || '').toLowerCase();
-    if(sel.options.length !== locked.count || text.indexOf('community unavailable') >= 0 || text.indexOf('loading communities') >= 0 || text.indexOf('no communities') >= 0){
+    var saved = getSavedSelection() || locked.value;
+    var needsListRepair = (sel.options.length !== locked.count || text.indexOf('community unavailable') >= 0 || text.indexOf('loading communities') >= 0 || text.indexOf('no communities') >= 0);
+    var needsValueRepair = !!(saved && optionExists(sel, saved) && asText(sel.value) !== saved);
+    if(needsListRepair || needsValueRepair){
       restoring = true;
-      sel.innerHTML = locked.html;
-      if(Array.prototype.some.call(sel.options, function(o){ return o.value === locked.value; })) sel.value = locked.value;
+      if(needsListRepair){
+        sel.innerHTML = locked.html;
+      }
+      setAuthoritativeSelection(sel, saved, true);
       sel.disabled = false;
       bindSelect(sel);
-      persistSelection(sel);
       restoring = false;
     }
   }
@@ -14377,7 +14440,7 @@ body#inspectionsPage .draftRow{
 
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
   window.addEventListener('load', function(){ setTimeout(function(){ removeTitleCheck(); installObserver(); repairIfOverwritten(); }, 80); });
-  // v2115: no delayed full reload loops. The header is single-mounted and the dropdown only repairs if overwritten.
+  // v2121: no external lock file. Assigned dropdown is single-owned here and selected-community state is authoritative.
 })();
 </script>
 <style id="communityInspectionsHeaderNoJump_v2115">
