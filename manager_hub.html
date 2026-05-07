@@ -1,2744 +1,911 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-07-v605-native-community-state";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Live Maintenance Updates</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="shared/community-state.js?v=2026-05-07-v605"></script>
-<script src="shared/input-undo-guard.js?v=2026-05-07-v605"></script>
 
-<script src="shared/supabase-client.js?v=2026-04-29-v337"></script>
-<script src="shared/maintenance-data.js?v=2026-05-07-v500"></script>
-<script src="zummee_clean_bootstrap.js?v=clean-2026-04-28"></script>
-  <script src="shared/header.js?v=2026-04-08-2"></script>
-  <link rel="stylesheet" href="shared/header.css?v=2026-03-27-1">
-  <link rel="stylesheet" href="shared/zummee-design-system.css?v=2026-03-27-1">
 
-  <script id="zummee-internal-nav-auth-safe">
-  (function(){
+<script>
+(function(){
+  var mh2LightningTimer = null;
+
+  function stopLightning(hero){
+    if(mh2LightningTimer){
+      clearTimeout(mh2LightningTimer);
+      mh2LightningTimer = null;
+    }
+    if(hero) hero.classList.remove('flash');
+  }
+
+  function scheduleLightning(hero){
+    stopLightning(hero);
+    if(!hero || !hero.classList.contains('wx-thunder')) return;
+
+    function flashLoop(){
+      if(!hero || !hero.classList.contains('wx-thunder')) return;
+      if(Math.random() < 0.25){
+        hero.classList.add('flash');
+        setTimeout(function(){
+          if(hero) hero.classList.remove('flash');
+        }, 120 + Math.random() * 120);
+      }
+      mh2LightningTimer = setTimeout(flashLoop, 2000 + Math.random() * 3000);
+    }
+
+    mh2LightningTimer = setTimeout(flashLoop, 1200);
+  }
+
+  var prevRenderWeatherModel = window.renderWeatherModel;
+  window.renderWeatherModel = function(){
+    var result = prevRenderWeatherModel && prevRenderWeatherModel.apply(this, arguments);
     try{
-      var params = new URLSearchParams(window.location.search || '');
-      if(params.get('from') === 'manager_hub'){
-        sessionStorage.setItem('zummee_manager_internal_entry','1');
-        sessionStorage.setItem('zummee_maintenance_manager_entry','1');
-        window.__ZUMMEE_INTERNAL_NAV__ = true;
+      var hero = document.getElementById('weatherHeroCard') || document.querySelector('.mh2-weather-hero');
+      if(hero && hero.classList.contains('wx-thunder')){
+        scheduleLightning(hero);
+      }else{
+        stopLightning(hero);
       }
     }catch(_e){}
-  })();
-  </script>
-  <script id="zummeeStaffGuard">
-  (async () => {
-    if (window.__zummeeStaffGuardRan) return;
-    window.__zummeeStaffGuardRan = true;
-    async function getClient(){
-      try{ if(typeof ensureSupabase === 'function'){ const c = await ensureSupabase(); if(c && c.auth && typeof c.auth.getSession === 'function') return c; } }catch(_e){}
-      try{ if(window.supabaseClient && window.supabaseClient.auth && typeof window.supabaseClient.auth.getSession === 'function') return window.supabaseClient; }catch(_e){}
-      try{ if(window.sb && window.sb.auth && typeof window.sb.auth.getSession === 'function') return window.sb; }catch(_e){}
-      return null;
-    }
-    const isInternalManagerNav = () => {
-      try{
-        const params = new URLSearchParams(window.location.search || '');
-        return params.get('from') === 'manager_hub' || sessionStorage.getItem('zummee_manager_internal_entry') === '1' || sessionStorage.getItem('zummee_maintenance_manager_entry') === '1' || window.__ZUMMEE_INTERNAL_NAV__ === true;
-      }catch(_e){ return window.__ZUMMEE_INTERNAL_NAV__ === true; }
-    };
-    const go = (target) => {
-      if(String(target||'').indexOf('login.html') !== -1 && isInternalManagerNav()){
-        console.warn('[Zummee auth-safe] Blocked login redirect during Manager Hub internal navigation.');
-        return;
-      }
-      try{ window.location.replace(target); }catch(_e){ window.location.href = target; }
-    };
-    const sb = await getClient();
-    if(!sb){ go('login.html'); return; }
-    let sessionRes = null;
-    for(let i=0;i<8;i++){
-      try{ sessionRes = await sb.auth.getSession(); }catch(_e){}
-      if(sessionRes && sessionRes.data && sessionRes.data.session && sessionRes.data.session.user) break;
-      await new Promise(r => setTimeout(r, 180));
-    }
-    const user = sessionRes && sessionRes.data && sessionRes.data.session ? sessionRes.data.session.user : null;
-    if(!user){ go('login.html'); return; }
-    const ud = await sb
-      .from('userdirectory')
-      .select('role')
-      .eq('auth_user_id', user.id)
-      .single();
-    const role = String((ud && ud.data && ud.data.role) || '').trim();
-    if(role === 'Resident'){ go('resident_portal.html'); return; }
-    document.documentElement.setAttribute('data-staff-role', role || '');
-  })();
-  </script>
-
-  <script>
-    (function(){
-      try{
-        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
-        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
-      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
-    })();
-  </script>
-  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
-  <style>
-    :root{
-      --brand:#0f3554;
-      --bg:#f4f6fa;
-      --card:#ffffff;
-      --muted:#5d6b7a;
-      --border:#d9e1ea;
-      --info:#dbeafe;
-      --warning:#fff1c9;
-      --success:#d9f2e3;
-      --danger:#fee2e2;
-    }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:#17324c}
-    #zummeeHeaderMount{display:block}
-    .wrap{max-width:1180px;margin:26px auto;padding:0 16px 40px}
-    .card{background:var(--card);border:2px solid var(--brand);border-radius:26px;padding:22px;box-shadow:0 12px 28px rgba(15,53,84,.08)}
-    .card.zummee-section-card{border:none;box-shadow:none;color:#17324c}
-    .card.zummee-section-card .sub,.card.zummee-section-card .muted,.card.zummee-section-card .tiny{color:#4d6580}
-    .card.zummee-section-card .tableWrap,.card.zummee-section-card .noteBox{background:rgba(255,255,255,.28);border-color:rgba(255,255,255,.36)}
-    .card.zummee-section-card th{background:rgba(255,255,255,.16);color:#48637f}
-    .card.zummee-section-card td{border-bottom:1px solid rgba(255,255,255,.18)}
-    .card.zummee-section-card .btn{background:#fff;color:#17324c;border-color:rgba(23,50,77,.16)}
-    .card.zummee-section-card .btn.primary{background:#234f80;color:#fff;border-color:#234f80}
-    .card.zummee-section-card .field input,.card.zummee-section-card .field select{background:rgba(255,255,255,.84);border-color:rgba(255,255,255,.32)}
-    .stack{display:grid;gap:22px}
-    .headRow{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap}
-    .sub{color:var(--muted);font-size:14px}
-    .btnRow{display:flex;gap:10px;flex-wrap:wrap}
-    .btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:11px 18px;border-radius:999px;border:2px solid var(--brand);background:#fff;color:var(--brand);text-decoration:none;font-size:15px;font-weight:800;cursor:pointer}
-    .btn.primary{background:var(--brand);color:#fff}
-    .filters{display:grid;grid-template-columns:1.1fr 190px 180px;gap:12px;margin-top:16px}
-    .field label{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;font-weight:800}
-    .field input,.field select{width:100%;border:1.5px solid var(--border);border-radius:16px;padding:12px 14px;font-size:16px;background:#fff;color:#17324c}
-    .statusLine{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;margin:16px 0 10px}
-    .statusSummary{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:4px 0 14px}
-    .statusSummaryChip{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:16px;border:1px solid rgba(15,53,84,.10);background:rgba(255,255,255,.72);box-shadow:0 8px 18px rgba(15,53,84,.06)}
-    .statusSummaryChip .dot{width:10px;height:10px;border-radius:999px;display:inline-block;flex:0 0 auto}
-    .statusSummaryChip .label{font-size:12px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#45607a}
-    .statusSummaryChip .count{font-size:20px;font-weight:900;color:#17324c;line-height:1}
-    .statusSummaryChip.submitted{background:linear-gradient(180deg,rgba(239,68,68,.14),rgba(255,255,255,.92));border-color:rgba(220,38,38,.16)}
-    .statusSummaryChip.submitted .dot{background:#dc2626}
-    .statusSummaryChip.submitted .count{color:#991b1b}
-    .statusSummaryChip.sent{background:linear-gradient(180deg,rgba(251,191,36,.16),rgba(255,255,255,.88));border-color:rgba(217,119,6,.18)}
-    .statusSummaryChip.sent .dot{background:#d97706}
-    .statusSummaryChip.sent .count{color:#8a4b00}
-    .statusSummaryChip.active{background:linear-gradient(180deg,rgba(34,197,94,.16),rgba(255,255,255,.9));border-color:rgba(22,163,74,.18)}
-    .statusSummaryChip.active .dot{background:#16a34a;box-shadow:0 0 0 0 rgba(22,163,74,.35);animation:livePulse 1.8s infinite}
-    .statusSummaryChip.active .count{color:#146534}
-    .statusSummaryChip.progress{background:linear-gradient(180deg,rgba(59,130,246,.14),rgba(255,255,255,.9));border-color:rgba(37,99,235,.16)}
-    .statusSummaryChip.progress .dot{background:#2563eb}
-    .statusSummaryChip.progress .count{color:#1d4ed8}
-    .tableWrap{overflow:auto;border:1px solid rgba(15,53,84,.12);border-radius:18px;background:#fff}
-    table{width:100%;border-collapse:collapse;min-width:860px}
-    th,td{padding:15px 16px;border-bottom:1px solid rgba(15,53,84,.08);text-align:left;vertical-align:top}
-    th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:900;background:#f8fafc}
-    .reqTitle{font-weight:900;color:var(--brand);margin-bottom:4px}
-    .reqSub{font-size:13px;color:var(--muted)}
-    .updatesTableBody tr[data-open-id]{cursor:pointer;transition:background .15s ease, transform .15s ease, box-shadow .15s ease;border-left:4px solid transparent}
-    .updatesTableBody tr[data-open-id]:hover{background:rgba(255,255,255,.45);box-shadow:inset 0 0 0 1px rgba(35,79,128,.12)}
-    .updatesTableBody tr.status-submitted{border-left-color:#dc2626}
-    .updatesTableBody tr.status-sent{border-left-color:#d97706}
-    .updatesTableBody tr.status-active{border-left-color:#16a34a}
-    .updatesTableBody tr.status-progress{border-left-color:#2563eb}
-    .updatesTableBody tr[data-open-id]:focus-within{outline:2px solid rgba(35,79,128,.28);outline-offset:-2px}
-    .openRecordBtn{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 14px;border-radius:999px;border:1.5px solid rgba(35,79,128,.16);background:rgba(255,255,255,.9);color:#17324c;font-size:13px;font-weight:900;text-decoration:none;cursor:pointer;transition:transform .15s ease, box-shadow .15s ease, background .15s ease}
-    .openRecordBtn:hover,.openRecordBtn:focus-visible{background:#fff;transform:translateY(-1px);box-shadow:0 8px 16px rgba(15,53,84,.12)}
-    .noteBox{padding:10px 12px;background:#f8fafc;border:1px solid rgba(15,53,84,.08);border-radius:12px;line-height:1.45}
-    .pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:900;white-space:nowrap}
-    .pill.sent{background:linear-gradient(180deg,rgba(251,191,36,.24),rgba(255,243,205,.95));color:#8a4b00;border:1px solid rgba(217,119,6,.18)}
-    .pill.active{background:linear-gradient(180deg,rgba(34,197,94,.22),rgba(220,252,231,.96));color:#146534;position:relative;border:1px solid rgba(22,163,74,.18)}
-    .pill.active::after{content:"";display:inline-block;width:8px;height:8px;border-radius:999px;background:#16a34a;margin-left:8px;box-shadow:0 0 0 0 rgba(22,163,74,.45);animation:livePulse 1.8s infinite}
-    .pill.progress{background:linear-gradient(180deg,rgba(59,130,246,.18),rgba(219,234,254,.96));color:#1d4ed8;border:1px solid rgba(37,99,235,.16)}
-    .pill.scheduled{background:rgba(245,158,11,.16);color:#8a5a00}
-    .pill.pending{background:var(--warning);color:#7b5b00}
-    .pill.completed{background:var(--success);color:#11653a}
-    .pill.error{background:var(--danger);color:#8c1d18}
-    @keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.45)}70%{box-shadow:0 0 0 8px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
-    .muted{color:var(--muted)}
-    .tiny{font-size:12px}
-    .empty{padding:22px;color:var(--muted)}
-    .timeline{position:relative;padding-left:10px}
-    .event{position:relative;padding:0 0 16px 22px;margin-left:4px}
-    .event:not(:last-child){border-left:2px solid rgba(15,53,84,.10)}
-    .eventDot{position:absolute;left:-8px;top:4px;width:14px;height:14px;border-radius:999px;background:var(--brand);border:3px solid #fff;box-shadow:0 0 0 1px rgba(15,53,84,.12)}
-    .eventTime{font-size:12px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.05em}
-    .eventMsg{font-size:18px;font-weight:900;color:var(--brand);margin-top:4px;line-height:1.3}
-    .eventMeta{font-size:13px;color:var(--muted);margin-top:4px}
-    @media (max-width: 860px){
-      .wrap{padding:0 12px 30px}
-      .card{padding:16px;border-radius:20px}
-      .filters{grid-template-columns:minmax(0,1fr) 180px 150px;align-items:end}
-      .btnRow{width:100%}
-      .btnRow .btn{flex:1}
-      table{min-width:700px}
-    }
-    @media (max-width: 640px){
-      .filters{grid-template-columns:1fr}
-    }
-
-    .detailOverlay{position:fixed;inset:0;background:rgba(15,23,42,.38);backdrop-filter:blur(3px);display:none;align-items:flex-end;justify-content:center;z-index:1200;padding:18px}
-    .detailOverlay.is-open{display:flex}
-    .detailSheet{width:min(760px,100%);max-height:min(88vh,920px);background:#fff;border:1px solid rgba(15,53,84,.10);border-radius:26px 26px 20px 20px;box-shadow:0 28px 80px rgba(15,23,42,.24);overflow:hidden;transform:translateY(24px);opacity:0;transition:transform .2s ease, opacity .2s ease}
-    .detailOverlay.is-open .detailSheet{transform:translateY(0);opacity:1}
-    .detailSheetHead{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:20px 22px;border-bottom:1px solid rgba(15,53,84,.08);background:linear-gradient(180deg,#f8fbff 0%,#fff 100%)}
-    .detailSheetTitle{font-size:24px;font-weight:900;color:var(--brand);line-height:1.2;margin:0}
-    .detailSheetSub{margin-top:6px;font-size:13px;color:var(--muted)}
-    .detailCloseBtn{min-width:44px;min-height:44px;border-radius:999px;border:1.5px solid rgba(15,53,84,.12);background:#fff;color:#17324c;font-size:24px;line-height:1;cursor:pointer;font-weight:400}
-    .detailSheetBody{padding:20px 22px 24px;overflow:auto;max-height:calc(88vh - 86px)}
-    .detailGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:16px}
-    .detailTile{padding:14px 16px;border:1px solid rgba(15,53,84,.08);border-radius:18px;background:#f8fbff}
-    .detailLabel{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:900;margin-bottom:6px}
-    .detailValue{font-size:16px;color:#17324c;font-weight:800;line-height:1.4;word-break:break-word}
-    .detailValue.muted{font-weight:600}
-    .detailLong{padding:16px 18px;border:1px solid rgba(15,53,84,.08);border-radius:18px;background:#fff;margin-bottom:14px}
-    .detailLong .detailValue{font-size:15px;font-weight:600;white-space:pre-wrap}
-    .detailAssignBlock{margin:16px 0 4px;padding:16px 18px;border:1px solid rgba(15,53,84,.08);border-radius:20px;background:linear-gradient(180deg,#f8fbff 0%,#ffffff 100%)}
-    .detailAssignLabel{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:900;margin-bottom:10px}
-    .detailAssignRow{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
-    .detailAssignSelect{width:100%;min-height:52px;padding:14px 48px 14px 16px;border:1.5px solid rgba(15,53,84,.12);border-radius:16px;background-color:#fff;color:#17324c;font-size:16px;font-weight:700;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5L10 12.5L15 7.5' stroke='%2317324c' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 16px center;background-size:18px 18px;box-shadow:0 6px 14px rgba(15,53,84,.04)}
-    .detailAssignSelect:focus{outline:none;border-color:rgba(35,79,128,.45);box-shadow:0 0 0 4px rgba(35,79,128,.12)}
-    .detailAssignBtn{width:100%;min-height:52px;border-radius:16px;background:#234f80 !important;color:#fff !important;border-color:#234f80 !important;box-shadow:0 12px 24px rgba(35,79,128,.16)}
-    .detailAssignBtn:hover,.detailAssignBtn:focus-visible{transform:translateY(-1px);box-shadow:0 16px 28px rgba(35,79,128,.22)}
-    .detailActions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
-    .detailActions .btn{min-height:48px}
-    .detailCompleteBtn{background:#234f80;color:#fff;border-color:#234f80}
-    .detailCompleteBtn[disabled]{opacity:.65;cursor:wait}
-    .detailMsg{margin-top:14px;font-size:14px;font-weight:700;min-height:20px}
-    .detailMsg.error{color:#8c1d18}
-    .detailMsg.success{color:#11653a}
-    @media (max-width: 640px){
-      .detailOverlay{padding:0}
-      .detailSheet{width:100%;max-height:92vh;border-radius:24px 24px 0 0}
-      .detailSheetHead,.detailSheetBody{padding-left:16px;padding-right:16px}
-      .detailGrid{grid-template-columns:1fr}
-      .detailSheetTitle{font-size:22px}
-    }
-  
-    .miniConfirmOverlay{position:fixed;inset:0;background:rgba(15,23,42,.28);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;z-index:1300;padding:20px}
-    .miniConfirmOverlay.is-open{display:flex}
-    .miniConfirmCard{width:min(420px,92vw);background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:22px;box-shadow:0 24px 80px rgba(15,23,42,.18);padding:20px}
-    .miniConfirmTitle{font-size:18px;font-weight:700;color:#15314b;margin:0 0 8px}
-    .miniConfirmText{font-size:14px;line-height:1.5;color:#425466;margin:0 0 16px}
-    .miniConfirmActions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
-    .miniConfirmActions .btn{min-width:110px}
-
-  
-/* DARK MODE — MANAGER ACTIONS FINAL */
-body.dark-mode .mh2-stat-box,
-body.dark-mode .mh2-kpi,
-body.dark-mode .mh2-mini-stat {
-  background: #f3f4f6 !important;
-  border: 1px solid rgba(255,255,255,0.08);
-}
-body.dark-mode .mh2-stat-value,
-body.dark-mode .mh2-card-value,
-body.dark-mode .mh2-kpi-value {
-  color: #0b0f14 !important;
-  font-weight: 700;
-}
-body.dark-mode .mh2-stat-label,
-body.dark-mode .mh2-card-label {
-  color: #4b5563 !important;
-}
-body.dark-mode .mh2-stat-box {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.25),
-    0 6px 16px rgba(0,0,0,0.25);
-}
-
-
-.mh2-actions .mh2-btn--ghost{display:none !important;}
-
-/* v26: refresh button removed; keep header controls aligned */
-.maintenance-feed-actions{justify-content:flex-end !important;}
-.maintenance-inline-controls{width:100% !important;}
-</style>
-<style>
-/* 🔒 Maintenance Updates header override */
-.zm-communityLabel {
-  display: none !important;
-}
-#zummeeCommunitySelect {
-  width: 260px !important;
-  max-width: 260px !important;
-  min-width: 260px !important;
-}
-.zm-communityRow {
-  gap: 8px !important;
-}
-@media (max-width: 1024px) {
-  #zummeeCommunitySelect {
-    width: 220px !important;
-  }
-}
-
-/* Live Maintenance Updates - move dropdown and Hub up */
-body[data-header-mode="subpage"] header.zm-header .zm-header__right {
-  transform: translateX(0) translateY(2px) !important;
-}
-
-/* Live Maintenance Updates - reduce logo size ~30% on this page only */
-body[data-header-mode="subpage"][data-device="desktop"] header.zm-header .zm-header__logo img,
-body[data-header-mode="subpage"][data-device="tablet"] header.zm-header .zm-header__logo img{
-  height: 50px !important;
-  min-height: 50px !important;
-  max-height: 50px !important;
-  width: auto !important;
-}
-body[data-header-mode="subpage"][data-device="mobile"] header.zm-header .zm-header__logo img{
-  height: 39px !important;
-  min-height: 39px !important;
-  max-height: 39px !important;
-  width: auto !important;
-}
-
-
-/* Live Maintenance Updates - Maintenance Status Feed gold card */
-.maintenance-feed-card{
-  position:relative;
-  background:#d4af37 !important;
-  border:1px solid rgba(0,0,0,.08) !important;
-  box-shadow:0 8px 20px rgba(0,0,0,.25) !important;
-  overflow:hidden;
-}
-.maintenance-feed-card::before,
-.maintenance-feed-card::after{
-  content:none !important;
-  display:none !important;
-}
-.maintenance-feed-card .sub,
-.maintenance-feed-card .muted,
-.maintenance-feed-card .tiny,
-.maintenance-feed-card #feedState,
-.maintenance-feed-card #communityState,
-.maintenance-feed-card .field label,
-.maintenance-feed-card .reqSub,
-.maintenance-feed-card .noteBox{
-  color:rgba(52,39,3,.78) !important;
-}
-.maintenance-feed-card .headRow > div:first-child > div:first-child,
-.maintenance-feed-card .empty,
-.maintenance-feed-card .reqTitle,
-.maintenance-feed-card th,
-.maintenance-feed-card td{
-  color:#1f2a37 !important;
-}
-.maintenance-feed-card .field input,
-.maintenance-feed-card .field select,
-.maintenance-feed-card .btn{
-  background:rgba(255,255,255,.86) !important;
-  border-color:rgba(31,42,55,.10) !important;
-  color:#17324c !important;
-}
-.maintenance-feed-card .btn.primary{
-  background:#234f80 !important;
-  color:#fff !important;
-  border-color:#234f80 !important;
-}
-.maintenance-feed-card .tableWrap{
-  background:rgba(255,255,255,.64) !important;
-  border:1px solid rgba(255,255,255,.55) !important;
-}
-.maintenance-feed-card th{
-  background:rgba(255,255,255,.22) !important;
-}
-.maintenance-feed-card td{
-  border-bottom:1px solid rgba(31,42,55,.10) !important;
-}
-
-/* Live Maintenance Updates - Recent Activity flat vivid gold card */
-.recent-activity-card{
-  position:relative;
-  background:#d4af37 !important;
-  border:1px solid rgba(0,0,0,.08) !important;
-  box-shadow:0 8px 20px rgba(0,0,0,.25) !important;
-  overflow:hidden;
-}
-.recent-activity-card::before,
-.recent-activity-card::after{
-  content:none !important;
-  display:none !important;
-}
-.recent-activity-card .sub,
-.recent-activity-card .muted,
-.recent-activity-card .tiny,
-.recent-activity-card #activityState,
-.recent-activity-card .eventMeta,
-.recent-activity-card .eventTime{
-  color:rgba(52,39,3,.78) !important;
-}
-.recent-activity-card .eventMsg,
-.recent-activity-card .headRow > div:first-child > div:first-child,
-.recent-activity-card .empty{
-  color:#1f2a37 !important;
-}
-.recent-activity-card .event:not(:last-child){
-  border-left:2px solid rgba(31,42,55,.16) !important;
-}
-.recent-activity-card .eventDot{
-  background:#1f2a37 !important;
-  border:3px solid rgba(255,255,255,.72) !important;
-  box-shadow:0 0 0 1px rgba(31,42,55,.16) !important;
-}
-
-
-
-    .miniConfirmOverlay{position:fixed;inset:0;background:rgba(15,23,42,.28);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;z-index:1300;padding:20px}
-    .miniConfirmOverlay.is-open{display:flex}
-    .miniConfirmCard{width:min(420px,92vw);background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:22px;box-shadow:0 24px 80px rgba(15,23,42,.18);padding:20px}
-    .miniConfirmTitle{font-size:18px;font-weight:700;color:#15314b;margin:0 0 8px}
-    .miniConfirmText{font-size:14px;line-height:1.5;color:#425466;margin:0 0 16px}
-    .miniConfirmActions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
-    .miniConfirmActions .btn{min-width:110px}
-
-  
-/* DARK MODE — MANAGER ACTIONS FINAL */
-body.dark-mode .mh2-stat-box,
-body.dark-mode .mh2-kpi,
-body.dark-mode .mh2-mini-stat {
-  background: #f3f4f6 !important;
-  border: 1px solid rgba(255,255,255,0.08);
-}
-body.dark-mode .mh2-stat-value,
-body.dark-mode .mh2-card-value,
-body.dark-mode .mh2-kpi-value {
-  color: #0b0f14 !important;
-  font-weight: 700;
-}
-body.dark-mode .mh2-stat-label,
-body.dark-mode .mh2-card-label {
-  color: #4b5563 !important;
-}
-body.dark-mode .mh2-stat-box {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.25),
-    0 6px 16px rgba(0,0,0,0.25);
-}
-
-</style>
-  <script src="community_state_stable.js"></script>
-<style>
-/* FORCE white text in Status & Details section */
-#boardSubmittedItemsSection,
-#boardSubmittedItemsSection *:not(button),
-#boardMemberHubStatus,
-#boardMemberHubStatus *:not(button),
-#annualMeetingApprovals,
-#annualMeetingApprovals *:not(button) {
-  color: #ffffff !important;
-}
-
-/* Secondary text (slightly dimmed white) */
-#boardSubmittedItemsSection .muted,
-#boardMemberHubStatus .muted,
-#annualMeetingApprovals .muted {
-  color: rgba(255,255,255,0.75) !important;
-}
-
-/* DARK MODE — MANAGER ACTIONS FINAL */
-body.dark-mode .mh2-stat-box,
-body.dark-mode .mh2-kpi,
-body.dark-mode .mh2-mini-stat {
-  background: #f3f4f6 !important;
-  border: 1px solid rgba(255,255,255,0.08);
-}
-body.dark-mode .mh2-stat-value,
-body.dark-mode .mh2-card-value,
-body.dark-mode .mh2-kpi-value {
-  color: #0b0f14 !important;
-  font-weight: 700;
-}
-body.dark-mode .mh2-stat-label,
-body.dark-mode .mh2-card-label {
-  color: #4b5563 !important;
-}
-body.dark-mode .mh2-stat-box {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.25),
-    0 6px 16px rgba(0,0,0,0.25);
-}
-
-</style>
-<style>
-/* HARD OVERRIDE — force white text in dark section */
-.hub-zone:last-of-type,
-.hub-zone:last-of-type *:not(button):not(.badge):not(.pill) {
-  color: #ffffff !important;
-}
-
-/* Slightly softer for secondary text */
-.hub-zone:last-of-type .muted,
-.hub-zone:last-of-type p,
-.hub-zone:last-of-type span {
-  color: rgba(255,255,255,0.75) !important;
-}
-
-/* DARK MODE — MANAGER ACTIONS FINAL */
-body.dark-mode .mh2-stat-box,
-body.dark-mode .mh2-kpi,
-body.dark-mode .mh2-mini-stat {
-  background: #f3f4f6 !important;
-  border: 1px solid rgba(255,255,255,0.08);
-}
-body.dark-mode .mh2-stat-value,
-body.dark-mode .mh2-card-value,
-body.dark-mode .mh2-kpi-value {
-  color: #0b0f14 !important;
-  font-weight: 700;
-}
-body.dark-mode .mh2-stat-label,
-body.dark-mode .mh2-card-label {
-  color: #4b5563 !important;
-}
-body.dark-mode .mh2-stat-box {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.25),
-    0 6px 16px rgba(0,0,0,0.25);
-}
-
-</style>
-
-<style id="live-maintenance-new-design-v21">
-/* Zummee v21 — Live Maintenance Updates rebuilt to match refreshed Board Member Hub */
-body{
-  background:linear-gradient(180deg,#f7fbff 0%,#eef6ff 46%,#f9fbff 100%) !important;
-  color:#17324c !important;
-}
-.wrap{
-  max-width:980px !important;
-  margin:26px auto 48px !important;
-  padding:0 24px 44px !important;
-}
-.stack{gap:24px !important;}
-.card.zummee-section-card.maintenance-feed-card,
-.card.zummee-section-card.recent-activity-card{
-  background:rgba(255,255,255,.86) !important;
-  border:1.5px solid rgba(142,190,255,.72) !important;
-  border-radius:32px !important;
-  box-shadow:0 18px 42px rgba(60,126,220,.14), inset 0 1px 0 rgba(255,255,255,.96) !important;
-  color:#17324c !important;
-  padding:26px 28px !important;
-  overflow:hidden !important;
-}
-.card.zummee-section-card.maintenance-feed-card::before,
-.card.zummee-section-card.recent-activity-card::before{
-  content:"" !important;
-  position:absolute !important;
-  inset:0 !important;
-  pointer-events:none !important;
-  background:radial-gradient(circle at 12% 0%,rgba(255,255,255,.9),transparent 32%),linear-gradient(135deg,rgba(255,255,255,.65),rgba(255,255,255,0) 46%) !important;
-  display:block !important;
-  opacity:.8 !important;
-}
-.card.zummee-section-card.maintenance-feed-card > *,
-.card.zummee-section-card.recent-activity-card > *{position:relative;z-index:1;}
-.card.zummee-section-card .headRow{align-items:center !important;margin-bottom:14px !important;}
-.card.zummee-section-card .headRow > div:first-child > div:first-child{
-  color:#17324c !important;
-  font-size:26px !important;
-  font-weight:900 !important;
-  letter-spacing:-.02em !important;
-}
-.card.zummee-section-card .sub{display:none !important;}
-.btnRow{justify-content:flex-end !important;}
-.btn{
-  border:1.5px solid rgba(23,50,76,.12) !important;
-  background:rgba(255,255,255,.9) !important;
-  color:#17324c !important;
-  box-shadow:0 8px 18px rgba(15,53,84,.08) !important;
-}
-.btn.primary{
-  background:#214b79 !important;
-  border-color:#214b79 !important;
-  color:#fff !important;
-}
-.filters{
-  grid-template-columns:minmax(0,1.4fr) minmax(160px,.8fr) minmax(140px,.6fr) !important;
-  gap:12px !important;
-  margin:18px 0 14px !important;
-}
-.field label{
-  color:#536b85 !important;
-  font-size:11px !important;
-  letter-spacing:.07em !important;
-}
-.field input,.field select{
-  min-height:48px !important;
-  border-radius:18px !important;
-  border:1.5px solid rgba(178,207,244,.75) !important;
-  background:#fff !important;
-  color:#17324c !important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.75) !important;
-}
-.statusLine{margin:10px 0 8px !important;}
-#feedState,#communityState,#activityState,.muted,.tiny,
-.maintenance-feed-card .reqSub,.recent-activity-card .eventMeta,.recent-activity-card .eventTime{
-  color:#60758d !important;
-}
-.statusSummary{
-  gap:10px !important;
-  margin:8px 0 16px !important;
-}
-.statusSummaryChip{
-  border-radius:999px !important;
-  padding:9px 13px !important;
-  background:rgba(255,255,255,.92) !important;
-  border:1px solid rgba(178,207,244,.8) !important;
-  box-shadow:0 8px 18px rgba(15,53,84,.07) !important;
-}
-.statusSummaryChip .label{font-size:11px !important;color:#445d78 !important;}
-.statusSummaryChip .count{font-size:16px !important;color:#17324c !important;}
-.tableWrap{
-  border:1.5px solid rgba(178,207,244,.8) !important;
-  border-radius:22px !important;
-  background:rgba(255,255,255,.72) !important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.8) !important;
-}
-table{min-width:820px !important;}
-th{
-  background:rgba(247,251,255,.9) !important;
-  color:#536b85 !important;
-  border-bottom:1px solid rgba(178,207,244,.65) !important;
-  padding:14px 16px !important;
-}
-td{
-  background:rgba(255,255,255,.68) !important;
-  color:#17324c !important;
-  border-bottom:1px solid rgba(178,207,244,.55) !important;
-  padding:16px !important;
-}
-tr:last-child td{border-bottom:none !important;}
-.reqTitle{color:#17324c !important;font-size:16px !important;font-weight:900 !important;}
-.noteBox{
-  background:#fff !important;
-  border:1px solid rgba(178,207,244,.65) !important;
-  color:#17324c !important;
-  border-radius:14px !important;
-}
-.openRecordBtn{
-  background:#fff !important;
-  border-color:rgba(178,207,244,.8) !important;
-  color:#17324c !important;
-}
-.pill{
-  border-radius:999px !important;
-  padding:7px 12px !important;
-  font-size:12px !important;
-  font-weight:900 !important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.5) !important;
-}
-.pill.completed{background:#dcfce7 !important;color:#166534 !important;border:1px solid rgba(22,101,52,.13) !important;}
-.pill.sent{background:#fef3c7 !important;color:#92400e !important;border:1px solid rgba(146,64,14,.14) !important;}
-.pill.active{background:#dcfce7 !important;color:#166534 !important;border:1px solid rgba(22,101,52,.13) !important;}
-.pill.progress{background:#dbeafe !important;color:#1d4ed8 !important;border:1px solid rgba(29,78,216,.13) !important;}
-.pill.pending,.pill.scheduled{background:#fef3c7 !important;color:#92400e !important;border:1px solid rgba(146,64,14,.14) !important;}
-.pill.error{background:#fee2e2 !important;color:#991b1b !important;border:1px solid rgba(153,27,27,.14) !important;}
-.timeline{padding-left:0 !important;margin-top:8px !important;}
-.event{
-  border-left:none !important;
-  margin:10px 0 0 !important;
-  padding:14px 16px !important;
-  border:1.5px solid rgba(178,207,244,.75) !important;
-  border-radius:20px !important;
-  background:rgba(255,255,255,.82) !important;
-}
-.eventDot{display:none !important;}
-.eventMsg{font-size:16px !important;color:#17324c !important;}
-.empty{
-  color:#60758d !important;
-  background:transparent !important;
-}
-@media (max-width:860px){
-  .wrap{padding:0 22px 36px !important;max-width:100% !important;}
-  .card.zummee-section-card.maintenance-feed-card,
-  .card.zummee-section-card.recent-activity-card{padding:24px 22px !important;border-radius:30px !important;}
-  .filters{grid-template-columns:1fr !important;}
-  .btnRow{width:auto !important;}
-  .btnRow .btn{flex:0 0 auto !important;}
-  table{min-width:760px !important;}
-}
-@media (max-width:640px){
-  .wrap{padding:0 14px 28px !important;}
-  .card.zummee-section-card .headRow{align-items:flex-start !important;}
-  .btnRow{width:100% !important;}
-  .btnRow .btn{flex:1 !important;}
-}
-</style>
-
-
-<style id="live-maintenance-controls-in-card-v22">
-body.live-maintenance-controls-moved header.zm-header .zm-header__right{display:none!important;}
-body.live-maintenance-controls-moved header.zm-header .zm-header__left{width:100%!important;max-width:none!important;}
-.maintenance-feed-header-row{align-items:flex-start!important;gap:16px!important;}
-.maintenance-feed-actions{align-items:center!important;justify-content:flex-end!important;gap:10px!important;flex-wrap:wrap!important;}
-.maintenance-inline-controls{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:10px!important;flex-wrap:wrap!important;}
-.maintenance-inline-controls .zm-communityRow{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:0!important;width:auto!important;min-width:0!important;max-width:none!important;}
-.maintenance-inline-controls .zm-communityLabel,.maintenance-inline-controls #zummeeCommunitySwatch{display:none!important;}
-.maintenance-inline-controls #zummeeCommunitySelect{width:260px!important;min-width:260px!important;max-width:260px!important;height:52px!important;border-radius:20px!important;padding:0 18px!important;background:#f1f5f9!important;border:1.5px solid rgba(178,207,244,.75)!important;color:#17324c!important;font-size:16px!important;font-weight:800!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.86)!important;}
-.maintenance-inline-controls .zm-actionsRow{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:10px!important;width:auto!important;}
-.maintenance-inline-controls #zummeeHdrHub{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:116px!important;width:auto!important;height:52px!important;padding:0 22px!important;border-radius:999px!important;background:#f1f5f9!important;color:#17324c!important;border:1.5px solid rgba(178,207,244,.75)!important;box-shadow:0 8px 18px rgba(15,53,84,.07)!important;font-size:16px!important;font-weight:900!important;text-decoration:none!important;}
-.maintenance-inline-controls #zummeeHdrProfile,.maintenance-inline-controls #zummeeSignOut{display:none!important;}
-@media(max-width:860px){.maintenance-feed-header-row{flex-direction:column!important;align-items:stretch!important}.maintenance-feed-actions{width:100%!important;justify-content:stretch!important}.maintenance-inline-controls{width:100%!important;justify-content:stretch!important}.maintenance-inline-controls .zm-communityRow{flex:1 1 260px!important;justify-content:stretch!important}.maintenance-inline-controls #zummeeCommunitySelect{width:100%!important;min-width:0!important;max-width:none!important}.maintenance-inline-controls #zummeeHdrHub,.maintenance-feed-actions #refreshBtn{flex:1 1 120px!important}}
-@media(max-width:560px){.maintenance-feed-actions,.maintenance-inline-controls{flex-direction:column!important;align-items:stretch!important}.maintenance-inline-controls .zm-communityRow,.maintenance-inline-controls #zummeeHdrHub,.maintenance-feed-actions #refreshBtn{width:100%!important;flex:1 1 auto!important}}
-</style>
-<style id="live-maintenance-remove-blue-header-v23-actual">
-body.live-maintenance-no-blue-header #zummeeHeaderMount,
-body.live-maintenance-no-blue-header header.zm-header,
-body.live-maintenance-no-blue-header .zm-header{
-  display:none !important;
-  visibility:hidden !important;
-  height:0 !important;
-  min-height:0 !important;
-  max-height:0 !important;
-  margin:0 !important;
-  padding:0 !important;
-  overflow:hidden !important;
-}
-body.live-maintenance-no-blue-header .wrap{margin-top:18px !important;}
-body.live-maintenance-no-blue-header .maintenance-feed-card{margin-top:0 !important;}
-.maintenance-title-block{display:flex !important;flex-direction:column !important;gap:4px !important;align-items:flex-start !important;}
-.maintenance-page-title{font-size:30px !important;line-height:1.12 !important;font-weight:950 !important;color:#17324c !important;letter-spacing:-.03em !important;}
-.maintenance-feed-title{font-size:18px !important;line-height:1.2 !important;font-weight:850 !important;color:#506985 !important;}
-@media(max-width:860px){body.live-maintenance-no-blue-header .wrap{margin-top:12px!important;padding-left:10px!important;padding-right:10px!important;}.maintenance-page-title{font-size:28px!important;text-align:left!important;}.maintenance-feed-title{font-size:17px!important;}}
-</style>
-
-<style id="live-maintenance-title-logo-v24">
-/* v24 — left title + manager-hub company logo placement */
-body.live-maintenance-no-blue-header .maintenance-feed-header-row{
-  display:flex !important;
-  flex-direction:column !important;
-  align-items:stretch !important;
-  gap:18px !important;
-  margin-bottom:18px !important;
-}
-.maintenance-title-brand-row{
-  width:100% !important;
-  display:flex !important;
-  align-items:flex-start !important;
-  justify-content:space-between !important;
-  gap:18px !important;
-}
-.maintenance-title-block{
-  flex:1 1 auto !important;
-  align-items:flex-start !important;
-  text-align:left !important;
-  min-width:0 !important;
-}
-.maintenance-page-title,.maintenance-feed-title{
-  text-align:left !important;
-}
-.maintenance-brand-slot{
-  flex:0 0 auto !important;
-  display:flex !important;
-  align-items:flex-start !important;
-  justify-content:flex-end !important;
-  min-width:130px !important;
-  min-height:54px !important;
-  padding-top:2px !important;
-}
-.maintenance-company-logo{
-  display:none !important;
-  width:auto !important;
-  height:54px !important;
-  max-width:210px !important;
-  object-fit:contain !important;
-  object-position:right center !important;
-  border:0 !important;
-  background:transparent !important;
-  opacity:0 !important;
-  transition:opacity .12s ease !important;
-}
-.maintenance-company-logo.logo-ready{
-  display:block !important;
-  opacity:1 !important;
-}
-.maintenance-company-logo:not(.logo-ready){display:none !important;}
-body.live-maintenance-no-blue-header .maintenance-feed-actions{
-  width:100% !important;
-  justify-content:stretch !important;
-}
-body.live-maintenance-no-blue-header .maintenance-inline-controls{
-  flex:1 1 auto !important;
-}
-body.live-maintenance-no-blue-header .maintenance-inline-controls .zm-communityRow{
-  flex:1 1 auto !important;
-}
-body.live-maintenance-no-blue-header .maintenance-inline-controls #zummeeCommunitySelect{
-  width:100% !important;
-  min-width:0 !important;
-  max-width:none !important;
-}
-body.live-maintenance-no-blue-header .maintenance-inline-controls #zummeeHdrHub{
-  min-width:128px !important;
-}
-@media(max-width:760px){
-  .maintenance-title-brand-row{align-items:center !important;}
-  .maintenance-page-title{font-size:27px !important;}
-  .maintenance-feed-title{font-size:17px !important;}
-  .maintenance-company-logo{height:48px !important;max-width:176px !important;}
-  .maintenance-brand-slot{min-width:110px !important;min-height:48px !important;}
-}
-@media(max-width:520px){
-  .maintenance-title-brand-row{gap:10px !important;}
-  .maintenance-page-title{font-size:23px !important;}
-  .maintenance-feed-title{font-size:15px !important;}
-  .maintenance-company-logo{height:40px !important;max-width:140px !important;}
-  .maintenance-brand-slot{min-width:84px !important;min-height:40px !important;}
-}
-</style>
-<style id="live-maintenance-archive-v29">
-.maintenance-archive-card .headRow{margin-bottom:10px !important;}.maintenanceArchive{display:grid !important;gap:12px !important;}.archiveMonth{border:1.5px solid rgba(178,207,244,.78) !important;border-radius:20px !important;background:rgba(255,255,255,.82) !important;overflow:hidden !important;}.archiveMonth summary{list-style:none !important;cursor:pointer !important;display:flex !important;align-items:center !important;justify-content:space-between !important;gap:12px !important;padding:14px 16px !important;font-weight:900 !important;color:#17324c !important;}.archiveMonth summary::-webkit-details-marker{display:none !important;}.archiveMonth summary::after{content:'›';font-size:24px;line-height:1;transition:transform .18s ease;color:#60758d;}.archiveMonth[open] summary::after{transform:rotate(90deg);}.archiveMonthBody{display:grid;gap:10px;padding:0 12px 12px !important;}.archiveRecord{display:flex !important;align-items:center !important;justify-content:space-between !important;gap:12px !important;padding:14px 16px !important;border:1px solid rgba(221,183,62,.38) !important;border-radius:18px !important;background:linear-gradient(135deg,rgba(255,248,214,.96),rgba(255,255,255,.88)) !important;box-shadow:0 8px 18px rgba(212,175,55,.12) !important;}.archiveRecord:hover{transform:translateY(-1px);box-shadow:0 12px 24px rgba(212,175,55,.18) !important;}.archiveTitle{font-size:16px;font-weight:900;color:#17324c;}.archiveMeta{font-size:13px;font-weight:700;color:#60758d;margin-top:4px;}@media(max-width:720px){.archiveRecord{align-items:flex-start !important;flex-direction:column !important;}.archiveMonth summary{font-size:15px !important;}}
-</style>
-
-
-<style id="live-maintenance-native-community-dropdown-v502">
-/* v502 — Native community controls for Live Maintenance.
-   The page no longer depends on missing shared/header.js controls to select community. */
-.maintenance-native-controls{
-  width:100% !important;
-  display:flex !important;
-  align-items:center !important;
-  justify-content:space-between !important;
-  gap:12px !important;
-  flex-wrap:wrap !important;
-  margin-top:2px !important;
-}
-.maintenance-native-select-wrap{
-  flex:1 1 360px !important;
-  min-width:260px !important;
-  position:relative !important;
-}
-.maintenance-native-select-wrap::after{
-  content:"⌄" !important;
-  position:absolute !important;
-  right:22px !important;
-  top:50% !important;
-  transform:translateY(-54%) !important;
-  color:#17324c !important;
-  font-size:22px !important;
-  font-weight:900 !important;
-  pointer-events:none !important;
-  opacity:.9 !important;
-}
-#maintenanceCommunitySelect{
-  width:100% !important;
-  min-height:60px !important;
-  height:60px !important;
-  border-radius:999px !important;
-  padding:0 56px 0 22px !important;
-  background:#f8fbff !important;
-  border:1.5px solid rgba(178,207,244,.85) !important;
-  color:#17324c !important;
-  font-size:16px !important;
-  font-weight:950 !important;
-  box-shadow:0 8px 18px rgba(15,53,84,.07) !important;
-  outline:none !important;
-  -webkit-appearance:none !important;
-  appearance:none !important;
-}
-#maintenanceCommunitySelect:hover{
-  background:#fff !important;
-}
-#maintenanceCommunitySelect:focus{
-  border-color:rgba(35,79,128,.48) !important;
-  box-shadow:0 0 0 4px rgba(35,79,128,.12), 0 8px 18px rgba(15,53,84,.07) !important;
-}
-.maintenance-native-hub-btn{
-  flex:0 0 auto !important;
-  display:inline-flex !important;
-  align-items:center !important;
-  justify-content:center !important;
-  min-width:132px !important;
-  min-height:60px !important;
-  height:60px !important;
-  padding:0 22px !important;
-  border-radius:999px !important;
-  background:#f8fbff !important;
-  color:#17324c !important;
-  border:1.5px solid rgba(178,207,244,.85) !important;
-  box-shadow:0 8px 18px rgba(15,53,84,.07) !important;
-  font-size:16px !important;
-  font-weight:950 !important;
-  text-decoration:none !important;
-}
-.maintenance-native-hub-btn:hover{
-  background:#fff !important;
-}
-@media(max-width:680px){
-  .maintenance-native-controls{flex-direction:column !important;align-items:stretch !important;}
-  .maintenance-native-select-wrap{min-width:0 !important;width:100% !important;flex:1 1 auto !important;}
-  .maintenance-native-hub-btn{width:100% !important;}
-}
-</style>
-
-</head>
-<body data-header-mode="subpage" class="live-maintenance-no-blue-header">
-  <div id="zummeeHeaderMount"></div>
-  <main class="wrap">
-    <div class="stack">
-      <section class="card zummee-section-card zummee-section-card--blue maintenance-feed-card">
-        <div class="headRow maintenance-feed-header-row">
-          <div class="maintenance-title-brand-row">
-            <div class="maintenance-title-block">
-              <div class="maintenance-page-title">Live Maintenance Updates</div>
-              <div class="maintenance-feed-title">Maintenance Status Feed</div>
-            </div>
-            <div class="maintenance-brand-slot" aria-label="Management company logo">
-              <img id="maintenanceCompanyLogo" class="maintenance-company-logo" alt="Management company logo" loading="eager" decoding="async" hidden>
-            </div>
-          </div>
-          <div class="btnRow maintenance-feed-actions" id="maintenancePageControls">
-            <div class="maintenance-native-controls" id="maintenanceNativeControls" aria-label="Live maintenance page controls">
-              <div class="maintenance-native-select-wrap">
-                <select id="maintenanceCommunitySelect" aria-label="Select community">
-                  <option value="">Loading communities…</option>
-                </select>
-              </div>
-              <a class="maintenance-native-hub-btn" href="manager_hub.html">Back to Hub</a>
-            </div>
-          </div>
-        </div>
-        <div class="filters">
-          <div class="field">
-            <label for="searchBox">Search Requests</label>
-            <input id="searchBox" type="text" placeholder="Search subject, vendor, notes…" />
-          </div>
-          <div class="field">
-            <label for="statusFilter">Status Filter</label>
-            <select id="statusFilter">
-              <option value="">All statuses</option>
-              <option value="submitted">Submitted / Manager Review</option>
-              <option value="vendor_email_pending">Email Pending</option>
-              <option value="vendor_email_failed">Email Failed</option>
-              <option value="sent_to_vendor">Sent to Vendor</option>
-              <option value="active">Active (Accepted)</option>
-              <option value="scheduled">Scheduled</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="limitSelect">Show</label>
-            <select id="limitSelect">
-              <option value="10">10 rows</option>
-              <option value="25" selected>25 rows</option>
-              <option value="50">50 rows</option>
-            </select>
-          </div>
-        </div>
-        <div class="statusLine">
-          <div class="sub" id="feedState">Loading maintenance updates…</div>
-          <div class="tiny muted" id="communityState"></div>
-        </div>
-        <div class="statusSummary" id="statusSummary" aria-label="Live maintenance status summary"></div>
-        <div class="tableWrap">
-          <table aria-label="Live maintenance updates">
-            <thead>
-              <tr>
-                <th>Request</th>
-                <th>Vendor</th>
-                <th>Status</th>
-                <th>Last Update</th>
-                <th>Vendor Notes</th>
-              </tr>
-            </thead>
-            <tbody id="updatesTableBody">
-              <tr><td colspan="5" class="empty">Loading maintenance updates…</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-      <section class="card zummee-section-card zummee-section-card--blue recent-activity-card maintenance-archive-card">
-        <div class="headRow">
-          <div>
-            <div style="font-size:24px;font-weight:900;color:var(--brand);">Maintenance Archive</div>
-          </div>
-          <div class="tiny muted" id="activityState">Loading archive…</div>
-        </div>
-        <div id="activityFeed" class="timeline maintenanceArchive" style="margin-top:16px;">
-          <div class="empty">Loading archive…</div>
-        </div>
-      </section>
-    </div>
-  </main>
-
-
-  <div class="miniConfirmOverlay" id="miniConfirmOverlay" aria-hidden="true">
-    <div class="miniConfirmCard" role="dialog" aria-modal="true" aria-labelledby="miniConfirmTitle">
-      <div class="miniConfirmTitle" id="miniConfirmTitle">Confirm action</div>
-      <p class="miniConfirmText" id="miniConfirmText">Are you sure?</p>
-      <div class="miniConfirmActions">
-        <button class="btn" id="miniConfirmCancelBtn" type="button">Cancel</button>
-        <button class="btn btn-primary" id="miniConfirmOkBtn" type="button">Yes</button>
-      </div>
-    </div>
-  </div>
-  <div class="detailOverlay" id="detailOverlay" aria-hidden="true">
-    <section class="detailSheet" role="dialog" aria-modal="true" aria-labelledby="detailSheetTitle">
-      <div class="detailSheetHead">
-        <div>
-          <h2 class="detailSheetTitle" id="detailSheetTitle">Maintenance Request</h2>
-          <div class="detailSheetSub" id="detailSheetSub">Review the live update and take action without leaving this page.</div>
-        </div>
-        <button class="detailCloseBtn" id="detailCloseBtn" type="button" aria-label="Close details">×</button>
-      </div>
-      <div class="detailSheetBody">
-        <div class="detailGrid" id="detailGrid"></div>
-        <div class="detailLong">
-          <div class="detailLabel">Description</div>
-          <div class="detailValue muted" id="detailDescription">—</div>
-        </div>
-        <div class="detailLong">
-          <div class="detailLabel">Vendor Notes</div>
-          <div class="detailValue muted" id="detailVendorNotes">—</div>
-        </div>
-        <div class="detailAssignBlock">
-          <div class="detailAssignLabel">Assign Vendor</div>
-          <div class="detailAssignRow">
-            <select id="detailVendorSelect" class="detailAssignSelect" aria-label="Assign vendor">
-              <option value="">Select vendor…</option>
-            </select>
-            <button class="btn detailAssignBtn" id="detailAssignVendorBtn" type="button">Assign Vendor</button>
-          </div>
-        </div>
-        <div class="detailActions">
-                    <button class="btn" id="detailInProgressBtn" type="button">Mark In Progress</button>
-          <button class="btn detailCompleteBtn" id="detailCompleteBtn" type="button">Mark Complete</button>
-          <button class="btn" id="detailOpenFullBtn" type="button">Open Full Record</button>
-        </div>
-        <div class="detailMsg" id="detailMsg"></div>
-      </div>
-    </section>
-  </div>
-
-  <script>
-    const SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
-    const SUPABASE_ANON_KEY = 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
-    let sb = null;
-    let currentRows = [];
-    let currentArchiveRows = [];
-    let currentEvents = [];
-    let requestChannel = null;
-    let eventChannel = null;
-    let loadUpdatesToken = 0;
-    let loadEventsToken = 0;
-    let autoRefreshTimer = null;
-    let activityRefreshTimer = null;
-    function esc(s){
-      return String(s == null ? "" : s)
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;");
-    }
-    function normalizeLiveStatus(row){
-      const raw = String(row?.status || "").trim().toLowerCase();
-      const vendorResponse = String(row?.vendor_response_status || "").trim().toLowerCase();
-      const vendorDispatch = String(row?.vendor_dispatch_status || "").trim().toLowerCase();
-      const vendorAccepted =
-        vendorResponse === "accepted" ||
-        vendorDispatch === "accepted" ||
-        !!row?.vendor_accepted_at;
-
-      if (raw === "completed" || raw === "closed" || raw === "done") return "completed";
-
-      if (
-        raw === "in_progress" ||
-        raw === "in progress" ||
-        vendorResponse === "in_progress" ||
-        vendorResponse === "in progress"
-      ) return "in_progress";
-
-      if (
-        raw === "scheduled" ||
-        vendorResponse === "scheduled" ||
-        vendorDispatch === "scheduled"
-      ) return "scheduled";
-
-      if (
-        vendorAccepted ||
-        raw === "active" ||
-        raw === "accepted"
-      ) return "active";
-
-      if (
-        raw === "sent_to_vendor" ||
-        raw === "sent to vendor" ||
-        raw === "assigned" ||
-        raw === "vendor_notified" ||
-        raw === "awaiting_vendor" ||
-        vendorDispatch === "sent" ||
-        vendorDispatch === "assigned"
-      ) return "sent_to_vendor";
-
-      if (raw === "vendor_email_failed" || String(row?.vendor_email_status || "").toLowerCase() === "failed") return "vendor_email_failed";
-      if (raw === "vendor_email_pending" || String(row?.vendor_email_status || "").toLowerCase() === "pending") return "vendor_email_pending";
-
-      if (
-        !raw ||
-        raw === "submitted" ||
-        raw === "new" ||
-        raw === "open" ||
-        raw === "pending" ||
-        raw === "manager_review" ||
-        raw === "awaiting_review" ||
-        raw === "awaiting review"
-      ) return "submitted";
-
-      return "submitted";
-    }
-    function fmtStatus(status){
-      const s = String(status || "").toLowerCase();
-      if (s === "sent_to_vendor") return "Sent to Vendor";
-      if (s === "active") return "Active";
-      if (s === "scheduled") return "Scheduled";
-      if (s === "in_progress") return "In Progress";
-      if (s === "vendor_email_pending") return "Email Pending";
-      if (s === "vendor_email_failed") return "Email Failed";
-      if (s === "submitted") return "Submitted";
-      if (s === "completed") return "Completed";
-      return String(status || "submitted").replaceAll("_"," ").replace(/\b\w/g, m => m.toUpperCase());
-    }
-    function statusClass(status){
-      const s = String(status || "").toLowerCase();
-      if (s === "completed") return "completed";
-      if (s === "in_progress") return "progress";
-      if (s === "scheduled") return "scheduled";
-      if (s === "active") return "active";
-      if (s === "sent_to_vendor") return "sent";
-      if (s === "vendor_email_failed") return "error";
-      if (s === "vendor_email_pending") return "pending";
-      if (s === "submitted") return "submitted";
-      return "submitted";
-    }
-    function prettifyEventMessage(ev){
-      const type = String(ev?.event_type || "").toLowerCase();
-      const msg = String(ev?.message || "").trim();
-      const lower = msg.toLowerCase();
-      if (type.includes("received") || lower.includes("marked request received")) return "Vendor marked RECEIVED";
-      if (type.includes("scheduled") || lower.includes("marked request scheduled")) return "Vendor marked SCHEDULED";
-      if (type.includes("in_progress") || lower.includes("marked request in progress")) return "Vendor marked IN PROGRESS";
-      if (type.includes("completed") || lower.includes("marked request completed")) return "Vendor marked COMPLETED";
-      if (lower.includes("accepted") || type.includes("accepted")) return "Vendor accepted the request";
-      if (lower.includes("sent to vendor") || lower.includes("vendor notified") || type.includes("dispatch")) return "Request sent to vendor";
-      return msg || "Maintenance activity recorded";
-    }
-    function fmtWhen(dt){
-      try{
-        if(!dt) return "—";
-        const d = new Date(dt);
-        return d.toLocaleDateString() + " " + d.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
-      }catch(_e){
-        return dt || "—";
-      }
-    }
-    function latestTs(){
-      const vals = Array.from(arguments).filter(Boolean).map(v => {
-        const t = new Date(v).getTime();
-        return Number.isFinite(t) ? t : 0;
-      }).filter(Boolean);
-      if(!vals.length) return "";
-      return new Date(Math.max.apply(null, vals)).toISOString();
-    }
-    function getPageActiveCommunityId(){
-      try{
-        if(window.ZummeeCommunityState && window.ZummeeCommunityState.getActiveCommunityId){
-          const sharedId = String(window.ZummeeCommunityState.getActiveCommunityId() || "").trim();
-          if(sharedId) return sharedId;
-        }
-        const nativeSelect = document.getElementById("maintenanceCommunitySelect");
-        if (nativeSelect && nativeSelect.value) return String(nativeSelect.value || "").trim();
-        const headerSelect = document.getElementById("zummeeCommunitySelect");
-        if (headerSelect && headerSelect.value) return String(headerSelect.value || "").trim();
-        if (typeof window.currentCommunityId === "string" && window.currentCommunityId) return String(window.currentCommunityId).trim();
-        if (typeof window.getActiveCommunityId === "function") {
-          return String(window.getActiveCommunityId() || '').trim();
-        }
-        return String(
-          localStorage.getItem("zummee_selected_community_id") ||
-          localStorage.getItem("activeCommunityId") ||
-          localStorage.getItem("zummeeActiveCommunityId") ||
-          localStorage.getItem("currentCommunityId") ||
-          localStorage.getItem("zummee_community_id") ||
-          ""
-        ).trim();
-      }catch(_e){
-        return "";
-      }
-    }
-    function setPageActiveCommunityId(id){
-      const v = String(id || '').trim();
-      try{
-        window.currentCommunityId = v;
-        localStorage.setItem("activeCommunityId", v);
-        localStorage.setItem("zummeeActiveCommunityId", v);
-        localStorage.setItem("currentCommunityId", v);
-        localStorage.setItem("zummee_selected_community_id", v);
-      }catch(_e){}
-      const nativeSelect = document.getElementById("maintenanceCommunitySelect");
-      if (nativeSelect && v && nativeSelect.value !== v) {
-        try{ nativeSelect.value = v; }catch(_e){}
-      }
-      const headerSelect = document.getElementById("zummeeCommunitySelect");
-      if (headerSelect && v && headerSelect.value !== v) {
-        try{ headerSelect.value = v; }catch(_e){}
-      }
-      return v;
-    }
-    function getCommunityNameForId(id){
-      const cid = String(id || '').trim();
-      if(!cid) return '';
-      try{
-        const headerSelect = document.getElementById('zummeeCommunitySelect');
-        if(headerSelect && headerSelect.options){
-          const match = Array.from(headerSelect.options).find(opt => String(opt.value || '').trim() === cid);
-          if(match){
-            const label = String(match.textContent || '').trim();
-            if(label && !/^select community/i.test(label)) return label;
-          }
-        }
-      }catch(_e){}
-      try{
-        const raw = localStorage.getItem('zummee_header_communities') || localStorage.getItem('communities') || '';
-        if(raw){
-          const parsed = JSON.parse(raw);
-          const arr = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.communities) ? parsed.communities : []);
-          const match = arr.find(c => String(c?.id || '').trim() === cid);
-          if(match && match.name) return String(match.name).trim();
-        }
-      }catch(_e){}
-      try{
-        const activeId = getPageActiveCommunityId();
-        const activeName = String(localStorage.getItem('activeCommunityName') || localStorage.getItem('zummeeActiveCommunityName') || '').trim();
-        if(activeName && activeId === cid) return activeName;
-      }catch(_e){}
-      return cid;
-    }
-    function getRecordCommunityDisplay(record){
-      return getCommunityNameForId(record?.community_id || '');
-    }
-    function showMiniConfirm(message, title){
-      const overlay = document.getElementById('miniConfirmOverlay');
-      const textEl = document.getElementById('miniConfirmText');
-      const titleEl = document.getElementById('miniConfirmTitle');
-      const okBtn = document.getElementById('miniConfirmOkBtn');
-      const cancelBtn = document.getElementById('miniConfirmCancelBtn');
-      if(!overlay || !textEl || !titleEl || !okBtn || !cancelBtn){
-        return Promise.resolve(window.confirm(String(message || 'Are you sure?')));
-      }
-      textEl.textContent = String(message || 'Are you sure?');
-      titleEl.textContent = String(title || 'Confirm action');
-      overlay.classList.add('is-open');
-      overlay.setAttribute('aria-hidden','false');
-      return new Promise(resolve => {
-        let done = false;
-        const finish = (value) => {
-          if(done) return;
-          done = true;
-          overlay.classList.remove('is-open');
-          overlay.setAttribute('aria-hidden','true');
-          okBtn.removeEventListener('click', onOk);
-          cancelBtn.removeEventListener('click', onCancel);
-          overlay.removeEventListener('click', onOverlay);
-          document.removeEventListener('keydown', onKey);
-          resolve(!!value);
-        };
-        const onOk = () => finish(true);
-        const onCancel = () => finish(false);
-        const onOverlay = (e) => { if(e.target === overlay) finish(false); };
-        const onKey = (e) => { if(e.key === 'Escape') finish(false); };
-        okBtn.addEventListener('click', onOk);
-        cancelBtn.addEventListener('click', onCancel);
-        overlay.addEventListener('click', onOverlay);
-        document.addEventListener('keydown', onKey);
-        okBtn.focus();
-      });
-    }
-    function extractVendorFromSubject(subject){
-      const raw = String(subject || '').trim();
-      if(!raw) return '';
-      const parts = raw.split(/\s+-\s+/);
-      if(parts.length < 2) return '';
-      return String(parts.slice(1).join(' - ') || '').trim();
-    }
-    function vendorDisplay(row){
-      return String(
-        row?.assigned_vendor_name ||
-        row?.vendor_name ||
-        row?.assigned_vendor_email ||
-        row?.vendor_email ||
-        extractVendorFromSubject(row?.subject) ||
-        'Unassigned'
-      ).trim();
-    }
-    function getSearchText(row){
-      return [
-        row.subject || "",
-        row.description || "",
-        row.assigned_vendor_name || "",
-        row.vendor_name || "",
-        row.assigned_vendor_email || "",
-        row.vendor_email || "",
-        extractVendorFromSubject(row?.subject) || "",
-        row.employee_email || "",
-        row.resident_name || "",
-        row.unit_number || ""
-      ].join(" ").toLowerCase();
-    }
-    function getVendorCacheForCommunity(communityId){
-      try{
-        const key = 'daily_ops_vendors_cache_v1::' + String(communityId || '').trim();
-        const raw = localStorage.getItem(key);
-        if(!raw) return [];
-        const parsed = JSON.parse(raw);
-        const vendors = Array.isArray(parsed?.vendors) ? parsed.vendors : [];
-        return vendors.map(v => ({
-          name: String(v?.name || '').trim(),
-          email: String(v?.email || '').trim(),
-          phone: String(v?.phone || '').trim(),
-          type: String(v?.type || '').trim()
-        })).filter(v => v.name);
-      }catch(_e){
-        return [];
-      }
-    }
-    function getDetailSelectedVendor(){
-      const select = document.getElementById('detailVendorSelect');
-      return String(select && select.value ? select.value : '').trim();
-    }
-    function hasDetailAssignedVendor(record){
-      const storedVendor = String(record?.vendor_name || '').trim();
-      const selectedVendor = getDetailSelectedVendor();
-      return !!(storedVendor || selectedVendor);
-    }
-    function populateDetailVendorSelect(record){
-      const select = document.getElementById('detailVendorSelect');
-      const button = document.getElementById('detailAssignVendorBtn');
-      if(!select) return;
-      const currentVendor = String(record?.vendor_name || '').trim();
-      const currentEmail = String(record?.vendor_email || '').trim();
-      const communityId = String(record?.community_id || getPageActiveCommunityId() || '').trim();
-      const vendors = getVendorCacheForCommunity(communityId);
-      const options = [];
-      const seen = new Set();
-      if(currentVendor){
-        options.push({ name: currentVendor, email: currentEmail, type: '' });
-        seen.add(currentVendor.toLowerCase());
-      }
-      vendors.forEach(v => {
-        const key = String(v.name || '').trim().toLowerCase();
-        if(!key || seen.has(key)) return;
-        seen.add(key);
-        options.push(v);
-      });
-      select.innerHTML = '<option value="">Select vendor…</option>' + options.map(v => {
-        const label = v.type ? `${esc(v.name)} — ${esc(v.type)}` : esc(v.name);
-        return `<option value="${esc(v.name)}" data-email="${esc(v.email || '')}">${label}</option>`;
-      }).join('');
-      if(currentVendor){
-        select.value = currentVendor;
-      }
-      select.disabled = detailLoading;
-      if(button) button.disabled = detailLoading || !select.value;
-    }
-    function requestTitleById(id){
-      const match = currentRows.find(r => String(r.id || "") === String(id || ""));
-      return match ? (match.subject || "Maintenance Request") : "Maintenance Request";
-    }
-    function openMaintenanceRecord(id){
-      const rid = String(id || '').trim();
-      if(!rid) return;
-      try{
-        window.location.href = `resident_work_orders.html?request_id=${encodeURIComponent(rid)}`;
-      }catch(_e){
-        window.location.assign(`resident_work_orders.html?request_id=${encodeURIComponent(rid)}`);
-      }
-    }
-
-    let detailRecord = null;
-    let detailLoading = false;
-    function detailField(label, value, muted){
-      return `
-        <div class="detailTile">
-          <div class="detailLabel">${esc(label || '')}</div>
-          <div class="detailValue${muted ? ' muted' : ''}">${esc(value || '—')}</div>
-        </div>
-      `;
-    }
-    function setDetailMsg(message, ok){
-      const el = document.getElementById('detailMsg');
-      if(!el) return;
-      el.textContent = String(message || '');
-      el.className = 'detailMsg' + (message ? (ok ? ' success' : ' error') : '');
-    }
-    function renderDetailSheet(record){
-      const grid = document.getElementById('detailGrid');
-      const title = document.getElementById('detailSheetTitle');
-      const sub = document.getElementById('detailSheetSub');
-      const desc = document.getElementById('detailDescription');
-      const notes = document.getElementById('detailVendorNotes');
-      const completeBtn = document.getElementById('detailCompleteBtn');
-      const inProgressBtn = document.getElementById('detailInProgressBtn');
-      const assignVendorBtn = document.getElementById('detailAssignVendorBtn');
-      const assignVendorSelect = document.getElementById('detailVendorSelect');
-      if(!grid || !title || !sub || !desc || !notes || !completeBtn || !inProgressBtn || !assignVendorBtn || !assignVendorSelect) return;
-      const status = normalizeLiveStatus(record || {});
-      const rid = String(record?.id || '').trim();
-      title.textContent = String(record?.subject || 'Maintenance Request');
-      sub.textContent = rid ? `Request ID: ${rid}` : 'Live maintenance record';
-      grid.innerHTML = [
-        detailField('Status', fmtStatus(status), false),
-        detailField('Community', getRecordCommunityDisplay(record || {}) || '—', true),
-        detailField('Vendor', vendorDisplay(record), true),
-        detailField('Resident', String(record?.resident_name || '—'), true),
-        detailField('Unit', String(record?.unit_number || '—'), true),
-        detailField('Last Update', fmtWhen(record?.last_update_at || record?.updated_at || record?.submitted_at || ''), true),
-      ].join('');
-      desc.textContent = String(record?.description || 'No description provided.');
-      notes.textContent = String((record && Object.prototype.hasOwnProperty.call(record, 'vendor_notes') && record.vendor_notes) ? record.vendor_notes : 'No vendor notes yet.');
-      const isCompleted = status === 'completed';
-      const isSent = status === 'sent_to_vendor';
-      const isInProgress = status === 'in_progress';
-      completeBtn.disabled = isCompleted || detailLoading;
-      completeBtn.textContent = isCompleted ? 'Already Completed' : 'Mark Complete';
-      populateDetailVendorSelect(record);
-      const hasAssignedVendor = hasDetailAssignedVendor(record);
-      inProgressBtn.disabled = detailLoading || isCompleted || isInProgress;
-      inProgressBtn.textContent = isInProgress ? 'Already In Progress' : 'Mark In Progress';
-      assignVendorSelect.disabled = detailLoading || isCompleted || isSent;
-      assignVendorBtn.disabled = detailLoading || isCompleted || isSent || !String(assignVendorSelect.value || '').trim();
-      assignVendorBtn.textContent = isSent ? 'Vendor Emailed' : (hasAssignedVendor ? 'Assign Vendor & Email' : 'Assign Vendor');
-      setDetailMsg('', true);
-    }
-    async function fetchDetailRecord(id){
-      const rid = String(id || '').trim();
-      if(!rid) return null;
-      const existing = currentRows.find(r => String(r.id || '').trim() === rid);
-      const client = await ensureSupabase();
-      const res = await client
-        .from('resident_work_orders')
-        .select('id, community_id, subject, description, status, vendor_name, vendor_email, vendor_response_status, vendor_dispatch_status, vendor_accepted_at, resident_name, unit_number, submitted_at, updated_at')
-        .eq('id', rid)
-        .maybeSingle();
-      if(res.error) throw res.error;
-      const merged = Object.assign({}, existing || {}, res.data || {});
-      merged.status = normalizeLiveStatus(merged);
-      merged.last_update_at = latestTs(merged.updated_at, merged.vendor_accepted_at, merged.submitted_at, existing?.last_update_at || '');
-      return merged;
-    }
-    async function openDetailSheet(id){
-      const overlay = document.getElementById('detailOverlay');
-      if(!overlay) return;
-      const rid = String(id || '').trim();
-      if(!rid) return;
-      overlay.classList.add('is-open');
-      overlay.setAttribute('aria-hidden', 'false');
-      document.body.style.overflow = 'hidden';
-      detailRecord = Object.assign({}, currentRows.find(r => String(r.id || '').trim() === rid) || { id: rid, subject: 'Loading…' });
-      renderDetailSheet(detailRecord);
-      setDetailMsg('Loading record details…', true);
-      try{
-        detailRecord = await fetchDetailRecord(rid);
-        renderDetailSheet(detailRecord);
-      }catch(err){
-        console.warn('Live Maintenance detail load failed', err);
-        setDetailMsg(err?.message || 'Unable to load full record details.', false);
-      }
-      const closeBtn = document.getElementById('detailCloseBtn');
-      if(closeBtn) closeBtn.focus();
-    }
-    function closeDetailSheet(){
-      const overlay = document.getElementById('detailOverlay');
-      if(!overlay) return;
-      overlay.classList.remove('is-open');
-      overlay.setAttribute('aria-hidden', 'true');
-      document.body.style.overflow = '';
-      detailLoading = false;
-    }
-    async function updateDetailStatus(nextStatus, successMessage){
-      if(!detailRecord || !detailRecord.id || detailLoading) return;
-      const allowed = new Set(['sent_to_vendor','in_progress','completed']);
-      const target = String(nextStatus || '').trim().toLowerCase();
-      if(!allowed.has(target)) return;
-      detailLoading = true;
-      renderDetailSheet(detailRecord);
-      setDetailMsg(successMessage ? successMessage.replace(/\.$/, '…') : 'Updating status…', true);
-      try{
-        const client = await ensureSupabase();
-        const patch = await client
-          .from('resident_work_orders')
-          .update({ status: target, updated_at: new Date().toISOString() })
-          .eq('id', String(detailRecord.id))
-          .select('id, community_id, subject, description, status, vendor_name, vendor_email, vendor_response_status, vendor_dispatch_status, vendor_accepted_at, resident_name, unit_number, submitted_at, updated_at')
-          .maybeSingle();
-        if(patch.error) throw patch.error;
-        detailRecord = Object.assign({}, detailRecord, patch.data || {}, { status: target });
-        renderDetailSheet(detailRecord);
-        setDetailMsg(successMessage || 'Status updated.', true);
-        await loadUpdates();
-        if(target === 'completed'){
-          setTimeout(closeDetailSheet, 550);
-        }
-      }catch(err){
-        console.warn('Live Maintenance status update failed', err);
-        setDetailMsg(err?.message || 'Unable to update status.', false);
-      }finally{
-        detailLoading = false;
-        renderDetailSheet(detailRecord);
-      }
-    }
-    async function markDetailSentToVendor(){
-      if(!detailRecord || !detailRecord.id || detailLoading) return;
-      const selectedVendor = getDetailSelectedVendor();
-      const vendorName = String(selectedVendor || detailRecord?.vendor_name || '').trim();
-      const vendorEmail = String(detailRecord?.vendor_email || '').trim();
-      if(!vendorName){
-        setDetailMsg('Please assign a vendor before sending.', false);
-        return;
-      }
-      if(!vendorEmail){
-        setDetailMsg('The selected vendor does not have an email address.', false);
-        return;
-      }
-      const prompt = `Send this work order to ${vendorName}?`;
-      const confirmed = await showMiniConfirm(prompt, 'Send to Vendor');
-      if(!confirmed) return;
-      detailLoading = true;
-      renderDetailSheet(detailRecord);
-      setDetailMsg('Sending vendor email…', true);
-      try{
-        const communityName = String(localStorage.getItem('activeCommunityName') || localStorage.getItem('zummeeActiveCommunityName') || '').trim();
-        const emailResult = await invokeVendorDispatchEmail({
-          work_order_id: detailRecord.id || null,
-          vendor_email: vendorEmail || null,
-          vendor_name: vendorName || '',
-          manager_name: getCurrentManagerName(),
-          manager_phone: getCurrentManagerPhone(),
-          company_name: getCurrentCompanyName(),
-          vendor_note: detailRecord?.vendor_notes || '',
-          community_name: communityName || '',
-          community_id: detailRecord?.community_id || getPageActiveCommunityId() || null,
-          resident_name: detailRecord?.resident_name || '',
-          resident_email: detailRecord?.resident_email || '',
-          resident_phone: detailRecord?.resident_phone || '',
-          unit_number: detailRecord?.unit_number || '',
-          subject: detailRecord?.subject || 'Resident Work Order',
-          description: detailRecord?.description || '',
-          priority: detailRecord?.priority || '',
-          status: detailRecord?.status || 'submitted'
-        });
-        const client = await ensureSupabase();
-        const patch = await client
-          .from('resident_work_orders')
-          .update({
-            status: 'sent_to_vendor',
-            vendor_dispatch_status: 'sent',
-            vendor_dispatched_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', String(detailRecord.id))
-          .select('id, community_id, subject, description, status, vendor_name, vendor_email, vendor_response_status, vendor_dispatch_status, vendor_accepted_at, resident_name, unit_number, submitted_at, updated_at')
-          .maybeSingle();
-        if(patch.error) throw patch.error;
-        detailRecord = Object.assign({}, detailRecord, patch.data || {}, {
-          status: 'sent_to_vendor',
-          vendor_dispatch_status: 'sent'
-        });
-        renderDetailSheet(detailRecord);
-        if(emailResult && emailResult.warning){
-          setDetailMsg('Vendor email sent with warning: ' + String(emailResult.warning), true);
-        } else {
-          setDetailMsg('Vendor emailed and record sent to vendor.', true);
-        }
-        await loadUpdates();
-      }catch(err){
-        console.warn('Live Maintenance vendor email send failed', err);
-        setDetailMsg(err?.message || 'Unable to send vendor email.', false);
-      }finally{
-        detailLoading = false;
-        renderDetailSheet(detailRecord);
-      }
-    }
-    async function markDetailInProgress(){
-      return updateDetailStatus('in_progress', 'Record marked in progress.');
-    }
-    async function markDetailComplete(){
-      return updateDetailStatus('completed', 'Record marked complete.');
-    }
-    async function assignDetailVendor(){
-      if(!detailRecord || !detailRecord.id || detailLoading) return;
-      const select = document.getElementById('detailVendorSelect');
-      if(!select) return;
-      const vendorName = String(select.value || '').trim();
-      if(!vendorName){
-        setDetailMsg('Select a vendor first.', false);
-        return;
-      }
-      const chosen = select.selectedOptions && select.selectedOptions[0] ? select.selectedOptions[0] : null;
-      const vendorEmail = String((chosen && chosen.dataset && chosen.dataset.email) || detailRecord.vendor_email || '').trim();
-      if(!vendorEmail){
-        setDetailMsg('The selected vendor does not have an email address.', false);
-        return;
-      }
-      const confirmed = await showMiniConfirm(`Assign ${vendorName} and email this work order to the vendor?`, 'Assign Vendor');
-      if(!confirmed) return;
-      detailLoading = true;
-      renderDetailSheet(detailRecord);
-      setDetailMsg('Assigning vendor and sending email…', true);
-      try{
-        const communityName = getRecordCommunityDisplay(detailRecord || {}) || String(localStorage.getItem('activeCommunityName') || localStorage.getItem('zummeeActiveCommunityName') || '').trim();
-        const emailResult = await invokeVendorDispatchEmail({
-          work_order_id: detailRecord.id || null,
-          vendor_email: vendorEmail || null,
-          vendor_name: vendorName || '',
-          manager_name: getCurrentManagerName(),
-          manager_phone: getCurrentManagerPhone(),
-          company_name: getCurrentCompanyName(),
-          vendor_note: detailRecord?.vendor_notes || '',
-          community_name: communityName || '',
-          community_id: detailRecord?.community_id || getPageActiveCommunityId() || null,
-          resident_name: detailRecord?.resident_name || '',
-          resident_email: detailRecord?.resident_email || '',
-          resident_phone: detailRecord?.resident_phone || '',
-          unit_number: detailRecord?.unit_number || '',
-          subject: detailRecord?.subject || 'Resident Work Order',
-          description: detailRecord?.description || '',
-          priority: detailRecord?.priority || '',
-          status: 'sent_to_vendor'
-        });
-        const client = await ensureSupabase();
-        const patch = await client
-          .from('resident_work_orders')
-          .update({
-            vendor_name: vendorName,
-            vendor_email: vendorEmail || null,
-            status: 'sent_to_vendor',
-            vendor_dispatch_status: 'sent',
-            vendor_dispatched_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', String(detailRecord.id))
-          .select('id, community_id, subject, description, status, vendor_name, vendor_email, vendor_response_status, vendor_dispatch_status, vendor_accepted_at, resident_name, unit_number, submitted_at, updated_at')
-          .maybeSingle();
-        if(patch.error) throw patch.error;
-        detailRecord = Object.assign({}, detailRecord, patch.data || {}, {
-          vendor_name: vendorName,
-          vendor_email: vendorEmail || null,
-          status: 'sent_to_vendor',
-          vendor_dispatch_status: 'sent'
-        });
-        renderDetailSheet(detailRecord);
-        if(emailResult && emailResult.warning){
-          setDetailMsg('Vendor assigned and emailed with warning: ' + String(emailResult.warning), true);
-        } else {
-          setDetailMsg('Vendor assigned and emailed successfully.', true);
-        }
-        await loadUpdates();
-      }catch(err){
-        console.warn('Live Maintenance vendor assign/email failed', err);
-        setDetailMsg(err?.message || 'Unable to assign and email vendor.', false);
-      }finally{
-        detailLoading = false;
-        renderDetailSheet(detailRecord);
-      }
-    }
-    function getVisibleRows(){
-      const search = (document.getElementById("searchBox").value || "").trim().toLowerCase();
-      const status = document.getElementById("statusFilter").value || "";
-      let rows = currentRows.filter(r => {
-        const s = String(r.status || "").toLowerCase();
-        return s === "submitted" || s === "vendor_email_pending" || s === "vendor_email_failed" || s === "active" || s === "sent_to_vendor" || s === "scheduled" || s === "in_progress";
-      });
-      if(status){
-        rows = currentRows.filter(r => String(r.status || "").toLowerCase() === String(status || "").toLowerCase());
-      }
-      if(search){
-        rows = rows.filter(r => getSearchText(r).includes(search));
-      }
-      return rows;
-    }
-    function renderStatusSummary(rows){
-      const host = document.getElementById('statusSummary');
-      if(!host) return;
-      const safeRows = Array.isArray(rows) ? rows : [];
-      const counts = { submitted: 0, sent: 0, active: 0, progress: 0 };
-      safeRows.forEach(r => {
-        const cls = statusClass(r.status);
-        if(cls === 'submitted') counts.submitted += 1;
-        else if(cls === 'sent') counts.sent += 1;
-        else if(cls === 'active') counts.active += 1;
-        else if(cls === 'progress') counts.progress += 1;
-      });
-      host.innerHTML = `
-        <div class="statusSummaryChip submitted"><span class="dot"></span><span class="label">New</span><span class="count">${counts.submitted}</span></div>
-        <div class="statusSummaryChip sent"><span class="dot"></span><span class="label">Sent to Vendor</span><span class="count">${counts.sent}</span></div>
-        <div class="statusSummaryChip active"><span class="dot"></span><span class="label">Active</span><span class="count">${counts.active}</span></div>
-        <div class="statusSummaryChip progress"><span class="dot"></span><span class="label">In Progress</span><span class="count">${counts.progress}</span></div>
-      `;
-    }
-    function renderRows(){
-      const body = document.getElementById("updatesTableBody");
-      const rows = getVisibleRows();
-      renderStatusSummary(rows);
-      if(!rows.length){
-        body.innerHTML = '<tr><td colspan="5" class="empty">No matching maintenance updates found.</td></tr>';
-        return;
-      }
-      body.innerHTML = rows.map(r => {
-        const rid = esc(r.id || "");
-        const rowClass = `status-${esc(statusClass(r.status))}`;
-        return `
-          <tr class="${rowClass}" data-open-id="${rid}" tabindex="0" aria-label="Open maintenance record ${esc(r.subject || "Maintenance Request")}">
-            <td>
-              <div class="reqTitle">${esc(r.subject || "Maintenance Request")}</div>
-              
-            </td>
-            <td>${esc(vendorDisplay(r) || "Unassigned")}</td>
-            <td><span class="pill ${esc(statusClass(r.status))}">${esc(fmtStatus(r.status))}</span></td>
-            <td>${esc(fmtWhen(r.last_update_at || r.created_at))}</td>
-            <td><button type="button" class="openRecordBtn" data-open-id="${rid}">View Details</button></td>
-          </tr>
-        `;
-      }).join("");
-    }
-    function archiveMonthKey(row){
-      const raw = row.last_update_at || row.updated_at || row.submitted_at || row.created_at || new Date().toISOString();
-      const d = new Date(raw);
-      if(Number.isNaN(d.getTime())) return 'Unknown Month';
-      return d.toLocaleDateString(undefined, { month:'long', year:'numeric' });
-    }
-
-    // Archive collapse state must survive auto-refresh/realtime rerenders.
-    // Default is collapsed; employees control when a month opens.
-    function archiveCollapseStorageKey(){
-      return 'zummee_live_maintenance_archive_open_months_v1::' + (getPageActiveCommunityId() || 'global');
-    }
-    function readArchiveOpenMonths(){
-      try{
-        const raw = localStorage.getItem(archiveCollapseStorageKey());
-        const parsed = raw ? JSON.parse(raw) : {};
-        return parsed && typeof parsed === 'object' ? parsed : {};
-      }catch(_e){ return {}; }
-    }
-    function writeArchiveOpenMonths(map){
-      try{ localStorage.setItem(archiveCollapseStorageKey(), JSON.stringify(map || {})); }catch(_e){}
-    }
-    function bindArchiveCollapseState(){
-      const host = document.getElementById("activityFeed");
-      if(!host) return;
-      host.querySelectorAll('details.archiveMonth').forEach(details => {
-        details.addEventListener('toggle', function(){
-          const month = String(details.getAttribute('data-archive-month') || '').trim();
-          if(!month) return;
-          const map = readArchiveOpenMonths();
-          map[month] = !!details.open;
-          writeArchiveOpenMonths(map);
-        });
-      });
-    }
-
-    function renderMaintenanceArchive(){
-      const host = document.getElementById("activityFeed");
-      const state = document.getElementById("activityState");
-      if(!host || !state) return;
-      const rows = (currentArchiveRows || []).filter(r => String(r.status || '').toLowerCase() === 'completed');
-      if(!rows.length){
-        host.innerHTML = '<div class="empty">No completed work orders archived yet.</div>';
-        state.textContent = 'No archive yet.';
-        return;
-      }
-      const groups = {};
-      rows.forEach(r => { const key = archiveMonthKey(r); if(!groups[key]) groups[key] = []; groups[key].push(r); });
-      const openMonths = readArchiveOpenMonths();
-      host.innerHTML = Object.keys(groups).map((month) => {
-        const items = groups[month];
-        const openAttr = openMonths[month] === true ? ' open' : '';
-        const itemHtml = items.map(r => {
-          const rid = esc(r.id || '');
-          return `<div class="archiveRecord" data-open-id="${rid}" tabindex="0" aria-label="Open archived maintenance record ${esc(r.subject || 'Maintenance Request')}"><div><div class="archiveTitle">${esc(r.subject || 'Maintenance Request')}</div><div class="archiveMeta">${esc(fmtWhen(r.last_update_at || r.updated_at || r.submitted_at || r.created_at))} • ${esc(vendorDisplay(r) || 'Unassigned')}</div></div><span class="pill completed">Completed</span></div>`;
-        }).join('');
-        return `<details class="archiveMonth" data-archive-month="${esc(month)}"${openAttr}><summary><span>${esc(month)}</span><span>${items.length} completed</span></summary><div class="archiveMonthBody">${itemHtml}</div></details>`;
-      }).join('');
-      bindArchiveCollapseState();
-      state.textContent = rows.length + ' archived completed work order' + (rows.length === 1 ? '' : 's') + '.';
-    }
-    function renderEvents(){ renderMaintenanceArchive(); }
-    async function ensureSupabase(){
-      // v337: use the canonical shared Supabase client and restore the persisted session
-      // before any resident_work_orders queries run. The previous local client was created
-      // without shared auth storage, so iPad/internal navigation could query as anon.
-      if(sb && sb.auth && typeof sb.from === 'function'){
-        try{ if(window.zummeeRestoreSupabaseSession) await window.zummeeRestoreSupabaseSession(); }catch(_e){}
-        return sb;
-      }
-
-      try{
-        if(window.supabaseClient && window.supabaseClient.auth && typeof window.supabaseClient.from === 'function'){
-          sb = window.supabaseClient;
-          try{ if(window.zummeeRestoreSupabaseSession) await window.zummeeRestoreSupabaseSession(); }catch(_e){}
-          return sb;
-        }
-      }catch(_e){}
-
-      try{
-        if(typeof window.ensureSupabaseSync === 'function'){
-          const shared = window.ensureSupabaseSync();
-          if(shared && shared.auth && typeof shared.from === 'function'){
-            sb = shared;
-            try{ if(window.zummeeRestoreSupabaseSession) await window.zummeeRestoreSupabaseSession(); }catch(_e){}
-            return sb;
-          }
-        }
-      }catch(_e){}
-
-      const key = SUPABASE_ANON_KEY || localStorage.getItem("sb_publishable_key") || "";
-      if(!key){
-        throw new Error("Missing Supabase anon key. Add it inside maintenance_updates.html.");
-      }
-      sb = window.supabase.createClient(SUPABASE_URL, key, {
-        auth: {
-          storageKey: 'sb-zummee-auth',
-          storage: window.localStorage,
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true
-        }
-      });
-      window.supabaseClient = sb;
-      window.sb = sb;
-      try{ if(window.zummeeRestoreSupabaseSession) await window.zummeeRestoreSupabaseSession(); }catch(_e){}
-      return sb;
-    }
-
-    async function ensureMaintenanceSession(){
-      const client = await ensureSupabase();
-      if(!client || !client.auth) return null;
-      try{
-        let current = await client.auth.getSession();
-        if(current && current.data && current.data.session) return current.data.session;
-      }catch(_e){}
-      try{ if(window.zummeeRestoreSupabaseSession) await window.zummeeRestoreSupabaseSession(); }catch(_e){}
-      for(let i=0;i<8;i++){
-        try{
-          const check = await client.auth.getSession();
-          if(check && check.data && check.data.session) return check.data.session;
-        }catch(_e){}
-        await new Promise(r => setTimeout(r, 180));
-      }
-      return null;
-    }
-
-    function getZummeeAuth(){
-      try{
-        return JSON.parse(localStorage.getItem('sb-zummee-auth') || '{}') || {};
-      }catch(_e){
-        return {};
-      }
-    }
-    function getCurrentManagerName(){
-      try{
-        const auth = getZummeeAuth();
-        const name = String(auth?.user?.user_metadata?.name || auth?.user?.name || '').trim();
-        if(name) return name;
-      }catch(_e){}
-      try{
-        const sess = JSON.parse(localStorage.getItem('zummee_session_v1') || '{}');
-        const name = String(sess?.name || sess?.email || '').trim();
-        if(name) return name;
-      }catch(_e){}
-      return 'Property Management';
-    }
-    function getCurrentManagerPhone(){
-      try{
-        const auth = getZummeeAuth();
-        const phone = String(auth?.user?.user_metadata?.phone || auth?.user?.phone || '').trim();
-        if(phone) return phone;
-      }catch(_e){}
-      return '';
-    }
-    function getCurrentCompanyName(){
-      try{
-        const auth = getZummeeAuth();
-        const company = String(auth?.user?.user_metadata?.company || localStorage.getItem('zummee_company') || '').trim();
-        if(company) return company;
-      }catch(_e){}
-      return String(localStorage.getItem('zummee_company') || '').trim() || 'Property Management';
-    }
-    async function invokeVendorDispatchEmail(payload){
-      const client = await ensureSupabase();
-      const result = await client.functions.invoke('assign-vendor-email', { body: payload });
-      if(result && result.error) throw result.error;
-      return result ? result.data : null;
-    }
-    function isPrivilegedRole(role){
-      const r = String(role || '').trim().toLowerCase();
-      return r.includes('admin') || r.includes('supervisor') || r === 'companyadmin' || r === 'company admin';
-    }
-    function getZummeeLocalUserId(){
-      try{
-        const raw = localStorage.getItem('zummee_user_id_v1') || localStorage.getItem('zummeeUserId') || localStorage.getItem('zummee_user_id') || '';
-        if(raw) return String(raw).trim();
-      }catch(_e){}
-      try{
-        const auth = getZummeeAuth();
-        const id = String(auth?.user?.id || auth?.user?.user_metadata?.id || '').trim();
-        if(id) return id;
-      }catch(_e){}
-      return '';
-    }
-    async function getCurrentProfile(){
-      const client = await ensureSupabase();
-      let uid = getZummeeLocalUserId();
-      if(!uid){
-        try{
-          const userRes = await client.auth.getUser();
-          uid = String(userRes && userRes.data && userRes.data.user && userRes.data.user.id || '').trim();
-        }catch(_e){}
-      }
-      if(!uid) return null;
-      try{
-        const q = await client
-          .from('profiles')
-          .select('id, company, company_id, selected_community_id, role, disabled, deleted')
-          .eq('id', uid)
-          .maybeSingle();
-        if(q.error) throw q.error;
-        const d = q.data || {};
-        return {
-          uid,
-          auth_user_id: uid,
-          company_id: String(d.company_id || '').trim(),
-          company_name: String(d.company || '').trim(),
-          selected_community_id: String(d.selected_community_id || '').trim(),
-          role: String(d.role || '').trim(),
-          disabled: !!d.disabled,
-          deleted: !!d.deleted
-        };
-      }catch(profileErr){
-        console.warn('Live Updates: profiles read failed', profileErr);
-        return { uid, auth_user_id: uid, company_id: '', company_name: '', role: '' };
-      }
-    }
-
-    async function loadAssignedRowsForCurrentUser(sb, ctx){
-      ctx = ctx || {};
-      var ids = [];
-      var emails = [];
-      function addId(v){ v = String(v || '').trim(); if(v && ids.indexOf(v) === -1) ids.push(v); }
-      function addEmail(v){ v = String(v || '').trim().toLowerCase(); if(v && emails.indexOf(v) === -1) emails.push(v); }
-      addId(ctx.uid);
-      try{
-        var au = await sb.auth.getUser();
-        var user = au && au.data && au.data.user;
-        if(user){ addId(user.id); addEmail(user.email); }
-      }catch(_authErr){}
-      try{
-        var sess = JSON.parse(localStorage.getItem('zummee_session_v1') || '{}') || {};
-        addId(sess.userId || sess.id); addEmail(sess.email || sess.user_email);
-      }catch(_sessErr){}
-      try{
-        var prof = JSON.parse(localStorage.getItem('zummee_profile_v1') || '{}') || {};
-        addId(prof.id || prof.userId || prof.employee_id); addEmail(prof.email || prof.employee_email);
-      }catch(_profErr){}
-
-      var rows = [];
-      var seen = {};
-      async function run(col, value){
-        if(!value) return;
-        try{
-          var r = await sb.from('community_assignments')
-            .select('community_id,community_name,company_id,employee_id,employee_name,employee_email,assistant_name,assistant_email')
-            .eq(col, value)
-            .order('community_name',{ascending:true});
-          if(r && r.error) throw r.error;
-          (Array.isArray(r.data) ? r.data : []).forEach(function(row){
-            var key = String(row.id || row.community_id || '') + '|' + String(row.community_name || '');
-            if(!seen[key]){ seen[key] = true; rows.push(row); }
-          });
-        }catch(e){ try{ console.warn('[Zummee] assignment lookup skipped', col, value, e); }catch(_w){} }
-      }
-      for(var i=0;i<ids.length;i++){
-        await run('employee_id', ids[i]);
-        await run('employee_user_id', ids[i]);
-        await run('user_id', ids[i]);
-      }
-      for(var j=0;j<emails.length;j++){
-        await run('employee_email', emails[j]);
-      }
-      try{ console.info('[Zummee] assignment identity candidates', { ids:ids, emails:emails, rows:rows.length }); }catch(_log){}
-      return rows;
-    }
-
-    async function listAccessibleCommunities(){
-      const client = await ensureSupabase();
-      const profile = await getCurrentProfile();
-      if(!profile) return [];
-      const uid = String(profile.uid || profile.auth_user_id || '').trim();
-      const companyId = String(profile.company_id || '').trim();
-      const companyName = String(profile.company_name || '').trim();
-      const role = String(profile.role || '').trim().toLowerCase();
-      const isEmployeeScoped = role === 'employee' || role === 'manager' || !/admin|supervisor/.test(role);
-
-      if(isEmployeeScoped){
-        let assignedRows = [];
-        try{
-          assignedRows = await loadAssignedRowsForCurrentUser(client, { uid: uid, role: role, company_id: companyId });
-        }catch(err){
-          console.warn('Live Updates: strict community_assignments read failed', err);
-          assignedRows = [];
-        }
-        const seenIds = new Set();
-        const seenNames = new Set();
-        const mapped = [];
-        assignedRows.forEach(r => {
-          const id = String(r && r.community_id || '').trim();
-          const name = String(r && r.community_name || '').replace(/\s+/g,' ').trim();
-          if(!id || !name) return;
-          const nk = name.toLowerCase();
-          if(seenIds.has(id) || seenNames.has(nk)) return;
-          seenIds.add(id); seenNames.add(nk);
-          mapped.push({ id, name, company_id:String(r.company_id || companyId || '').trim(), company:companyName });
-        });
-        mapped.sort((a,b) => String(a.name||'').localeCompare(String(b.name||'')));
-        try{ console.info('Live Updates: STRICT assigned communities count=', mapped.length, mapped); }catch(_e){}
-        return mapped;
-      }
-
-      let qc = client.from('PropertyCommunities').select('id,name,company_id,company');
-      if(companyId) qc = qc.eq('company_id', companyId);
-      else if(companyName) qc = qc.eq('company', companyName);
-      const communitiesRes = await qc.order('name', { ascending:true });
-      const rows = Array.isArray(communitiesRes && communitiesRes.data) ? communitiesRes.data : [];
-      return rows.map(r => ({ id:String(r.id || '').trim(), name:String(r.name || '').trim(), company_id:String(r.company_id || '').trim(), company:String(r.company || '').trim() })).filter(r => r.id && r.name);
-    }
-    async function populateHeaderCommunities(){
-      const select = document.getElementById('zummeeCommunitySelect');
-      if(!select) return;
-      try{
-        const communities = await listAccessibleCommunities();
-        const current = getPageActiveCommunityId();
-        select.innerHTML = '';
-        communities.forEach(c => {
-          const opt = document.createElement('option');
-          opt.value = String(c.id || '').trim();
-          opt.textContent = String(c.name || c.id || '').trim();
-          select.appendChild(opt);
-        });
-        if (!communities.length) {
-          const opt = document.createElement('option');
-          opt.value = '';
-          opt.textContent = 'No communities';
-          select.appendChild(opt);
-          select.value = '';
-          return;
-        }
-        const fallback = communities[0] ? String(communities[0].id || '').trim() : '';
-        const selected = communities.some(c => String(c.id || '').trim() === current) ? current : fallback;
-        select.value = selected;
-        try{
-          setPageActiveCommunityId(selected);
-          const picked = communities.find(c => String(c.id || '').trim() === selected);
-          if (picked) {
-            localStorage.setItem('activeCommunityName', String(picked.name || '').trim());
-            localStorage.setItem('zummeeActiveCommunityName', String(picked.name || '').trim());
-          }
-        }catch(_e){}
-      }catch(err){
-        console.warn('Live Updates: header community population failed', err);
-      }
-    }
-    async function loadUpdates(){
-      const myToken = ++loadUpdatesToken;
-      const state = document.getElementById("feedState");
-      const communityEl = document.getElementById("communityState");
-      const cid = getPageActiveCommunityId();
-      communityEl.textContent = cid ? `Community: ${getCommunityNameForId(cid)}` : "No active community selected";
-
-      if(!cid){
-        currentRows = [];
-        currentArchiveRows = [];
-        renderRows();
-        renderMaintenanceArchive();
-        state.textContent = "Select a community to view live updates.";
-        return;
-      }
-
-      state.textContent = "Loading maintenance updates…";
-      try{
-        if(!window.ZummeeMaintenanceData){
-          throw new Error("shared/maintenance-data.js is not loaded.");
-        }
-
-        const limit = parseInt(document.getElementById("limitSelect").value || "25", 10);
-        const allRows = await window.ZummeeMaintenanceData.getWorkOrdersForCommunity(cid, { limit: 500 });
-        if (myToken !== loadUpdatesToken) return;
-
-        const normalized = (Array.isArray(allRows) ? allRows : []).map(row => {
-          const status = normalizeLiveStatus(row);
-          const vendorName = String(row.assigned_vendor_name || row.vendor_name || '').trim();
-          const vendorEmail = String(row.assigned_vendor_email || row.vendor_email || '').trim();
-          return Object.assign({}, row, {
-            status,
-            vendor_name: vendorName,
-            vendor_email: vendorEmail,
-            last_update_at: latestTs(
-              row.updated_at,
-              row.vendor_accepted_at,
-              row.vendor_email_sent_at,
-              row.submitted_at,
-              row.created_at
-            )
-          });
-        });
-
-        currentArchiveRows = normalized.filter(r => {
-          const s = String(r.status || '').toLowerCase();
-          return s === 'completed' || s === 'closed';
-        });
-
-        currentRows = normalized.filter(r => {
-          const s = String(r.status || '').toLowerCase();
-          return [
-            'submitted',
-            'manager_review',
-            'vendor_email_pending',
-            'sent_to_vendor',
-            'active',
-            'scheduled',
-            'in_progress',
-            'vendor_email_failed'
-          ].includes(s);
-        }).slice(0, limit);
-
-        renderRows();
-        renderMaintenanceArchive();
-
-        const liveCount = currentRows.length;
-        state.textContent = liveCount ? "Live updates active." : "No maintenance updates for this community yet.";
-      }catch(err){
-        if (myToken !== loadUpdatesToken) return;
-        currentRows = [];
-        currentArchiveRows = [];
-        renderRows();
-        renderMaintenanceArchive();
-        document.getElementById("activityFeed").innerHTML = '<div class="empty">Unable to load archive.</div>';
-        document.getElementById("activityState").textContent = "Load failed.";
-        state.textContent = "Unable to load maintenance updates.";
-        console.warn("Maintenance updates page load failed", err);
-      }
-    }
-
-    async function loadEvents(){
-      const myToken = ++loadEventsToken;
-      const state = document.getElementById("activityState");
-      const liveRows = currentRows.filter(r => {
-        const status = String(r.status || "").toLowerCase();
-        return status === "active" || status === "sent_to_vendor";
-      });
-      if(!liveRows.length){
-        currentEvents = [];
-        renderEvents();
-        return;
-      }
-      state.textContent = "Loading activity…";
-      try{
-        const client = await ensureSupabase();
-        const ids = liveRows.map(r => r.id).filter(Boolean);
-        const res = await client
-          .from("maintenance_request_events")
-          .select("id,request_id,event_type,message,actor,created_at")
-          .in("request_id", ids)
-          .order("created_at", { ascending:false })
-          .limit(30);
-        if(res.error) throw res.error;
-        if (myToken !== loadEventsToken) return;
-        currentEvents = res.data || [];
-        if(currentEvents.length && currentRows.length){
-          const latestByRequest = {};
-          currentEvents.forEach(ev => {
-            const rid = String(ev.request_id || "").trim();
-            if(!rid) return;
-            const ts = String(ev.created_at || "").trim();
-            if(!ts) return;
-            if(!latestByRequest[rid] || new Date(ts).getTime() > new Date(latestByRequest[rid]).getTime()){
-              latestByRequest[rid] = ts;
-            }
-          });
-          currentRows = currentRows.map(r => {
-            const rid = String(r.id || "").trim();
-            return Object.assign({}, r, {
-              last_update_at: latestTs(r.last_update_at, latestByRequest[rid], r.updated_at, r.vendor_accepted_at, r.created_at)
-            });
-          });
-          renderRows();
-        }
-        renderEvents();
-      }catch(err){
-        if (myToken !== loadEventsToken) return;
-        currentEvents = [];
-        document.getElementById("activityFeed").innerHTML = '<div class="empty">Activity feed not available yet. Add the maintenance_request_events table to enable it.</div>';
-        state.textContent = "Activity table not ready.";
-        console.warn("Activity feed load failed", err);
-      }
-    }
-    function isDetailSheetOpen(){
-      const overlay = document.getElementById('detailOverlay');
-      return !!(overlay && overlay.classList.contains('is-open'));
-    }
-    function stopAutoRefresh(){
-      if(autoRefreshTimer){
-        clearInterval(autoRefreshTimer);
-        autoRefreshTimer = null;
-      }
-      if(activityRefreshTimer){
-        clearInterval(activityRefreshTimer);
-        activityRefreshTimer = null;
-      }
-    }
-    function startAutoRefresh(){
-      stopAutoRefresh();
-      autoRefreshTimer = setInterval(function(){
-        if(document.hidden || isDetailSheetOpen() || detailLoading) return;
-        loadUpdates();
-      }, 15000);
-      activityRefreshTimer = setInterval(function(){
-        if(document.hidden || isDetailSheetOpen() || detailLoading) return;
-        loadEvents();
-      }, 18000);
-    }
-    async function subscribeRealtime(){
-      try{
-        const client = await ensureSupabase();
-        const cid = getPageActiveCommunityId();
-        if(!cid) return;
-        if(requestChannel){
-          try{ client.removeChannel(requestChannel); }catch(_e){}
-          requestChannel = null;
-        }
-        if(eventChannel){
-          try{ client.removeChannel(eventChannel); }catch(_e){}
-          eventChannel = null;
-        }
-        requestChannel = client
-          .channel("maintenance-requests-page-" + cid)
-          .on("postgres_changes", {
-            event:"*",
-            schema:"public",
-            table:"resident_work_orders",
-            filter:"community_id=eq." + cid
-          }, function(){
-            loadUpdates();
-          })
-          .subscribe();
-        eventChannel = client
-          .channel("maintenance-events-page-" + cid)
-          .on("postgres_changes", {
-            event:"*",
-            schema:"public",
-            table:"maintenance_request_events"
-          }, function(){
-            loadUpdates();
-          })
-          .subscribe();
-      }catch(err){
-        console.warn("Realtime subscribe failed", err);
-      }
-    }
-
-    function parseLiveMaintenanceLogoRef(raw){
-      raw = String(raw || '').trim();
-      if(!raw) return null;
-      if(/^https?:\/\//i.test(raw)) return { url: raw };
-      return { bucket:'company_logos', path: raw };
-    }
-    function setMaintenanceCompanyLogo(url, alt, isCompany){
-      const logo = document.getElementById('maintenanceCompanyLogo');
-      if(!logo) return;
-      const finalUrl = String(url || '').trim();
-      logo.classList.remove('logo-ready','is-company-logo');
-      logo.hidden = true;
-      logo.removeAttribute('src');
-      if(!finalUrl) return;
-      logo.onload = function(){
-        logo.hidden = false;
-        logo.classList.add('logo-ready');
-      };
-      logo.onerror = function(){
-        logo.hidden = true;
-        logo.classList.remove('logo-ready','is-company-logo');
-        logo.removeAttribute('src');
-      };
-      logo.alt = String(alt || '').trim() || 'Management company logo';
-      logo.classList.toggle('is-company-logo', !!isCompany);
-      logo.src = finalUrl;
-    }
-    async function loadMaintenanceCompanyLogo(){
-      const logo = document.getElementById('maintenanceCompanyLogo');
-      if(!logo) return;
-      try{
-        const profile = await getCurrentProfile();
-        const companyId = String(profile && profile.company_id || '').trim();
-        if(!companyId) throw new Error('No company id');
-        const client = await ensureSupabase();
-        const res = await client.from('companies').select('logo_path,name').eq('id', companyId).maybeSingle();
-        if(res && res.error) throw res.error;
-        const row = (res && res.data) || {};
-        const ref = parseLiveMaintenanceLogoRef(row.logo_path);
-        if(!ref) throw new Error('No company logo');
-        let url = String(ref.url || '').trim();
-        if(!url && ref.bucket && ref.path && client.storage && client.storage.from){
-          const pub = client.storage.from(ref.bucket).getPublicUrl(ref.path);
-          url = String(pub && pub.data && pub.data.publicUrl || '').trim();
-        }
-        if(!url) throw new Error('No logo url');
-        setMaintenanceCompanyLogo(url, String(row.name || 'Management company logo'), true);
-      }catch(err){
-        setMaintenanceCompanyLogo('', 'Management company logo', false);
-      }
-    }
-
-    document.addEventListener("DOMContentLoaded", async function(){
-      const refreshBtn = document.getElementById("refreshBtn");
-      if(refreshBtn) refreshBtn.addEventListener("click", loadUpdates);
-      document.getElementById("searchBox").addEventListener("input", renderRows);
-      document.getElementById("statusFilter").addEventListener("change", renderRows);
-      document.getElementById("limitSelect").addEventListener("change", loadUpdates);
-      const updatesTableBody = document.getElementById("updatesTableBody");
-      if (updatesTableBody) {
-        updatesTableBody.addEventListener("click", function(e){
-          const target = e.target && e.target.closest ? e.target.closest("[data-open-id]") : null;
-          if(!target) return;
-          const rid = String(target.getAttribute("data-open-id") || '').trim();
-          if(!rid) return;
-          openDetailSheet(rid);
-        });
-        updatesTableBody.addEventListener("keydown", function(e){
-          const row = e.target && e.target.closest ? e.target.closest("tr[data-open-id]") : null;
-          if(!row) return;
-          if(e.key === "Enter" || e.key === " "){
-            e.preventDefault();
-            const rid = String(row.getAttribute("data-open-id") || '').trim();
-            if(!rid) return;
-            openDetailSheet(rid);
-          }
-        });
-      }
-      const detailOverlay = document.getElementById('detailOverlay');
-      const detailCloseBtn = document.getElementById('detailCloseBtn');
-      const detailSendVendorBtn = document.getElementById('detailSendVendorBtn');
-      const detailInProgressBtn = document.getElementById('detailInProgressBtn');
-      const detailCompleteBtn = document.getElementById('detailCompleteBtn');
-      const detailAssignVendorBtn = document.getElementById('detailAssignVendorBtn');
-      const detailVendorSelect = document.getElementById('detailVendorSelect');
-      const detailOpenFullBtn = document.getElementById('detailOpenFullBtn');
-      if(detailCloseBtn) detailCloseBtn.addEventListener('click', closeDetailSheet);
-      if(detailOverlay) detailOverlay.addEventListener('click', function(e){
-        if(e.target === detailOverlay) closeDetailSheet();
-      });
-      if(detailSendVendorBtn) detailSendVendorBtn.addEventListener('click', markDetailSentToVendor);
-      if(detailInProgressBtn) detailInProgressBtn.addEventListener('click', markDetailInProgress);
-      if(detailCompleteBtn) detailCompleteBtn.addEventListener('click', markDetailComplete);
-      if(detailAssignVendorBtn) detailAssignVendorBtn.addEventListener('click', assignDetailVendor);
-      if(detailVendorSelect) detailVendorSelect.addEventListener('change', function(){
-        const assignBtn = document.getElementById('detailAssignVendorBtn');
-        const sendBtn = document.getElementById('detailSendVendorBtn');
-        const selectedVendor = String(this.value || '').trim();
-        if(assignBtn) assignBtn.disabled = detailLoading || !selectedVendor;
-        if(sendBtn){
-          const normalizedStatus = normalizeLiveStatus(detailRecord || {});
-          const isCompleted = normalizedStatus === 'completed';
-          const isSent = normalizedStatus === 'sent_to_vendor';
-          const hasAssignedVendor = !!(selectedVendor || String(detailRecord?.vendor_name || '').trim());
-          sendBtn.disabled = detailLoading || isCompleted || isSent || !hasAssignedVendor;
-        }
-      });
-      if(detailOpenFullBtn) detailOpenFullBtn.addEventListener('click', function(){
-        if(detailRecord && detailRecord.id) openMaintenanceRecord(detailRecord.id);
-      });
-      document.addEventListener('keydown', function(e){
-        const overlay = document.getElementById('detailOverlay');
-        if(!overlay || !overlay.classList.contains('is-open')) return;
-        if(e.key === 'Escape') closeDetailSheet();
-      });
-      setPageActiveCommunityId(getPageActiveCommunityId());
-      await populateHeaderCommunities();
-      loadMaintenanceCompanyLogo();
-      loadUpdates();
-      subscribeRealtime();
-      startAutoRefresh();
-      document.addEventListener('visibilitychange', function(){
-        if(document.hidden){
-          stopAutoRefresh();
-          return;
-        }
-        startAutoRefresh();
-        if(!isDetailSheetOpen() && !detailLoading){
-          loadUpdates();
-        }
-      });
-      document.addEventListener("change", function(e){
-        if(e && e.target && (e.target.id === "zummeeCommunitySelect" || e.target.id === "communitySelect")){
-          try{
-            if (e.target.id === 'zummeeCommunitySelect') {
-              setPageActiveCommunityId(String(e.target.value || ''));
-            }
-          }catch(_e){}
-          setTimeout(function(){
-            loadUpdates();
-            subscribeRealtime();
-          }, 50);
-        }
-      });
-    });
-  
-
-// 🔒 Remove Profile + Sign Out (page-specific override)
-(function forceHeaderButtonCleanup(){
-  const removeBtns = () => {
-    document.querySelectorAll("button, a, .btn, [role='button']").forEach(el => {
-      const txt = (el.textContent || "").trim().toLowerCase();
-      if (txt === "profile" || txt.includes("profile") || txt === "sign out" || txt.includes("sign out")) {
-        el.remove();
-      }
-    });
+    return result;
   };
-  removeBtns();
-  const cleanupTimer = setInterval(removeBtns, 250);
-  setTimeout(() => clearInterval(cleanupTimer), 5000);
+
+  window.addEventListener('beforeunload', function(){
+    stopLightning(document.getElementById('weatherHeroCard') || document.querySelector('.mh2-weather-hero'));
+  });
 })();
 </script>
 
-<script id="live-maintenance-move-controls-v22">
+
+<script>
 (function(){
-  function moveLiveMaintenanceControls(){
+  const btn = document.getElementById('mh2ThemeToggleBtn');
+  if (!btn) return;
+
+  function syncThemeBtn(){
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
+                   document.documentElement.classList.contains('dark-mode');
+    btn.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+    btn.textContent = isDark ? 'Light mode' : 'Dark mode';
+  }
+
+  syncThemeBtn();
+  window.addEventListener('focus', syncThemeBtn);
+  document.addEventListener('visibilitychange', syncThemeBtn);
+  btn.addEventListener('click', function(){
+    setTimeout(syncThemeBtn, 0);
+    setTimeout(syncThemeBtn, 150);
+  });
+})();
+</script>
+
+
+<style id="mh2-signout-modal-style-v86">
+.mh2-signout-modal-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(10,24,42,.34);backdrop-filter:blur(14px) saturate(1.08);-webkit-backdrop-filter:blur(14px) saturate(1.08);animation:mh2SignOutFade .16s ease-out;}
+.mh2-signout-modal-overlay.closing{animation:mh2SignOutFadeOut .12s ease-in forwards;}
+.mh2-signout-modal{width:min(430px,calc(100vw - 48px));border-radius:28px;border:1.5px solid rgba(135,184,255,.85);background:linear-gradient(145deg,rgba(255,255,255,.96),rgba(245,250,255,.90));box-shadow:0 24px 70px rgba(14,42,76,.24),inset 0 1px 0 rgba(255,255,255,.95);padding:26px;color:#123251;font-family:inherit;animation:mh2SignOutPop .18s cubic-bezier(.2,.85,.25,1.15);}
+.mh2-signout-modal-kicker{display:inline-flex;align-items:center;height:30px;padding:0 14px;border-radius:999px;border:1px solid rgba(152,195,255,.8);background:rgba(232,243,255,.85);color:#275f96;font-size:12px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;margin-bottom:14px;}
+.mh2-signout-modal h2{margin:0;font-size:30px;line-height:1.05;letter-spacing:-.04em;color:#102f4e;}
+.mh2-signout-modal p{margin:12px 0 22px;font-size:17px;line-height:1.4;color:#526985;font-weight:650;}
+.mh2-signout-modal-actions{display:flex;gap:12px;justify-content:flex-end;}
+.mh2-signout-modal-actions button{appearance:none;border:1.4px solid rgba(148,190,248,.82);border-radius:18px;min-height:52px;padding:0 22px;font:inherit;font-size:16px;font-weight:900;cursor:pointer;box-shadow:0 10px 24px rgba(20,50,86,.12);}
+.mh2-signout-cancel{color:#163552;background:rgba(255,255,255,.78);}
+.mh2-signout-confirm{color:#fff;border-color:rgba(21,89,156,.86)!important;background:linear-gradient(135deg,#1b5f9d,#123d71);}
+.mh2-signout-modal-actions button:active{transform:scale(.98);}
+.mh2-signout-modal-actions button:focus-visible{outline:3px solid rgba(117,176,255,.62);outline-offset:3px;}
+@keyframes mh2SignOutFade{from{opacity:0}to{opacity:1}}@keyframes mh2SignOutFadeOut{from{opacity:1}to{opacity:0}}@keyframes mh2SignOutPop{from{transform:translateY(10px) scale(.97);opacity:.3}to{transform:translateY(0) scale(1);opacity:1}}
+@media (max-width:640px){.mh2-signout-modal{width:100%;padding:22px;border-radius:24px}.mh2-signout-modal h2{font-size:27px}.mh2-signout-modal-actions{display:grid;grid-template-columns:1fr 1fr}.mh2-signout-modal-actions button{padding:0 12px}}
+</style>
+
+<style id="mh2-signout-modal-readable-lock-v269">
+/* v269: Manager Hub sign-out modal readability lock. */
+.mh2-signout-modal-overlay{background:rgba(4,16,31,.58)!important;backdrop-filter:blur(16px) saturate(1.08)!important;-webkit-backdrop-filter:blur(16px) saturate(1.08)!important;}
+.mh2-signout-modal{background:linear-gradient(145deg,#ffffff,#f4f9ff)!important;color:#123251!important;border:2px solid #9ec5ff!important;box-shadow:0 28px 80px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.95)!important;}
+.mh2-signout-modal *,html.dark-mode .mh2-signout-modal *,html[data-theme="dark"] .mh2-signout-modal *,body.dark-mode .mh2-signout-modal *{text-shadow:none!important;}
+.mh2-signout-modal-kicker,html.dark-mode .mh2-signout-modal-kicker,html[data-theme="dark"] .mh2-signout-modal-kicker,body.dark-mode .mh2-signout-modal-kicker{background:#edf6ff!important;color:#1b5f9d!important;border-color:#9ec5ff!important;}
+.mh2-signout-modal h2,html.dark-mode .mh2-signout-modal h2,html[data-theme="dark"] .mh2-signout-modal h2,body.dark-mode .mh2-signout-modal h2{color:#102f4e!important;opacity:1!important;}
+.mh2-signout-modal p,html.dark-mode .mh2-signout-modal p,html[data-theme="dark"] .mh2-signout-modal p,body.dark-mode .mh2-signout-modal p{color:#526985!important;opacity:1!important;}
+.mh2-signout-cancel,html.dark-mode .mh2-signout-cancel,html[data-theme="dark"] .mh2-signout-cancel,body.dark-mode .mh2-signout-cancel{background:#ffffff!important;color:#17345f!important;border-color:#b8d4ff!important;opacity:1!important;}
+.mh2-signout-confirm,html.dark-mode .mh2-signout-confirm,html[data-theme="dark"] .mh2-signout-confirm,body.dark-mode .mh2-signout-confirm{background:linear-gradient(135deg,#1b5f9d,#123d71)!important;color:#ffffff!important;border-color:#1b5f9d!important;opacity:1!important;}
+</style>
+<script>
+/* v87 Manager Hub sign-out hardening: real logout + login redirect */
+(function(){
+  if (window.__MH2_SIGNOUT_HARDENED_V87__) return;
+  window.__MH2_SIGNOUT_HARDENED_V87__ = true;
+  function getSb(){
     try{
-      var target=document.getElementById('maintenanceInlineControls');
-      var select=document.getElementById('zummeeCommunitySelect');
-      var hub=document.getElementById('zummeeHdrHub');
-      if(!target||!select||!hub)return false;
-      var communityRow=select.closest('.zm-communityRow')||select;
-      var actionsRow=hub.closest('.zm-actionsRow')||hub;
-      if(!target.contains(communityRow))target.appendChild(communityRow);
-      if(!target.contains(actionsRow))target.appendChild(actionsRow);
-      document.body.classList.add('live-maintenance-controls-moved');
-      return true;
-    }catch(err){console.warn('Live Maintenance controls move failed',err);return false;}
+      if (window.sb && window.sb.auth && typeof window.sb.auth.signOut === 'function') return window.sb;
+      if (window.supabaseClient && window.supabaseClient.auth && typeof window.supabaseClient.auth.signOut === 'function') return window.supabaseClient;
+      if (typeof window.ensureSupabaseSync === 'function'){
+        var c = window.ensureSupabaseSync();
+        if (c && c.auth && typeof c.auth.signOut === 'function') return c;
+      }
+    }catch(_e){}
+    return null;
   }
-  function scheduleMove(){
-    moveLiveMaintenanceControls();
-    setTimeout(moveLiveMaintenanceControls,80);
-    setTimeout(moveLiveMaintenanceControls,250);
-    setTimeout(moveLiveMaintenanceControls,800);
-    setTimeout(moveLiveMaintenanceControls,1500);
+  function clearZummeeSessionHints(){
+    var keepPrefixes = ['mh2-theme','mh2-favorite','mh2-card-order','mh2-weather-zip:','mh2-last-weather-zip'];
+    var removeExact = {'sb-zummee-auth':1,'sb-slcwuuwyrgnmlmxpcaim-auth-token':1,'zummeeAuth':1,'zummee_user':1,'ZUMMEE_AUTH':1,'zummeeCurrentUser':1,'zummeeCurrentProfile':1,'currentUser':1,'currentProfile':1};
+    try{
+      for (var i = localStorage.length - 1; i >= 0; i--){
+        var k = localStorage.key(i) || '';
+        var keep = keepPrefixes.some(function(prefix){ return k === prefix || k.indexOf(prefix) === 0; });
+        if (keep) continue;
+        var lk = k.toLowerCase();
+        if (removeExact[k] || k.indexOf('supabase.auth.token') >= 0 || k.indexOf('sb-') === 0 || lk.indexOf('auth') >= 0){
+          try{ localStorage.removeItem(k); }catch(_e){}
+        }
+      }
+    }catch(_e){}
+    try{ sessionStorage.clear(); }catch(_e){}
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',scheduleMove);else scheduleMove();
-  window.addEventListener('load',scheduleMove);
-})();
-</script>
-<script src="company_logo_sync.js"></script>
-
-  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
-
-<script id="zummee-v5-page-lock-maintenance_updates">
-(function(){
-  var PAGE='maintenance_updates';
-  var IDS=['zummeeCommunitySelect','communitySelect'];
-  var GOOD_KEY='zummee_v5_good_community_state';
-  var OPTIONS_KEY='zummee_v5_good_community_options_html_'+PAGE;
-  function isUuid(v){return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||'').trim());}
-  function sel(){for(var i=0;i<IDS.length;i++){var x=document.getElementById(IDS[i]); if(x) return x;} return null;}
-  function opt(s){return s&&s.options&&s.selectedIndex>=0?s.options[s.selectedIndex]:null;}
-  function persist(id,name,zip){
-    if(!isUuid(id)) return;
-    ['zummee_selected_community_id','activeCommunityId','zummeeActiveCommunityId','currentCommunityId','zummee_community_id'].forEach(function(k){try{localStorage.setItem(k,id)}catch(_e){}});
-    if(name){['currentCommunityName','activeCommunityName','zummee_community'].forEach(function(k){try{localStorage.setItem(k,name)}catch(_e){}});}
-    if(zip){try{localStorage.setItem('mh2-weather-zip:'+id,zip); localStorage.setItem('mh2-last-weather-zip',zip)}catch(_e){}}
-    try{window.currentCommunityId=id; window.activeCommunityId=id; window.zummeeSelectedCommunityId=id;}catch(_e){}
+  function showZummeeSignOutConfirm(){
+    return new Promise(function(resolve){
+      var overlay = document.getElementById('mh2SignOutModalOverlay');
+      try{ if (overlay) overlay.remove(); }catch(_e){}
+      overlay = document.createElement('div');
+      overlay.id = 'mh2SignOutModalOverlay';
+      overlay.className = 'mh2-signout-modal-overlay';
+      overlay.innerHTML = '<div class="mh2-signout-modal" role="dialog" aria-modal="true" aria-labelledby="mh2SignOutTitle"><div class="mh2-signout-modal-kicker">Zummee</div><h2 id="mh2SignOutTitle">Sign out?</h2><p>Are you sure you want to sign out of the Manager Hub?</p><div class="mh2-signout-modal-actions"><button type="button" class="mh2-signout-cancel">Cancel</button><button type="button" class="mh2-signout-confirm">Sign out</button></div></div>';
+      document.body.appendChild(overlay);
+      var cancel = overlay.querySelector('.mh2-signout-cancel');
+      var confirm = overlay.querySelector('.mh2-signout-confirm');
+      function close(val){
+        try{ document.removeEventListener('keydown', onKey, true); }catch(_e){}
+        try{ overlay.classList.add('closing'); setTimeout(function(){ overlay.remove(); }, 120); }catch(_e){ try{ overlay.remove(); }catch(_e2){} }
+        resolve(!!val);
+      }
+      function onKey(e){ if(e && e.key === 'Escape'){ e.preventDefault(); close(false); } }
+      document.addEventListener('keydown', onKey, true);
+      overlay.addEventListener('click', function(e){ if(e.target === overlay) close(false); });
+      cancel.addEventListener('click', function(){ close(false); });
+      confirm.addEventListener('click', function(){ close(true); });
+      setTimeout(function(){ try{ confirm.focus(); }catch(_e){} }, 40);
+    });
   }
-  function snapshot(){
-    var s=sel(); if(!s||!s.options||!s.options.length||!isUuid(s.value)) return false;
-    var o=opt(s), id=String(s.value||'').trim(), name=String(o&&o.textContent||'').trim(), zip=String(o&&o.getAttribute('data-zip')||'').replace(/\D+/g,'').slice(0,5);
-    persist(id,name,zip);
-    try{localStorage.setItem(GOOD_KEY,JSON.stringify({id:id,name:name,zip:zip,page:PAGE,at:Date.now()})); localStorage.setItem(OPTIONS_KEY,s.innerHTML)}catch(_e){}
-    window.__ZUMMEE_V5_COMMUNITY_LOCK__=true;
-    return true;
-  }
-  function restore(reason){
-    var s=sel(); if(!s) return false;
-    var state=null; try{state=JSON.parse(localStorage.getItem(GOOD_KEY)||'null')}catch(_e){}
-    var html=''; try{html=localStorage.getItem(OPTIONS_KEY)||localStorage.getItem('zummee_v5_good_community_options_html')||''}catch(_e){}
-    if((!s.options||!s.options.length)&&html) s.innerHTML=html;
-    var id=String((state&&state.id)||localStorage.getItem('zummee_selected_community_id')||'').trim();
-    if(isUuid(id)&&s.options&&s.options.length){
-      s.value=id;
-      s.disabled=false;
-      var o=opt(s), name=String(o&&o.textContent||state&&state.name||'').trim(), zip=String(o&&o.getAttribute('data-zip')||state&&state.zip||'').trim();
-      persist(id,name,zip);
-      try{console.warn('[Zummee v5 '+PAGE+'] restored locked community after '+reason,id,name)}catch(_e){}
-      return true;
-    }
+  async function performManagerHubSignOut(evt){
+    try{ if(evt){ evt.preventDefault(); evt.stopPropagation(); if(evt.stopImmediatePropagation) evt.stopImmediatePropagation(); } }catch(_e){}
+    var ok = await showZummeeSignOutConfirm();
+    if (!ok) return false;
+    var btn = document.getElementById('mh2SignOutBtn');
+    try{ if(btn){ btn.disabled = true; btn.textContent = 'Signing out...'; btn.setAttribute('aria-busy','true'); } }catch(_e){}
+    try{
+      var sb = getSb();
+      if (sb && sb.auth && typeof sb.auth.signOut === 'function') await sb.auth.signOut({ scope:'global' });
+    }catch(err){ try{ console.warn('[MH2] Supabase signOut warning', err); }catch(_e){} }
+    clearZummeeSessionHints();
+    var dest = 'login.html?logged_out=1&t=' + Date.now();
+    try{ window.__ZUMMEE_SIGNING_OUT__ = true; }catch(_e){}
+    try{ window.location.replace(dest); }catch(_e){ try{ window.location.href = dest; }catch(_e2){} }
+    setTimeout(function(){ try{ window.location.assign(dest); }catch(_e){} }, 150);
+    setTimeout(function(){ try{ window.top.location.href = dest; }catch(_e){} }, 500);
     return false;
   }
-  function wrapRender(){
-    if(typeof window.renderCommunities!=='function'||window.renderCommunities.__v5Locked) return;
-    var original=window.renderCommunities;
-    window.renderCommunities=async function(){
-      var s=sel();
-      if(window.__ZUMMEE_V5_COMMUNITY_LOCK__&&s&&s.options&&s.options.length&&isUuid(s.value)){snapshot();return {locked:true};}
-      if(window.__ZUMMEE_V5_RENDER_IN_PROGRESS__) return {skipped:true};
-      window.__ZUMMEE_V5_RENDER_IN_PROGRESS__=true;
-      try{var out=await original.apply(this,arguments); if(!snapshot()) restore('empty-render'); return out;}
-      catch(e){restore('render-error'); throw e;}
-      finally{window.__ZUMMEE_V5_RENDER_IN_PROGRESS__=false;}
-    };
-    window.renderCommunities.__v5Locked=true;
+  window.zummeeManagerHubSignOut = performManagerHubSignOut;
+  window.zummeePerformSignOut = performManagerHubSignOut;
+  function wire(){
+    var btn = document.getElementById('mh2SignOutBtn');
+    if (!btn) return;
+    btn.setAttribute('type','button');
+    btn.onclick = performManagerHubSignOut;
+    if (btn.dataset.signoutV85 === '1') return;
+    btn.dataset.signoutV85 = '1';
+    btn.addEventListener('click', performManagerHubSignOut, true);
   }
-  function watchdog(){var s=sel(); if(s&&s.options&&s.options.length&&isUuid(s.value)) snapshot(); else restore('watchdog');}
-  wrapRender();
-  var t=setInterval(function(){wrapRender(); watchdog();},250); setTimeout(function(){try{clearInterval(t)}catch(_e){}},6000);
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(watchdog,120);setTimeout(watchdog,900);setTimeout(watchdog,2200)},{once:true}); else {setTimeout(watchdog,120);setTimeout(watchdog,900);setTimeout(watchdog,2200);}
-  window.addEventListener('pageshow',function(){setTimeout(watchdog,120);setTimeout(watchdog,900)});
-  document.addEventListener('change',function(e){if(e&&e.target&&IDS.indexOf(e.target.id)>=0){setTimeout(snapshot,20);setTimeout(watchdog,250)}},true);
-  try{console.info('[Zummee v5] '+PAGE+' page lock installed')}catch(_e){}
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire); else wire();
+  window.addEventListener('load', wire);
+  document.addEventListener('click', function(evt){
+    var target = evt.target && evt.target.closest ? evt.target.closest('#mh2SignOutBtn') : null;
+    if (target) performManagerHubSignOut(evt);
+  }, true);
+})();
+</script>
+<style id="employee-hub-blue-final-v105">
+/* V105 FINAL: vibrant subtle blue Employee Hub cards only */
+#employeeHubSection #employeeHubCards > a.mh2-tool-card[data-role-scope="supervisor"],
+html[data-theme="light"] #employeeHubSection #employeeHubCards > a.mh2-tool-card[data-role-scope="supervisor"]{
+  background:linear-gradient(180deg,#edf8ff 0%,#d8eeff 100%) !important;
+  background-color:#e6f4ff !important;
+  border:1px solid rgba(49,130,206,.48) !important;
+  box-shadow:0 10px 22px rgba(49,130,206,.16), inset 0 1px 0 rgba(255,255,255,.82) !important;
+}
+#employeeHubSection #employeeHubCards > a.mh2-tool-card[data-role-scope="supervisor"]::before,
+html[data-theme="light"] #employeeHubSection #employeeHubCards > a.mh2-tool-card[data-role-scope="supervisor"]::before{
+  content:"" !important;display:block !important;position:absolute !important;left:0 !important;top:12px !important;bottom:12px !important;width:5px !important;border-radius:0 6px 6px 0 !important;background:linear-gradient(180deg,#4aa3ff,#2f7fd4) !important;opacity:.86 !important;pointer-events:none !important;
+}
+#employeeHubSection #employeeHubCards > a.mh2-tool-card[data-role-scope="supervisor"]::after,
+html[data-theme="light"] #employeeHubSection #employeeHubCards > a.mh2-tool-card[data-role-scope="supervisor"]::after{
+  content:"" !important;display:block !important;position:absolute !important;inset:0 !important;border-radius:22px !important;background:linear-gradient(120deg,rgba(255,255,255,.44) 0%,rgba(255,255,255,.12) 42%,rgba(255,255,255,0) 70%) !important;pointer-events:none !important;
+}
+#employeeHubSection #employeeHubCards > a.mh2-tool-card[data-role-scope="supervisor"] .mh2-tool-name{color:#163f6f !important;}
+#employeeHubSection #employeeHubCards > a.mh2-tool-card[data-role-scope="supervisor"] .mh2-tool-pill{background:rgba(255,255,255,.74) !important;border:1px solid rgba(49,130,206,.42) !important;color:#1f5f99 !important;}
+#employeeHubSection #employeeHubCards > a.mh2-tool-card[data-role-scope="supervisor"] .mh2-tool-metric{background:rgba(255,255,255,.70) !important;border-color:rgba(49,130,206,.24) !important;}
+</style>
+<style id="inline-ai-scheduling-v251-style">
+.mh2-ai-response{display:none;margin-top:10px;border:1px solid rgba(47,111,237,.22);background:#fff;border-radius:16px;padding:12px;color:#12324d;font-size:13px;line-height:1.4}.mh2-ai-response.is-visible{display:block}.mh2-ai-response strong{font-weight:950}.mh2-ai-confirm-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.mh2-ai-action-btn{border:2px solid #2f6fed;border-radius:14px;padding:9px 12px;background:#fff;color:#12324d;font-size:12px;font-weight:950;cursor:pointer}.mh2-ai-action-btn.primary{background:#2f6fed;color:#fff}.mh2-ai-action-btn.danger{border-color:#d0d7e2;color:#63758a}.mh2-ai-small{font-size:12px;color:#63758a;margin-top:6px}.mh2-ai-status-ok{color:#047857;font-weight:900}.mh2-ai-status-bad{color:#b91c1c;font-weight:900}html[data-theme="dark"] .mh2-ai-response{background:rgba(10,24,38,.86);border-color:rgba(155,201,255,.22);color:#e8f3ff}html[data-theme="dark"] .mh2-ai-small{color:#a9bad0}
+</style>
+<script id="employee-hub-blue-final-v105-js">
+(function lockEmployeeHubBlue(){
+  function apply(){
+    var cards=document.querySelectorAll('#employeeHubCards > a.mh2-tool-card[data-role-scope="supervisor"]');
+    cards.forEach(function(card){
+      card.style.setProperty('background','linear-gradient(180deg,#edf8ff 0%,#d8eeff 100%)','important');
+      card.style.setProperty('background-color','#e6f4ff','important');
+      card.style.setProperty('border','1px solid rgba(49,130,206,.48)','important');
+      card.style.setProperty('box-shadow','0 10px 22px rgba(49,130,206,.16), inset 0 1px 0 rgba(255,255,255,.82)','important');
+    });
+  }
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',apply,{once:true});}else{apply();}
+  window.addEventListener('pageshow',apply);
+  window.addEventListener('focus',apply);
+})();
+</script>
+
+<script id="supervisor-hub-link-guard-v182">
+(function(){
+  async function isPrivileged(){
+    try{
+      if(window.getManagerHubAuthoritativePrivilege){
+        var auth = await window.getManagerHubAuthoritativePrivilege();
+        return !!(auth && auth.privileged);
+      }
+    }catch(_e){}
+    try{ return !!window.mh2IsPrivileged; }catch(_e){}
+    return false;
+  }
+  document.addEventListener('click', function(e){
+    var link = e.target && e.target.closest ? e.target.closest('a[data-role-scope="supervisor"], #employeeHubCards a') : null;
+    if(!link) return;
+    e.preventDefault();
+    e.stopPropagation();
+    isPrivileged().then(function(ok){
+      if(ok && link.href){ window.location.href = link.href; return; }
+      alert('Supervisor access only.');
+    });
+  }, true);
 })();
 </script>
 
 
-
-<script id="live-maintenance-native-community-dropdown-v503-script">
-/* v503 — Live Maintenance community dropdown source authority.
-   Source priority:
-   1. public.Vendors distinct community_id
-   2. public.resident_work_orders distinct community_id
-   3. local saved community as emergency fallback
-   Reason:
-   - Live Maintenance is a maintenance/vendor page.
-   - It should show communities represented in the Vendors / maintenance data source, even if community_assignments is empty or mismatched.
-*/
+<script id="mh2-ask-zummee-modal-v467-js">
 (function(){
-  if(window.__liveMaintenanceNativeCommunityDropdownV503) return;
-  window.__liveMaintenanceNativeCommunityDropdownV503 = true;
-
-  const SUPABASE_URL_NATIVE = window.SUPABASE_URL || "https://slcwuuwyrgnmlmxpcaim.supabase.co";
-  const SUPABASE_ANON_NATIVE = window.SUPABASE_ANON_KEY || "sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864";
-
-  function escOpt(value){
-    return String(value == null ? "" : value)
-      .replace(/&/g,"&amp;")
-      .replace(/</g,"&lt;")
-      .replace(/>/g,"&gt;")
-      .replace(/"/g,"&quot;");
+  function $(id){ return document.getElementById(id); }
+  function openAskZummee(){
+    var modal=$('mh2AskZummeeModal');
+    if(!modal) return;
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden','false');
+    setTimeout(function(){ try{ var input=$('mh2AiPrompt'); if(input) input.focus(); }catch(_e){} },60);
   }
-
-  function safeJson(raw, fallback){
-    try{ return raw ? JSON.parse(raw) : fallback; }catch(_e){ return fallback; }
+  function closeAskZummee(){
+    var modal=$('mh2AskZummeeModal');
+    if(!modal) return;
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden','true');
+    try{ var btn=$('mh2AskZummeeBtn'); if(btn) btn.focus(); }catch(_e){}
   }
-
-  async function getNativeToken(){
-    try{
-      if(window.ZummeeMaintenanceData && typeof window.ZummeeMaintenanceData.getAccessToken === "function"){
-        const token = await window.ZummeeMaintenanceData.getAccessToken();
-        if(token) return token;
-      }
-    }catch(_e){}
-    const keys = ["sb-zummee-auth","sb-slcwuuwyrgnmlmxpcaim-auth-token","supabase.auth.token","zummee_supabase_session","zummee_session_v1"];
-    for(const key of keys){
-      try{
-        const raw = localStorage.getItem(key) || sessionStorage.getItem(key) || "";
-        const parsed = safeJson(raw, null);
-        const token = parsed?.access_token || parsed?.currentSession?.access_token || parsed?.session?.access_token || parsed?.data?.session?.access_token;
-        if(token) return String(token);
-      }catch(_e){}
+  function wire(){
+    var btn=$('mh2AskZummeeBtn'), close=$('mh2AskZummeeClose'), modal=$('mh2AskZummeeModal');
+    if(btn && btn.dataset.askZummeeWired!=='1'){
+      btn.dataset.askZummeeWired='1';
+      btn.addEventListener('click', openAskZummee);
     }
-    return "";
-  }
-
-  async function nativeRest(path){
-    const token = await getNativeToken();
-    const headers = {
-      apikey: SUPABASE_ANON_NATIVE,
-      "Content-Type": "application/json"
-    };
-    if(token) headers.Authorization = "Bearer " + token;
-    const res = await fetch(SUPABASE_URL_NATIVE + "/rest/v1/" + path, { headers });
-    const raw = await res.text();
-    const data = safeJson(raw, raw);
-    if(!res.ok){
-      const err = new Error((data && (data.message || data.error)) || raw || ("REST failed: " + res.status));
-      err.status = res.status;
-      err.response = data;
-      throw err;
+    if(close && close.dataset.askZummeeWired!=='1'){
+      close.dataset.askZummeeWired='1';
+      close.addEventListener('click', closeAskZummee);
     }
-    return data;
-  }
-
-  function uniqueCommunityIds(rows){
-    const out = [];
-    const seen = new Set();
-    (Array.isArray(rows) ? rows : []).forEach(r => {
-      const id = String(r?.community_id || r?.communityId || "").trim();
-      if(!id || seen.has(id)) return;
-      seen.add(id);
-      out.push(id);
-    });
-    return out;
-  }
-
-  async function lookupCommunityNames(ids){
-    ids = [...new Set((ids || []).map(id => String(id || "").trim()).filter(Boolean))];
-    if(!ids.length) return [];
-
-    const fallback = ids.map(id => ({ id, name:id }));
-
-    try{
-      const idList = ids.map(encodeURIComponent).join(",");
-      const rows = await nativeRest("PropertyCommunities?select=*&id=in.(" + idList + ")");
-      const byId = new Map();
-      (Array.isArray(rows) ? rows : []).forEach(c => {
-        const id = String(c?.id || c?.community_id || "").trim();
-        if(!id) return;
-        byId.set(id, {
-          id,
-          name: String(
-            c?.community_name ||
-            c?.name ||
-            c?.label ||
-            c?.title ||
-            c?.property_name ||
-            id
-          ).trim()
-        });
-      });
-      return ids.map(id => byId.get(id) || { id, name:id });
-    }catch(err){
-      console.warn("[Live Maintenance v503] community name lookup failed; using ids", err);
-      return fallback;
+    if(modal && modal.dataset.askZummeeWired!=='1'){
+      modal.dataset.askZummeeWired='1';
+      modal.addEventListener('click', function(e){ if(e.target===modal) closeAskZummee(); });
+      document.addEventListener('keydown', function(e){ if(e.key==='Escape' && modal.classList.contains('is-open')) closeAskZummee(); });
     }
   }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', wire, {once:true}); else wire();
+  window.mh2OpenAskZummee=openAskZummee;
+  window.mh2CloseAskZummee=closeAskZummee;
+})();
+</script>
 
-  async function loadMaintenanceCommunities(){
-    let ids = [];
-
-    // Primary: Vendors table.
-    try{
-      const vendorRows = await nativeRest("Vendors?select=community_id&limit=1000");
-      ids = uniqueCommunityIds(vendorRows);
-    }catch(err){
-      console.warn("[Live Maintenance v503] Vendors community lookup failed", err);
-    }
-
-    // Secondary: resident_work_orders table.
-    if(!ids.length){
-      try{
-        const workOrderRows = await nativeRest("resident_work_orders?select=community_id&limit=1000");
-        ids = uniqueCommunityIds(workOrderRows);
-      }catch(err){
-        console.warn("[Live Maintenance v503] resident_work_orders community lookup failed", err);
-      }
-    }
-
-    // Emergency fallback: currently saved community.
-    if(!ids.length){
-      try{
-        const id = String(
-          localStorage.getItem("activeCommunityId") ||
-          localStorage.getItem("zummeeActiveCommunityId") ||
-          localStorage.getItem("currentCommunityId") ||
-          localStorage.getItem("zummee_selected_community_id") ||
-          ""
-        ).trim();
-        if(id) ids = [id];
-      }catch(_e){}
-    }
-
-    return lookupCommunityNames(ids);
+<script id="mh2-inline-ai-dictation-v253">
+(function(){
+  function $(id){ return document.getElementById(id); }
+  function isIOS(){ return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
+  function sendToAssistant(prompt){
+    var input = $('mh2AiPrompt');
+    var text = (prompt || (input && input.value) || '').trim();
+    if(!text){ if(input) input.focus(); return; }
+    try{ sessionStorage.setItem('zummee_ai_prefill_prompt', text); }catch(e){}
+    window.location.href = 'zummee_ai_assistant.html';
   }
-
-  function saveCommunity(id, name){
-    id = String(id || "").trim();
-    name = String(name || "").trim();
-    if(!id) return;
-    try{
-      if(window.ZummeeMaintenanceData && typeof window.ZummeeMaintenanceData.setSelectedCommunity === "function"){
-        window.ZummeeMaintenanceData.setSelectedCommunity(id, name);
-      }
-    }catch(_e){}
-    try{
-      window.currentCommunityId = id;
-      localStorage.setItem("activeCommunityId", id);
-      localStorage.setItem("zummeeActiveCommunityId", id);
-      localStorage.setItem("currentCommunityId", id);
-      localStorage.setItem("zummee_selected_community_id", id);
-      localStorage.setItem("zummee_selected_community_v1", id);
-      if(name){
-        localStorage.setItem("activeCommunityName", name);
-        localStorage.setItem("zummeeActiveCommunityName", name);
-        localStorage.setItem("zummeeCurrentCommunityName", name);
-      }
-    }catch(_e){}
+  var recognition = null, isListening = false, listenTimeout = null, finalTranscript = '';
+  var nativeDictationArmed = false, nativeDictationTimer = null, nativeStartingValue = '';
+  function updateDictateUI(active, nativeMode){
+    var btn = $('mh2AiDictateBtn'); if(!btn) return;
+    if(active && nativeMode){ btn.classList.add('is-listening'); btn.textContent='Use keyboard mic…'; btn.setAttribute('aria-pressed','true'); return; }
+    if(active){ btn.classList.add('is-listening'); btn.textContent='Listening… tap to stop'; btn.setAttribute('aria-pressed','true'); }
+    else { btn.classList.remove('is-listening'); btn.textContent='Dictate'; btn.setAttribute('aria-pressed','false'); }
   }
-
-  async function initNativeDropdown(){
-    const select = document.getElementById("maintenanceCommunitySelect");
-    if(!select) return;
-
-    select.innerHTML = '<option value="">Loading communities…</option>';
-
-    let communities = await loadMaintenanceCommunities();
-    communities = communities
-      .filter(c => c && c.id)
-      .sort((a,b) => String(a.name || a.id).localeCompare(String(b.name || b.id), undefined, { sensitivity:"base" }));
-
-    if(!communities.length){
-      select.innerHTML = '<option value="">No vendor communities found</option>';
-      const state = document.getElementById("feedState");
-      if(state) state.textContent = "No communities found in Vendors or resident work orders.";
+  function runAssistantAfterDictation(){
+    setTimeout(function(){ var send = $('mh2AiSendBtn'); if(send) send.click(); else sendToAssistant(finalTranscript); }, 250);
+  }
+  function stopDictation(autoRun){
+    if(!isListening){ updateDictateUI(false); return; }
+    isListening = false;
+    clearTimeout(listenTimeout); listenTimeout = null;
+    try{ if(recognition) recognition.stop(); }catch(e){}
+    updateDictateUI(false);
+    if(autoRun && finalTranscript) runAssistantAfterDictation();
+  }
+  function armNativeIOSDictation(){
+    var input = $('mh2AiPrompt'); if(!input) return;
+    nativeDictationArmed = true;
+    nativeStartingValue = (input.value || '').trim();
+    updateDictateUI(true, true);
+    input.focus();
+    input.setAttribute('placeholder', 'Use the iPad keyboard microphone, then pause.');
+    clearTimeout(nativeDictationTimer);
+    nativeDictationTimer = setTimeout(function(){ nativeDictationArmed = false; updateDictateUI(false); }, 15000);
+  }
+  function startDictation(){
+    var input = $('mh2AiPrompt');
+    if(isIOS()){
+      armNativeIOSDictation();
       return;
     }
-
-    const current =
-      (window.ZummeeMaintenanceData && window.ZummeeMaintenanceData.getSelectedCommunityId && window.ZummeeMaintenanceData.getSelectedCommunityId()) ||
-      localStorage.getItem("activeCommunityId") ||
-      localStorage.getItem("zummeeActiveCommunityId") ||
-      localStorage.getItem("currentCommunityId") ||
-      communities[0].id;
-
-    select.innerHTML = communities.map(c =>
-      '<option value="' + escOpt(c.id) + '">' + escOpt(c.name || c.id) + '</option>'
-    ).join("");
-
-    const selected = communities.find(c => c.id === current) || communities[0];
-    select.value = selected.id;
-    saveCommunity(selected.id, selected.name);
-
-    select.addEventListener("change", function(){
-      const opt = select.selectedOptions && select.selectedOptions[0] ? select.selectedOptions[0] : null;
-      const id = String(select.value || "").trim();
-      const name = String(opt ? opt.textContent : "").trim();
-      saveCommunity(id, name);
-      try{ if(window.ZummeeMaintenanceData) window.ZummeeMaintenanceData.clearVendorCache?.(); }catch(_e){}
-      if(typeof loadUpdates === "function") loadUpdates();
-      if(typeof loadEvents === "function") loadEvents();
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SR){ if(input){ input.focus(); input.setAttribute('placeholder','Type your request or use your device keyboard microphone.'); } return; }
+    clearTimeout(listenTimeout); finalTranscript = '';
+    recognition = new SR();
+    recognition.lang='en-US'; recognition.continuous=false; recognition.interimResults=false; recognition.maxAlternatives=1;
+    recognition.onresult = function(ev){
+      var spoken = ev.results && ev.results[0] && ev.results[0][0] ? ev.results[0][0].transcript : '';
+      finalTranscript = (spoken || '').trim();
+      if(input && finalTranscript){ input.value = finalTranscript; input.focus(); }
+      stopDictation(!!finalTranscript);
+    };
+    recognition.onerror = function(){ stopDictation(false); };
+    recognition.onend = function(){ if(isListening) stopDictation(!!finalTranscript); else updateDictateUI(false); };
+    isListening = true; updateDictateUI(true);
+    try{ recognition.start(); }catch(e){ stopDictation(false); return; }
+    listenTimeout = setTimeout(function(){ stopDictation(!!finalTranscript); }, 7000);
+  }
+  function bindAiInline(){
+    var input=$('mh2AiPrompt'), send=$('mh2AiSendBtn'), dictate=$('mh2AiDictateBtn');
+    document.querySelectorAll('[data-ai-prompt]').forEach(function(btn){ btn.addEventListener('click', function(){ if(input){ input.value=btn.getAttribute('data-ai-prompt')||''; input.focus(); }}); });
+    if(send) send.addEventListener('click', function(){ sendToAssistant(); });
+    if(input){
+      input.addEventListener('keydown', function(e){ if((e.metaKey||e.ctrlKey)&&e.key==='Enter') sendToAssistant(); });
+      input.addEventListener('input', function(){
+        if(!nativeDictationArmed) return;
+        clearTimeout(nativeDictationTimer);
+        nativeDictationTimer = setTimeout(function(){
+          var current = (input.value || '').trim();
+          nativeDictationArmed = false;
+          updateDictateUI(false);
+          if(current && current !== nativeStartingValue){ finalTranscript = current; runAssistantAfterDictation(); }
+        }, 1400);
+      });
+    }
+    if(dictate) dictate.addEventListener('click', function(){
+      if(nativeDictationArmed){ nativeDictationArmed=false; clearTimeout(nativeDictationTimer); updateDictateUI(false); return; }
+      if(isListening) stopDictation(!!finalTranscript); else startDictation();
     });
-
-    if(typeof loadUpdates === "function") loadUpdates();
   }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bindAiInline); else bindAiInline();
+})();
+</script>
+<script src="inline_ai_scheduling_v251.js"></script>
+<script src="company_logo_sync.js"></script>
 
-  if(document.readyState === "loading"){
-    document.addEventListener("DOMContentLoaded", initNativeDropdown, { once:true });
-  }else{
-    setTimeout(initNativeDropdown, 100);
+  <!-- shared/dark-mode.js removed: file not present in stable build; root dark-mode.css remains -->
+
+<style id="mh2-signout-button-final-readable-lock-v270">
+/* v270: final Manager Hub sign-out modal button readability lock. */
+#mh2SignOutModalOverlay .mh2-signout-modal-actions button,
+html.dark-mode #mh2SignOutModalOverlay .mh2-signout-modal-actions button,
+body.dark-mode #mh2SignOutModalOverlay .mh2-signout-modal-actions button,
+html[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-modal-actions button,
+body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-modal-actions button{
+  opacity:1 !important;
+  filter:none !important;
+  text-shadow:none !important;
+  -webkit-text-fill-color:currentColor !important;
+}
+#mh2SignOutModalOverlay .mh2-signout-cancel,
+html.dark-mode #mh2SignOutModalOverlay .mh2-signout-cancel,
+body.dark-mode #mh2SignOutModalOverlay .mh2-signout-cancel,
+html[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-cancel,
+body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-cancel{
+  background:#ffffff !important;
+  color:#17345f !important;
+  -webkit-text-fill-color:#17345f !important;
+  border:1.5px solid #9ec5ff !important;
+  box-shadow:0 10px 24px rgba(20,50,86,.14) !important;
+}
+#mh2SignOutModalOverlay .mh2-signout-confirm,
+html.dark-mode #mh2SignOutModalOverlay .mh2-signout-confirm,
+body.dark-mode #mh2SignOutModalOverlay .mh2-signout-confirm,
+html[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm,
+body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
+  background:#17345f !important;
+  color:#ffffff !important;
+  -webkit-text-fill-color:#ffffff !important;
+  border:1.5px solid #17345f !important;
+  box-shadow:0 14px 30px rgba(23,52,95,.24) !important;
+}
+#mh2SignOutModalOverlay .mh2-signout-cancel:hover{background:#f4f9ff !important;}
+#mh2SignOutModalOverlay .mh2-signout-confirm:hover{background:#0f274b !important;}
+</style>
+<script id="mh2-signout-button-final-readable-lock-js-v270">
+(function(){
+  function lockSignOutButtons(){
+    try{
+      var root=document.getElementById('mh2SignOutModalOverlay');
+      if(!root) return;
+      var cancel=root.querySelector('.mh2-signout-cancel');
+      var confirm=root.querySelector('.mh2-signout-confirm');
+      if(cancel){
+        cancel.style.setProperty('background','#ffffff','important');
+        cancel.style.setProperty('color','#17345f','important');
+        cancel.style.setProperty('-webkit-text-fill-color','#17345f','important');
+        cancel.style.setProperty('border','1.5px solid #9ec5ff','important');
+        cancel.style.setProperty('opacity','1','important');
+        cancel.style.setProperty('filter','none','important');
+      }
+      if(confirm){
+        confirm.style.setProperty('background','#17345f','important');
+        confirm.style.setProperty('color','#ffffff','important');
+        confirm.style.setProperty('-webkit-text-fill-color','#ffffff','important');
+        confirm.style.setProperty('border','1.5px solid #17345f','important');
+        confirm.style.setProperty('opacity','1','important');
+        confirm.style.setProperty('filter','none','important');
+      }
+    }catch(e){}
   }
+  document.addEventListener('click', function(){ setTimeout(lockSignOutButtons, 0); setTimeout(lockSignOutButtons, 40); }, true);
+  document.addEventListener('DOMContentLoaded', function(){
+    lockSignOutButtons();
+    try{ new MutationObserver(lockSignOutButtons).observe(document.body,{childList:true,subtree:true}); }catch(e){}
+  });
+})();
+</script>
+
+<script id="mh2-annual-approval-alert-hard-lock-v288">
+(function(){
+  function $(id){ return document.getElementById(id); }
+  function esc(v){ return String(v == null ? '' : v).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];}); }
+  function getSb(){
+    try{ if(window.supabaseClient && typeof window.supabaseClient.from === 'function') return window.supabaseClient; }catch(e){}
+    try{ if(window.sb && typeof window.sb.from === 'function') return window.sb; }catch(e){}
+    try{ if(window.getSupabase){ var c=window.getSupabase(); if(c && typeof c.from === 'function') return c; } }catch(e){}
+    return null;
+  }
+  function isUuid(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||'').trim()); }
+  function selectedCommunity(){
+    var sel=$('zummeeCommunitySelect');
+    var id='', name='';
+    if(sel){
+      var raw=String(sel.value||'').trim();
+      if(isUuid(raw)) id=raw;
+      name=String(sel.options && sel.selectedIndex>=0 ? (sel.options[sel.selectedIndex].textContent||'') : '').trim();
+    }
+    if(!id){ try{ var vals=[localStorage.getItem('zummeeActiveCommunityId'),localStorage.getItem('activeCommunityId'),localStorage.getItem('currentCommunityId'),localStorage.getItem('zummee_selected_community_id')]; for(var vi=0;vi<vals.length;vi++){ if(isUuid(vals[vi])){ id=String(vals[vi]).trim(); break; } } }catch(e){} }
+    if(!name){ try{ name=String(localStorage.getItem('currentCommunityName')||localStorage.getItem('zummeeCurrentCommunityName')||'').trim(); }catch(e){} }
+    return {id:id,name:name};
+  }
+  function norm(v){ return String(v||'').toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' '); }
+  function statusIsOpen(row){
+    var st=String((row&&row.status)||'').toLowerCase().trim().replace(/[\s-]+/g,'_');
+    if(!st) return true;
+    if(st.indexOf('reject')>-1) return false;
+    if(st.indexOf('mail')>-1) return false;
+    if(st.indexOf('sent_to_admin')>-1) return false;
+    if(st==='approved' || st==='complete' || st==='completed' || st==='closed') return false;
+    if(st.indexOf('approved_ready')>-1) return false;
+    return st.indexOf('pending')>-1 || st.indexOf('board')>-1 || st.indexOf('supervisor')>-1 || st.indexOf('approval')>-1 || st==='draft';
+  }
+  function parseWhen(row){
+    var raw = row && (row.submitted_at || row.created_at || row.updated_at || row.created || row.date || '');
+    raw=String(raw||'').trim();
+    if(!raw) return null;
+    var t=Date.parse(raw);
+    if(isFinite(t)) return new Date(t);
+    var m=raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if(m) return new Date(Number(m[1]), Number(m[2])-1, Number(m[3]));
+    m=raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if(m) return new Date(Number(m[3]), Number(m[1])-1, Number(m[2]));
+    return null;
+  }
+  function isOverdue(row){
+    var d=parseWhen(row);
+    if(!d || !isFinite(d.getTime())) return false;
+    return (Date.now() - d.getTime()) >= (2*24*60*60*1000);
+  }
+  function matchesCommunity(row, ctx){
+    if(!row) return false;
+    var rid=String(row.community_id||row.communityId||'').trim();
+    if(ctx.id && rid && rid===ctx.id) return true;
+    var rname=norm(row.community_name||row.community||row.property_name||row.association_name||row.name);
+    var cname=norm(ctx.name);
+    return !!(cname && rname && cname===rname);
+  }
+  function paint(openCount, overdueCount, ctx){
+    var el=$('mh2AlertApprovals');
+    if(!el) return;
+    ctx = ctx || {};
+    var tone = overdueCount>0 ? 'is-urgent' : (openCount>0 ? 'is-attention' : 'is-good');
+    var badge = overdueCount>0 ? (String(overdueCount)+' OVERDUE') : (openCount>0 ? (String(openCount)+' OPEN') : 'CLEAR');
+    var copy = overdueCount>0
+      ? (String(overdueCount)+' annual meeting approval item'+(overdueCount===1?' has':'s have')+' been open more than 2 days for '+(ctx.name||'the selected community')+'.')
+      : (openCount>0 ? (String(openCount)+' annual meeting approval item'+(openCount===1?' is':'s are')+' still in progress for '+(ctx.name||'the selected community')+'.') : 'No active items');
+
+    // v537: allow the first paint and any real community/data change, but do not rebuild
+    // the Annual card DOM when the exact same community + payload is repainted by legacy timers.
+    // This stops the visible text blink while preserving community switching.
+    var communityKey = String(ctx.id || '') + '|' + String(ctx.name || '');
+    var renderKey = JSON.stringify({ community: communityKey, tone: tone, badge: badge, copy: copy, open: openCount, overdue: overdueCount });
+    if(window.__mh2AnnualApprovalLastRenderKey === renderKey){
+      try{ window.__mh2AnnualApprovalDuplicatePaintBlocked = (window.__mh2AnnualApprovalDuplicatePaintBlocked || 0) + 1; }catch(_e){}
+      return;
+    }
+    window.__mh2AnnualApprovalLastRenderKey = renderKey;
+
+    el.classList.remove('is-urgent','is-attention','is-good');
+    el.classList.add(tone);
+    el.setAttribute('href', (window.mh2IsPrivileged ? 'annual_meeting_approvals.html' : 'annual_meeting_status.html'));
+    el.innerHTML = '<div class="mh2-alert-top"><div class="mh2-alert-title">Annual meeting approvals</div><div class="mh2-alert-badge">'+esc(badge)+'</div></div><div class="mh2-alert-copy">'+esc(copy)+'</div>';
+    try{ window.__mh2AnnualApprovalAlertDebug={community:ctx,open:openCount,overdue:overdueCount,paintedAt:new Date().toISOString(),renderKey:renderKey}; }catch(e){}
+  }
+  async function refreshAnnualAlert(){
+    var sb=getSb();
+    if(!sb) return;
+    var ctx=selectedCommunity();
+    try{
+      var q=sb.from('annual_meeting_packet_requests').select('*').limit(200);
+      if(ctx.id) q=q.eq('community_id', ctx.id);
+      var res=await q;
+      if(res && res.error) throw res.error;
+      var rows=Array.isArray(res&&res.data)?res.data:[];
+      if(!ctx.id && ctx.name) rows=rows.filter(function(r){ return matchesCommunity(r,ctx); });
+      var open=rows.filter(statusIsOpen);
+      var overdue=open.filter(isOverdue);
+      paint(open.length, overdue.length, ctx);
+      try{ window.__mh2AnnualApprovalRows=rows; window.__mh2AnnualApprovalOpenRows=open; window.__mh2AnnualApprovalOverdueRows=overdue; }catch(e){}
+    }catch(e){
+      try{ console.warn('[MH2] annual approval hard-lock failed', e); window.__mh2AnnualApprovalAlertError=e; }catch(_e){}
+    }
+  }
+  window.mh2RefreshAnnualApprovalSmartAlert = refreshAnnualAlert;
+  function schedule(){ setTimeout(refreshAnnualAlert,250); setTimeout(refreshAnnualAlert,1200); setTimeout(refreshAnnualAlert,3500); }
+  document.addEventListener('DOMContentLoaded', function(){
+    schedule();
+    var sel=$('zummeeCommunitySelect');
+    if(sel) sel.addEventListener('change', function(){ setTimeout(refreshAnnualAlert,150); setTimeout(refreshAnnualAlert,1000); });
+    setInterval(refreshAnnualAlert, 15000);
+  });
+  if(document.readyState !== 'loading') schedule();
 })();
 </script>
 
 
 
+<script id="zummee-v410k-app-context-auth-guard">
+(function(){
+  if(window.__ZUMMEE_V410K_APP_CONTEXT_AUTH_GUARD__) return;
+  window.__ZUMMEE_V410K_APP_CONTEXT_AUTH_GUARD__ = true;
+  var UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  function readUserId(){
+    var keys=['zummee_user_id_v1','zummeeUserId','activeUserId','currentUserId'];
+    for(var i=0;i<keys.length;i++){
+      try{
+        var v=String(localStorage.getItem(keys[i])||sessionStorage.getItem(keys[i])||'').trim();
+        if(UUID_RE.test(v)) return v;
+      }catch(_e){}
+    }
+    return '';
+  }
+  window.validateZummeeSession = async function(){
+    var localUserId=readUserId();
+    var hasSession=false;
+    try{
+      var sb=window.supabaseClient||window.sb||(typeof window.ensureSupabaseSync==='function'?window.ensureSupabaseSync():null);
+      if(sb&&sb.auth&&typeof sb.auth.getSession==='function'){
+        var res=await sb.auth.getSession();
+        hasSession=!!(res&&res.data&&res.data.session);
+      }
+    }catch(_e){}
+    if(!hasSession && !localUserId){
+      try{ window.location.href='login.html'; }catch(_e){}
+      return false;
+    }
+    if(localUserId){
+      try{
+        ['zummee_user_id_v1','zummeeUserId','activeUserId','currentUserId'].forEach(function(k){
+          localStorage.setItem(k,localUserId); sessionStorage.setItem(k,localUserId);
+        });
+      }catch(_e){}
+    }
+    return true;
+  };
+})();
+</script>
+
+<script id="zummee-v380-auth-ready-helper">
+(function(){
+  if(window.__ZUMMEE_V380_AUTH_READY_HELPER__) return;
+  window.__ZUMMEE_V380_AUTH_READY_HELPER__ = true;
+  window.zummeeWaitForAuthReady = async function(client, opts){
+    opts = opts || {};
+    var attempts = Number(opts.attempts || 24);
+    var delay = Number(opts.delay || 125);
+    if(!client || !client.auth || typeof client.auth.getSession !== 'function') return null;
+    for(var i=0;i<attempts;i++){
+      try{
+        var res = await client.auth.getSession();
+        var session = res && res.data && res.data.session;
+        if(session && session.access_token) return session;
+      }catch(_e){}
+      await new Promise(function(resolve){ setTimeout(resolve, delay); });
+    }
+    console.warn('[v380 auth gate] no Supabase session yet; protected queries paused.');
+    return null;
+  };
+})();
+</script>
+<script id="zummee-v307-board-alert-route-lock">
+(function(){
+  if(window.__ZUMMEE_V307_BOARD_ALERT_ROUTE_LOCK__) return;
+  window.__ZUMMEE_V307_BOARD_ALERT_ROUTE_LOCK__ = true;
+  function isUuid(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||'').trim()); }
+  function selectedCommunityId(){
+    var sel = document.getElementById('zummeeCommunitySelect') || document.querySelector('select[data-community-select], select[name="community"], #communitySelect, #communityDropdown');
+    var id = '';
+    if(sel && isUuid(sel.value)) id = String(sel.value).trim();
+    if(!id) id = String(localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('activeCommunityId') || localStorage.getItem('zummeeActiveCommunityId') || localStorage.getItem('currentCommunityId') || '').trim();
+    if(isUuid(id)){
+      try{ localStorage.setItem('zummee_selected_community_id', id); localStorage.setItem('activeCommunityId', id); localStorage.setItem('zummeeActiveCommunityId', id); localStorage.setItem('currentCommunityId', id); }catch(_e){}
+      window.currentCommunityId = id; window.zummeeSelectedCommunityId = id; window.activeCommunityId = id;
+      return id;
+    }
+    return '';
+  }
+  function boardUrl(){ var id = selectedCommunityId(); return 'board_member_hub_v2.html' + (id ? ('?community_id=' + encodeURIComponent(id) + '&from=manager_hub') : '?from=manager_hub'); }
+  function bind(){ var board = document.getElementById('mh2AlertBoard'); if(board){ var url = boardUrl(); board.setAttribute('href', url); board.setAttribute('data-zummee-route', url); board.onclick = null; } }
+  function route(evt){ var a = evt.target && evt.target.closest ? evt.target.closest('#mh2AlertBoard') : null; if(!a) return; evt.preventDefault(); evt.stopPropagation(); if(evt.stopImmediatePropagation) evt.stopImmediatePropagation(); try{ sessionStorage.setItem('zummee_manager_internal_entry','1'); sessionStorage.setItem('zummee_board_manager_entry','1'); }catch(_e){} window.location.assign(boardUrl()); }
+  ['pointerdown','touchstart','mousedown','click'].forEach(function(type){ document.addEventListener(type, route, true); });
+  document.addEventListener('DOMContentLoaded', bind, {once:true}); window.addEventListener('pageshow', bind); setTimeout(bind,200); setTimeout(bind,900); setTimeout(bind,1800);
+})();
+</script>
+<script id="zummee-v308-maintenance-alert-route-lock">
+(function(){
+  if(window.__ZUMMEE_V308_MAINTENANCE_ALERT_ROUTE_LOCK__) return;
+  window.__ZUMMEE_V308_MAINTENANCE_ALERT_ROUTE_LOCK__ = true;
+  function isUuid(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||'').trim()); }
+  function selectedCommunityId(){
+    var sel = document.getElementById('zummeeCommunitySelect') || document.querySelector('select[data-community-select], select[name="community"], #communitySelect, #communityDropdown');
+    var id = '';
+    if(sel && isUuid(sel.value)) id = String(sel.value).trim();
+    if(!id) id = String(localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('activeCommunityId') || localStorage.getItem('zummeeActiveCommunityId') || localStorage.getItem('currentCommunityId') || '').trim();
+    if(isUuid(id)){
+      try{ localStorage.setItem('zummee_selected_community_id', id); localStorage.setItem('activeCommunityId', id); localStorage.setItem('zummeeActiveCommunityId', id); localStorage.setItem('currentCommunityId', id); }catch(_e){}
+      window.currentCommunityId = id; window.zummeeSelectedCommunityId = id; window.activeCommunityId = id;
+      return id;
+    }
+    return '';
+  }
+  function maintenanceUrl(){ var id = selectedCommunityId(); return 'maintenance_updates.html' + (id ? ('?community_id=' + encodeURIComponent(id) + '&from=manager_hub') : '?from=manager_hub'); }
+  function bind(){
+    var activity = document.getElementById('mh2AlertActivity');
+    if(activity){
+      var url = maintenanceUrl();
+      activity.setAttribute('href', url);
+      activity.setAttribute('data-zummee-route', url);
+      activity.onclick = null;
+      activity.style.cursor = 'pointer';
+      activity.style.touchAction = 'manipulation';
+    }
+  }
+  function route(evt){
+    var a = evt.target && evt.target.closest ? evt.target.closest('#mh2AlertActivity') : null;
+    if(!a) return;
+    evt.preventDefault(); evt.stopPropagation(); if(evt.stopImmediatePropagation) evt.stopImmediatePropagation();
+    try{ sessionStorage.setItem('zummee_manager_internal_entry','1'); sessionStorage.setItem('zummee_maintenance_manager_entry','1'); }catch(_e){}
+    window.location.assign(maintenanceUrl());
+  }
+  ['pointerdown','touchstart','mousedown','click'].forEach(function(type){ document.addEventListener(type, route, true); });
+  document.addEventListener('DOMContentLoaded', bind, {once:true});
+  window.addEventListener('pageshow', bind);
+  document.addEventListener('community:changed', function(){ setTimeout(bind, 50); });
+  setTimeout(bind, 150); setTimeout(bind, 700); setTimeout(bind, 1600); setTimeout(bind, 3200);
+})();
+</script>
+
+
+
+
+
+
+
+<script id="zummee-v410d-live-activity-collapse-js">
+(function(){
+  function ready(fn){
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+  ready(function(){
+    var card=document.getElementById('activityFeedCard');
+    if(!card) return;
+    var buttons=[document.getElementById('activityFeedToggleBtn')].filter(Boolean);
+    if(!buttons.length) return;
+    var key='zummee_manager_hub_live_activity_collapsed_v1';
+    function apply(collapsed){
+      card.classList.toggle('is-collapsed', !!collapsed);
+      buttons.forEach(function(btn){
+        btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        btn.textContent = collapsed ? 'Expand' : 'Collapse';
+      });
+    }
+    var collapsed=false;
+    try{ collapsed=localStorage.getItem(key)==='1'; }catch(e){}
+    apply(collapsed);
+    buttons.forEach(function(btn){
+      btn.addEventListener('click', function(ev){
+        ev.preventDefault();
+        collapsed=!card.classList.contains('is-collapsed');
+        try{ localStorage.setItem(key, collapsed ? '1' : '0'); }catch(e){}
+        apply(collapsed);
+      });
+    });
+  });
+})();
+</script>
+
+
+
+<!-- v412 Smart Alerts single owner: no flashing, no legacy repaint, one render path for board/maintenance/annual. -->
+
+
+
+
+
+<script id="zummee-v453-board-smart-source-sync">
+(function(){
+  function n(v){ return Number(v||0)||0; }
+  function syncBoardSurfaces(){
+    try{
+      var final=window.__ZUMMEE_V412_SMART_ALERT_FINAL__||{};
+      var board=final.board||{};
+      var open=n(board.count);
+      var overdue=n(board.overdue);
+      var countEl=document.getElementById('mh2BoardOverdueCount');
+      var noteEl=document.getElementById('mh2BoardOverdueNote');
+      if(countEl){ countEl.textContent=String(open); }
+      if(noteEl){ noteEl.textContent=open ? ('Needs review in '+((final.ctx&&final.ctx.name)||'selected community')+'.') : 'Current board items for the selected community.'; }
+      var card=document.getElementById('boardMemberHubCard');
+      if(card){
+        var tone=card.querySelector('[data-role="tone"]');
+        var m1=card.querySelector('[data-role="metric1"]');
+        var m2=card.querySelector('[data-role="metric2"]');
+        if(tone){
+          tone.textContent=overdue ? 'Overdue' : (open ? 'Open' : 'Clear');
+          tone.className='mh2-tool-pill'+(overdue?' is-urgent':(open?' is-gold':' is-good'));
+        }
+        if(m1){ m1.textContent=String(open); }
+        if(m2){ m2.textContent=String(overdue); }
+        card.classList.remove('mh2-tool-card--gold','mh2-tool-card--urgent');
+        if(overdue){ card.classList.add('mh2-tool-card--urgent'); }
+        else if(open){ card.classList.add('mh2-tool-card--gold'); }
+      }
+    }catch(e){}
+  }
+  window.addEventListener('load',function(){
+    var tries=0;
+    var timer=setInterval(function(){
+      tries++;
+      syncBoardSurfaces();
+      if(tries>20) clearInterval(timer);
+    },400);
+  });
+  document.addEventListener('visibilitychange',function(){ if(!document.hidden) syncBoardSurfaces(); });
+})();
+</script>
+
+
+
+
+
+<script id="zummee-v462-manager-hub-board-smart-card-direct-lock">
+(function(){
+  'use strict';
+  var UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  function isUuid(v){return UUID.test(String(v||'').trim());}
+  function $(id){return document.getElementById(id);}
+  function esc(s){return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function client(){
+    try{ if(window.supabaseClient&&window.supabaseClient.from) return window.supabaseClient; }catch(e){}
+    try{ if(window.getSupabase){var c=window.getSupabase(); if(c&&c.from) return c;} }catch(e){}
+    try{ if(window.ensureSupabaseSync){var c2=window.ensureSupabaseSync(); if(c2&&c2.from) return c2;} }catch(e){}
+    return null;
+  }
+  function context(){
+    var id='',name='';
+    var sel=$('zummeeCommunitySelect')||$('communitySelect')||document.querySelector('select[data-community-select],select[name="community"],select');
+    if(sel){
+      if(isUuid(sel.value)) id=String(sel.value).trim();
+      var opt=sel.options&&sel.selectedIndex>=0?sel.options[sel.selectedIndex]:null;
+      if(opt) name=String(opt.textContent||'').trim();
+    }
+    if(!id){
+      [window.currentCommunityId,window.activeCommunityId,window.zummeeSelectedCommunityId,localStorage.getItem('zummee_selected_community_id'),localStorage.getItem('zummeeActiveCommunityId'),localStorage.getItem('activeCommunityId'),localStorage.getItem('currentCommunityId'),sessionStorage.getItem('zummee_selected_community_id'),sessionStorage.getItem('zummeeActiveCommunityId'),sessionStorage.getItem('activeCommunityId'),sessionStorage.getItem('currentCommunityId')].some(function(v){ if(isUuid(v)){ id=String(v).trim(); return true; } return false; });
+    }
+    if(!name) name=localStorage.getItem('zummeeCurrentCommunityName')||localStorage.getItem('currentCommunityName')||sessionStorage.getItem('zummeeCurrentCommunityName')||sessionStorage.getItem('currentCommunityName')||'the selected community';
+    return {id:id,name:name};
+  }
+  function statusOf(row){
+    var md=(row&&row.metadata&&typeof row.metadata==='object')?row.metadata:{};
+    return String((row&&(row.status||row.workflow_status||row.review_status))||md.status||md.workflow_status||md.review_status||'open').toLowerCase().trim();
+  }
+  function isCurrent(row){
+    if(!row) return false;
+    if(row.deleted_at||row.archived_at||row.completed_at||row.reviewed_at) return false;
+    var st=statusOf(row);
+    if(/reviewed|complete|completed|closed|archived|done|resolved|cancel|cancelled|reject|rejected|approved|converted|agenda|minutes|deleted|inactive/i.test(st)) return false;
+    return true;
+  }
+  function isOverdue(row){
+    var raw=row&&(row.due_date||row.review_due_date||row.deadline||(row.metadata&&row.metadata.due_date));
+    if(!raw) return false;
+    var d=new Date(String(raw).slice(0,10)+'T00:00:00');
+    if(isNaN(d.getTime())) return false;
+    var today=new Date(); today.setHours(0,0,0,0); d.setHours(0,0,0,0);
+    return d.getTime()<today.getTime();
+  }
+  function setText(id,value){var el=$(id); if(el) el.textContent=String(value);}
+  function render(payload){
+    payload=payload||{};
+    var count=Number(payload.count)||0, overdue=Number(payload.overdue)||0;
+    var ctx=context();
+    var card=$('mh2AlertBoard');
+    if(card){
+      card.classList.remove('is-good','is-attention','is-urgent');
+      card.classList.add(overdue?'is-urgent':(count?'is-attention':'is-good'));
+      card.setAttribute('href','board_member_hub_v2.html'+(ctx.id?'?community_id='+encodeURIComponent(ctx.id):''));
+      var title=card.querySelector('.mh2-alert-title'), badge=card.querySelector('.mh2-alert-badge'), copy=card.querySelector('.mh2-alert-copy');
+      if(title) title.textContent=overdue?'Board review overdue':'Board review status';
+      if(badge) badge.textContent=overdue?(overdue+' OVERDUE'):(count?'OPEN':'STABLE');
+      if(copy) copy.textContent=overdue?(count+' current board item'+(count===1?'':'s')+' ready for review, '+overdue+' overdue.'):(count?(count+' current board item'+(count===1?'':'s')+' ready for review.'):'No current board items for review.');
+    }
+    setText('mh2BoardOverdueCount',count);
+    setText('mh2BoardOverdueNote',count?('Needs review in '+(ctx.name||'selected community')+'.'):'Current board items for the selected community.');
+    setText('mh2BoardItemsPill',count);
+    setText('mh2BoardStatusPill',overdue?('Overdue '+overdue):(count?('Open '+count):'Clear'));
+    try{ document.documentElement.setAttribute('data-zummee-smart-alerts-v426-ready','1'); }catch(e){}
+    window.__ZUMMEE_V462_BOARD_SMART_LOCK__={ctx:ctx,count:count,overdue:overdue,source:payload.source||'notification_events'};
+  }
+  async function load(){
+    var ctx=context(); if(!isUuid(ctx.id)){render({count:0,overdue:0,source:'no-community'}); return;}
+    try{
+      if(window.ZummeeBoardData&&typeof window.ZummeeBoardData.getBoardReviewItems==='function'){
+        var shared=await window.ZummeeBoardData.getBoardReviewItems(ctx.id,{sb:client(),communityName:ctx.name});
+        if(shared && !shared.error && Array.isArray(shared.rows)){ render({count:shared.rows.length,overdue:shared.rows.filter(isOverdue).length,source:'shared-notification_events'}); return; }
+      }
+    }catch(e){ console.warn('[v462 Manager Hub board smart card] shared board source skipped',e); }
+    var sb=client(); if(!sb){render({count:0,overdue:0,source:'no-client'}); return;}
+    try{
+      var q=await sb.from('notification_events').select('id,title,message,metadata,created_at,event_type,community_id').eq('community_id',ctx.id).eq('event_type','board_item_submitted').order('created_at',{ascending:false}).limit(500);
+      if(q.error) throw q.error;
+      var rows=(Array.isArray(q.data)?q.data:[]).filter(isCurrent);
+      render({count:rows.length,overdue:rows.filter(isOverdue).length,source:'notification_events-direct'});
+    }catch(e){
+      console.warn('[v462 Manager Hub board smart card] direct notification_events load failed',e);
+      render({count:0,overdue:0,source:'notification_events-error'});
+    }
+  }
+  function schedule(){
+    // v500: disabled legacy Board Review writer. The shared manager-hub-data-layer.js owns this card.
+    try{ console.info('[v500 board no-flash lock] legacy board smart writer disabled'); }catch(_e){}
+  }
+  window.__ZUMMEE_V462_BOARD_SMART_LOCK_DISABLED__ = true;
+})();
+</script>
 
 
 
@@ -2874,35 +1041,283 @@ body.live-maintenance-no-blue-header .maintenance-inline-controls #zummeeHdrHub{
 </body>
 </html>
 
-<style id="live-maintenance-gold-records-v28">
-/* V28: make maintenance update records pop with Board Member Hub style gold cards */
-#updatesTableBody tr[data-open-id] td{
-  background:linear-gradient(135deg, rgba(255,244,190,.96), rgba(255,255,255,.92)) !important;
-  border-top:1px solid rgba(214,168,38,.42) !important;
-  border-bottom:1px solid rgba(214,168,38,.42) !important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.7) !important;
+<style id="sunrise-sunset-cinematic-upgrade">
+/* ===== ZUMMEE WEATHER: SUNRISE/SUNSET READABILITY + CINEMATIC GLOW ===== */
+#weatherHeroCard.mh2-weather-hero.wx-sunrise,
+#weatherHeroCard.mh2-weather-hero.wx-sunset,
+.mh2-weather-hero.wx-sunrise,
+.mh2-weather-hero.wx-sunset{
+  color:#12356d !important;
+  text-shadow:none !important;
+  isolation:isolate;
 }
-#updatesTableBody tr[data-open-id] td:first-child{
-  border-left:1px solid rgba(214,168,38,.48) !important;
-  border-radius:18px 0 0 18px !important;
+
+#weatherHeroCard.mh2-weather-hero.wx-sunrise > *:not(.mh2-weather-scene),
+#weatherHeroCard.mh2-weather-hero.wx-sunset > *:not(.mh2-weather-scene),
+.mh2-weather-hero.wx-sunrise > *:not(.mh2-weather-scene),
+.mh2-weather-hero.wx-sunset > *:not(.mh2-weather-scene){
+  position:relative;
+  z-index:3;
 }
-#updatesTableBody tr[data-open-id] td:last-child{
-  border-right:1px solid rgba(214,168,38,.48) !important;
-  border-radius:0 18px 18px 0 !important;
+
+#weatherHeroCard.mh2-weather-hero.wx-sunrise .mh2-kicker,
+#weatherHeroCard.mh2-weather-hero.wx-sunrise .mh2-weather-temp,
+#weatherHeroCard.mh2-weather-hero.wx-sunrise .mh2-weather-copy,
+#weatherHeroCard.mh2-weather-hero.wx-sunrise .mh2-daylight-times,
+#weatherHeroCard.mh2-weather-hero.wx-sunrise .mh2-daylight-times span,
+#weatherHeroCard.mh2-weather-hero.wx-sunrise .mh2-chip,
+#weatherHeroCard.mh2-weather-hero.wx-sunset .mh2-kicker,
+#weatherHeroCard.mh2-weather-hero.wx-sunset .mh2-weather-temp,
+#weatherHeroCard.mh2-weather-hero.wx-sunset .mh2-weather-copy,
+#weatherHeroCard.mh2-weather-hero.wx-sunset .mh2-daylight-times,
+#weatherHeroCard.mh2-weather-hero.wx-sunset .mh2-daylight-times span,
+#weatherHeroCard.mh2-weather-hero.wx-sunset .mh2-chip{
+  color:#12356d !important;
+  text-shadow:0 1px 1px rgba(255,255,255,.32) !important;
 }
-#updatesTableBody tr[data-open-id]{
-  border-left:0 !important;
-  filter:drop-shadow(0 8px 16px rgba(120,88,12,.08));
+
+#weatherHeroCard.mh2-weather-hero.wx-sunrise .mh2-chip,
+#weatherHeroCard.mh2-weather-hero.wx-sunset .mh2-chip,
+.mh2-weather-hero.wx-sunrise .mh2-chip,
+.mh2-weather-hero.wx-sunset .mh2-chip{
+  background:rgba(255,255,255,.52) !important;
+  border-color:rgba(255,255,255,.68) !important;
+  box-shadow:0 8px 18px rgba(22,53,109,.08);
 }
-#updatesTableBody tr[data-open-id]:hover td,
-#updatesTableBody tr[data-open-id]:focus-within td{
-  background:linear-gradient(135deg, rgba(255,236,154,.98), rgba(255,255,255,.96)) !important;
-  border-color:rgba(214,168,38,.68) !important;
+
+#weatherHeroCard.mh2-weather-hero.wx-sunrise{
+  background:
+    radial-gradient(circle at 78% 58%, rgba(255,255,255,.95) 0 4%, rgba(255,235,151,.88) 5% 10%, rgba(255,191,100,.38) 18%, transparent 36%),
+    radial-gradient(circle at 70% 52%, rgba(255,232,141,.55), transparent 38%),
+    linear-gradient(180deg,#d8e8ff 0%, #f6d9ba 48%, #ffb76d 80%, #d98b4d 100%) !important;
 }
-#updatesTableBody tr[data-open-id] + tr[data-open-id] td{
-  border-top-width:1px !important;
+
+#weatherHeroCard.mh2-weather-hero.wx-sunset{
+  background:
+    radial-gradient(circle at 74% 62%, rgba(255,255,245,.98) 0 3.5%, rgba(255,216,111,.92) 4% 9%, rgba(255,113,64,.42) 18%, transparent 34%),
+    radial-gradient(circle at 68% 62%, rgba(255,130,58,.62), transparent 42%),
+    linear-gradient(180deg,#314f97 0%, #6f76b7 24%, #f08a64 55%, #ffb15f 76%, #2b1f2d 100%) !important;
 }
-#updatesTableBody .reqTitle{
-  color:#17324c !important;
+
+/* soft horizon, hills, and glow layer */
+#weatherHeroCard.mh2-weather-hero.wx-sunrise::before,
+#weatherHeroCard.mh2-weather-hero.wx-sunset::before{
+  content:"";
+  position:absolute;
+  inset:auto 0 0 0;
+  height:42%;
+  z-index:1;
+  pointer-events:none;
+  background:
+    radial-gradient(ellipse at 78% 42%, rgba(255,225,127,.45), transparent 28%),
+    linear-gradient(172deg, transparent 0 42%, rgba(29,61,82,.16) 43% 47%, transparent 48%),
+    linear-gradient(8deg, rgba(17,53,68,.30) 0 28%, transparent 29%),
+    linear-gradient(180deg, transparent 0%, rgba(65,42,38,.26) 75%, rgba(31,28,38,.48) 100%);
+  opacity:.82;
+}
+
+/* rays / bloom */
+#weatherHeroCard.mh2-weather-hero.wx-sunrise::after,
+#weatherHeroCard.mh2-weather-hero.wx-sunset::after{
+  content:"" !important;
+  position:absolute !important;
+  inset:0 !important;
+  width:auto !important;
+  height:auto !important;
+  left:0 !important;
+  bottom:0 !important;
+  transform:none !important;
+  border-radius:inherit !important;
+  z-index:1;
+  pointer-events:none;
+  filter:none !important;
+  background:
+    conic-gradient(from 245deg at 74% 62%, transparent 0 11deg, rgba(255,232,151,.34) 12deg 14deg, transparent 15deg 28deg, rgba(255,176,91,.22) 29deg 31deg, transparent 32deg 360deg),
+    linear-gradient(180deg, rgba(255,255,255,.20), transparent 35%, rgba(0,0,0,.12) 100%) !important;
+  opacity:.86;
+}
+
+#weatherHeroCard.mh2-weather-hero.wx-sunrise .mh2-sun,
+#weatherHeroCard.mh2-weather-hero.wx-sunset .mh2-sun{
+  z-index:2;
+  top:auto !important;
+  right:14% !important;
+  left:auto !important;
+  bottom:26% !important;
+  width:82px !important;
+  height:82px !important;
+  transform:none !important;
+  opacity:1 !important;
+  background:radial-gradient(circle at 38% 34%, #fff 0 10%, #fff6c8 24%, #ffd76b 56%, rgba(255,176,74,.35) 72%, rgba(255,176,74,0) 75%) !important;
+  box-shadow:
+    0 0 0 18px rgba(255,217,113,.18),
+    0 0 46px 18px rgba(255,175,70,.42),
+    0 0 92px 38px rgba(255,121,64,.24) !important;
+  filter:saturate(1.16) brightness(1.06);
+}
+
+#weatherHeroCard.mh2-weather-hero.wx-sunrise .mh2-sun{
+  right:13% !important;
+  bottom:32% !important;
+  box-shadow:
+    0 0 0 18px rgba(255,226,132,.18),
+    0 0 56px 20px rgba(255,194,81,.42),
+    0 0 100px 42px rgba(255,161,80,.18) !important;
+}
+
+#weatherHeroCard.mh2-weather-hero.wx-sunset .mh2-cloud,
+#weatherHeroCard.mh2-weather-hero.wx-sunset .mh2-cloud::before,
+#weatherHeroCard.mh2-weather-hero.wx-sunset .mh2-cloud::after,
+#weatherHeroCard.mh2-weather-hero.wx-sunrise .mh2-cloud,
+#weatherHeroCard.mh2-weather-hero.wx-sunrise .mh2-cloud::before,
+#weatherHeroCard.mh2-weather-hero.wx-sunrise .mh2-cloud::after{
+  background:rgba(255,220,190,.40) !important;
+  box-shadow:0 10px 30px rgba(255,145,83,.10);
+}
+
+#weatherHeroCard.mh2-weather-hero.wx-sunset .mh2-daylight-row,
+#weatherHeroCard.mh2-weather-hero.wx-sunrise .mh2-daylight-row{
+  background:rgba(255,255,255,.42) !important;
+}
+
+#weatherHeroCard.mh2-weather-hero.wx-sunset .mh2-daylight-fill,
+#weatherHeroCard.mh2-weather-hero.wx-sunrise .mh2-daylight-fill{
+  background:linear-gradient(90deg, rgba(255,196,88,.80), rgba(255,240,150,.98), rgba(255,156,75,.82)) !important;
+}
+
+#weatherHeroCard.mh2-weather-hero.wx-sunset .mh2-daylight-sun,
+#weatherHeroCard.mh2-weather-hero.wx-sunrise .mh2-daylight-sun{
+  background:#fff3a8 !important;
+  box-shadow:0 0 0 5px rgba(255,243,168,.22), 0 0 14px rgba(255,176,68,.28) !important;
 }
 </style>
+
+<style id="mh2-dark-mode-sweep-targeted-v272">
+/* v272 targeted dark-mode sweep: preserve full v270 build and only fix Manager Hub contrast. */
+html.dark-mode #mh2BoardOverdueCount,
+body.dark-mode #mh2BoardOverdueCount,
+html[data-theme="dark"] #mh2BoardOverdueCount,
+body[data-theme="dark"] #mh2BoardOverdueCount,
+html.dark-mode #mh2HubCardCount,
+body.dark-mode #mh2HubCardCount,
+html[data-theme="dark"] #mh2HubCardCount,
+body[data-theme="dark"] #mh2HubCardCount{
+  color:#ffffff !important;
+  opacity:1 !important;
+  text-shadow:none !important;
+  font-weight:900 !important;
+}
+
+html.dark-mode .mh2-board-tag.is-overdue,
+body.dark-mode .mh2-board-tag.is-overdue,
+html[data-theme="dark"] .mh2-board-tag.is-overdue,
+body[data-theme="dark"] .mh2-board-tag.is-overdue,
+html.dark-mode a.mh2-board-tag.is-overdue,
+body.dark-mode a.mh2-board-tag.is-overdue,
+html[data-theme="dark"] a.mh2-board-tag.is-overdue,
+body[data-theme="dark"] a.mh2-board-tag.is-overdue{
+  background:#fff7f2 !important;
+  color:#0f172a !important;
+  border-color:#fecaca !important;
+  opacity:1 !important;
+  text-shadow:none !important;
+  font-weight:900 !important;
+  text-decoration:none !important;
+}
+</style>
+
+<script>
+/* v403 URL context lock: Manager Hub owns auth/community context and passes it explicitly. */
+(function(){
+  'use strict';
+  if (window.__ZUMMEE_V403_BOARD_V2_ROUTE_LOCK__) return;
+  window.__ZUMMEE_V403_BOARD_V2_ROUTE_LOCK__ = true;
+  const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const isUuid=v=>UUID_RE.test(String(v||'').trim());
+  const enc=v=>encodeURIComponent(String(v||''));
+  function store(k,v){try{ if(v) { localStorage.setItem(k,v); sessionStorage.setItem(k,v); }}catch(e){}}
+  function read(k){try{return String(localStorage.getItem(k)||sessionStorage.getItem(k)||'').trim();}catch(e){return '';}}
+  function selectedCommunity(){
+    const params=new URLSearchParams(location.search);
+    let id=String(params.get('community_id')||params.get('cid')||'').trim();
+    let name=String(params.get('community_name')||params.get('name')||'').trim();
+    const sel=document.getElementById('zummeeCommunitySelect')||document.querySelector('select[data-community-select],#communitySelect,#communityDropdown,select');
+    if(!isUuid(id) && sel){
+      if(isUuid(sel.value)) id=String(sel.value).trim();
+      const opt=sel.options&&sel.selectedIndex>=0?sel.options[sel.selectedIndex]:null;
+      if(!name && opt) name=String(opt.textContent||'').trim();
+    }
+    if(!isUuid(id)){
+      const vals=[window.currentCommunityId, window.currentCommunity&&window.currentCommunity.id, read('zummee_selected_community_id'), read('activeCommunityId'), read('zummeeActiveCommunityId'), read('currentCommunityId')];
+      for(const v of vals){ if(isUuid(v)){ id=String(v).trim(); break; } }
+    }
+    if(!name){ name=read('zummeeCurrentCommunityName')||read('currentCommunityName')||read('activeCommunityName')||''; }
+    return {id,name};
+  }
+  async function getUserId(){
+    const stored=read('zummee_user_id_v1')||read('zummeeUserId')||read('activeUserId')||read('currentUserId');
+    if(isUuid(stored)) return stored;
+    try{
+      const sb=window.supabaseClient||(window.getSupabase&&window.getSupabase())||null;
+      const res=sb&&sb.auth&&await sb.auth.getSession();
+      const id=res&&res.data&&res.data.session&&res.data.session.user&&res.data.session.user.id;
+      if(isUuid(id)){ ['zummee_user_id_v1','zummeeUserId','activeUserId','currentUserId'].forEach(k=>store(k,id)); return id; }
+    }catch(e){}
+    return '';
+  }
+  async function persistAssignedCommunities(){
+    try{
+      const userId=await getUserId();
+      if(!isUuid(userId)) return;
+      let list=[];
+      if(window.ZummeeDataLayer && typeof window.ZummeeDataLayer.getAssignedCommunities==='function'){
+        list=await window.ZummeeDataLayer.getAssignedCommunities({userId:userId});
+      }
+      if(!Array.isArray(list) || !list.length){
+        try{ list=JSON.parse(localStorage.getItem('zummee_assigned_communities_v1')||sessionStorage.getItem('zummee_assigned_communities_v1')||'[]'); }catch(_e){ list=[]; }
+      }
+      list=(Array.isArray(list)?list:[]).map(c=>({id:String(c.id||c.community_id||'').trim(), community_id:String(c.id||c.community_id||'').trim(), name:String(c.name||c.community_name||'').trim()})).filter(c=>isUuid(c.id));
+      if(!list.length) return;
+      localStorage.setItem('zummee_assigned_communities_v1', JSON.stringify(list));
+      sessionStorage.setItem('zummee_assigned_communities_v1', JSON.stringify(list));
+      window.__zummeeAssignedCommunities=list;
+      console.info('[v403 board route] saved assigned communities', list.length);
+    }catch(e){ console.warn('[v403 board route] could not persist assigned communities', e); }
+  }
+  async function boardV2Url(extra){
+    const c=selectedCommunity(); const userId=await getUserId();
+    if(isUuid(c.id)){ ['zummee_selected_community_id','activeCommunityId','zummeeActiveCommunityId','currentCommunityId'].forEach(k=>store(k,c.id)); }
+    if(c.name){ ['zummeeCurrentCommunityName','currentCommunityName','activeCommunityName'].forEach(k=>store(k,c.name)); }
+    const p=[];
+    if(isUuid(c.id)) p.push('community_id='+enc(c.id));
+    if(c.name) p.push('community_name='+enc(c.name));
+    if(isUuid(userId)) p.push('user_id='+enc(userId));
+    if(extra) p.push(String(extra).replace(/^\?/,''));
+    return '/board_member_hub_v2.html' + (p.length?'?'+p.join('&'):'');
+  }
+  async function openBoardHub(extra){ window.location.href=await boardV2Url(extra); }
+  window.goToBoardHub=function(){ openBoardHub(); };
+  window.openBoardMemberHub=function(){ openBoardHub(); };
+  function patchLinks(){
+    document.querySelectorAll('a[href*="board_member_hub"],button[data-board-hub],button[data-open-board-hub]').forEach(el=>{
+      if(el.__zummeeV400BoardPatched) return; el.__zummeeV400BoardPatched=true;
+      if(el.tagName==='A') el.setAttribute('href','#');
+      el.addEventListener('click', function(ev){
+        const raw=String(el.getAttribute('href')||'');
+        if(raw==='#'||/board_member_hub/.test(raw)){ ev.preventDefault(); ev.stopPropagation(); openBoardHub(raw.includes('#calendar')?'section=calendar':''); }
+      }, true);
+    });
+    ['mh2AlertBoard','boardMemberHubCard'].forEach(id=>{ const a=document.getElementById(id); if(a&&a.tagName==='A') a.setAttribute('href','#'); });
+  }
+  document.addEventListener('DOMContentLoaded',()=>{ persistAssignedCommunities(); patchLinks(); setInterval(patchLinks,1500); });
+  window.addEventListener('pageshow',()=>{ persistAssignedCommunities(); patchLinks(); });
+})();
+</script>
+
+
+
+<!-- v404: Smart Alerts and Board Hub submitted items use shared notification_events board_item_submitted direct authority. No RPC dependency. -->
+
+
+<!-- v492: Manager Hub canonical data layer lock. Final owner for Smart Alerts + Operations Portal pill. -->
+<script src="shared/manager-hub-data-layer.js?v=2026-05-04-v500"></script>
