@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-07-v489-rwo-live-status-refresh";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-07-v490-rwo-realtime-polling-fallback";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <script id="rwo-v478-scroll-reset">
 (function(){
   try{ if('scrollRestoration' in history) history.scrollRestoration='manual'; }catch(_e){}
@@ -2316,20 +2316,24 @@ function statusClass(rowOrStatus){
     }catch(_e){}
     loadWorkOrders({ clearSelection: new URLSearchParams(window.location.search || '').get('new_work_order') === '1' });
 
-    /* ZUMMEE_PATCH v489 — Resident Work Orders live status refresh
-       Purpose:
-       - When a vendor accepts a job from email/vendor_accept.html, the work order status updates in Supabase.
-       - This page now refreshes its data automatically when the tab regains focus, becomes visible,
-         receives a local work-order change event, or receives a Supabase Realtime row update.
-       - This prevents "Sent to Vendor" from staying on screen until manual refresh.
+    /* ZUMMEE_PATCH v490 — Resident Work Orders live status polling fallback
+       Why:
+       - Supabase Realtime may not be enabled or may not fire under the current RLS/session path.
+       - Vendor Accept updates can happen in a different tab/device, so focus/visibility alone is not enough.
+       Long-term behavior:
+       - Keep Realtime/focus refresh where available.
+       - Add a quiet, token-safe REST polling fallback every few seconds while this page is visible.
+       - Update the existing in-memory rows and rerender without requiring a full browser refresh.
     */
-    (function setupResidentWorkOrdersLiveRefresh(){
-      if(window.__rwoLiveStatusRefreshV489) return;
-      window.__rwoLiveStatusRefreshV489 = true;
+    (function setupResidentWorkOrdersRealtimeAndPolling(){
+      if(window.__rwoLivePollingFallbackV490) return;
+      window.__rwoLivePollingFallbackV490 = true;
 
-      var refreshTimer = null;
-      var lastRefreshAt = 0;
+      var pollTimer = null;
       var realtimeChannel = null;
+      var pollInFlight = false;
+      var lastDigest = "";
+      var lastPollAt = 0;
 
       function activeCommunity(){
         try{
@@ -2339,7 +2343,7 @@ function statusClass(rowOrStatus){
         }
       }
 
-      function selectedCommunityName(){
+      function activeCommunityName(){
         try{
           var sel = headerCommunitySelect && headerCommunitySelect();
           if(sel && sel.selectedOptions && sel.selectedOptions[0]){
@@ -2347,9 +2351,105 @@ function statusClass(rowOrStatus){
           }
         }catch(_e){}
         try{
-          return String(localStorage.getItem('activeCommunityName') || localStorage.getItem('zummeeActiveCommunityName') || '').trim();
+          return String(localStorage.getItem('activeCommunityName') || localStorage.getItem('zummeeActiveCommunityName') || localStorage.getItem('zummeeCurrentCommunityName') || '').trim();
         }catch(_e){
           return '';
+        }
+      }
+
+      function sortRows(rows){
+        rows = Array.isArray(rows) ? rows.slice() : [];
+        rows.sort(function(a,b){
+          var ad = new Date(a.submitted_at || a.created_at || a.updated_at || 0).getTime() || 0;
+          var bd = new Date(b.submitted_at || b.created_at || b.updated_at || 0).getTime() || 0;
+          return bd - ad;
+        });
+        return rows;
+      }
+
+      function digestRows(rows){
+        try{
+          return (rows || []).map(function(r){
+            return [
+              r.id || '',
+              r.status || '',
+              r.updated_at || '',
+              r.vendor_response_status || '',
+              r.vendor_accepted_at || '',
+              r.vendor_email_status || '',
+              r.assigned_vendor_name || '',
+              r.assigned_vendor_email || ''
+            ].join(':');
+          }).join('|');
+        }catch(_e){
+          return String(Date.now());
+        }
+      }
+
+      function rerenderFromRows(rows, reason){
+        try{
+          var selectedId = selected && selected.id ? String(selected.id) : '';
+          workOrders = sortRows(rows);
+          if(selectedId){
+            selected = workOrders.find(function(r){ return String(r.id || '') === selectedId; }) || selected;
+          }
+          applyFilters();
+          if(selected && workOrders.some(function(r){ return String(r.id || '') === String(selected.id || ''); })){
+            renderDetail(selected);
+            populateVendorDropdown();
+          }
+          var cname = activeCommunityName();
+          if(statusLine){
+            statusLine.textContent = 'Resident work orders loaded' + (cname ? (' for ' + cname) : '') + '.';
+          }
+          try{ console.log('[RWO v490] refreshed from', reason || 'poll'); }catch(_e){}
+        }catch(err){
+          console.warn('[RWO v490] rerender failed:', err);
+        }
+      }
+
+      async function quietRefresh(reason, force){
+        if(pollInFlight) return;
+        var cid = activeCommunity();
+        if(!cid) return;
+        if(document.hidden && !force) return;
+
+        var now = Date.now();
+        if(!force && now - lastPollAt < 3000) return;
+        lastPollAt = now;
+
+        pollInFlight = true;
+        try{
+          var restPath = 'resident_work_orders?select=*'
+            + '&community_id=eq.' + encodeURIComponent(cid)
+            + '&limit=500';
+
+          var rows = await residentApi(restPath, { method:'GET' });
+          if(!Array.isArray(rows)) rows = [];
+
+          var nextDigest = digestRows(rows);
+          if(force || nextDigest !== lastDigest){
+            lastDigest = nextDigest;
+            rerenderFromRows(rows, reason || 'quiet-refresh');
+          }
+        }catch(err){
+          console.warn('[RWO v490] quiet refresh skipped:', err);
+        }finally{
+          pollInFlight = false;
+        }
+      }
+
+      function startPolling(){
+        if(pollTimer) return;
+        pollTimer = setInterval(function(){
+          quietRefresh('polling-fallback', false);
+        }, 4000);
+      }
+
+      function stopPolling(){
+        if(pollTimer){
+          clearInterval(pollTimer);
+          pollTimer = null;
         }
       }
 
@@ -2364,68 +2464,6 @@ function statusClass(rowOrStatus){
         }
       }
 
-      function scheduleResidentWorkOrdersRefresh(reason, row){
-        try{
-          if(row && !shouldReloadForRow(row)) return;
-          var cid = activeCommunity();
-          if(!cid) return;
-
-          clearTimeout(refreshTimer);
-          refreshTimer = setTimeout(async function(){
-            try{
-              var now = Date.now();
-              if(now - lastRefreshAt < 850) return;
-              lastRefreshAt = now;
-
-              // Preserve current selected row/detail pane if possible; do not clear selection.
-              if(typeof loadWorkOrders === 'function'){
-                await loadWorkOrders({
-                  communityId: cid,
-                  communityName: selectedCommunityName(),
-                  preserveSelection: true,
-                  liveRefreshReason: reason || 'live-refresh'
-                });
-              }
-            }catch(err){
-              console.warn('[RWO v489] Live refresh failed:', err);
-            }
-          }, 350);
-        }catch(err){
-          console.warn('[RWO v489] Could not schedule live refresh:', err);
-        }
-      }
-
-      window.ZummeeResidentWorkOrdersRefresh = function(reason){
-        scheduleResidentWorkOrdersRefresh(reason || 'manual');
-      };
-
-      // Refresh when returning from vendor_accept.html or another tab/app.
-      document.addEventListener('visibilitychange', function(){
-        if(!document.hidden){
-          scheduleResidentWorkOrdersRefresh('visibilitychange');
-        }
-      });
-
-      window.addEventListener('focus', function(){
-        scheduleResidentWorkOrdersRefresh('window-focus');
-      });
-
-      // Local app events used by delete/vendor routing/status changes.
-      [
-        'resident-work-orders:changed',
-        'zummee:resident-work-orders-changed',
-        'zummee:work-order-status-updated',
-        'zummee:vendor-job-accepted',
-        'storage'
-      ].forEach(function(eventName){
-        window.addEventListener(eventName, function(){
-          scheduleResidentWorkOrdersRefresh(eventName);
-        });
-        document.addEventListener(eventName, function(){
-          scheduleResidentWorkOrdersRefresh(eventName);
-        });
-      });
-
       async function setupRealtime(){
         try{
           var client = await getResidentWorkOrdersClient();
@@ -2433,27 +2471,59 @@ function statusClass(rowOrStatus){
           if(realtimeChannel) return;
 
           realtimeChannel = client
-            .channel('rwo_live_status_refresh_v489')
+            .channel('rwo_live_status_refresh_v490')
             .on(
               'postgres_changes',
               { event: '*', schema: 'public', table: 'resident_work_orders' },
               function(payload){
                 var row = (payload && (payload.new || payload.old)) || null;
-                scheduleResidentWorkOrdersRefresh('supabase-realtime', row);
+                if(shouldReloadForRow(row)){
+                  quietRefresh('supabase-realtime', true);
+                }
               }
             )
             .subscribe(function(status){
-              if(status === 'SUBSCRIBED'){
-                console.log('[RWO v489] Realtime status refresh subscribed');
-              }
+              try{ console.log('[RWO v490] realtime status:', status); }catch(_e){}
             });
         }catch(err){
-          console.warn('[RWO v489] Realtime subscribe skipped:', err);
+          console.warn('[RWO v490] realtime subscribe skipped:', err);
         }
       }
 
-      setTimeout(setupRealtime, 900);
-      setTimeout(function(){ scheduleResidentWorkOrdersRefresh('initial-stabilize'); }, 1800);
+      window.ZummeeResidentWorkOrdersRefresh = function(reason){
+        return quietRefresh(reason || 'manual', true);
+      };
+
+      document.addEventListener('visibilitychange', function(){
+        if(document.hidden){
+          stopPolling();
+        }else{
+          startPolling();
+          quietRefresh('visibilitychange', true);
+        }
+      });
+
+      window.addEventListener('focus', function(){
+        quietRefresh('window-focus', true);
+      });
+
+      [
+        'resident-work-orders:changed',
+        'zummee:resident-work-orders-changed',
+        'zummee:work-order-status-updated',
+        'zummee:vendor-job-accepted',
+        'storage'
+      ].forEach(function(eventName){
+        window.addEventListener(eventName, function(){ quietRefresh(eventName, true); });
+        document.addEventListener(eventName, function(){ quietRefresh(eventName, true); });
+      });
+
+      setTimeout(function(){
+        try{ lastDigest = digestRows(workOrders || []); }catch(_e){}
+        setupRealtime();
+        startPolling();
+        quietRefresh('initial-v490', true);
+      }, 1200);
     })();
 
   </script>
