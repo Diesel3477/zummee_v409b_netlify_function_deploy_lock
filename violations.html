@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Zummee Violations</title>
   <script>
+    window.ZUMMEE_VIOLATIONS_BUILD = 'v540b-community-categories-readonly';
     (function(){
       try{
         var stored = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || 'light';
@@ -23,6 +24,8 @@
       --z-blue:#2563eb;
       --z-blue-dark:#1e4fd2;
       --z-gold:#f4b63f;
+      --z-green:#16a34a;
+      --z-red:#dc2626;
       --z-soft:#eef6ff;
       --z-shadow:0 18px 50px rgba(18,45,78,.10);
       --z-radius:24px;
@@ -45,149 +48,82 @@
       min-height:100vh;
     }
     html[data-theme="dark"] body{background:linear-gradient(180deg,#07111f,#0a1626 55%,#07111f);}
-    .page{
-      width:min(1180px,calc(100% - 32px));
-      margin:0 auto;
-      padding:20px 0 44px;
-    }
+    .page{width:min(1180px,calc(100% - 32px));margin:0 auto;padding:20px 0 44px;}
     .topbar{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:14px;
-      background:rgba(255,255,255,.88);
-      border:1px solid var(--z-line);
-      border-radius:26px;
-      box-shadow:var(--z-shadow);
-      padding:16px 18px;
-      position:sticky;
-      top:12px;
-      z-index:5;
-      backdrop-filter:blur(16px);
+      display:flex;align-items:center;justify-content:space-between;gap:14px;
+      background:rgba(255,255,255,.88);border:1px solid var(--z-line);border-radius:26px;
+      box-shadow:var(--z-shadow);padding:16px 18px;position:sticky;top:12px;z-index:5;backdrop-filter:blur(16px);
     }
     html[data-theme="dark"] .topbar{background:rgba(15,29,49,.88);}
     .brand{display:flex;align-items:center;gap:14px;min-width:0;}
     .mark{
-      width:46px;height:46px;border-radius:16px;
-      display:grid;place-items:center;
-      background:linear-gradient(145deg,#eef6ff,#ffffff);
-      border:1px solid var(--z-line);
-      color:var(--z-blue);
-      font-weight:900;
-      letter-spacing:-.04em;
-      box-shadow:0 10px 22px rgba(37,99,235,.11);
-      flex:0 0 auto;
+      width:46px;height:46px;border-radius:16px;display:grid;place-items:center;
+      background:linear-gradient(145deg,#eef6ff,#ffffff);border:1px solid var(--z-line);color:var(--z-blue);
+      font-weight:900;letter-spacing:-.04em;box-shadow:0 10px 22px rgba(37,99,235,.11);flex:0 0 auto;
     }
     html[data-theme="dark"] .mark{background:rgba(255,255,255,.08);}
     h1{font-size:28px;line-height:1.05;margin:0;letter-spacing:-.04em;}
     .subtitle{margin:5px 0 0;color:var(--z-muted);font-size:13px;font-weight:700;}
     .top-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
     .select-shell,.btn{
-      min-height:42px;
-      border-radius:14px;
-      border:1px solid var(--z-line);
-      background:var(--z-card);
-      color:var(--z-ink);
-      font-weight:800;
-      font-size:13px;
-      padding:0 14px;
-      box-shadow:0 8px 18px rgba(18,45,78,.06);
+      min-height:42px;border-radius:14px;border:1px solid var(--z-line);background:var(--z-card);color:var(--z-ink);
+      font-weight:800;font-size:13px;padding:0 14px;box-shadow:0 8px 18px rgba(18,45,78,.06);
     }
-    .select-shell{display:flex;align-items:center;min-width:220px;color:var(--z-muted);}
-    .btn{
-      display:inline-flex;align-items:center;justify-content:center;
-      text-decoration:none;
-      cursor:pointer;
-      appearance:none;
-    }
+    .select-shell{min-width:240px;appearance:none;}
+    .btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;cursor:pointer;appearance:none;}
     .btn.primary{background:linear-gradient(180deg,#2f74ff,#1e55dc);color:#fff;border-color:rgba(37,99,235,.42);}
-    .hero{
-      margin-top:16px;
-      display:grid;
-      grid-template-columns:1.04fr .96fr;
-      gap:14px;
-      align-items:stretch;
-    }
-    .card{
-      background:var(--z-card);
-      border:1px solid var(--z-line);
-      border-radius:var(--z-radius);
-      box-shadow:var(--z-shadow);
-      padding:18px;
-      min-width:0;
-    }
+    .btn[disabled]{opacity:.62;cursor:not-allowed;}
+    .hero{margin-top:16px;display:grid;grid-template-columns:1.04fr .96fr;gap:14px;align-items:stretch;}
+    .card{background:var(--z-card);border:1px solid var(--z-line);border-radius:var(--z-radius);box-shadow:var(--z-shadow);padding:18px;min-width:0;}
     .card h2{margin:0 0 8px;font-size:18px;letter-spacing:-.025em;}
     .card p{margin:0;color:var(--z-muted);line-height:1.45;font-size:14px;}
     .status-pill{
-      display:inline-flex;align-items:center;gap:8px;
-      margin-bottom:12px;
-      padding:8px 11px;
-      border-radius:999px;
-      background:rgba(244,182,63,.14);
-      border:1px solid rgba(244,182,63,.42);
-      color:#8b5a00;
-      font-weight:900;
-      font-size:12px;
-      letter-spacing:.01em;
+      display:inline-flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px 11px;border-radius:999px;
+      background:rgba(244,182,63,.14);border:1px solid rgba(244,182,63,.42);color:#8b5a00;font-weight:900;font-size:12px;letter-spacing:.01em;
     }
+    .status-pill.good{background:rgba(22,163,74,.12);border-color:rgba(22,163,74,.32);color:#166534;}
+    .status-pill.warn{background:rgba(244,182,63,.14);border-color:rgba(244,182,63,.42);color:#8b5a00;}
+    .status-pill.error{background:rgba(220,38,38,.10);border-color:rgba(220,38,38,.24);color:#991b1b;}
     html[data-theme="dark"] .status-pill{color:#ffd98a;background:rgba(244,182,63,.12);}
+    html[data-theme="dark"] .status-pill.good{color:#90eead;background:rgba(22,163,74,.13);}
+    html[data-theme="dark"] .status-pill.error{color:#fca5a5;background:rgba(220,38,38,.12);}
     .dot{width:8px;height:8px;border-radius:50%;background:var(--z-gold);box-shadow:0 0 0 4px rgba(244,182,63,.16);}
-    .grid{
-      margin-top:14px;
-      display:grid;
-      grid-template-columns:repeat(3,1fr);
-      gap:12px;
-    }
-    .mini{
-      border:1px solid var(--z-line);
-      background:var(--z-soft);
-      border-radius:18px;
-      padding:14px;
-      min-height:96px;
-    }
+    .status-pill.good .dot{background:var(--z-green);box-shadow:0 0 0 4px rgba(22,163,74,.15);}
+    .status-pill.error .dot{background:var(--z-red);box-shadow:0 0 0 4px rgba(220,38,38,.12);}
+    .grid{margin-top:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+    .mini{border:1px solid var(--z-line);background:var(--z-soft);border-radius:18px;padding:14px;min-height:96px;}
     .mini strong{display:block;font-size:14px;margin-bottom:6px;}
     .mini span{display:block;color:var(--z-muted);font-size:12px;font-weight:700;line-height:1.35;}
-    .form-shell{
-      margin-top:14px;
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:12px;
-    }
+    .form-shell{margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px;}
     .field{display:flex;flex-direction:column;gap:6px;}
     .field.full{grid-column:1 / -1;}
     label{font-size:12px;font-weight:900;color:var(--z-muted);}
     input,select,textarea{
-      width:100%;
-      border:1px solid var(--z-line);
-      border-radius:14px;
-      background:rgba(255,255,255,.88);
-      color:var(--z-ink);
-      font:inherit;
-      font-size:14px;
-      padding:12px 13px;
-      outline:none;
+      width:100%;border:1px solid var(--z-line);border-radius:14px;background:rgba(255,255,255,.88);color:var(--z-ink);
+      font:inherit;font-size:14px;padding:12px 13px;outline:none;
     }
     html[data-theme="dark"] input,html[data-theme="dark"] select,html[data-theme="dark"] textarea{background:rgba(255,255,255,.06);}
     textarea{min-height:88px;resize:vertical;}
-    .disabled-note{opacity:.72;}
-    .list-placeholder{
-      margin-top:14px;
-      border:1px dashed rgba(37,99,235,.35);
-      border-radius:20px;
-      padding:18px;
-      background:var(--z-soft);
-      color:var(--z-muted);
-      font-weight:750;
-      line-height:1.4;
-    }
+    .readonly-note{opacity:.74;}
+    .list-placeholder{margin-top:14px;border:1px dashed rgba(37,99,235,.35);border-radius:20px;padding:18px;background:var(--z-soft);color:var(--z-muted);font-weight:750;line-height:1.4;}
+    .info-row{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px;}
+    .info-box{border:1px solid var(--z-line);border-radius:18px;padding:14px;background:rgba(255,255,255,.58);}
+    html[data-theme="dark"] .info-box{background:rgba(255,255,255,.05);}
+    .info-box .k{font-size:11px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:var(--z-muted);}
+    .info-box .v{margin-top:5px;font-size:18px;font-weight:950;letter-spacing:-.03em;}
+    .category-list{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px;}
+    .category-chip{border:1px solid var(--z-line);border-radius:16px;background:var(--z-soft);padding:11px 12px;}
+    .category-chip strong{display:block;font-size:13px;margin-bottom:4px;}
+    .category-chip span{display:block;color:var(--z-muted);font-size:12px;font-weight:700;line-height:1.3;}
     @media (max-width:880px){
       .page{width:min(100% - 22px,1180px);padding-top:12px;}
-      .topbar{position:relative;top:auto;align-items:flex-start;}
+      .topbar{position:relative;top:auto;align-items:flex-start;flex-direction:column;}
       .hero{grid-template-columns:1fr;}
-      .grid{grid-template-columns:1fr;}
+      .grid,.category-list,.info-row{grid-template-columns:1fr;}
       .form-shell{grid-template-columns:1fr;}
       .top-actions{width:100%;justify-content:flex-start;}
       .select-shell{min-width:100%;}
+      .btn{flex:1;}
     }
   </style>
 </head>
@@ -198,26 +134,41 @@
         <div class="mark" aria-hidden="true">Z</div>
         <div>
           <h1>Violations</h1>
-          <div class="subtitle">Inspection workflow shell · Supabase wiring comes next</div>
+          <div class="subtitle" id="pageSubtitle">Loading assigned communities and violation categories</div>
         </div>
       </div>
       <div class="top-actions">
-        <div class="select-shell" aria-label="Community selector placeholder">Selected Community</div>
+        <select id="violationsCommunitySelect" class="select-shell" aria-label="Community selector">
+          <option value="">Loading communities…</option>
+        </select>
         <a class="btn" href="manager_hub.html">Back to Hub</a>
         <button class="btn primary" type="button" disabled>Start Inspection</button>
       </div>
     </header>
 
-    <section class="hero" aria-label="Violations build shell">
+    <section class="hero" aria-label="Violations Supabase read test">
       <article class="card">
-        <div class="status-pill"><span class="dot"></span> Step 1 Shell Ready</div>
+        <div id="loadStatus" class="status-pill warn"><span class="dot"></span> Loading Supabase reads</div>
         <h2>New Violation Case</h2>
-        <p>This first build intentionally adds the page shell only, so we can confirm the route and layout on the working iPad baseline before adding Supabase save logic.</p>
+        <p>This build safely reads assigned communities and violation categories only. Case saving, photos, and letters are still locked until this read layer is confirmed stable on iPad.</p>
 
-        <div class="form-shell disabled-note" aria-disabled="true">
+        <div class="info-row">
+          <div class="info-box">
+            <div class="k">Selected Community</div>
+            <div class="v" id="selectedCommunityLabel">—</div>
+          </div>
+          <div class="info-box">
+            <div class="k">Loaded Categories</div>
+            <div class="v" id="categoryCountLabel">—</div>
+          </div>
+        </div>
+
+        <div class="form-shell readonly-note" aria-disabled="true">
           <div class="field">
             <label>Violation Category</label>
-            <select disabled><option>Categories load in Step 2</option></select>
+            <select id="violationCategorySelect">
+              <option value="">Loading categories…</option>
+            </select>
           </div>
           <div class="field">
             <label>Offense Number</label>
@@ -243,24 +194,176 @@
       </article>
 
       <aside class="card">
-        <h2>Build Roadmap</h2>
-        <p>We are keeping this module isolated first so it cannot disturb Manager Hub, Weather Hub, Smart Alerts, or the stable top-button spacing.</p>
+        <h2>Read Layer Test</h2>
+        <p>Only two live reads are enabled: assigned communities from the existing shared data layer, and active categories from <strong>violation_categories</strong>.</p>
         <div class="grid">
-          <div class="mini"><strong>Step 1</strong><span>Page shell and Manager Hub route test.</span></div>
-          <div class="mini"><strong>Step 2</strong><span>Assigned community dropdown only.</span></div>
-          <div class="mini"><strong>Step 3</strong><span>Categories and covenant preview from Supabase.</span></div>
-          <div class="mini"><strong>Step 4</strong><span>Save violation case and render open cases.</span></div>
-          <div class="mini"><strong>Step 5</strong><span>Photos, letter preview, PDF generation.</span></div>
-          <div class="mini"><strong>Step 6</strong><span>Email delivery and archive workflow.</span></div>
+          <div class="mini"><strong>Communities</strong><span id="communityReadNote">Waiting for shared data layer…</span></div>
+          <div class="mini"><strong>Categories</strong><span id="categoryReadNote">Waiting for Supabase…</span></div>
+          <div class="mini"><strong>Writes</strong><span>No case saving is enabled in this build.</span></div>
         </div>
+
+        <div id="categoryPreviewList" class="category-list" aria-label="Loaded violation categories"></div>
       </aside>
     </section>
 
     <section class="card" style="margin-top:14px;">
       <h2>Open Violations</h2>
-      <p>Open cases will appear here after Supabase case saving is added in a later step.</p>
-      <div class="list-placeholder">No live data is loaded in this shell build. This is intentional for the first stability test.</div>
+      <p>Open cases will appear here after save logic is added in the next step.</p>
+      <div class="list-placeholder">No case records are loaded or written in v540b. This is intentional.</div>
     </section>
   </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="shared/supabase-client.js"></script>
+  <script src="shared/data-layer.js"></script>
+  <script>
+    (function(){
+      'use strict';
+      var state = { communities: [], categories: [], selectedCommunityId: '', selectedCommunityName: '' };
+      var els = {};
+      function $(id){ return document.getElementById(id); }
+      function clean(v){ return String(v == null ? '' : v).replace(/\s+/g,' ').trim(); }
+      function setText(id, text){ var el=$(id); if(el) el.textContent = text; }
+      function setStatus(kind, text){
+        var el = $('loadStatus');
+        if(!el) return;
+        el.className = 'status-pill ' + (kind || 'warn');
+        el.innerHTML = '<span class="dot"></span> ' + text;
+      }
+      function option(text, value){ var o=document.createElement('option'); o.textContent=text; o.value=value || ''; return o; }
+      function getUrlCommunityId(){ try{ return clean(new URLSearchParams(location.search).get('community_id') || ''); }catch(_e){ return ''; } }
+      function getStoredCommunityId(){
+        var keys=['zummee_active_community_id','zummee_selected_community_id','zummeeActiveCommunityId','activeCommunityId','currentCommunityId','zummee_community_id'];
+        for(var i=0;i<keys.length;i++){
+          try{ var v=clean(localStorage.getItem(keys[i]) || sessionStorage.getItem(keys[i]) || ''); if(v) return v; }catch(_e){}
+        }
+        return '';
+      }
+      async function waitForDataLayer(){
+        var start = Date.now();
+        while(Date.now() - start < 7000){
+          if(window.ZummeeDataLayer && typeof window.ZummeeDataLayer.getAssignedCommunities === 'function') return window.ZummeeDataLayer;
+          await new Promise(function(r){ setTimeout(r,80); });
+        }
+        return null;
+      }
+      async function loadCommunities(){
+        var select = $('violationsCommunitySelect');
+        select.innerHTML = '';
+        select.appendChild(option('Loading communities…',''));
+        var dl = await waitForDataLayer();
+        if(!dl){
+          select.innerHTML = '';
+          select.appendChild(option('Community loader unavailable',''));
+          setText('communityReadNote','Shared data layer unavailable.');
+          throw new Error('Shared data layer unavailable');
+        }
+        var rows = await dl.getAssignedCommunities({});
+        rows = Array.isArray(rows) ? rows : [];
+        state.communities = rows.filter(function(r){ return clean(r.id || r.community_id) && clean(r.name || r.community_name); });
+        select.innerHTML = '';
+        if(!state.communities.length){
+          select.appendChild(option('No assigned communities found',''));
+          setText('communityReadNote','No assigned communities returned.');
+          setText('selectedCommunityLabel','None');
+          return;
+        }
+        state.communities.forEach(function(c){ select.appendChild(option(clean(c.name || c.community_name), clean(c.id || c.community_id))); });
+        var preferred = getUrlCommunityId() || getStoredCommunityId();
+        var match = state.communities.find(function(c){ return clean(c.id || c.community_id) === preferred; }) || state.communities[0];
+        select.value = clean(match.id || match.community_id);
+        applyCommunitySelection(false);
+        setText('communityReadNote', state.communities.length + ' assigned communit' + (state.communities.length === 1 ? 'y' : 'ies') + ' loaded.');
+      }
+      function applyCommunitySelection(push){
+        var select = $('violationsCommunitySelect');
+        var id = clean(select && select.value);
+        var found = state.communities.find(function(c){ return clean(c.id || c.community_id) === id; }) || {};
+        var name = clean(found.name || found.community_name || 'Selected Community');
+        state.selectedCommunityId = id;
+        state.selectedCommunityName = name;
+        setText('selectedCommunityLabel', name || '—');
+        setText('pageSubtitle', name ? ('Violations setup for ' + name) : 'Select a community');
+        try{
+          if(window.ZummeeDataLayer && typeof window.ZummeeDataLayer.syncCommunityContext === 'function'){
+            window.ZummeeDataLayer.syncCommunityContext(id, name, push ? 'push' : 'none');
+          }
+        }catch(_e){}
+      }
+      async function getClient(){
+        if(window.ensureSupabase && typeof window.ensureSupabase === 'function') return await window.ensureSupabase();
+        if(window.getSupabase && typeof window.getSupabase === 'function') return window.getSupabase();
+        if(window.supabaseClient) return window.supabaseClient;
+        return null;
+      }
+      async function loadCategories(){
+        var select = $('violationCategorySelect');
+        select.innerHTML = '';
+        select.appendChild(option('Loading categories…',''));
+        var sb = await getClient();
+        if(!sb || typeof sb.from !== 'function') throw new Error('Supabase client unavailable');
+        var res = await sb.from('violation_categories')
+          .select('id, category_name, description, default_severity, is_active')
+          .eq('is_active', true)
+          .order('category_name', { ascending: true });
+        if(res.error) throw res.error;
+        state.categories = Array.isArray(res.data) ? res.data : [];
+        select.innerHTML = '';
+        if(!state.categories.length){
+          select.appendChild(option('No active categories found',''));
+          setText('categoryReadNote','No active categories returned.');
+          setText('categoryCountLabel','0');
+          renderCategoryPreview();
+          return;
+        }
+        select.appendChild(option('Select violation category',''));
+        state.categories.forEach(function(c){ select.appendChild(option(clean(c.category_name), clean(c.id))); });
+        setText('categoryReadNote', state.categories.length + ' active categor' + (state.categories.length === 1 ? 'y' : 'ies') + ' loaded.');
+        setText('categoryCountLabel', String(state.categories.length));
+        renderCategoryPreview();
+      }
+      function renderCategoryPreview(){
+        var box = $('categoryPreviewList');
+        if(!box) return;
+        box.innerHTML = '';
+        if(!state.categories.length){
+          var empty = document.createElement('div');
+          empty.className = 'list-placeholder';
+          empty.textContent = 'No categories loaded yet.';
+          box.appendChild(empty);
+          return;
+        }
+        state.categories.slice(0,10).forEach(function(c){
+          var div = document.createElement('div');
+          div.className = 'category-chip';
+          div.innerHTML = '<strong></strong><span></span>';
+          div.querySelector('strong').textContent = clean(c.category_name);
+          div.querySelector('span').textContent = clean(c.description || c.default_severity || 'Active category');
+          box.appendChild(div);
+        });
+      }
+      async function boot(){
+        try{
+          setStatus('warn','Loading Supabase reads');
+          await loadCommunities();
+          await loadCategories();
+          setStatus('good','Read layer connected');
+        }catch(e){
+          console.error('[Zummee Violations v540b] boot failed', e);
+          setStatus('error','Read layer needs attention');
+          setText('pageSubtitle','Unable to complete read test');
+          if(!state.communities.length) setText('communityReadNote', clean(e && e.message) || 'Community read failed.');
+          if(!state.categories.length) setText('categoryReadNote', clean(e && e.message) || 'Category read failed.');
+        }
+      }
+      document.addEventListener('DOMContentLoaded', function(){
+        els.communitySelect = $('violationsCommunitySelect');
+        if(els.communitySelect){
+          els.communitySelect.addEventListener('change', function(){ applyCommunitySelection(true); });
+        }
+        boot();
+      });
+    })();
+  </script>
 </body>
 </html>
