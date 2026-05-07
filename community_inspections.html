@@ -2,7 +2,7 @@
 
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-07-v2125-email-deliverability-audit";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-07-v500-maintenance-data-layer";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <!-- ZUMMEE_PATCH v2115: stable single-mount header + assigned dropdown no-jump lock -->
 <!-- ZUMMEE_PATCH v2074: inspections reads vendors from actual ops localStorage keys -->
@@ -8215,6 +8215,7 @@ body.dark-mode .mh2-stat-box {
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="shared/supabase-client.js?v=2026-04-08-2"></script>
+<script src="shared/maintenance-data.js?v=2026-05-07-v500"></script>
 <script>
   // Supabase init (shared)
   var SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
@@ -13475,6 +13476,151 @@ body#inspectionsPage [data-page-error]{
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', initPremiumDate);
   else initPremiumDate();
   window.addEventListener('load', function(){ setTimeout(initPremiumDate,60); setTimeout(initPremiumDate,350); });
+})();
+</script>
+
+
+<script id="zummee-maintenance-data-layer-inspections-v500">
+/* v500: Community Inspections vendor authority.
+   Uses shared/maintenance-data.js and public.Vendors by community_id.
+   Keeps the existing inspection UI, but removes old Daily Ops/localStorage vendor source behavior. */
+(function(){
+  if(window.__ciV500MaintenanceDataLayer) return;
+  window.__ciV500MaintenanceDataLayer = true;
+
+  const $ = (id) => document.getElementById(id);
+  let latestVendors = [];
+
+  function selectedCommunityId(){
+    try{
+      return $("zummeeCommunitySelect")?.value || $("communitySelect")?.value || window.ZummeeMaintenanceData?.getSelectedCommunityId?.() || "";
+    }catch(_e){ return ""; }
+  }
+
+  function selectedType(){
+    return ($("inspVendorType")?.value || "").trim();
+  }
+
+  function typeMatches(vendorType, wanted){
+    vendorType = String(vendorType || "").toLowerCase().replace(/[_\-]/g," ").replace(/\s+/g," ").trim();
+    wanted = String(wanted || "").toLowerCase().replace(/[_\-]/g," ").replace(/\s+/g," ").trim();
+    if(!wanted) return true;
+    if(!vendorType) return true;
+    return vendorType === wanted || vendorType.includes(wanted) || wanted.includes(vendorType);
+  }
+
+  function setContactLinkSafe(el, value, kind){
+    try{
+      if(typeof setContactLink === "function") return setContactLink(el, value, kind);
+    }catch(_e){}
+    if(!el) return;
+    value = String(value || "").trim();
+    if(!value){
+      el.textContent = "—";
+      el.href = "javascript:void(0)";
+      el.style.pointerEvents = "none";
+      el.style.opacity = "0.65";
+      return;
+    }
+    el.style.pointerEvents = "auto";
+    el.style.opacity = "1";
+    el.textContent = value;
+    el.href = kind === "phone" ? ("tel:" + value.replace(/[^\d+]/g,"")) : ("mailto:" + value);
+  }
+
+  function applyVendorDetails(){
+    const sel = $("inspVendorId");
+    const v = latestVendors.find(x => String(x.id) === String(sel?.value || ""));
+    setContactLinkSafe($("inspVendorPhoneLink"), v?.phone || "", "phone");
+    setContactLinkSafe($("inspVendorEmailLink"), v?.email || "", "email");
+    const emailBtn = $("btnEmailInspNote");
+    if(emailBtn){
+      emailBtn.disabled = !(v && v.email);
+      emailBtn.style.opacity = (v && v.email) ? "1" : "0.6";
+    }
+
+    // Keep legacy lookup/cache compatible with existing Create Work Order code.
+    window.vendorCache = window.vendorCache || { byType:{}, byId:{} };
+    if(typeof vendorCache !== "undefined"){
+      vendorCache.byId = vendorCache.byId || {};
+      latestVendors.forEach(vv => vendorCache.byId[vv.id] = vv);
+    }
+  }
+
+  async function refreshInspectionVendors(){
+    const sel = $("inspVendorId");
+    if(!sel || !window.ZummeeMaintenanceData) return;
+
+    const cid = selectedCommunityId();
+    const wantedType = selectedType();
+    sel.disabled = true;
+    sel.innerHTML = '<option value="">Loading vendors…</option>';
+
+    try{
+      latestVendors = await window.ZummeeMaintenanceData.getVendorsForCommunity(cid);
+    }catch(err){
+      console.warn("[CI v500] Vendor load failed:", err);
+      latestVendors = [];
+    }
+
+    const filtered = latestVendors.filter(v => typeMatches(v.type, wantedType));
+    const list = filtered.length ? filtered : latestVendors;
+
+    sel.innerHTML = '<option value="">— Select vendor —</option>';
+    list.forEach(v => {
+      const opt = document.createElement("option");
+      opt.value = v.id || v.name;
+      opt.textContent = v.type ? `${v.name} — ${v.type}` : v.name;
+      opt.dataset.email = v.email || "";
+      opt.dataset.phone = v.phone || "";
+      sel.appendChild(opt);
+    });
+
+    if(!list.length){
+      sel.innerHTML = '<option value="">No vendors found for selected community</option>';
+    }
+
+    sel.disabled = !wantedType && !!$("inspVendorType");
+    if(!$("inspVendorType")) sel.disabled = false;
+    applyVendorDetails();
+  }
+
+  // Replace legacy global vendor functions where possible.
+  window.readDailyOpsVendors = function(){ return latestVendors.slice(); };
+  window.rebuildVendorCache = function(){
+    window.vendorCache = window.vendorCache || { byType:{}, byId:{} };
+    if(typeof vendorCache !== "undefined"){
+      vendorCache.byType = {};
+      vendorCache.byId = {};
+      latestVendors.forEach(v => {
+        vendorCache.byId[v.id] = v;
+        const t = v.type || "";
+        if(!vendorCache.byType[t]) vendorCache.byType[t] = [];
+        vendorCache.byType[t].push(v);
+      });
+    }
+  };
+  window.populateVendorSelect = function(){
+    refreshInspectionVendors();
+  };
+
+  function bind(){
+    $("zummeeCommunitySelect")?.addEventListener("change", function(){
+      try{ window.ZummeeMaintenanceData.clearVendorCache(); }catch(_e){}
+      refreshInspectionVendors();
+    });
+    $("communitySelect")?.addEventListener("change", function(){
+      try{ window.ZummeeMaintenanceData.clearVendorCache(); }catch(_e){}
+      refreshInspectionVendors();
+    });
+    $("inspVendorType")?.addEventListener("change", refreshInspectionVendors);
+    $("inspVendorId")?.addEventListener("change", applyVendorDetails);
+    setTimeout(refreshInspectionVendors, 300);
+    setTimeout(refreshInspectionVendors, 1300);
+  }
+
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind, { once:true });
+  else bind();
 })();
 </script>
 
