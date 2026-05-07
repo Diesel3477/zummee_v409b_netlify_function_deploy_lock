@@ -376,7 +376,7 @@
           <div class="letter-subject" id="letterSubject">Select a property, category, and offense number to preview the notice.</div>
           <div class="letter-body" id="letterBody">The preview will update automatically as the manager completes the violation case fields. This preview is not saved, downloaded, or emailed yet.</div>
           <div class="letter-actions">
-            <button id="generateLetterBtn" class="btn primary" type="button" onclick="window.zummeeGenerateLetterRecord && window.zummeeGenerateLetterRecord()">Generate Letter Record</button>
+            <button id="generateLetterBtn" class="btn primary" type="button">Generate Letter Record</button>
             <span id="letterSaveNote" class="letter-save-note">Save the violation case first, then generate the permanent letter record.</span>
           </div>
           <div class="letter-warning">Preview only. This layout is formatted for a standard #10 window envelope. PDF generation and email delivery remain locked until the next phases.</div>
@@ -1133,20 +1133,10 @@
       }
       async function generateLetterRecord(){
         if(state.isGeneratingLetter) return;
-        setText('letterSaveNote','Generate Letter Record clicked. Checking case and letter preview…');
         if(!state.lastSavedCase || !state.lastSavedCase.id){
-          setStatus('warn','Saving case first');
-          setText('letterSaveNote','No saved case was found for this form yet. Saving the violation case first, then generating the letter record…');
-          try{
-            await saveViolationCase();
-          }catch(saveErr){
-            console.error('[Zummee Violations v540j2] auto-save before letter failed', saveErr);
-          }
-          if(!state.lastSavedCase || !state.lastSavedCase.id){
-            setStatus('error','Save case first');
-            setText('letterSaveNote','The letter record was not generated because the case did not save. Check required fields and the case save message.');
-            return;
-          }
+          setStatus('error','Save case first');
+          setText('letterSaveNote','Save the violation case before generating the permanent letter record.');
+          return;
         }
         var categoryId = clean(($('violationCategorySelect') || {}).value || state.selectedCategoryId || '');
         var categoryName = getSelectedCategoryName() || 'Violation Notice';
@@ -1208,8 +1198,6 @@
         }
       }
 
-      window.zummeeGenerateLetterRecord = generateLetterRecord;
-
       async function boot(){
         try{
           setStatus('warn','Loading Supabase reads');
@@ -1237,7 +1225,7 @@
         var saveBtn = $('saveCaseBtn');
         if(saveBtn){ saveBtn.addEventListener('click', saveViolationCase); }
         var generateBtn = $('generateLetterBtn');
-        if(generateBtn){ generateBtn.onclick = generateLetterRecord; }
+        if(generateBtn){ generateBtn.addEventListener('click', generateLetterRecord); }
         var streetSelect = $('streetSelect');
         if(streetSelect){ streetSelect.addEventListener('change', handleStreetChange); }
         var propertySelect = $('propertySelect');
