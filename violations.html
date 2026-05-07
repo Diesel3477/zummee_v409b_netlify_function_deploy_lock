@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Zummee Violations</title>
   <script>
-    window.ZUMMEE_VIOLATIONS_BUILD = 'v540i3-photo-moved-upper-right';
+    window.ZUMMEE_VIOLATIONS_BUILD = 'v540j-save-generated-letter-record';
     (function(){
       try{
         var stored = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || 'light';
@@ -207,6 +207,8 @@
     .letter-signature{margin-top:16px;font-size:13px;line-height:1.35;}
     .letter-footer-note{clear:both;margin-top:14px;border-top:1px solid #e7edf6;padding-top:8px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#71829a;font-size:9px;line-height:1.25;}
     .letter-warning{margin-top:10px;color:var(--z-muted);font-size:12px;font-weight:750;line-height:1.35;}
+    .letter-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;}
+    .letter-save-note{color:var(--z-muted);font-size:12px;font-weight:800;line-height:1.35;}
     .window-side .letter-photo-caption{text-align:left;}
     @media print{
       body{background:#fff!important;}
@@ -373,13 +375,17 @@
           </div>
           <div class="letter-subject" id="letterSubject">Select a property, category, and offense number to preview the notice.</div>
           <div class="letter-body" id="letterBody">The preview will update automatically as the manager completes the violation case fields. This preview is not saved, downloaded, or emailed yet.</div>
-          <div class="letter-warning">Preview only. This layout is formatted for a standard #10 window envelope. PDF generation, saved letter records, and email delivery remain locked until the next phases.</div>
+          <div class="letter-actions">
+            <button id="generateLetterBtn" class="btn primary" type="button">Generate Letter Record</button>
+            <span id="letterSaveNote" class="letter-save-note">Save the violation case first, then generate the permanent letter record.</span>
+          </div>
+          <div class="letter-warning">Preview only. This layout is formatted for a standard #10 window envelope. PDF generation and email delivery remain locked until the next phases.</div>
         </div>
       </article>
 
       <aside class="card">
         <h2>Read Layer Test</h2>
-        <p>Live reads are enabled for communities, properties, categories, covenants, inspections, and open cases. Writes are enabled for <strong>Start Inspection</strong> and <strong>Save Violation Case</strong> only. Letter preview is branded and formatted for a standard windowed envelope. It is generated on screen only.</p>
+        <p>Live reads are enabled for communities, properties, categories, covenants, inspections, and open cases. Writes are enabled for <strong>Start Inspection</strong>, <strong>Save Violation Case</strong>, and <strong>Generate Letter Record</strong> only. Letter preview is branded and formatted for a standard windowed envelope. It can now be saved as a letter record before PDF/email phases.</p>
         <div class="grid">
           <div class="mini"><strong>Communities</strong><span id="communityReadNote">Waiting for shared data layer…</span></div>
           <div class="mini"><strong>Properties</strong><span id="propertyReadNote">Waiting for selected community…</span></div>
@@ -415,7 +421,7 @@
   <script>
     (function(){
       'use strict';
-      var state = { communities: [], properties: [], streets: [], selectedStreet: '', selectedPropertyId: '', selectedProperty: null, categories: [], covenants: [], selectedCommunityId: '', selectedCommunityName: '', selectedCategoryId: '', currentCovenant: null, currentInspection: null, openCases: [], isStartingInspection: false, isSavingCase: false, primaryPhotoFile: null, primaryPhotoUrl: '', primaryPhotoObjectUrl: '' };
+      var state = { communities: [], properties: [], streets: [], selectedStreet: '', selectedPropertyId: '', selectedProperty: null, categories: [], covenants: [], selectedCommunityId: '', selectedCommunityName: '', selectedCategoryId: '', currentCovenant: null, currentInspection: null, openCases: [], isStartingInspection: false, isSavingCase: false, primaryPhotoFile: null, primaryPhotoUrl: '', primaryPhotoObjectUrl: '', lastSavedCase: null, lastGeneratedLetter: null, isGeneratingLetter: false };
       var els = {};
       function $(id){ return document.getElementById(id); }
       function clean(v){ return String(v == null ? '' : v).replace(/\s+/g,' ').trim(); }
@@ -991,7 +997,7 @@
         setText('letterTypePill', letterType);
         setText('letterSubject', subject);
         setHTML('letterBody', renderLetterHtml(data));
-        setText('letterReadNote', 'Branded mailing-ready preview ready: ' + letterType + '. Not saved, downloaded, or emailed yet.');
+        setText('letterReadNote', 'Branded mailing-ready preview ready: ' + letterType + '. Generate Letter Record saves it before PDF/email phases.');
         try{ if(window.zummeeSyncCompanyLogo) window.zummeeSyncCompanyLogo(); }catch(_e){}
       }
 
@@ -1091,6 +1097,9 @@
             .select('id, inspection_id, community_id, community_name, category_id, covenant_id, violation_type, homeowner_name, property_address, unit, manager_notes, offense_number, letter_type, case_status, created_at')
             .single();
           if(res.error) throw res.error;
+          state.lastSavedCase = res.data || null;
+          state.lastGeneratedLetter = null;
+          setText('letterSaveNote','Case saved. Generate the letter record when the preview is ready.');
           var photoMessage = '';
           if(state.primaryPhotoFile){
             try{
@@ -1114,6 +1123,78 @@
         }finally{
           state.isSavingCase = false;
           if(btn){ btn.disabled = false; btn.textContent = 'Save Violation Case'; }
+        }
+      }
+
+
+      function buildPlainLetterText(){
+        var el = $('letterBody');
+        return clean(el ? (el.innerText || el.textContent || '') : '');
+      }
+      async function generateLetterRecord(){
+        if(state.isGeneratingLetter) return;
+        if(!state.lastSavedCase || !state.lastSavedCase.id){
+          setStatus('error','Save case first');
+          setText('letterSaveNote','Save the violation case before generating the permanent letter record.');
+          return;
+        }
+        var categoryId = clean(($('violationCategorySelect') || {}).value || state.selectedCategoryId || '');
+        var categoryName = getSelectedCategoryName() || 'Violation Notice';
+        var offenseNumber = parseInt((($('offenseNumberSelect') || {}).value || '1'),10) || 1;
+        var selectedProperty = state.selectedProperty || {};
+        var homeowner = clean(($('homeownerNameInput') || {}).value || '') || clean(state.lastSavedCase.homeowner_name || '');
+        var address = clean(($('propertyAddressInput') || {}).value || '') || clean(state.lastSavedCase.property_address || '');
+        var unit = clean(($('unitInput') || {}).value || '') || clean(state.lastSavedCase.unit || '');
+        var recipientEmail = clean(selectedProperty.owner_email || state.lastSavedCase.homeowner_email || '');
+        var letterType = letterTypeForOffense(offenseNumber);
+        var subject = clean(($('letterSubject') || {}).textContent || '') || (letterLabelForOffense(offenseNumber) + ' - ' + categoryName + ' - ' + address);
+        var html = clean(($('letterBody') || {}).innerHTML || '');
+        var textBody = buildPlainLetterText();
+        if(!html){
+          setStatus('error','Letter preview missing');
+          setText('letterSaveNote','The letter preview is empty. Complete the case fields before generating a letter record.');
+          return;
+        }
+        state.isGeneratingLetter = true;
+        var btn = $('generateLetterBtn');
+        if(btn){ btn.disabled = true; btn.textContent = 'Generating…'; }
+        setText('letterSaveNote','Saving generated letter record to Supabase…');
+        setStatus('warn','Generating letter record');
+        try{
+          var sb = await getClient();
+          if(!sb || typeof sb.from !== 'function') throw new Error('Supabase client unavailable');
+          var payload = {
+            case_id: state.lastSavedCase.id,
+            community_id: state.selectedCommunityId,
+            letter_type: letterType,
+            offense_number: offenseNumber,
+            letter_status: 'generated',
+            recipient_name: homeowner || null,
+            recipient_email: recipientEmail || null,
+            property_address: address || null,
+            unit: unit || null,
+            subject: subject,
+            letter_html: html,
+            letter_text: textBody,
+            email_to: recipientEmail || null,
+            email_subject: subject,
+            email_body: 'Generated violation notice is ready for PDF/email workflow.'
+          };
+          var res = await sb.from('violation_letters')
+            .insert(payload)
+            .select('id, case_id, letter_type, offense_number, letter_status, recipient_name, recipient_email, property_address, created_at')
+            .single();
+          if(res.error) throw res.error;
+          state.lastGeneratedLetter = res.data || null;
+          setStatus('good','Letter record generated');
+          setText('letterSaveNote','Generated letter record saved. Email/PDF delivery remains locked for the next phase.');
+        }catch(e){
+          console.error('[Zummee Violations v540j] generate letter record failed', e);
+          setStatus('error','Letter record needs attention');
+          setText('letterSaveNote', clean(e && e.message) || 'Supabase insert failed.');
+        }finally{
+          state.isGeneratingLetter = false;
+          if(btn){ btn.disabled = false; btn.textContent = 'Generate Letter Record'; }
         }
       }
 
@@ -1143,6 +1224,8 @@
         if(startBtn){ startBtn.addEventListener('click', startInspection); }
         var saveBtn = $('saveCaseBtn');
         if(saveBtn){ saveBtn.addEventListener('click', saveViolationCase); }
+        var generateBtn = $('generateLetterBtn');
+        if(generateBtn){ generateBtn.addEventListener('click', generateLetterRecord); }
         var streetSelect = $('streetSelect');
         if(streetSelect){ streetSelect.addEventListener('change', handleStreetChange); }
         var propertySelect = $('propertySelect');
