@@ -2,7 +2,7 @@
 
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-07-v501-inspections-vendor-type-optional";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-07-v502-clean-vendor-id-create-work-order";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <!-- ZUMMEE_PATCH v2115: stable single-mount header + assigned dropdown no-jump lock -->
 <!-- ZUMMEE_PATCH v2074: inspections reads vendors from actual ops localStorage keys -->
@@ -10970,9 +10970,38 @@ async function collectData(){
     const rawDate = getVal("inspDate");
     const date = rawDate ? new Date(rawDate + "T00:00:00").toLocaleDateString(undefined,{month:"long", day:"numeric", year:"numeric"}) : "";
     const inspType = getSelText("inspType");
-    const vendorName = getSelText("inspVendorId");
-    const vendorPhone = getLinkText("inspVendorPhoneLink");
-    const vendorEmail = getLinkText("inspVendorEmailLink");
+
+    // v502 clean fix: vendor selection must pass a durable vendorId into
+    // createInspectionWorkOrder(). The prior v501 dropdown could display the
+    // vendor name, but collectData did not return vendorId. The existing
+    // create flow intentionally ignores vendorName unless vendorId is present,
+    // so work orders fell back to manager review and skipped vendor email.
+    const vendorSelect = document.getElementById("inspVendorId");
+    const vendorOption = vendorSelect && vendorSelect.selectedOptions && vendorSelect.selectedOptions[0]
+      ? vendorSelect.selectedOptions[0]
+      : null;
+    const vendorId = String(vendorSelect && vendorSelect.value || "").trim();
+    const vendorList = Array.isArray(window.__ciInspectionVendorList) ? window.__ciInspectionVendorList : [];
+    const vendorFromLayer = vendorList.find(function(v){
+      return String(v && (v.id || "")).trim() === vendorId || String(v && (v.name || "")).trim() === vendorId;
+    }) || null;
+    const vendorName = String(
+      (vendorFromLayer && vendorFromLayer.name) ||
+      (vendorOption && (vendorOption.getAttribute("data-name") || vendorOption.textContent || "")) ||
+      ""
+    ).replace(/\s+—\s+.*$/, "").trim();
+    const vendorPhone = String(
+      (vendorFromLayer && vendorFromLayer.phone) ||
+      (vendorOption && vendorOption.getAttribute("data-phone")) ||
+      getLinkText("inspVendorPhoneLink") ||
+      ""
+    ).trim();
+    const vendorEmail = String(
+      (vendorFromLayer && vendorFromLayer.email) ||
+      (vendorOption && vendorOption.getAttribute("data-email")) ||
+      getLinkText("inspVendorEmailLink") ||
+      ""
+    ).trim();
     const notes = getVal("inspNotes");
     const photoInput = document.getElementById("inspPhotos");
     const photos = await filesToDataUrls(photoInput?.files);
@@ -10984,6 +11013,7 @@ async function collectData(){
       date,
       ticketNumber: __maintAdState.ticketNumber || null,
       inspType,
+      vendorId,
       vendorName,
       vendorPhone,
       vendorEmail,
@@ -13490,6 +13520,7 @@ body#inspectionsPage [data-page-error]{
 
   const $ = (id) => document.getElementById(id);
   let latestVendors = [];
+  window.__ciInspectionVendorList = window.__ciInspectionVendorList || [];
 
   function selectedCommunityId(){
     try{
@@ -13530,7 +13561,8 @@ body#inspectionsPage [data-page-error]{
 
   function applyVendorDetails(){
     const sel = $("inspVendorId");
-    const v = latestVendors.find(x => String(x.id) === String(sel?.value || ""));
+    const selectedValue = String(sel?.value || "").trim();
+    const v = latestVendors.find(x => String(x.id || "").trim() === selectedValue || String(x.name || "").trim() === selectedValue);
     setContactLinkSafe($("inspVendorPhoneLink"), v?.phone || "", "phone");
     setContactLinkSafe($("inspVendorEmailLink"), v?.email || "", "email");
     const emailBtn = $("btnEmailInspNote");
@@ -13558,9 +13590,11 @@ body#inspectionsPage [data-page-error]{
 
     try{
       latestVendors = await window.ZummeeMaintenanceData.getVendorsForCommunity(cid);
+      window.__ciInspectionVendorList = latestVendors.slice();
     }catch(err){
       console.warn("[CI v500] Vendor load failed:", err);
       latestVendors = [];
+      window.__ciInspectionVendorList = [];
     }
 
     const filtered = latestVendors.filter(v => typeMatches(v.type, wantedType));
@@ -13571,6 +13605,8 @@ body#inspectionsPage [data-page-error]{
       const opt = document.createElement("option");
       opt.value = v.id || v.name;
       opt.textContent = v.type ? `${v.name} — ${v.type}` : v.name;
+      opt.dataset.id = v.id || "";
+      opt.dataset.name = v.name || "";
       opt.dataset.email = v.email || "";
       opt.dataset.phone = v.phone || "";
       sel.appendChild(opt);
