@@ -12356,7 +12356,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
 
-<script id="zummee-community-inspections-premium-header-v2109">
+<script id="zummee-community-inspections-premium-header-v2110">
 (function(){
   function addHeader(){
     try{
@@ -12771,6 +12771,210 @@ body#inspectionsPage [data-page-error]{
 }
 
 </style>
+
+
+
+<style id="communityInspectionsHeaderHardLock_v2110">
+  #ciPremiumHeader.ci-header-v2110{
+    width:min(100% - 28px,1180px) !important;
+    margin:14px auto 0 !important;
+    padding:18px 22px 18px !important;
+    border:2px solid #bcd5ff !important;
+    border-radius:28px !important;
+    background:#ffffff !important;
+    box-shadow:0 18px 48px rgba(18,45,78,.10) !important;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:14px !important;
+    box-sizing:border-box !important;
+  }
+  #ciPremiumHeader .ci-v2110-top{
+    display:flex !important;
+    align-items:flex-start !important;
+    justify-content:space-between !important;
+    gap:16px !important;
+    width:100% !important;
+  }
+  #ciPremiumHeader .ci-v2110-left{
+    display:flex !important;
+    align-items:center !important;
+    gap:14px !important;
+    min-width:0 !important;
+    flex:1 1 auto !important;
+  }
+  #ciPremiumHeader .ci-v2110-icon{
+    width:54px !important;
+    height:54px !important;
+    border-radius:18px !important;
+    border:1px solid rgba(128,177,255,.45) !important;
+    background:linear-gradient(180deg,#fff,#eef6ff) !important;
+    color:#2563eb !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    font-weight:950 !important;
+    font-size:22px !important;
+    flex:0 0 auto !important;
+  }
+  #ciPremiumHeader .ci-v2110-title{
+    margin:0 !important;
+    color:#10243d !important;
+    font-size:30px !important;
+    font-weight:950 !important;
+    letter-spacing:-.04em !important;
+    line-height:1 !important;
+  }
+  #ciPremiumHeader .ci-v2110-subtitle{
+    margin-top:6px !important;
+    color:#657894 !important;
+    font-size:13px !important;
+    font-weight:850 !important;
+    line-height:1.35 !important;
+  }
+  #ciPremiumHeader .ci-v2110-logo{
+    height:50px !important;
+    max-width:178px !important;
+    width:auto !important;
+    object-fit:contain !important;
+    display:block !important;
+    flex:0 0 auto !important;
+  }
+  #ciPremiumHeader .ci-v2110-controls{
+    display:flex !important;
+    flex-direction:row !important;
+    align-items:center !important;
+    justify-content:flex-start !important;
+    gap:12px !important;
+    width:100% !important;
+  }
+  #ciPremiumHeader #zummeeCommunitySelect.ci-v2110-select{
+    flex:0 1 430px !important;
+    width:min(430px, calc(100% - 225px)) !important;
+    min-width:260px !important;
+    height:50px !important;
+    border-radius:16px !important;
+    border:2px solid #bcd5ff !important;
+    background:#ffffff !important;
+    color:#10243d !important;
+    padding:0 16px !important;
+    font-size:16px !important;
+    font-weight:850 !important;
+    box-shadow:0 8px 20px rgba(18,45,78,.05) !important;
+    box-sizing:border-box !important;
+  }
+  #ciPremiumHeader .ci-v2110-hub{
+    flex:0 0 auto !important;
+    min-width:200px !important;
+    height:50px !important;
+    border-radius:16px !important;
+    border:2px solid #bcd5ff !important;
+    background:#ffffff !important;
+    color:#10243d !important;
+    text-decoration:none !important;
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    font-size:16px !important;
+    font-weight:950 !important;
+    box-shadow:0 8px 20px rgba(18,45,78,.05) !important;
+    box-sizing:border-box !important;
+  }
+  @media(max-width:560px){
+    #ciPremiumHeader .ci-v2110-controls{flex-direction:column !important;align-items:stretch !important;}
+    #ciPremiumHeader #zummeeCommunitySelect.ci-v2110-select{width:100% !important;min-width:0 !important;flex:0 0 auto !important;}
+    #ciPremiumHeader .ci-v2110-hub{width:100% !important;min-width:0 !important;}
+  }
+</style>
+<script id="communityInspectionsHeaderHardLock_v2110_script">
+(function(){
+  var SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
+  var SUPABASE_KEY = "sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864";
+  async function ensureSb(){
+    if(window.sb && window.sb.auth && window.sb.from) return window.sb;
+    if(window.supabase && window.supabase.createClient){
+      window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        auth:{storageKey:'sb-zummee-auth',storage:window.localStorage,persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
+      });
+      return window.sb;
+    }
+    return null;
+  }
+  async function loadCommunities(){
+    var sel = document.getElementById('zummeeCommunitySelect');
+    if(!sel) return;
+    try{
+      sel.innerHTML = '<option value="">Loading communities...</option>';
+      var sb = await ensureSb();
+      if(!sb) return;
+      var ses = await sb.auth.getSession();
+      var uid = ses && ses.data && ses.data.session && ses.data.session.user && ses.data.session.user.id;
+      if(!uid){ sel.innerHTML = '<option value="">No communities</option>'; return; }
+      var a = await sb.from('CommunityAssignments').select('community_id').eq('user_id', uid);
+      if(a.error) throw a.error;
+      var ids = (a.data || []).map(function(r){ return r.community_id; }).filter(Boolean);
+      if(!ids.length){ sel.innerHTML = '<option value="">No communities</option>'; return; }
+      var pc = await sb.from('PropertyCommunities').select('id,name').in('id', ids);
+      if(pc.error) throw pc.error;
+      var list = (pc.data || []).slice().sort(function(x,y){ return String(x.name||'').localeCompare(String(y.name||'')); });
+      sel.innerHTML = '';
+      list.forEach(function(c){
+        var opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name;
+        sel.appendChild(opt);
+      });
+      var desired = String(localStorage.getItem('activeCommunityId') || localStorage.getItem('zummee_selected_community_id') || '').trim();
+      if(desired && Array.from(sel.options).some(function(o){ return String(o.value) === desired; })) sel.value = desired;
+      if(!sel.value && sel.options.length) sel.value = sel.options[0].value;
+      if(sel.value){
+        localStorage.setItem('activeCommunityId', String(sel.value));
+        localStorage.setItem('zummee_selected_community_id', String(sel.value));
+      }
+      if(!sel.__ciV2110Bound){
+        sel.__ciV2110Bound = true;
+        sel.addEventListener('change', function(){
+          var v = String(sel.value || '').trim();
+          if(v){
+            localStorage.setItem('activeCommunityId', v);
+            localStorage.setItem('zummee_selected_community_id', v);
+          }
+        });
+      }
+      try{ sel.dispatchEvent(new Event('change',{bubbles:true})); }catch(e){}
+    }catch(e){
+      console.warn('v2110 community load failed', e);
+      sel.innerHTML = '<option value="">Community unavailable</option>';
+    }
+  }
+  function rebuildHeader(){
+    var wrap = document.querySelector('.wrap');
+    if(!wrap || !wrap.parentNode) return;
+    var existing = document.getElementById('ciPremiumHeader');
+    if(existing) existing.remove();
+    var h = document.createElement('div');
+    h.id = 'ciPremiumHeader';
+    h.className = 'ci-header-v2110';
+    h.innerHTML = ''+
+      '<div class="ci-v2110-top">'+
+        '<div class="ci-v2110-left">'+
+          '<div class="ci-v2110-icon" aria-hidden="true">✓</div>'+
+          '<div><h1 class="ci-v2110-title">Community Inspections</h1><div class="ci-v2110-subtitle">Create inspection records, vendor walks, drafts, photos, and follow-up work orders.</div></div>'+
+        '</div>'+
+        '<img id="ciCompanyLogo" class="company-logo ci-v2110-logo" alt="Company logo" />'+
+      '</div>'+
+      '<div class="ci-v2110-controls">'+
+        '<select id="zummeeCommunitySelect" class="ci-v2110-select" aria-label="Select community"></select>'+
+        '<a class="ci-v2110-hub" href="manager_hub.html">Back to Hub</a>'+
+      '</div>';
+    wrap.parentNode.insertBefore(h, wrap);
+    try{ if(window.ZummeeCompanyLogoSync && typeof window.ZummeeCompanyLogoSync.sync === 'function') window.ZummeeCompanyLogoSync.sync(); }catch(e){}
+    loadCommunities();
+  }
+  function boot(){ rebuildHeader(); setTimeout(rebuildHeader, 250); setTimeout(rebuildHeader, 1000); }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+  window.addEventListener('load', function(){ setTimeout(rebuildHeader, 50); });
+})();
+</script>
 
 </body>
 </html>
