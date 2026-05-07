@@ -2,10 +2,10 @@
 
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-07-v2122-operations-vendor-source";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-07-v2123-vendors-table-authority";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <!-- ZUMMEE_PATCH v2121: assigned dropdown single owner + selected-community state authority -->
-<!-- ZUMMEE_PATCH v2122: operations vendor source authority -->
+<!-- ZUMMEE_PATCH v2123: exact Daily Ops Vendors table authority -->
 <!-- ZUMMEE_PATCH v2074: inspections reads vendors from actual ops localStorage keys -->
 <!-- ZUMMEE_PATCH v2064: offline drafts (IndexedDB) for inspections -->
 <!-- ZUMMEE_PATCH v2061: latest polish bundle -->
@@ -13390,27 +13390,25 @@ body#inspectionsPage [data-page-error]{
 </script>
 
 
-<script id="communityInspectionsOperationsVendorSource_v2122">
-/* ZUMMEE_PATCH v2122 — Operations Vendor Source Authority
-   Long-term direction:
-   - Inspections does not own vendor data.
-   - Operations Portal remains the vendor source of truth.
-   - Inspections reads Operations vendors by selected community, then renders the vendor dropdown.
-   - Supabase/cloud is preferred; Operations local cache is fallback only for offline/backward compatibility.
+<script id="communityInspectionsVendorsTableAuthority_v2123">
+/* ZUMMEE_PATCH v2123 — Daily Ops Vendors Table Authority
+   Long-term source of truth:
+   - Daily Ops / Operations saves vendors in public."Vendors".
+   - Community Inspections reads ONLY public."Vendors".
+   - No blended fallback to old vendor tables.
+   - Vendor rows are filtered by the selected community_id from the inspections header.
 */
 (function(){
-  if(window.__ZUMMEE_CI_OPS_VENDOR_SOURCE_V2122__) return;
-  window.__ZUMMEE_CI_OPS_VENDOR_SOURCE_V2122__ = true;
+  if(window.__ZUMMEE_CI_VENDORS_TABLE_AUTHORITY_V2123__) return;
+  window.__ZUMMEE_CI_VENDORS_TABLE_AUTHORITY_V2123__ = true;
 
-  var SOURCE_VERSION = 'v2122';
+  var VERSION = 'v2123';
   var requestSeq = 0;
-  var lastCommunityKey = '';
 
   function $(id){ return document.getElementById(id); }
   function str(v){ return (v == null ? '' : String(v)).trim(); }
   function lower(v){ return str(v).toLowerCase(); }
   function compact(v){ return lower(v).replace(/&/g,'and').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim(); }
-  function safeParse(raw){ try{ return JSON.parse(raw); }catch(_e){ return null; } }
 
   function getSB(){
     try{ if(window.sb) return window.sb; }catch(_e){}
@@ -13418,6 +13416,15 @@ body#inspectionsPage [data-page-error]{
     try{ if(window.ZummeeSupabaseClient) return window.ZummeeSupabaseClient; }catch(_e){}
     try{ if(typeof ensureSupabaseSync === 'function') return ensureSupabaseSync(); }catch(_e){}
     return null;
+  }
+
+  function getCurrentCompany(){
+    var keys = ['zummee_company','zummee_selected_company','zummee_management_company','selectedCompany','zummee_company_name','managementCompanyName'];
+    for(var i=0;i<keys.length;i++){
+      try{ var v = str(localStorage.getItem(keys[i])); if(v) return v; }catch(_e){}
+    }
+    try{ if(window.__zummeeCompany) return str(window.__zummeeCompany); }catch(_e){}
+    return '';
   }
 
   function selectedCommunity(){
@@ -13429,55 +13436,39 @@ body#inspectionsPage [data-page-error]{
       name = str(opt && (opt.textContent || opt.label));
     }catch(_e){}
     if(!id){
-      try{ id = str(localStorage.getItem((window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.SELECTED_COMMUNITY_KEY) || 'zummee_selected_community_v1')); }catch(_e){}
+      var keys = [
+        (window.ZUMMEE_KEYS && window.ZUMMEE_KEYS.SELECTED_COMMUNITY_KEY) || '',
+        'zummee_selected_community_v1',
+        'zummee_selected_community_id',
+        'activeCommunityId',
+        'managerHubSelectedCommunityId'
+      ];
+      for(var i=0;i<keys.length;i++){
+        try{ var v = str(localStorage.getItem(keys[i])); if(v){ id = v; break; } }catch(_e){}
+      }
     }
-    return { id:id, name:name, nameKey:compact(name), idKey:lower(id) };
+    return { id:id, name:name, idKey:lower(id), nameKey:compact(name) };
   }
 
   function selectedVendorType(){ return str($('inspVendorType') && $('inspVendorType').value); }
 
   function normVendor(row){
     row = row || {};
-    var name = str(row.vendor_name) || str(row.name) || str(row.vendorName) || str(row.company_name) || str(row.company) || str(row.business_name) || str(row.contact_name) || str(row.title);
-    var email = str(row.vendor_email) || str(row.email) || str(row.vendorEmail) || str(row.contact_email) || str(row.primary_email) || str(row.mail);
-    var phone = str(row.vendor_phone) || str(row.phone) || str(row.vendorPhone) || str(row.contact_phone) || str(row.primary_phone) || str(row.tel) || str(row.mobile);
-    var type = str(row.vendor_type) || str(row.type) || str(row.vendorType) || str(row.category) || str(row.service_type) || str(row.service) || str(row.trade);
+    var name = str(row.name) || str(row.vendor_name) || str(row.vendorName) || str(row.business_name) || str(row.company_name) || str(row.company);
+    var email = str(row.email) || str(row.vendor_email) || str(row.vendorEmail) || str(row.contact_email) || str(row.primary_email);
+    var phone = str(row.phone) || str(row.vendor_phone) || str(row.vendorPhone) || str(row.contact_phone) || str(row.primary_phone);
+    var type = str(row.type) || str(row.vendor_type) || str(row.vendorType) || str(row.category) || str(row.service_type) || str(row.trade);
     var communityId = str(row.community_id) || str(row.communityId) || str(row.property_community_id) || str(row.propertyCommunityId);
     var communityName = str(row.community_name) || str(row.communityName) || str(row.community) || str(row.property_name) || str(row.propertyName);
-    var companyId = str(row.company_id) || str(row.companyId);
-    var companyName = str(row.company_name) || str(row.companyName) || str(row.management_company) || str(row.company);
-    var id = str(row.id) || str(row.vendor_id) || str(row.vendorId) || str(row.uuid) || str(row.key);
+    var company = str(row.company) || str(row.company_name) || str(row.companyName) || str(row.management_company);
+    var id = str(row.id) || str(row.vendor_id) || str(row.vendorId) || str(row.uuid);
     if(!id){
-      var base = [name,email,phone,type,communityId,communityName].join('|').toLowerCase();
+      var base = [name,email,phone,type,communityId,communityName,company].join('|').toLowerCase();
       var h = 0;
       for(var i=0;i<base.length;i++){ h = ((h << 5) - h) + base.charCodeAt(i); h |= 0; }
-      id = 'ops_' + ((h >>> 0).toString(16));
+      id = 'vendor_' + ((h >>> 0).toString(16));
     }
-    return {
-      id:id,
-      name:name,
-      email:email,
-      phone:phone,
-      type:type,
-      community_id:communityId,
-      community_name:communityName,
-      company_id:companyId,
-      company_name:companyName,
-      raw:row
-    };
-  }
-
-  function isEmptyVendor(v){ return !(v && (str(v.name) || str(v.email) || str(v.phone))); }
-
-  function vendorMatchesCommunity(v, community){
-    if(!community || (!community.id && !community.name)) return true;
-    var cid = lower(v.community_id);
-    var cname = compact(v.community_name);
-    // If the vendor row has no community fields, treat as company/global vendor and allow it.
-    if(!cid && !cname) return true;
-    if(community.id && cid && cid === community.idKey) return true;
-    if(community.name && cname && cname === community.nameKey) return true;
-    return false;
+    return { id:id, name:name, email:email, phone:phone, type:type, community_id:communityId, community_name:communityName, company:company, raw:row };
   }
 
   function vendorMatchesType(v, selectedType){
@@ -13485,127 +13476,38 @@ body#inspectionsPage [data-page-error]{
     if(!selectedType) return true;
     var vt = str(v.type);
     if(!vt) return true;
-    var a = compact(vt);
-    var b = compact(selectedType);
+    var a = compact(vt), b = compact(selectedType);
     return a === b || a.indexOf(b) >= 0 || b.indexOf(a) >= 0;
-  }
-
-  function extractVendorArrays(obj){
-    if(!obj) return [];
-    var arrays = [];
-    function push(val){ if(Array.isArray(val)) arrays.push(val); }
-    push(Array.isArray(obj) ? obj : null);
-    push(obj.vendors); push(obj.vendorContacts); push(obj.vendorDirectory); push(obj.vendor_list); push(obj.contractors); push(obj.preferred_vendors);
-    if(obj.data){
-      push(obj.data.vendors); push(obj.data.vendorContacts); push(obj.data.vendorDirectory); push(obj.data.vendor_list); push(obj.data.contractors); push(obj.data.preferred_vendors); push(obj.data.vendors_by_type); push(obj.data.vendorsByCommunity);
-    }
-    // Support dictionary shaped directories.
-    [obj.vendors, obj.vendorDirectory, obj.data && obj.data.vendors, obj.data && obj.data.vendorDirectory].forEach(function(d){
-      if(d && typeof d === 'object' && !Array.isArray(d)){
-        var vals = Object.values(d).filter(function(x){ return x && typeof x === 'object'; });
-        if(vals.length) arrays.push(vals);
-      }
-    });
-    return arrays;
   }
 
   function dedupe(vendors){
     var seen = new Map();
     vendors.forEach(function(v){
       v = normVendor(v);
-      if(isEmptyVendor(v)) return;
-      var key = lower(v.id) || [compact(v.name), lower(v.email), lower(v.phone), compact(v.type)].join('|');
+      if(!(v.name || v.email || v.phone)) return;
+      var key = lower(v.id) || [compact(v.name), lower(v.email), lower(v.phone), lower(v.community_id)].join('|');
       if(!seen.has(key)) seen.set(key, v);
-      else {
-        var prior = seen.get(key);
-        seen.set(key, Object.assign({}, prior, {
-          name: prior.name || v.name,
-          email: prior.email || v.email,
-          phone: prior.phone || v.phone,
-          type: prior.type || v.type,
-          community_id: prior.community_id || v.community_id,
-          community_name: prior.community_name || v.community_name
-        }));
-      }
     });
     return Array.from(seen.values()).sort(function(a,b){ return str(a.name || a.email || a.phone).localeCompare(str(b.name || b.email || b.phone), undefined, {sensitivity:'base'}); });
   }
 
-  function operationsLocalKeys(community){
-    var keys = [];
-    var patterns = [
-      'daily_ops_vendors_cache_v1::' + community.id,
-      'daily_ops_vendors_cache_v1::' + community.name,
-      'daily_ops_manager_v9',
-      'daily_ops_manager_ui_v9',
-      'zummee_cloud_lastsync_ops_v1',
-      'zummee_cloud_pending_ops_v1'
-    ].filter(Boolean);
-    try{
-      for(var i=0;i<localStorage.length;i++){
-        var k = localStorage.key(i) || '';
-        if(/daily_ops|operations|vendor/i.test(k)) keys.push(k);
-      }
-    }catch(_e){}
-    patterns.forEach(function(k){ if(k && keys.indexOf(k) === -1) keys.unshift(k); });
-    return keys.filter(function(k, idx){ return k && keys.indexOf(k) === idx; });
-  }
-
-  function readOperationsLocalVendors(community){
-    var rows = [];
-    operationsLocalKeys(community).forEach(function(k){
-      var raw = '';
-      try{ raw = localStorage.getItem(k); }catch(_e){}
-      if(!raw) return;
-      var obj = safeParse(raw);
-      if(!obj) return;
-      var keyText = compact(k);
-      var keyLooksScoped = (community.id && lower(k).indexOf(community.idKey) >= 0) || (community.name && keyText.indexOf(community.nameKey) >= 0);
-      extractVendorArrays(obj).forEach(function(arr){
-        arr.forEach(function(item){
-          var v = normVendor(item);
-          if(isEmptyVendor(v)) return;
-          if(keyLooksScoped || vendorMatchesCommunity(v, community)) rows.push(v);
-        });
-      });
-    });
-    return dedupe(rows);
-  }
-
-  async function readSupabaseVendorRows(community){
+  async function readDailyOpsVendorsTable(community){
     var sb = getSB();
-    if(!sb) return [];
-    var tableNames = [
-      'operations_vendors',
-      'operation_vendors',
-      'daily_ops_vendors',
-      'community_vendors',
-      'preferred_vendors',
-      'vendor_directory',
-      'vendors'
-    ];
-    var out = [];
-    for(var ti=0; ti<tableNames.length; ti++){
-      var table = tableNames[ti];
-      try{
-        var res = await sb.from(table).select('*').limit(1000);
-        if(res && res.error) continue;
-        var rows = Array.isArray(res && res.data) ? res.data : [];
-        rows.forEach(function(row){
-          var v = normVendor(row);
-          if(!isEmptyVendor(v) && vendorMatchesCommunity(v, community)) out.push(v);
-        });
-        if(out.length) break; // one cloud source wins; do not blend cloud tables.
-      }catch(_e){}
+    if(!sb || !community || !community.id) return [];
+    var res = await sb.from('Vendors').select('*').eq('community_id', community.id).limit(1000);
+    if(res && res.error){
+      console.warn('[CI Vendors v2123] public.Vendors read failed:', res.error);
+      return [];
     }
-    return dedupe(out);
-  }
-
-  async function readOperationsVendors(community){
-    var cloud = await readSupabaseVendorRows(community);
-    if(cloud && cloud.length) return { source:'supabase', vendors:cloud };
-    var local = readOperationsLocalVendors(community);
-    return { source:'operations-local-fallback', vendors:local };
+    var rows = Array.isArray(res && res.data) ? res.data : [];
+    var vendors = rows.map(normVendor);
+    var company = getCurrentCompany();
+    if(company){
+      var cKey = compact(company);
+      var scoped = vendors.filter(function(v){ return !v.company || compact(v.company) === cKey; });
+      if(scoped.length) vendors = scoped;
+    }
+    return dedupe(vendors);
   }
 
   function setContactLinkSafe(el, value, kind){
@@ -13640,22 +13542,7 @@ body#inspectionsPage [data-page-error]{
     if(emailBtn){ emailBtn.disabled = true; emailBtn.style.opacity = '0.6'; }
   }
 
-  function populateVendorUI(vendors, source){
-    var sel = $('inspVendorId');
-    if(!sel) return;
-    sel.innerHTML = '<option value="">— Select vendor —</option>';
-    var map = new Map();
-    vendors.forEach(function(v){
-      map.set(v.id, v);
-      var opt = document.createElement('option');
-      opt.value = v.id;
-      opt.textContent = v.name || v.email || v.phone || 'Vendor';
-      if(v.type) opt.setAttribute('data-type', v.type);
-      if(source) opt.setAttribute('data-source', source);
-      sel.appendChild(opt);
-    });
-    window.__inspVendorLookup = map;
-    // Keep the legacy cache in sync for older email/work-order functions that read vendorCache.byId.
+  function syncLegacyVendorCache(vendors){
     try{
       window.vendorCache = window.vendorCache || { byType:{}, byId:{} };
       if(typeof vendorCache !== 'undefined'){
@@ -13669,6 +13556,24 @@ body#inspectionsPage [data-page-error]{
         });
       }
     }catch(_e){}
+  }
+
+  function populateVendorUI(vendors){
+    var sel = $('inspVendorId');
+    if(!sel) return;
+    sel.innerHTML = '<option value="">— Select vendor —</option>';
+    var map = new Map();
+    vendors.forEach(function(v){
+      map.set(v.id, v);
+      var opt = document.createElement('option');
+      opt.value = v.id;
+      opt.textContent = v.name || v.email || v.phone || 'Vendor';
+      if(v.type) opt.setAttribute('data-type', v.type);
+      opt.setAttribute('data-source', 'public.Vendors');
+      sel.appendChild(opt);
+    });
+    window.__inspVendorLookup = map;
+    syncLegacyVendorCache(vendors);
     sel.disabled = false;
   }
 
@@ -13689,35 +13594,34 @@ body#inspectionsPage [data-page-error]{
     var community = selectedCommunity();
     if(!community.id){ clearVendorUI('Select a community first'); return; }
     var seq = ++requestSeq;
-    var type = selectedVendorType();
-    lastCommunityKey = community.id;
+    var selectedType = selectedVendorType();
     clearVendorUI('Loading vendors…');
-    var result = await readOperationsVendors(community);
+    var all = await readDailyOpsVendorsTable(community);
     if(seq !== requestSeq) return;
-    var all = dedupe(result.vendors || []);
-    var filtered = all.filter(function(v){ return vendorMatchesType(v, type); });
+    var filtered = all.filter(function(v){ return vendorMatchesType(v, selectedType); });
     var shown = filtered.length ? filtered : all;
     if(!shown.length){
-      clearVendorUI('No vendors found in Operations Portal');
+      clearVendorUI('No vendors found in Daily Ops');
+      syncLegacyVendorCache([]);
       return;
     }
-    populateVendorUI(shown, result.source);
+    populateVendorUI(shown);
   }
 
   function wire(){
     var communitySel = $('zummeeCommunitySelect') || $('communitySelect') || $('communityDropdown');
     var typeSel = $('inspVendorType');
     var vendorSel = $('inspVendorId');
-    if(communitySel && !communitySel.__zummeeOpsVendorBound){
-      communitySel.__zummeeOpsVendorBound = true;
+    if(communitySel && !communitySel.__zummeeVendorsAuthorityBound){
+      communitySel.__zummeeVendorsAuthorityBound = true;
       communitySel.addEventListener('change', function(){ refresh('community-change'); }, true);
     }
-    if(typeSel && !typeSel.__zummeeOpsVendorBound){
-      typeSel.__zummeeOpsVendorBound = true;
+    if(typeSel && !typeSel.__zummeeVendorsAuthorityBound){
+      typeSel.__zummeeVendorsAuthorityBound = true;
       typeSel.addEventListener('change', function(){ refresh('type-change'); }, true);
     }
-    if(vendorSel && !vendorSel.__zummeeOpsVendorDetailBound){
-      vendorSel.__zummeeOpsVendorDetailBound = true;
+    if(vendorSel && !vendorSel.__zummeeVendorsAuthorityDetailBound){
+      vendorSel.__zummeeVendorsAuthorityDetailBound = true;
       vendorSel.addEventListener('change', function(e){ applyVendorDetails(e.target.value); }, true);
     }
   }
@@ -13734,10 +13638,10 @@ body#inspectionsPage [data-page-error]{
   window.addEventListener('load', function(){ wire(); refresh('window-load'); });
   window.addEventListener('zummee:selected-community-updated', function(){ refresh('selected-community-event'); });
 
-  window.ZummeeOperationsVendorSource = {
-    version: SOURCE_VERSION,
+  window.ZummeeVendorsTableAuthority = {
+    version: VERSION,
     refresh: refresh,
-    read: function(){ return readOperationsVendors(selectedCommunity()); },
+    read: function(){ return readDailyOpsVendorsTable(selectedCommunity()); },
     selectedCommunity: selectedCommunity
   };
 })();
