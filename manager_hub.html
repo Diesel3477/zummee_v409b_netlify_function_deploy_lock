@@ -109,7 +109,7 @@
     })();
   </script>
   <script>
-window.__MH_VERSION = 'v533_annual_stable_cache_lock';
+window.__MH_VERSION = 'v534_annual_empty_text_source_lock';
 
     (function(){
       try{
@@ -2889,6 +2889,34 @@ html[data-theme="dark"] .mh2-ask-close,html[data-theme="dark"] .mh2-ask-modal .m
 </style>
 
   <script src="shared/zummee-board-data.js?v=463-manager-hub-notification-events-hard-lock"></script>
+
+<script id="zummee-v534-annual-empty-text-source-lock">
+(function(){
+  // v534: Do not change Smart Alert timing or card ownership.
+  // Keep Annual Approval copy stable from first paint so the later zero-state writer cannot visibly blink it in.
+  function apply(){
+    try{
+      var card=document.getElementById('mh2AlertApprovals');
+      if(!card) return;
+      var copy=card.querySelector('.mh2-alert-copy');
+      var badge=card.querySelector('.mh2-alert-badge');
+      var title=card.querySelector('.mh2-alert-title');
+      if(title && !String(title.textContent||'').trim()) title.textContent='Annual meeting approvals';
+      if(badge && !String(badge.textContent||'').trim()) badge.textContent='Clear';
+      if(copy){
+        var txt=String(copy.textContent||'').trim();
+        if(!txt || /signals will appear|loading|checking/i.test(txt)){
+          copy.textContent='No active items';
+        }
+        copy.style.opacity='1';
+        copy.style.visibility='visible';
+      }
+    }catch(e){}
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', apply, {once:true}); else apply();
+  setTimeout(apply, 50);
+})();
+</script>
 </head>
 <body class="manager-hub-page">
   <main class="mh2-page">
@@ -3029,7 +3057,7 @@ html[data-theme="dark"] .mh2-ask-close,html[data-theme="dark"] .mh2-ask-modal .m
           </a>
           <a id="mh2AlertApprovals" class="mh2-alert is-good" href="annual_meeting_status.html">
             <div class="mh2-alert-top"><div class="mh2-alert-title">Annual meeting approvals</div><div class="mh2-alert-badge">Clear</div></div>
-            <div class="mh2-alert-copy">Annual meeting approval signals will appear here from the live data.</div>
+            <div class="mh2-alert-copy">No active items</div>
           </a>
         </div>
       </section>
@@ -6217,36 +6245,6 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     if(!name){ try{ name=String(localStorage.getItem('currentCommunityName')||localStorage.getItem('zummeeCurrentCommunityName')||'').trim(); }catch(e){} }
     return {id:id,name:name};
   }
-  function annualCacheKey(ctx){
-    ctx = ctx || selectedCommunity();
-    return 'zummee_manager_annual_alert_stable_v533:' + String(ctx.id || norm(ctx.name) || 'default');
-  }
-  function readAnnualCache(ctx){
-    try{ return JSON.parse(sessionStorage.getItem(annualCacheKey(ctx)) || localStorage.getItem(annualCacheKey(ctx)) || 'null'); }catch(e){ return null; }
-  }
-  function writeAnnualCache(ctx, snap){
-    if(!snap || !snap.copy) return;
-    try{ sessionStorage.setItem(annualCacheKey(ctx), JSON.stringify(snap)); }catch(e){}
-    try{ localStorage.setItem(annualCacheKey(ctx), JSON.stringify(snap)); }catch(e){}
-  }
-  function paintAnnualSnapshot(snap){
-    var el=$('mh2AlertApprovals');
-    if(!el || !snap) return;
-    el.classList.remove('is-urgent','is-attention','is-good');
-    el.classList.add(snap.tone || 'is-good');
-    if(snap.href) el.setAttribute('href', snap.href);
-    var title = el.querySelector('.mh2-alert-title');
-    var badge = el.querySelector('.mh2-alert-badge');
-    var copy = el.querySelector('.mh2-alert-copy');
-    if(title) title.textContent = snap.title || 'Annual meeting approvals';
-    if(badge) badge.textContent = snap.badge || 'CLEAR';
-    if(copy) copy.textContent = snap.copy || 'No active items';
-  }
-  function restoreAnnualAlertFromCache(){
-    var ctx = selectedCommunity();
-    var snap = readAnnualCache(ctx);
-    if(snap && snap.copy) paintAnnualSnapshot(snap);
-  }
   function norm(v){ return String(v||'').toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' '); }
   function statusIsOpen(row){
     var st=String((row&&row.status)||'').toLowerCase().trim().replace(/[\s-]+/g,'_');
@@ -6287,15 +6285,15 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     var el=$('mh2AlertApprovals');
     if(!el) return;
     var tone = overdueCount>0 ? 'is-urgent' : (openCount>0 ? 'is-attention' : 'is-good');
-    var href = (window.mh2IsPrivileged ? 'annual_meeting_approvals.html' : 'annual_meeting_status.html');
+    el.classList.remove('is-urgent','is-attention','is-good');
+    el.classList.add(tone);
+    el.setAttribute('href', (window.mh2IsPrivileged ? 'annual_meeting_approvals.html' : 'annual_meeting_status.html'));
     var badge = overdueCount>0 ? (String(overdueCount)+' OVERDUE') : (openCount>0 ? (String(openCount)+' OPEN') : 'CLEAR');
     var copy = overdueCount>0
       ? (String(overdueCount)+' annual meeting approval item'+(overdueCount===1?' has':'s have')+' been open more than 2 days for '+(ctx.name||'the selected community')+'.')
       : (openCount>0 ? (String(openCount)+' annual meeting approval item'+(openCount===1?' is':'s are')+' still in progress for '+(ctx.name||'the selected community')+'.') : 'No active items');
-    var snap = { title:'Annual meeting approvals', tone:tone, href:href, badge:badge, copy:copy };
-    paintAnnualSnapshot(snap);
-    writeAnnualCache(ctx, snap);
-    try{ window.__mh2AnnualApprovalAlertDebug={community:ctx,open:openCount,overdue:overdueCount,paintedAt:new Date().toISOString(), cached:true}; }catch(e){}
+    el.innerHTML = '<div class="mh2-alert-top"><div class="mh2-alert-title">Annual meeting approvals</div><div class="mh2-alert-badge">'+esc(badge)+'</div></div><div class="mh2-alert-copy">'+esc(copy)+'</div>';
+    try{ window.__mh2AnnualApprovalAlertDebug={community:ctx,open:openCount,overdue:overdueCount,paintedAt:new Date().toISOString()}; }catch(e){}
   }
   async function refreshAnnualAlert(){
     var sb=getSb();
@@ -6319,16 +6317,12 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
   window.mh2RefreshAnnualApprovalSmartAlert = refreshAnnualAlert;
   function schedule(){ setTimeout(refreshAnnualAlert,250); setTimeout(refreshAnnualAlert,1200); setTimeout(refreshAnnualAlert,3500); }
   document.addEventListener('DOMContentLoaded', function(){
-    restoreAnnualAlertFromCache();
     schedule();
     var sel=$('zummeeCommunitySelect');
-    if(sel) sel.addEventListener('change', function(){ restoreAnnualAlertFromCache(); setTimeout(refreshAnnualAlert,150); setTimeout(refreshAnnualAlert,1000); });
+    if(sel) sel.addEventListener('change', function(){ setTimeout(refreshAnnualAlert,150); setTimeout(refreshAnnualAlert,1000); });
     setInterval(refreshAnnualAlert, 15000);
   });
-  if(document.readyState !== 'loading'){
-    restoreAnnualAlertFromCache();
-    schedule();
-  }
+  if(document.readyState !== 'loading') schedule();
 })();
 </script>
 
