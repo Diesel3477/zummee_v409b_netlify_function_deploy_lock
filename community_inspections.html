@@ -4,7 +4,7 @@
 <head>
 <script>window.ZUMMEE_BUILD="2026-03-27-1";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
-<!-- ZUMMEE_PATCH v2113: header check removed + resilient assigned-community dropdown recovery lock -->
+<!-- ZUMMEE_PATCH v2114: header check removed + assigned dropdown name dedupe lock -->
 <!-- ZUMMEE_PATCH v2074: inspections reads vendors from actual ops localStorage keys -->
 <!-- ZUMMEE_PATCH v2064: offline drafts (IndexedDB) for inspections -->
 <!-- ZUMMEE_PATCH v2061: latest polish bundle -->
@@ -13679,9 +13679,9 @@ body#inspectionsPage .draftRow{
   #ciPremiumHeader .ci-icon,
   #ciPremiumHeader .ci-header-icon{display:none !important;}
 </style>
-<script id="communityInspectionsAssignedDropdownRecoveryLock_v2113">
+<script id="communityInspectionsAssignedDropdownNameDedupeLock_v2114">
 (function(){
-  var BUILD = 'v2113';
+  var BUILD = 'v2114';
   var SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
   var SUPABASE_KEY = "sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864";
   var locked = null;
@@ -13704,8 +13704,17 @@ body#inspectionsPage .draftRow{
     return asText(row.id || row.community_id || row.communityId || row.property_community_id || row.propertyCommunityId || row.value || row.uuid || row.community || '');
   }
   function normalizeCommunityRows(rows){
-    var seen = {};
+    var seenIds = {};
+    var seenNames = {};
     var list = [];
+    function nameKey(v){
+      return String(v || '')
+        .toLowerCase()
+        .replace(/&/g,'and')
+        .replace(/[^a-z0-9]+/g,' ')
+        .replace(/\s+/g,' ')
+        .trim();
+    }
     (rows||[]).forEach(function(r){
       if(!r) return;
       if(typeof r === 'string') r = { id:r, name:r };
@@ -13713,9 +13722,14 @@ body#inspectionsPage .draftRow{
       var name = normalizeName(r, id);
       if(!id && name) id = name;
       if(!id) return;
-      var key = String(id);
-      if(seen[key]) return;
-      seen[key] = true;
+      var idKey = String(id);
+      var nKey = nameKey(name || id);
+      // v2114: Manager Hub shows assigned communities by display community, so this page must
+      // de-dupe by BOTH source id and visible name. This prevents legacy duplicate rows like
+      // two different City Side Loft IDs from appearing twice in the picker.
+      if(seenIds[idKey] || (nKey && seenNames[nKey])) return;
+      seenIds[idKey] = true;
+      if(nKey) seenNames[nKey] = true;
       list.push({ id:id, name:name || id });
     });
     list.sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||'')); });
@@ -13896,8 +13910,8 @@ body#inspectionsPage .draftRow{
   }
 
   function bindSelect(sel){
-    if(!sel || sel.__ciV2113Bound) return;
-    sel.__ciV2113Bound = true;
+    if(!sel || sel.__ciV2114Bound) return;
+    sel.__ciV2114Bound = true;
     sel.addEventListener('change', function(){
       persistSelection(sel);
       try{ document.dispatchEvent(new Event('community:changed')); }catch(e){}
@@ -13940,8 +13954,8 @@ body#inspectionsPage .draftRow{
 
   function installObserver(){
     var sel = getSelect();
-    if(!sel || sel.__ciV2113Observer) return;
-    sel.__ciV2113Observer = true;
+    if(!sel || sel.__ciV2114Observer) return;
+    sel.__ciV2114Observer = true;
     try{
       var mo = new MutationObserver(function(){ setTimeout(repairIfOverwritten, 0); });
       mo.observe(sel, { childList:true, subtree:true, attributes:true, attributeFilter:['disabled'] });
