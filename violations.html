@@ -697,6 +697,7 @@
       }
       function renderNoCovenant(message){
         state.currentCovenant = null;
+        state.lastGeneratedLetter = null;
         setText('covenantTitle','No covenant added yet');
         setText('covenantReference','Not found');
         setText('covenantSection', state.selectedCommunityName && state.selectedCategoryId ? (state.selectedCommunityName + ' • ' + getSelectedCategoryName()) : 'Select a category');
@@ -708,6 +709,7 @@
       }
       function renderCovenant(c){
         state.currentCovenant = c || null;
+        state.lastGeneratedLetter = null;
         setText('covenantTitle', clean(c.covenant_title || 'Covenant Preview'));
         setText('covenantReference', clean(c.covenant_reference || 'Reference not set'));
         setText('covenantSection', clean((state.selectedCommunityName || 'Community') + ' • ' + (c.covenant_section || getSelectedCategoryName())));
@@ -1151,18 +1153,34 @@
       }
 
 
+      function hasActiveCovenantForCurrentSelection(){
+        var cov = state.currentCovenant || {};
+        var selectedCategoryId = clean(($('violationCategorySelect') || {}).value || state.selectedCategoryId || '');
+        if(!cov.id || !selectedCategoryId) return false;
+        if(clean(cov.category_id || '') !== selectedCategoryId) return false;
+        var covCommunityId = clean(cov.community_id || '');
+        var covCommunityName = clean(cov.community_name || '');
+        var communityMatches = (covCommunityId && covCommunityId === clean(state.selectedCommunityId)) || (covCommunityName && covCommunityName === clean(state.selectedCommunityName));
+        if(!communityMatches) return false;
+        if(cov.is_active === false) return false;
+        if(!clean(cov.covenant_language || '')) return false;
+        return true;
+      }
+
+
       function getLetterReadiness(){
         var propertyAddress = clean(($('propertyAddressInput') || {}).value || '');
         var categoryId = clean(($('violationCategorySelect') || {}).value || state.selectedCategoryId || '');
-        var covenantId = clean((state.currentCovenant || {}).id || '');
+        var hasCurrentCovenant = hasActiveCovenantForCurrentSelection();
+        var covenantId = hasCurrentCovenant ? clean((state.currentCovenant || {}).id || '') : '';
         var caseId = clean((state.lastSavedCase || {}).id || '');
         var caseMatchesCurrent = false;
-        if(caseId){
+        if(caseId && hasCurrentCovenant){
           var savedAddress = clean((state.lastSavedCase || {}).property_address || '');
           var savedCategory = clean((state.lastSavedCase || {}).category_id || '');
           var savedCovenant = clean((state.lastSavedCase || {}).covenant_id || '');
           var currentCovenant = clean((state.currentCovenant || {}).id || '');
-          caseMatchesCurrent = (!propertyAddress || savedAddress === propertyAddress) && (!categoryId || savedCategory === categoryId) && (!!currentCovenant && savedCovenant === currentCovenant);
+          caseMatchesCurrent = (!!propertyAddress && savedAddress === propertyAddress) && (!!categoryId && savedCategory === categoryId) && (!!currentCovenant && savedCovenant === currentCovenant);
         }
         var items = [
           { key:'property', id:'letterCheckProperty', ok:!!propertyAddress, label:'Property selected', target:'propertySelect', message:'Select a street and property address first.' },
@@ -1183,7 +1201,12 @@
           el.innerHTML = '<span class="check-dot"></span><span>' + escapeHtml((item.ok ? '✓ ' : '') + item.label) + '</span>';
         });
         var btn = $('generateLetterBtn');
-        if(btn) btn.disabled = !readiness.ready || state.isGeneratingLetter;
+        if(btn){
+          var locked = !readiness.ready || state.isGeneratingLetter;
+          btn.disabled = locked;
+          btn.setAttribute('aria-disabled', locked ? 'true' : 'false');
+          btn.textContent = state.isGeneratingLetter ? 'Generating…' : (locked ? 'Complete checklist first' : 'Generate Letter Record');
+        }
         if(readiness.ready){
           if(!state.lastGeneratedLetter) setText('letterSaveNote','Ready. Generate the permanent letter record when the preview looks correct.');
         }else if(!state.isGeneratingLetter){
@@ -1210,7 +1233,7 @@
       async function generateLetterRecord(){
         if(state.isGeneratingLetter) return;
         var readiness = renderLetterReadiness();
-        if(!readiness.ready || !state.currentCovenant || !state.currentCovenant.id){
+        if(!readiness.ready || !hasActiveCovenantForCurrentSelection()){
           setStatus('warn','Complete letter checklist');
           setText('letterSaveNote', 'A letter record cannot be generated until a property, category, active covenant, and matching saved case are complete.');
           focusLetterMissingField(readiness);
