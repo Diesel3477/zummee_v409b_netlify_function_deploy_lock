@@ -7,9 +7,11 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="shared/supabase-client.js?v=2026-04-29-v327"></script>
   <script src="shared/data-layer-v409.js?v=2026-04-30-v409-server-board-photo-upload"></script>
+  <script src="shared/community-state.js?v=2026-05-07-v613"></script>
+  <script src="shared/input-undo-guard.js?v=2026-05-07-v613"></script>
   
   <script>
-window.ZUMMEE_BUILD = "2026-05-06-v521-vendor-ipad-undo-stability-lock";
+window.ZUMMEE_BUILD = "2026-05-07-v613-operations-native-community-state";
     (function(){
       try{
         var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
@@ -2118,13 +2120,23 @@ body.dark-mode .mh2-stat-box {
         if(!Store.userId) Store.userId = String(user?.id || '').trim();
       }catch(_e){}
     }
-    function syncCommunityToStorage(){
+    function syncCommunityToStorage(options){
+      options = options || {};
       try{ if(Store.activeCommunityId) localStorage.setItem('activeCommunityId', Store.activeCommunityId); }catch(_e){}
       try{ if(Store.activeCommunityName) localStorage.setItem('activeCommunityName', Store.activeCommunityName); }catch(_e){}
       try{ if(Store.activeCommunityId) localStorage.setItem('currentCommunityId', Store.activeCommunityId); }catch(_e){}
       try{ if(Store.activeCommunityName) localStorage.setItem('currentCommunityName', Store.activeCommunityName); }catch(_e){}
       try{ if(Store.activeCommunityId) localStorage.setItem('zummee_community_id', Store.activeCommunityId); }catch(_e){}
       try{ if(Store.activeCommunityId) localStorage.setItem('zummee_selected_community_id', Store.activeCommunityId); }catch(_e){}
+      try{ if(Store.activeCommunityId) localStorage.setItem('zummeeActiveCommunityId', Store.activeCommunityId); }catch(_e){}
+      try{
+        if(Store.activeCommunityId && window.ZummeeCommunityState && typeof window.ZummeeCommunityState.setActiveCommunity === 'function'){
+          window.ZummeeCommunityState.setActiveCommunity(Store.activeCommunityId, Store.activeCommunityName || '', {
+            source: options.source || 'operations-portal',
+            silent: options.silent !== false
+          });
+        }
+      }catch(_e){}
     }
     async function fetchCommunitiesFromSupabase(){
       if(!sb) return [];
@@ -2140,10 +2152,17 @@ body.dark-mode .mh2-stat-box {
       };
       const uniqCommunities = (rows) => uniqBy((rows||[]).filter(x => x && (x.id || x.name)), x => (x.id || ('name:' + String(x.name||'').toLowerCase())));
 
-      // v96 LOCKED: Operations Portal dropdown must match Manager Hub / Board Hub.
-      // Assigned communities are the only source of truth. Do not seed from old company/local caches first.
+      // v613: use the same shared community-state layer as Manager Hub / Inspections / Work Orders / Live Maintenance.
       try{
-        if(window.ZummeeDataLayer && typeof window.ZummeeDataLayer.getAssignedCommunities === 'function'){
+        if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.loadAssignedCommunities === 'function'){
+          const sharedStateCommunities = await window.ZummeeCommunityState.loadAssignedCommunities({ force:false });
+          pushRows(sharedStateCommunities, assigned);
+        }
+      }catch(e){ console.warn('[Operations Portal v613] shared community-state loader failed', e); }
+
+      // Legacy fallback only. Keep this as a secondary compatibility path while Operations is migrated.
+      try{
+        if(!assigned.length && window.ZummeeDataLayer && typeof window.ZummeeDataLayer.getAssignedCommunities === 'function'){
           const shared = await window.ZummeeDataLayer.getAssignedCommunities({ userId: Store.userId });
           pushRows(shared, assigned);
         }
@@ -2215,9 +2234,32 @@ body.dark-mode .mh2-stat-box {
         Store.activeCommunityName = '';
         return;
       }
-      const currentId = String(localStorage.getItem('activeCommunityId') || localStorage.getItem('currentCommunityId') || localStorage.getItem('zummee_community_id') || localStorage.getItem('zummee_selected_community_id') || '').trim();
-      const currentName = String(localStorage.getItem('activeCommunityName') || localStorage.getItem('currentCommunityName') || '').trim().toLowerCase();
-      const match = Store.communities.find(c => (c.id && c.id === currentId) || (c.name && c.name.toLowerCase() === currentName)) || Store.communities[0];
+
+      let active = null;
+      try{
+        if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+          active = window.ZummeeCommunityState.getActiveCommunity();
+        }
+      }catch(_e){}
+
+      const currentId = String(
+        (active && active.id) ||
+        localStorage.getItem('zummee_active_community_id') ||
+        localStorage.getItem('activeCommunityId') ||
+        localStorage.getItem('currentCommunityId') ||
+        localStorage.getItem('zummee_community_id') ||
+        localStorage.getItem('zummee_selected_community_id') ||
+        ''
+      ).trim();
+      const currentName = String(
+        (active && active.name) ||
+        localStorage.getItem('zummee_active_community_name') ||
+        localStorage.getItem('activeCommunityName') ||
+        localStorage.getItem('currentCommunityName') ||
+        ''
+      ).trim().toLowerCase();
+
+      const match = Store.communities.find(c => (c.id && c.id === currentId) || (c.name && String(c.name).toLowerCase() === currentName)) || Store.communities[0];
       Store.activeCommunityId = match.id || '';
       Store.activeCommunityName = match.name || '';
       select.innerHTML = Store.communities.map(c => {
@@ -2225,14 +2267,22 @@ body.dark-mode .mh2-stat-box {
         const selected = ((c.id && c.id === Store.activeCommunityId) || ((!c.id || !Store.activeCommunityId) && c.name === Store.activeCommunityName)) ? ' selected' : '';
         return `<option value="${value}"${selected}>${escapeHtml(c.name || c.id || 'Community')}</option>`;
       }).join('');
-      syncCommunityToStorage();
+      syncCommunityToStorage({ source:'operations-render-v613', silent:true });
     }
     function attachCommunitySelect(){
-      byId('communitySelect').addEventListener('change', async (e) => {
+      const select = byId('communitySelect');
+      if(!select || select.__operationsCommunityStateV613Bound) return;
+      select.__operationsCommunityStateV613Bound = true;
+      select.addEventListener('change', async (e) => {
         const obj = safeJson(decodeURIComponent(e.target.value), {});
-        Store.activeCommunityId = String(obj.id || '').trim();
-        Store.activeCommunityName = String(obj.name || '').trim();
-        syncCommunityToStorage();
+        Store.activeCommunityId = String(obj.id || obj.community_id || obj.communityId || '').trim();
+        Store.activeCommunityName = String(obj.name || obj.community_name || obj.communityName || '').trim();
+        syncCommunityToStorage({ source:'operations-dropdown-v613', silent:false });
+        try{
+          window.dispatchEvent(new CustomEvent('zummee:community-changed', {
+            detail:{ id:Store.activeCommunityId, community_id:Store.activeCommunityId, name:Store.activeCommunityName, source:'operations-dropdown-v613' }
+          }));
+        }catch(_e){}
         await loadDailyOpsCompanyLogo();
         await loadModules();
       });
@@ -3205,6 +3255,7 @@ body.dark-mode .mh2-stat-box {
       let raw = String(select && select.value || '').trim();
       let id = raw;
       let name = String(select && select.selectedOptions && select.selectedOptions[0] ? select.selectedOptions[0].textContent : '').trim();
+
       if(raw){
         try{
           const decoded = decodeURIComponent(raw);
@@ -3213,18 +3264,35 @@ body.dark-mode .mh2-stat-box {
           name = String(obj.name || obj.community_name || obj.communityName || name || '').trim();
         }catch(_e){}
       }
+
+      if((!id || id === raw) && window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        try{
+          const active = window.ZummeeCommunityState.getActiveCommunity();
+          if(active && active.id){
+            id = String(active.id || '').trim();
+            name = String(active.name || name || '').trim();
+          }
+        }catch(_e){}
+      }
+
       if(id){
         Store.activeCommunityId = id;
         try{ localStorage.setItem('activeCommunityId', id); }catch(_e){}
         try{ localStorage.setItem('currentCommunityId', id); }catch(_e){}
         try{ localStorage.setItem('zummee_community_id', id); }catch(_e){}
         try{ localStorage.setItem('zummee_selected_community_id', id); }catch(_e){}
+        try{ localStorage.setItem('zummeeActiveCommunityId', id); }catch(_e){}
       }
       if(name){
         Store.activeCommunityName = name;
         try{ localStorage.setItem('activeCommunityName', name); }catch(_e){}
         try{ localStorage.setItem('currentCommunityName', name); }catch(_e){}
       }
+      try{
+        if(id && window.ZummeeCommunityState && typeof window.ZummeeCommunityState.setActiveCommunity === 'function'){
+          window.ZummeeCommunityState.setActiveCommunity(id, name || '', { source:'operations-selected-community-v613', silent:true });
+        }
+      }catch(_e){}
       return { id, name };
     }
     function getDailyOpsSelectedCommunityId(){
@@ -5235,15 +5303,44 @@ function normalizeAccessCodeRow(row){
       }
     }
 
+    async function syncOperationsFromCanonical(options){
+      options = options || {};
+      if(!window.ZummeeCommunityState || typeof window.ZummeeCommunityState.getActiveCommunity !== 'function') return false;
+      const active = window.ZummeeCommunityState.getActiveCommunity();
+      if(!active || !active.id) return false;
+      const activeId = String(active.id || '').trim();
+      const activeName = String(active.name || '').trim();
+      const hit = Store.communities.find(c => String(c.id || '') === activeId);
+      if(!hit) return false;
+
+      Store.activeCommunityId = activeId;
+      Store.activeCommunityName = activeName || hit.name || activeId;
+      const select = byId('communitySelect');
+      if(select){
+        const option = Array.from(select.options || []).find(o => {
+          try{
+            const obj = safeJson(decodeURIComponent(o.value), {});
+            return String(obj.id || obj.community_id || obj.communityId || '') === activeId;
+          }catch(_e){ return false; }
+        });
+        if(option && select.value !== option.value) select.value = option.value;
+      }
+      syncCommunityToStorage({ source:'operations-canonical-sync-v613', silent:true });
+      if(options.reload){
+        await loadDailyOpsCompanyLogo();
+        await loadModules();
+      }
+      return true;
+    }
+
     async function init(){
       await restoreSupabaseSessionFromStorage();
       await ensureUser();
-      // v110: company logo loads after selected community is resolved so company_id is derived from PropertyCommunities.
-      // v96 LOCKED: load assigned communities from shared/Supabase first.
-      // Local cached company lists are fallback only, never the primary dropdown source.
+      // v613: community list and active selection come from shared/community-state.js first.
       Store.communities = await fetchCommunitiesFromSupabase();
       if(!Store.communities.length) Store.communities = readCommunityCandidates();
       renderCommunityOptions();
+      await syncOperationsFromCanonical({ reload:false });
       await loadDailyOpsCompanyLogo();
       attachCommunitySelect();
       await applySupervisorCommsRoleLock();
@@ -5255,6 +5352,13 @@ function normalizeAccessCodeRow(row){
       attachImportantDatesModule();
       attachAccessCodesModule();
       await loadModules();
+
+      if(!window.__operationsCommunityLifecycleV613){
+        window.__operationsCommunityLifecycleV613 = true;
+        window.addEventListener('pageshow', () => setTimeout(() => syncOperationsFromCanonical({ reload:true }), 100));
+        window.addEventListener('focus', () => syncOperationsFromCanonical({ reload:true }));
+        document.addEventListener('visibilitychange', () => { if(!document.hidden) syncOperationsFromCanonical({ reload:true }); });
+      }
     }
     init();
   </script>
