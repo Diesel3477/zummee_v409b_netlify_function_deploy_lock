@@ -2,7 +2,7 @@
 
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-07-v606-community-inspections-native-community-state";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-07-v607-community-inspections-remove-legacy-community-writers";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <!-- ZUMMEE_PATCH v2115: stable single-mount header + assigned dropdown no-jump lock -->
 <!-- ZUMMEE_PATCH v2074: inspections reads vendors from actual ops localStorage keys -->
@@ -7919,75 +7919,6 @@ body.dark-mode .mh2-stat-box {
 }
 
 </style>
-<script id="mzHeaderCommunityPopulate">
-(function(){
-  const SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864";
-  async function ensureSb(){
-    if(window.sb && window.sb.auth && window.sb.from) return window.sb;
-    if(!window.supabase || !window.supabase.createClient) return null;
-    window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-      auth: { storageKey:'sb-zummee-auth', storage: window.localStorage, persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }
-    });
-    return window.sb;
-  }
-  async function loadCommunityOptions(){
-    try{
-      const sel = document.getElementById('zummeeCommunitySelect');
-      if(!sel) return;
-      const sb = await ensureSb();
-      if(!sb) return;
-      const { data } = await sb.auth.getSession();
-      const uid = data?.session?.user?.id;
-      if(!uid) return;
-      const a = await sb.from('community_assignments').select('community_id').eq('user_id', uid);
-      if(a.error) throw a.error;
-      const ids = (a.data||[]).map(r=>r.community_id).filter(Boolean);
-      if(!ids.length) return;
-      const pc = await sb.from('PropertyCommunities').select('id,name').in('id', ids);
-      if(pc.error) throw pc.error;
-      const list = (pc.data||[]).slice().sort((x,y)=>String(x.name||'').localeCompare(String(y.name||'')));
-      sel.innerHTML = '';
-      for(const c of list){
-        const opt = document.createElement('option');
-        opt.value = c.id;
-        opt.textContent = c.name;
-        sel.appendChild(opt);
-      }
-
-      // --- Persist selected community across pages ---
-      try{
-        const desired = (localStorage.getItem('activeCommunityId') || localStorage.getItem('zummee_selected_community_id') || '').toString().trim();
-        if(desired){
-          const has = Array.from(sel.options).some(o => String(o.value) === String(desired));
-          if(has){
-            sel.value = desired;
-          }
-        }
-        if(!sel.value && sel.options && sel.options.length){
-          sel.value = sel.options[0].value;
-        }
-        if(sel.value){
-          localStorage.setItem('activeCommunityId', String(sel.value));
-          localStorage.setItem('zummee_selected_community_id', String(sel.value));
-        }
-        setTimeout(()=>{ try{ sel.dispatchEvent(new Event('change',{bubbles:true})); }catch(e){} }, 0);
-        if(!sel.__zummeePersistBound){
-          sel.__zummeePersistBound = true;
-          sel.addEventListener('change', ()=>{
-            const v = String(sel.value||'').trim();
-            if(v){
-              localStorage.setItem('activeCommunityId', v);
-              localStorage.setItem('zummee_selected_community_id', v);
-            }
-          });
-        }
-      }catch(e){}
-    } catch(e){ console.warn('Header community load failed', e); }
-  }
-  document.addEventListener('DOMContentLoaded', loadCommunityOptions);
-})();
-</script>
 <script>
   // --- Cloud Communities (company-wide) ---
   (function(){
@@ -8216,8 +8147,8 @@ body.dark-mode .mh2-stat-box {
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="shared/supabase-client.js?v=2026-04-08-2"></script>
 <script src="shared/maintenance-data.js?v=2026-05-07-v500"></script>
-<script src="shared/community-state.js?v=2026-05-07-v606"></script>
-<script src="shared/input-undo-guard.js?v=2026-05-07-v606"></script>
+<script src="shared/community-state.js?v=2026-05-07-v607"></script>
+<script src="shared/input-undo-guard.js?v=2026-05-07-v607"></script>
 
 <script>
   // Supabase init (shared)
@@ -10638,113 +10569,6 @@ body.dark-mode .mh2-stat-box {
   wire(); refreshVendors();
 })();
 </script>
-<script id="zummeeCommunityController_v1">
-/* Unified Community Controller — single source of truth for all pages (v2092) */
-(function(){
-  const KEY="activeCommunityId";
-
-  function getSelect(){
-    return document.getElementById("zummeeCommunitySelect");
-  }
-
-  function isPlaceholder(opt){
-    const v = (opt?.value || "").trim();
-    const t = (opt?.textContent || "").trim().toLowerCase();
-    if(!v) return true;
-    return (t === "select" || t === "select..." || t === "— select —" || t === "-- select --");
-  }
-
-  function firstRealValue(sel){
-    const opts = Array.from(sel?.options || []);
-    for(const o of opts){
-      if(!isPlaceholder(o)) return o.value;
-    }
-    return "";
-  }
-
-  function syncLabel(){
-    const sel=getSelect();
-    if(!sel) return;
-    const txt=sel.selectedOptions?.[0]?.textContent?.trim();
-    if(!txt) return;
-    [
-      document.getElementById("mzCommunityPickerLabel"),
-      document.getElementById("zummeeCommunityLabel"),
-      document.querySelector(".communityPickerLabel"),
-      document.querySelector("[data-community-label]"),
-      // Hub header uses this label class
-      document.querySelector(".zummee-header__communityLabelValue")
-    ].filter(Boolean).forEach(el=>{ try{ el.textContent=txt; }catch(_e){} });
-  }
-
-  function applySaved(){
-    const sel=getSelect();
-    if(!sel) return;
-
-    const saved=(localStorage.getItem(KEY)||"").trim();
-
-    // If saved exists and option exists, apply it.
-    if(saved){
-      const opt=sel.querySelector('option[value="'+CSS.escape(saved)+'"]');
-      if(opt){
-        sel.value=saved;
-      }
-    }
-
-    // If still placeholder/empty, choose first real option.
-    const currentOpt = sel.selectedOptions?.[0];
-    if(!sel.value || isPlaceholder(currentOpt)){
-      const first = firstRealValue(sel);
-      if(first){
-        sel.value = first;
-      }
-    }
-
-    if(sel.value){
-      localStorage.setItem(KEY, sel.value);
-    }
-
-    syncLabel();
-  }
-
-  function wire(){
-    const sel=getSelect();
-    if(!sel) return;
-
-    if(!sel.__zummeeBound){
-      sel.__zummeeBound=true;
-      sel.addEventListener("change", ()=>{
-        const opt = sel.selectedOptions?.[0];
-        if(sel.value && !isPlaceholder(opt)){
-          localStorage.setItem(KEY, sel.value);
-        }
-        syncLabel();
-      });
-    }
-
-    applySaved();
-  }
-
-  function start(){
-    wire();
-
-    // Observe for header rebuild / option repopulation (Hub does this)
-    const obs = new MutationObserver(()=>{ if(getSelect()) wire(); });
-    obs.observe(document.body,{childList:true,subtree:true});
-
-    // Retry window during load
-    let tries=0;
-    const t=setInterval(()=>{
-      wire();
-      tries++;
-      if(tries>120) clearInterval(t);
-    },100);
-  }
-
-  document.addEventListener("DOMContentLoaded", start);
-  start();
-})();
-</script>
 <!-- Maintenance Request Ad Modal (Branded) -->
 <div id="maintAdOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:9999; padding:18px; overflow:auto;">
 <div id="maintAdModal" style="max-width:980px; margin:20px auto; background:#fff; border-radius:16px; box-shadow:0 18px 60px rgba(0,0,0,.35); overflow:hidden;">
@@ -12322,112 +12146,6 @@ document.addEventListener('DOMContentLoaded', function(){
 
 
 
-<script id="inspectionsHeaderDirectDailyOpsMatch">
-(function(){
-  function applyHeaderMatch(){
-    try{
-      const hdr = document.querySelector('header.zm-header');
-      const label = document.querySelector('.zm-communityLabel');
-      const select = document.getElementById('zummeeCommunitySelect');
-      const hub = document.getElementById('zummeeHdrHub');
-      const logo = document.querySelector('.zm-header__logo img');
-      const actions = document.querySelector('.zm-actionsRow');
-      const row = document.querySelector('.zm-communityRow');
-      const left = document.querySelector('.zm-header__left');
-      const right = document.querySelector('.zm-header__right');
-      const swatch = document.getElementById('zummeeCommunitySwatch');
-      const profile = document.getElementById('zummeeHdrProfile');
-      const signout = document.getElementById('zummeeSignOut');
-
-      if (!hdr) return;
-
-      hdr.style.setProperty('padding', '12px', 'important');
-      hdr.style.setProperty('margin', '16px 16px 0 16px', 'important');
-      hdr.style.setProperty('background', 'linear-gradient(rgb(126, 174, 230) 0%, rgb(110, 153, 209) 100%)', 'important');
-      hdr.style.setProperty('border-radius', '26px', 'important');
-      hdr.style.setProperty('box-shadow', 'rgba(30, 60, 90, 0.18) 0px 12px 28px 0px, rgba(255, 255, 255, 0.34) 0px 1px 0px 0px inset', 'important');
-      hdr.style.setProperty('display', 'flex', 'important');
-      hdr.style.setProperty('flex-direction', 'column', 'important');
-      hdr.style.setProperty('align-items', 'center', 'important');
-      hdr.style.setProperty('gap', '10px', 'important');
-
-      left && left.style.setProperty('width', '100%', 'important');
-      left && left.style.setProperty('justify-content', 'center', 'important');
-
-      right && right.style.setProperty('width', '100%', 'important');
-      right && right.style.setProperty('display', 'flex', 'important');
-      right && right.style.setProperty('flex-direction', 'column', 'important');
-      right && right.style.setProperty('align-items', 'center', 'important');
-      right && right.style.setProperty('gap', '10px', 'important');
-
-      row && row.style.setProperty('width', '100%', 'important');
-      row && row.style.setProperty('display', 'flex', 'important');
-      row && row.style.setProperty('flex-direction', 'column', 'important');
-      row && row.style.setProperty('align-items', 'center', 'important');
-      row && row.style.setProperty('gap', '10px', 'important');
-
-      swatch && swatch.style.setProperty('display', 'none', 'important');
-
-      label && label.style.setProperty('color', 'rgba(255, 255, 255, 0.92)', 'important');
-      label && label.style.setProperty('font-size', '20px', 'important');
-      label && label.style.setProperty('font-weight', '600', 'important');
-      label && label.style.setProperty('margin', '0', 'important');
-
-      logo && logo.style.setProperty('height', '56px', 'important');
-      logo && logo.style.setProperty('width', '296.469px', 'important');
-      logo && logo.style.setProperty('max-width', 'none', 'important');
-
-      select && select.style.setProperty('width', '100%', 'important');
-      select && select.style.setProperty('max-width', '354px', 'important');
-      select && select.style.setProperty('min-height', '0', 'important');
-      select && select.style.setProperty('height', '46px', 'important');
-      select && select.style.setProperty('padding', '10px 12px', 'important');
-      select && select.style.setProperty('border-radius', '14px', 'important');
-      select && select.style.setProperty('font-size', '18px', 'important');
-      select && select.style.setProperty('font-weight', '700', 'important');
-      select && select.style.setProperty('background', 'rgba(255, 255, 255, 0.96)', 'important');
-      select && select.style.setProperty('color', 'rgb(15, 47, 74)', 'important');
-
-      actions && actions.style.setProperty('width', '100%', 'important');
-      actions && actions.style.setProperty('justify-content', 'center', 'important');
-      actions && actions.style.setProperty('gap', '10px', 'important');
-
-      hub && hub.style.setProperty('display', 'inline-flex', 'important');
-      hub && hub.style.setProperty('width', '160px', 'important');
-      hub && hub.style.setProperty('max-width', '160px', 'important');
-      hub && hub.style.setProperty('min-width', '0', 'important');
-      hub && hub.style.setProperty('min-height', '0', 'important');
-      hub && hub.style.setProperty('height', '41px', 'important');
-      hub && hub.style.setProperty('padding', '10px 16px', 'important');
-      hub && hub.style.setProperty('border-radius', '999px', 'important');
-      hub && hub.style.setProperty('font-size', '16px', 'important');
-      hub && hub.style.setProperty('font-weight', '900', 'important');
-      hub && hub.style.setProperty('background', '#ffffff', 'important');
-      hub && hub.style.setProperty('color', 'rgb(11, 30, 47)', 'important');
-      hub && hub.style.setProperty('border', '1px solid rgb(11, 30, 47)', 'important');
-      hub && hub.style.setProperty('box-shadow', 'rgba(15, 47, 74, 0.12) 0px 8px 18px 0px', 'important');
-
-      if (profile) profile.style.setProperty('display', 'none', 'important');
-      if (signout) signout.style.setProperty('display', 'none', 'important');
-    }catch(e){}
-  }
-
-  function runSequence(){
-    applyHeaderMatch();
-    setTimeout(applyHeaderMatch, 50);
-    setTimeout(applyHeaderMatch, 150);
-    setTimeout(applyHeaderMatch, 400);
-    setTimeout(applyHeaderMatch, 1000);
-  }
-
-  if (document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', runSequence);
-  } else {
-    runSequence();
-  }
-  window.addEventListener('load', runSequence);
-})();
-</script>
 
 <div id="zummeeAlertBackdrop" class="zummee-modal__backdrop" aria-hidden="true">
   <div class="zummee-modal__card" role="dialog" aria-modal="true" aria-labelledby="zummeeAlertTitle" aria-describedby="zummeeAlertMessage">
@@ -12993,98 +12711,6 @@ body#inspectionsPage [data-page-error]{
     #ciPremiumHeader .ci-v2110-hub{width:100% !important;min-width:0 !important;}
   }
 </style>
-<script id="communityInspectionsHeaderHardLock_v2110_script">
-(function(){
-  var SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
-  var SUPABASE_KEY = "sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864";
-  async function ensureSb(){
-    if(window.sb && window.sb.auth && window.sb.from) return window.sb;
-    if(window.supabase && window.supabase.createClient){
-      window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-        auth:{storageKey:'sb-zummee-auth',storage:window.localStorage,persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
-      });
-      return window.sb;
-    }
-    return null;
-  }
-  async function loadCommunities(){
-    var sel = document.getElementById('zummeeCommunitySelect');
-    if(!sel) return;
-    try{
-      sel.innerHTML = '<option value="">Loading communities...</option>';
-      var sb = await ensureSb();
-      if(!sb) return;
-      var ses = await sb.auth.getSession();
-      var uid = ses && ses.data && ses.data.session && ses.data.session.user && ses.data.session.user.id;
-      if(!uid){ sel.innerHTML = '<option value="">No communities</option>'; return; }
-      var a = await sb.from('community_assignments').select('community_id').eq('user_id', uid);
-      if(a.error) throw a.error;
-      var ids = (a.data || []).map(function(r){ return r.community_id; }).filter(Boolean);
-      if(!ids.length){ sel.innerHTML = '<option value="">No communities</option>'; return; }
-      var pc = await sb.from('PropertyCommunities').select('id,name').in('id', ids);
-      if(pc.error) throw pc.error;
-      var list = (pc.data || []).slice().sort(function(x,y){ return String(x.name||'').localeCompare(String(y.name||'')); });
-      sel.innerHTML = '';
-      list.forEach(function(c){
-        var opt = document.createElement('option');
-        opt.value = c.id;
-        opt.textContent = c.name;
-        sel.appendChild(opt);
-      });
-      var desired = String(localStorage.getItem('activeCommunityId') || localStorage.getItem('zummee_selected_community_id') || '').trim();
-      if(desired && Array.from(sel.options).some(function(o){ return String(o.value) === desired; })) sel.value = desired;
-      if(!sel.value && sel.options.length) sel.value = sel.options[0].value;
-      if(sel.value){
-        localStorage.setItem('activeCommunityId', String(sel.value));
-        localStorage.setItem('zummee_selected_community_id', String(sel.value));
-      }
-      if(!sel.__ciV2110Bound){
-        sel.__ciV2110Bound = true;
-        sel.addEventListener('change', function(){
-          var v = String(sel.value || '').trim();
-          if(v){
-            localStorage.setItem('activeCommunityId', v);
-            localStorage.setItem('zummee_selected_community_id', v);
-          }
-        });
-      }
-      try{ sel.dispatchEvent(new Event('change',{bubbles:true})); }catch(e){}
-    }catch(e){
-      console.warn('v2110 community load failed', e);
-      sel.innerHTML = '<option value="">Community unavailable</option>';
-    }
-  }
-  function rebuildHeader(){
-    var wrap = document.querySelector('.wrap');
-    if(!wrap || !wrap.parentNode) return;
-    var existing = document.getElementById('ciPremiumHeader');
-    if(existing){
-      // v2115: do not remove/reinsert the header on delayed timers; that caused visible iPad jump.
-      return existing;
-    }
-    var h = document.createElement('div');
-    h.id = 'ciPremiumHeader';
-    h.className = 'ci-header-v2110';
-    h.innerHTML = ''+
-      '<div class="ci-v2110-top">'+
-        '<div class="ci-v2110-left">'+
-          '<div><h1 class="ci-v2110-title">Community Inspections</h1><div class="ci-v2110-subtitle">Create inspection records, vendor walks, drafts, photos, and follow-up work orders.</div></div>'+
-        '</div>'+
-        '<img id="ciCompanyLogo" class="company-logo ci-v2110-logo" alt="Company logo" />'+
-      '</div>'+
-      '<div class="ci-v2110-controls">'+
-        '<select id="zummeeCommunitySelect" class="ci-v2110-select" aria-label="Select community"></select>'+
-        '<a class="ci-v2110-hub" href="manager_hub.html">Back to Hub</a>'+
-      '</div>';
-    wrap.parentNode.insertBefore(h, wrap);
-    try{ if(window.ZummeeCompanyLogoSync && typeof window.ZummeeCompanyLogoSync.sync === 'function') window.ZummeeCompanyLogoSync.sync(); }catch(e){}
-    loadCommunities();
-  }
-  function boot(){ rebuildHeader(); }
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
-  window.addEventListener('load', function(){ if(!document.getElementById('ciPremiumHeader')) setTimeout(rebuildHeader, 50); });
-})();
-</script>
 
 
 
@@ -13686,10 +13312,10 @@ body#inspectionsPage [data-page-error]{
 </script>
 
 
-<script id="zummee-community-inspections-native-community-state-v606">
+<script id="zummee-community-inspections-native-community-state-v607">
 /*
   Community Inspections native community-state integration
-  Build: 2026-05-07-v606
+  Build: 2026-05-07-v607
 
   Long-term rule:
   - shared/community-state.js owns selected community persistence.
@@ -13699,8 +13325,8 @@ body#inspectionsPage [data-page-error]{
   - Vendor dropdown reloads from public.Vendors after community changes.
 */
 (function(){
-  if(window.__CommunityInspectionsNativeCommunityStateV606) return;
-  window.__CommunityInspectionsNativeCommunityStateV606 = true;
+  if(window.__CommunityInspectionsNativeCommunityStateV607) return;
+  window.__CommunityInspectionsNativeCommunityStateV607 = true;
 
   function findCommunitySelect(){
     return document.getElementById("zummeeCommunitySelect") ||
@@ -13739,16 +13365,8 @@ body#inspectionsPage [data-page-error]{
       if(typeof window.refreshInspectionVendors === "function") window.refreshInspectionVendors();
     }catch(_e){}
 
-    try{
-      window.dispatchEvent(new CustomEvent("zummee:community-changed", {
-        detail: {
-          id: active && active.id,
-          community_id: active && active.id,
-          name: active && active.name,
-          source: "community-inspections-native-v606"
-        }
-      }));
-    }catch(_e){}
+    // Do not dispatch generic community events during passive reload.
+    // The shared community-state layer dispatches only when the user changes the dropdown.
   }
 
   async function init(){
@@ -13756,7 +13374,7 @@ body#inspectionsPage [data-page-error]{
     if(!window.ZummeeCommunityState || !select) return;
 
     await window.ZummeeCommunityState.hydrateCommunityDropdown(select, {
-      source: "community-inspections-native-v606",
+      source: "community-inspections-native-v607",
       force: false
     });
 
@@ -13777,10 +13395,15 @@ body#inspectionsPage [data-page-error]{
         if(!id) return;
 
         var active = window.ZummeeCommunityState.setActiveCommunity(id, name, {
-          source: "community-inspections-dropdown-v606"
+          source: "community-inspections-dropdown-v607"
         }) || { id:id, name:name };
 
         reloadInspectionCommunityData(active);
+        try{
+          window.dispatchEvent(new CustomEvent("zummee:community-changed", {
+            detail: { id:id, community_id:id, name:name, source:"community-inspections-dropdown-v607" }
+          }));
+        }catch(_e){}
       });
     }
   }
@@ -14501,308 +14124,6 @@ body#inspectionsPage .draftRow{
   #ciPremiumHeader .ci-icon,
   #ciPremiumHeader .ci-header-icon{display:none !important;}
 </style>
-<script id="communityInspectionsAssignedDropdownStableLock_v2115">
-(function(){
-  var BUILD = 'v2115';
-  var SUPABASE_URL = "https://slcwuuwyrgnmlmxpcaim.supabase.co";
-  var SUPABASE_KEY = "sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864";
-  var locked = null;
-  var restoring = false;
-
-  function log(){ try{ console.log.apply(console, ['Community Inspections '+BUILD+':'].concat([].slice.call(arguments))); }catch(e){} }
-  function warn(){ try{ console.warn.apply(console, ['Community Inspections '+BUILD+':'].concat([].slice.call(arguments))); }catch(e){} }
-  function byId(id){ return document.getElementById(id); }
-  function asText(v){ return String(v == null ? '' : v).trim(); }
-  function unique(arr){ var s={}; return (arr||[]).filter(function(x){ x=asText(x); if(!x || s[x]) return false; s[x]=true; return true; }); }
-
-  function getSelect(){ return byId('zummeeCommunitySelect'); }
-
-  function normalizeName(row, fallback){
-    row = row || {};
-    return asText(row.name || row.community_name || row.communityName || row.label || row.title || row.text || fallback || 'Community');
-  }
-  function normalizeId(row){
-    row = row || {};
-    return asText(row.id || row.community_id || row.communityId || row.property_community_id || row.propertyCommunityId || row.value || row.uuid || row.community || '');
-  }
-  function normalizeCommunityRows(rows){
-    var seenIds = {};
-    var seenNames = {};
-    var list = [];
-    function nameKey(v){
-      return String(v || '')
-        .toLowerCase()
-        .replace(/&/g,'and')
-        .replace(/[^a-z0-9]+/g,' ')
-        .replace(/\s+/g,' ')
-        .trim();
-    }
-    (rows||[]).forEach(function(r){
-      if(!r) return;
-      if(typeof r === 'string') r = { id:r, name:r };
-      var id = normalizeId(r);
-      var name = normalizeName(r, id);
-      if(!id && name) id = name;
-      if(!id) return;
-      var idKey = String(id);
-      var nKey = nameKey(name || id);
-      // v2114: Manager Hub shows assigned communities by display community, so this page must
-      // de-dupe by BOTH source id and visible name. This prevents legacy duplicate rows like
-      // two different City Side Loft IDs from appearing twice in the picker.
-      if(seenIds[idKey] || (nKey && seenNames[nKey])) return;
-      seenIds[idKey] = true;
-      if(nKey) seenNames[nKey] = true;
-      list.push({ id:id, name:name || id });
-    });
-    list.sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||'')); });
-    return list;
-  }
-
-  async function waitForSupabase(){
-    var start = Date.now();
-    while(Date.now() - start < 7000){
-      try{
-        if(window.sb && window.sb.auth && window.sb.from) return window.sb;
-        if(window.supabase && window.supabase.createClient){
-          window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-            auth:{ storageKey:'sb-zummee-auth', storage:window.localStorage, persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }
-          });
-          if(window.sb && window.sb.auth && window.sb.from) return window.sb;
-        }
-      }catch(e){}
-      await new Promise(function(resolve){ setTimeout(resolve, 120); });
-    }
-    return null;
-  }
-
-  async function getIdentity(sb){
-    var out = { uid:'', email:'' };
-    try{
-      var u = await sb.auth.getUser();
-      if(u && u.data && u.data.user){ out.uid = asText(u.data.user.id); out.email = asText(u.data.user.email); }
-    }catch(e){}
-    if(!out.uid){
-      try{
-        var s = await sb.auth.getSession();
-        var user = s && s.data && s.data.session && s.data.session.user;
-        if(user){ out.uid = asText(user.id); out.email = asText(user.email); }
-      }catch(e){}
-    }
-    if(!out.uid){ try{ out.uid = asText(window.ZummeeAuth && window.ZummeeAuth.getUserId && window.ZummeeAuth.getUserId()); }catch(e){} }
-    if(!out.uid){ try{ out.uid = asText(localStorage.getItem('zummee_user_id_v1')); }catch(e){} }
-    if(!out.email){
-      try{
-        var raw = sessionStorage.getItem('zummee_session_v1') || localStorage.getItem('zummee_session_v1') || '';
-        var obj = raw ? JSON.parse(raw) : null;
-        out.email = asText(obj && (obj.email || obj.userEmail));
-      }catch(e){}
-    }
-    return out;
-  }
-
-  async function getAssignmentRows(sb, ident){
-    var rows = [];
-    // Most reliable first: select all visible rows, then filter locally. RLS should already limit to the signed-in user.
-    try{
-      var q = await sb.from('community_assignments').select('*');
-      if(!q.error && Array.isArray(q.data)) rows = q.data;
-    }catch(e){ warn('assignment select all failed', e); }
-
-    function rowMatches(r){
-      if(!r) return false;
-      var vals = [r.user_id, r.profile_id, r.employee_id, r.assigned_user_id, r.manager_id, r.userId, r.profileId, r.employeeId].map(asText);
-      var emails = [r.email, r.user_email, r.employee_email, r.assigned_email].map(function(v){ return asText(v).toLowerCase(); });
-      if(ident.uid && vals.indexOf(asText(ident.uid)) >= 0) return true;
-      if(ident.email && emails.indexOf(asText(ident.email).toLowerCase()) >= 0) return true;
-      // If RLS returned only a small assignment set and no obvious owner columns exist, accept the visible rows.
-      var hasOwnerColumn = vals.some(Boolean) || emails.some(Boolean);
-      return !hasOwnerColumn;
-    }
-    rows = (rows||[]).filter(rowMatches);
-
-    // If the unrestricted/RLS read was empty, try known user_id filter.
-    if(!rows.length && ident.uid){
-      try{
-        var byUid = await sb.from('community_assignments').select('*').eq('user_id', ident.uid);
-        if(!byUid.error && Array.isArray(byUid.data)) rows = byUid.data;
-      }catch(e){}
-    }
-    return rows || [];
-  }
-
-  function extractCommunityIds(assignments){
-    var ids = [];
-    (assignments||[]).forEach(function(r){
-      ids.push(r.community_id, r.property_community_id, r.propertyCommunityId, r.communityId, r.community, r.community_uuid);
-    });
-    return unique(ids);
-  }
-
-  async function fetchCommunityRows(sb, ids, assignmentRows){
-    var list = [];
-    if(ids && ids.length){
-      try{
-        var pc = await sb.from('PropertyCommunities').select('id,name,community_name,label').in('id', ids);
-        if(!pc.error && Array.isArray(pc.data)) list = list.concat(pc.data);
-      }catch(e){ warn('PropertyCommunities lookup failed', e); }
-      if(!list.length){
-        try{
-          var pc2 = await sb.from('property_communities').select('id,name,community_name,label').in('id', ids);
-          if(!pc2.error && Array.isArray(pc2.data)) list = list.concat(pc2.data);
-        }catch(e){}
-      }
-    }
-    // If assignment rows already carry community names, use them as fallback.
-    if(!list.length){
-      list = (assignmentRows||[]).map(function(r){
-        return {
-          id: asText(r.community_id || r.property_community_id || r.propertyCommunityId || r.communityId || r.community || r.id),
-          name: asText(r.community_name || r.communityName || r.property_community_name || r.name || r.label)
-        };
-      });
-    }
-    return normalizeCommunityRows(list);
-  }
-
-  function localStorageFallback(ident){
-    var keys = [];
-    if(ident && ident.uid){
-      keys.push('zummee_communities_v1__user__' + ident.uid);
-      keys.push('zummee_communities_v1__user_' + ident.uid);
-      keys.push('mh2_assigned_communities__' + ident.uid);
-      keys.push('manager_hub_assigned_communities__' + ident.uid);
-    }
-    keys = keys.concat([
-      'mh2_assigned_communities',
-      'manager_hub_assigned_communities',
-      'zummee_assigned_communities_v1',
-      'zummee_communities_v1'
-    ]);
-    for(var i=0;i<keys.length;i++){
-      try{
-        var raw = localStorage.getItem(keys[i]);
-        if(!raw) continue;
-        var parsed = JSON.parse(raw);
-        var arr = Array.isArray(parsed) ? parsed : (parsed && (parsed.communities || parsed.list || parsed.data));
-        var list = normalizeCommunityRows(arr);
-        // Prefer a likely assigned list. Avoid accepting the old 6-community company master when better sources fail.
-        if(list.length && list.length <= 5){ log('using local fallback', keys[i], list.length); return list; }
-      }catch(e){}
-    }
-    return [];
-  }
-
-  function renderDropdown(list){
-    var sel = getSelect();
-    if(!sel) return false;
-    list = normalizeCommunityRows(list);
-    if(!list.length){
-      sel.innerHTML = '<option value="">Community unavailable</option>';
-      sel.disabled = true;
-      locked = null;
-      return false;
-    }
-
-    var previous = asText(sel.value || localStorage.getItem('activeCommunityId') || localStorage.getItem('zummee_selected_community_id'));
-    sel.innerHTML = '';
-    list.forEach(function(c){
-      var opt = document.createElement('option');
-      opt.value = String(c.id);
-      opt.textContent = String(c.name || c.id);
-      sel.appendChild(opt);
-    });
-    if(previous && Array.prototype.some.call(sel.options, function(o){ return String(o.value) === previous; })) sel.value = previous;
-    if(!sel.value && sel.options.length) sel.value = sel.options[0].value;
-    sel.disabled = false;
-    persistSelection(sel);
-    locked = { html: sel.innerHTML, value: sel.value, count: sel.options.length };
-    bindSelect(sel);
-    log('loaded assigned communities', locked.count);
-    return true;
-  }
-
-  function persistSelection(sel){
-    sel = sel || getSelect();
-    var v = asText(sel && sel.value);
-    if(!v) return;
-    try{ localStorage.setItem('activeCommunityId', v); }catch(e){}
-    try{ localStorage.setItem('zummee_selected_community_id', v); }catch(e){}
-    try{ localStorage.setItem('zummee_selected_community_v1', v); }catch(e){}
-    try{ window.currentCommunityId = v; }catch(e){}
-  }
-
-  function bindSelect(sel){
-    if(!sel || sel.__ciV2115Bound) return;
-    sel.__ciV2115Bound = true;
-    sel.addEventListener('change', function(){
-      persistSelection(sel);
-      try{ document.dispatchEvent(new Event('community:changed')); }catch(e){}
-      try{ document.dispatchEvent(new Event('communities:changed')); }catch(e){}
-      try{ window.dispatchEvent(new CustomEvent('zummee:community-changed', { detail:{ communityId:sel.value } })); }catch(e){}
-    });
-  }
-
-  async function loadAssignedDropdown(){
-    var sel = getSelect();
-    if(!sel) return false;
-    if(!locked) sel.innerHTML = '<option value="">Loading communities...</option>';
-    var sb = await waitForSupabase();
-    var ident = { uid:'', email:'' };
-    var list = [];
-    if(sb){
-      ident = await getIdentity(sb);
-      var rows = await getAssignmentRows(sb, ident);
-      var ids = extractCommunityIds(rows);
-      list = await fetchCommunityRows(sb, ids, rows);
-    }
-    if(!list.length) list = localStorageFallback(ident);
-    return renderDropdown(list);
-  }
-
-  function repairIfOverwritten(){
-    var sel = getSelect();
-    if(!sel || !locked || restoring) return;
-    var text = (sel.textContent || '').toLowerCase();
-    if(sel.options.length !== locked.count || text.indexOf('community unavailable') >= 0 || text.indexOf('loading communities') >= 0 || text.indexOf('no communities') >= 0){
-      restoring = true;
-      sel.innerHTML = locked.html;
-      if(Array.prototype.some.call(sel.options, function(o){ return o.value === locked.value; })) sel.value = locked.value;
-      sel.disabled = false;
-      bindSelect(sel);
-      persistSelection(sel);
-      restoring = false;
-    }
-  }
-
-  function installObserver(){
-    var sel = getSelect();
-    if(!sel || sel.__ciV2115Observer) return;
-    sel.__ciV2115Observer = true;
-    try{
-      var mo = new MutationObserver(function(){ setTimeout(repairIfOverwritten, 0); });
-      mo.observe(sel, { childList:true, subtree:true, attributes:true, attributeFilter:['disabled'] });
-    }catch(e){}
-  }
-
-  function removeTitleCheck(){
-    try{
-      var titles = document.querySelectorAll('#ciPremiumHeader h1, #ciPremiumHeader .ci-v2110-title, #ciPremiumHeader .ci-title');
-      titles.forEach(function(t){ t.textContent = String(t.textContent || '').replace(/^[\s✓✔✅☑]+/, '').replace('✅','').replace('✓','').replace('✔','').trim(); });
-      var icons = document.querySelectorAll('#ciPremiumHeader .ci-title-check, #ciPremiumHeader .ci-v2110-check, #ciPremiumHeader .ci-icon, #ciPremiumHeader .ci-header-icon');
-      icons.forEach(function(el){ el.style.display = 'none'; });
-    }catch(e){}
-  }
-
-  function boot(){
-    removeTitleCheck();
-    loadAssignedDropdown().then(function(){ installObserver(); repairIfOverwritten(); });
-  }
-
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
-  window.addEventListener('load', function(){ setTimeout(function(){ removeTitleCheck(); installObserver(); repairIfOverwritten(); }, 80); });
-  // v2115: no delayed full reload loops. The header is single-mounted and the dropdown only repairs if overwritten.
-})();
-</script>
 <style id="communityInspectionsHeaderNoJump_v2115">
   /* Reserve the final header geometry immediately so iPad refresh does not jump while auth/dropdown finishes. */
   #ciPremiumHeader,
