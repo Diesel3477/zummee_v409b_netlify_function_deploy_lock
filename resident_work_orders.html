@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-07-v605-native-community-state";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-07-v610-work-orders-native-community-state";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <script id="rwo-v478-scroll-reset">
 (function(){
   try{ if('scrollRestoration' in history) history.scrollRestoration='manual'; }catch(_e){}
@@ -35,10 +35,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Resident Work Orders</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="shared/community-state.js?v=2026-05-07-v605"></script>
-<script src="shared/input-undo-guard.js?v=2026-05-07-v605"></script>
-
   <script src="shared/supabase-client.js?v=2026-05-04-v488"></script>
+<script src="shared/community-state.js?v=2026-05-07-v610"></script>
+<script src="shared/input-undo-guard.js?v=2026-05-07-v610"></script>
+
 <script src="shared/auth.js?v=2026-05-04-v488"></script>
   <script src="shared/zummee-auth.js?v=2026-05-04-v488"></script>
   
@@ -2875,111 +2875,116 @@ window.__rwoTokenTest = async function(){
 
 
 
-<script id="zummee-native-community-controller-v605">
+<script id="zummee-work-orders-native-community-state-v610">
 /*
-  v605 native community controller.
-  Long-term pattern:
-  - page dropdown is hydrated by shared/community-state.js
-  - no dropdown cloning
-  - no bridge patches
-  - no page-specific default-to-first-community behavior
+  Work Orders native community-state integration
+  Build: 2026-05-07-v610
+
+  Long-term rule:
+  - shared/community-state.js owns selected community persistence.
+  - Work Orders uses hydrateCommunityDropdown() directly.
+  - No dropdown clone controller.
+  - No bridge/migration script.
+  - Work-order loader and vendor logic remain intact.
 */
 (function(){
-  if(window.__ZummeeNativeCommunityControllerV605) return;
-  window.__ZummeeNativeCommunityControllerV605 = true;
+  if(window.__WorkOrdersNativeCommunityStateV610) return;
+  window.__WorkOrdersNativeCommunityStateV610 = true;
 
   function findCommunitySelect(){
     return document.getElementById("zummeeCommunitySelect") ||
-      document.getElementById("maintenanceCommunitySelect") ||
       document.getElementById("communitySelect") ||
       document.querySelector('select[id*="community" i]');
   }
 
-  function pageName(){
-    var path = String(location.pathname || "").toLowerCase();
-    if(path.indexOf("manager_hub") >= 0) return "manager-hub";
-    if(path.indexOf("community_inspections") >= 0) return "community-inspections";
-    if(path.indexOf("resident_work_orders") >= 0) return "work-orders";
-    if(path.indexOf("maintenance_updates") >= 0) return "live-maintenance";
-    return "zummee-page";
-  }
-
-  function refreshPageData(active){
+  function setGlobals(active){
     active = active || {};
-    var id = active.id || active.community_id || "";
-    var name = active.name || active.community_name || "";
+    var id = String(active.id || active.community_id || "").trim();
+    var name = String(active.name || active.community_name || "").trim();
+    if(!id) return;
     try{
       window.currentCommunityId = id;
       window.activeCommunityId = id;
       window.selectedCommunityId = id;
+      window.__rwoActiveCommunityId = id;
       if(name) window.currentCommunityName = name;
     }catch(_e){}
+  }
 
-    // Manager Hub known surfaces.
-    if(pageName() === "manager-hub"){
-      [
-        "bootstrapCommunityGlobals",
-        "applyWeatherContext",
-        "loadWeather",
-        "loadWeatherForCommunity",
-        "loadSmartAlerts",
-        "refreshSmartAlerts",
-        "loadActivityFeed",
-        "refreshActivityFeed",
-        "loadBoardSubmittedItems",
-        "refreshBoardStatus",
-        "loadApprovalSummary",
-        "refreshAnnualAlert",
-        "loadManagerHubData"
-      ].forEach(function(fn){
-        try{ if(typeof window[fn] === "function") window[fn](); }catch(_e){}
-      });
+  function reloadWorkOrdersCommunityData(active, clearSelection){
+    setGlobals(active);
+
+    try{
+      if(window.ZummeeMaintenanceData && typeof window.ZummeeMaintenanceData.clearVendorCache === "function"){
+        window.ZummeeMaintenanceData.clearVendorCache();
+      }
+    }catch(_e){}
+
+    try{
+      if(typeof window.loadWorkOrders === "function"){
+        window.loadWorkOrders({
+          clearSelection: !!clearSelection,
+          preserveSelection: !clearSelection,
+          liveRefreshReason: "work-orders-native-v610"
+        });
+      }
+    }catch(err){
+      console.warn("[Work Orders v610] loadWorkOrders failed", err);
     }
 
-    // Work Orders / Maintenance / Inspections.
-    [
-      "loadWorkOrders",
-      "loadUpdates",
-      "loadEvents",
-      "populateVendorSelect",
-      "populateVendorDropdown",
-      "loadInspectionData",
-      "refreshVendorDropdownForActiveCommunity"
-    ].forEach(function(fn){
-      try{
-        if(typeof window[fn] === "function"){
-          if(fn === "loadWorkOrders") window[fn]({ clearSelection:true, liveRefreshReason:"community-v605" });
-          else window[fn]();
-        }
-      }catch(_e){}
-    });
+    try{
+      if(typeof window.populateVendorDropdown === "function"){
+        window.populateVendorDropdown();
+      }
+    }catch(_e){}
 
-    try{ window.dispatchEvent(new CustomEvent("zummee:community-changed", { detail:{ id:id, community_id:id, name:name, source:pageName() } })); }catch(_e){}
-    try{ document.dispatchEvent(new CustomEvent("community:changed", { detail:{ community_id:id, communityId:id, name:name } })); }catch(_e){}
+    try{
+      if(typeof window.refreshVendorDropdownForActiveCommunity === "function"){
+        window.refreshVendorDropdownForActiveCommunity();
+      }
+    }catch(_e){}
   }
 
   async function init(){
-    if(!window.ZummeeCommunityState) return;
     var select = findCommunitySelect();
+    if(!window.ZummeeCommunityState) return;
 
-    // Not every page has a visible dropdown yet, but the page still needs active state.
-    if(!select){
-      var activeOnly = await window.ZummeeCommunityState.ensureActiveCommunity({ silent:true });
-      if(activeOnly) refreshPageData(activeOnly);
-      return;
+    if(select){
+      await window.ZummeeCommunityState.hydrateCommunityDropdown(select, {
+        source: "work-orders-native-v610",
+        force: false
+      });
+    }else{
+      await window.ZummeeCommunityState.ensureActiveCommunity({ silent:true });
     }
-
-    await window.ZummeeCommunityState.bindNativeDropdown(select, {
-      source: pageName(),
-      onChange: refreshPageData
-    });
 
     var active = window.ZummeeCommunityState.getActiveCommunity();
     if(active && active.id){
-      if(select.value !== active.id){
+      if(select && select.value !== active.id){
         try{ select.value = active.id; }catch(_e){}
       }
-      refreshPageData(active);
+      reloadWorkOrdersCommunityData(active, false);
+    }
+
+    if(select && !select.__workOrdersNativeCommunityStateV610Bound){
+      select.__workOrdersNativeCommunityStateV610Bound = true;
+      select.addEventListener("change", function(){
+        var opt = select.selectedOptions && select.selectedOptions[0] ? select.selectedOptions[0] : null;
+        var id = String(select.value || "").trim();
+        var name = String(opt ? opt.textContent : "").trim();
+        if(!id) return;
+
+        var active = window.ZummeeCommunityState.setActiveCommunity(id, name, {
+          source: "work-orders-dropdown-v610"
+        }) || { id:id, name:name };
+
+        reloadWorkOrdersCommunityData(active, true);
+        try{
+          window.dispatchEvent(new CustomEvent("zummee:community-changed", {
+            detail: { id:id, community_id:id, name:name, source:"work-orders-dropdown-v610" }
+          }));
+        }catch(_e){}
+      });
     }
   }
 
@@ -2988,16 +2993,26 @@ window.__rwoTokenTest = async function(){
       if(!window.ZummeeCommunityState) return;
       var active = window.ZummeeCommunityState.getActiveCommunity();
       var select = findCommunitySelect();
-      if(active && active.id && select && select.value !== active.id) select.value = active.id;
+      if(active && active.id){
+        if(select && select.value !== active.id){
+          select.value = active.id;
+        }
+        reloadWorkOrdersCommunityData(active, false);
+      }
     }catch(_e){}
   }
 
-  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once:true });
-  else setTimeout(init, 60);
+  if(document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", init, { once:true });
+  }else{
+    setTimeout(init, 60);
+  }
 
-  window.addEventListener("pageshow", function(){ setTimeout(init, 80); setTimeout(syncVisibleSelect, 350); });
+  window.addEventListener("pageshow", function(){ setTimeout(init, 80); });
   window.addEventListener("focus", syncVisibleSelect);
-  document.addEventListener("visibilitychange", function(){ if(!document.hidden) syncVisibleSelect(); });
+  document.addEventListener("visibilitychange", function(){
+    if(!document.hidden) syncVisibleSelect();
+  });
 })();
 </script>
 
