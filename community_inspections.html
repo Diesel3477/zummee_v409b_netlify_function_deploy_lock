@@ -2,7 +2,7 @@
 
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-07-v500-maintenance-data-layer";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-07-v501-inspections-vendor-type-optional";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <!-- ZUMMEE_PATCH v2115: stable single-mount header + assigned dropdown no-jump lock -->
 <!-- ZUMMEE_PATCH v2074: inspections reads vendors from actual ops localStorage keys -->
@@ -13580,8 +13580,8 @@ body#inspectionsPage [data-page-error]{
       sel.innerHTML = '<option value="">No vendors found for selected community</option>';
     }
 
-    sel.disabled = !wantedType && !!$("inspVendorType");
-    if(!$("inspVendorType")) sel.disabled = false;
+    // v501: Vendor Type is optional. Blank type shows all vendors for the selected community.
+    sel.disabled = false;
     applyVendorDetails();
   }
 
@@ -13617,6 +13617,64 @@ body#inspectionsPage [data-page-error]{
     $("inspVendorId")?.addEventListener("change", applyVendorDetails);
     setTimeout(refreshInspectionVendors, 300);
     setTimeout(refreshInspectionVendors, 1300);
+  }
+
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind, { once:true });
+  else bind();
+})();
+</script>
+
+
+<script id="zummee-inspections-vendor-type-optional-v501">
+/* v501: Vendor Type is a filter, not a required field.
+   If no vendor type is selected, show all vendors for the selected community. */
+(function(){
+  if(window.__ciVendorTypeOptionalV501) return;
+  window.__ciVendorTypeOptionalV501 = true;
+
+  function vendorSelect(){
+    return document.getElementById("inspVendorId");
+  }
+
+  function vendorType(){
+    return document.getElementById("inspVendorType");
+  }
+
+  function unlockVendorDropdown(){
+    var sel = vendorSelect();
+    if(!sel) return;
+    // Never force-disable vendor select just because type is blank.
+    if(sel.options && sel.options.length){
+      sel.disabled = false;
+    }
+  }
+
+  function refreshVendors(){
+    try{
+      if(typeof window.populateVendorSelect === "function"){
+        window.populateVendorSelect();
+      }
+    }catch(_e){}
+    setTimeout(unlockVendorDropdown, 100);
+    setTimeout(unlockVendorDropdown, 500);
+  }
+
+  function bind(){
+    var type = vendorType();
+    var sel = vendorSelect();
+
+    if(type && !type.__vendorTypeOptionalBound){
+      type.__vendorTypeOptionalBound = true;
+      type.addEventListener("change", refreshVendors);
+    }
+
+    if(sel){
+      unlockVendorDropdown();
+    }
+
+    // On page load, blank vendor type should immediately load all vendors.
+    setTimeout(refreshVendors, 250);
+    setTimeout(refreshVendors, 1200);
   }
 
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind, { once:true });
