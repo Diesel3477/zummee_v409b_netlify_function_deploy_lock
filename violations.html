@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Zummee Violations</title>
   <script>
-    window.ZUMMEE_VIOLATIONS_BUILD = 'v540h-branded-window-envelope-letter-preview';
+    window.ZUMMEE_VIOLATIONS_BUILD = 'v540i-photo-letter-preview-and-upload';
     (function(){
       try{
         var stored = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || 'light';
@@ -151,6 +151,30 @@
     .required-action{margin-top:12px;border-top:1px solid var(--z-line);padding-top:12px;color:var(--z-muted);font-size:13px;line-height:1.42;}
     .required-action strong{color:var(--z-ink);}
 
+
+    .photo-upload-card{
+      grid-column:1 / -1;
+      border:1px solid var(--z-line);
+      border-radius:18px;
+      background:linear-gradient(180deg,rgba(238,246,255,.72),rgba(255,255,255,.64));
+      padding:14px;
+      display:grid;
+      grid-template-columns:1fr 220px;
+      gap:12px;
+      align-items:start;
+    }
+    html[data-theme="dark"] .photo-upload-card{background:rgba(255,255,255,.05);}
+    .photo-help{color:var(--z-muted);font-size:12px;font-weight:750;line-height:1.35;margin-top:7px;}
+    .photo-preview{border:1px solid rgba(128,177,255,.24);border-radius:16px;background:rgba(255,255,255,.58);min-height:150px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+    html[data-theme="dark"] .photo-preview{background:rgba(255,255,255,.04);}
+    .photo-preview img{width:100%;height:100%;max-height:180px;object-fit:cover;display:block;}
+    .photo-empty{color:var(--z-muted);font-size:12px;font-weight:850;text-align:center;padding:18px;line-height:1.35;}
+    .photo-status{grid-column:1 / -1;color:var(--z-muted);font-size:12px;font-weight:800;line-height:1.35;}
+    .letter-photo-block{border:1px solid #dbe6f5;background:#f8fbff;border-radius:8px;padding:10px;margin:14px 0 16px;page-break-inside:avoid;}
+    .letter-photo-title{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-size:10px;font-weight:950;letter-spacing:.07em;text-transform:uppercase;color:#40536d;margin-bottom:7px;}
+    .letter-photo-block img{display:block;width:100%;max-height:245px;object-fit:contain;border-radius:6px;background:#fff;border:1px solid #e3e8f1;}
+    .letter-photo-caption{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#58708d;font-size:10px;font-weight:800;margin-top:6px;}
+
     .letter-card{margin-top:14px;border:1px solid var(--z-line);border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.86),rgba(238,246,255,.66));padding:15px;}
     html[data-theme="dark"] .letter-card{background:rgba(255,255,255,.05);}
     .letter-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;}
@@ -215,6 +239,8 @@
       .topbar{position:relative;top:auto;align-items:flex-start;flex-direction:column;}
       .hero{grid-template-columns:1fr;}
       .grid,.category-list,.info-row,.case-meta,.owner-preview{grid-template-columns:1fr;}
+      .photo-upload-card{grid-template-columns:1fr;}
+      .photo-preview img{max-height:220px;}
       .form-shell{grid-template-columns:1fr;}
       .top-actions{width:100%;justify-content:flex-start;}
       .select-shell{min-width:100%;}
@@ -229,7 +255,7 @@
         <div class="mark" aria-hidden="true">Z</div>
         <div>
           <h1>Violations</h1>
-          <div class="subtitle" id="pageSubtitle">Loading communities, categories, covenants, inspections, open cases, and branded mailing-ready letter preview</div>
+          <div class="subtitle" id="pageSubtitle">Loading communities, categories, covenants, inspections, open cases, and branded mailing-ready letter preview with primary photo with primary photo with primary photo</div>
         </div>
       </div>
       <div class="top-actions">
@@ -311,6 +337,15 @@
             <label>Manager Notes</label>
             <textarea id="managerNotesInput" placeholder="Inspection notes"></textarea>
           </div>
+          <div class="photo-upload-card">
+            <div class="field">
+              <label>Violation Photo for Letter</label>
+              <input id="violationPhotoInput" type="file" accept="image/*" />
+              <div class="photo-help">Choose one primary photo to appear on the violation letter. Additional photo gallery support can come later.</div>
+            </div>
+            <div class="photo-preview" id="violationPhotoPreview"><div class="photo-empty">No letter photo selected</div></div>
+            <div class="photo-status" id="photoUploadNote">Photo is optional. If selected, it will show in the preview and upload after the case is saved.</div>
+          </div>
         </div>
 
         <div class="form-actions">
@@ -377,7 +412,7 @@
   <script>
     (function(){
       'use strict';
-      var state = { communities: [], properties: [], streets: [], selectedStreet: '', selectedPropertyId: '', selectedProperty: null, categories: [], covenants: [], selectedCommunityId: '', selectedCommunityName: '', selectedCategoryId: '', currentCovenant: null, currentInspection: null, openCases: [], isStartingInspection: false, isSavingCase: false };
+      var state = { communities: [], properties: [], streets: [], selectedStreet: '', selectedPropertyId: '', selectedProperty: null, categories: [], covenants: [], selectedCommunityId: '', selectedCommunityName: '', selectedCategoryId: '', currentCovenant: null, currentInspection: null, openCases: [], isStartingInspection: false, isSavingCase: false, primaryPhotoFile: null, primaryPhotoUrl: '', primaryPhotoObjectUrl: '' };
       var els = {};
       function $(id){ return document.getElementById(id); }
       function clean(v){ return String(v == null ? '' : v).replace(/\s+/g,' ').trim(); }
@@ -483,10 +518,10 @@
           }
         }catch(_e){}
         setStartButton(false);
-        loadProperties().catch(function(e){ console.error('[Zummee Violations v540h] property directory refresh failed', e); setText('propertyReadNote', clean(e && e.message) || 'Property directory failed to load.'); });
-        loadCurrentInspection().catch(function(e){ console.error('[Zummee Violations v540h] inspection refresh failed', e); setInspectionStatus('', 'Inspection status unavailable', clean(e && e.message) || 'Unable to read inspection status.', 'Needs attention'); });
-        if(state.selectedCategoryId) loadCovenantPreview().catch(function(e){ console.error('[Zummee Violations v540h] covenant refresh failed', e); renderNoCovenant('Covenant preview unavailable.'); });
-        loadOpenCases().catch(function(e){ console.error('[Zummee Violations v540h] open cases refresh failed', e); setText('openCasesReadNote', clean(e && e.message) || 'Open cases failed to load.'); });
+        loadProperties().catch(function(e){ console.error('[Zummee Violations v540i] property directory refresh failed', e); setText('propertyReadNote', clean(e && e.message) || 'Property directory failed to load.'); });
+        loadCurrentInspection().catch(function(e){ console.error('[Zummee Violations v540i] inspection refresh failed', e); setInspectionStatus('', 'Inspection status unavailable', clean(e && e.message) || 'Unable to read inspection status.', 'Needs attention'); });
+        if(state.selectedCategoryId) loadCovenantPreview().catch(function(e){ console.error('[Zummee Violations v540i] covenant refresh failed', e); renderNoCovenant('Covenant preview unavailable.'); });
+        loadOpenCases().catch(function(e){ console.error('[Zummee Violations v540i] open cases refresh failed', e); setText('openCasesReadNote', clean(e && e.message) || 'Open cases failed to load.'); });
       }
       async function getClient(){
         if(window.ensureSupabase && typeof window.ensureSupabase === 'function') return await window.ensureSupabase();
@@ -741,7 +776,7 @@
             setStatus('good','Inspection started');
           }
         }catch(e){
-          console.error('[Zummee Violations v540h] start inspection failed', e);
+          console.error('[Zummee Violations v540i] start inspection failed', e);
           setStatus('error','Inspection write needs attention');
           setInspectionStatus('', 'Could not start inspection', clean(e && e.message) || 'Supabase insert failed.', 'Failed');
         }finally{
@@ -797,7 +832,98 @@
         }
         return lines.join('\n');
       }
+
+      function safeFileName(name){
+        return clean(name || 'violation-photo.jpg').replace(/[^a-zA-Z0-9._-]+/g,'_').slice(0,120) || 'violation-photo.jpg';
+      }
+      function clearPrimaryPhoto(){
+        if(state.primaryPhotoObjectUrl){
+          try{ URL.revokeObjectURL(state.primaryPhotoObjectUrl); }catch(_e){}
+        }
+        state.primaryPhotoFile = null;
+        state.primaryPhotoUrl = '';
+        state.primaryPhotoObjectUrl = '';
+        renderPhotoPreview();
+        scheduleLetterPreview();
+      }
+      function renderPhotoPreview(){
+        var box = $('violationPhotoPreview');
+        if(!box) return;
+        if(!state.primaryPhotoUrl){
+          box.innerHTML = '<div class="photo-empty">No letter photo selected</div>';
+          setText('photoUploadNote','Photo is optional. If selected, it will show in the preview and upload after the case is saved.');
+          return;
+        }
+        box.innerHTML = '<img alt="Selected violation photo preview" />';
+        var img = box.querySelector('img');
+        if(img) img.src = state.primaryPhotoUrl;
+        var file = state.primaryPhotoFile;
+        setText('photoUploadNote', file ? ('Primary letter photo selected: ' + safeFileName(file.name) + '.') : 'Primary letter photo selected.');
+      }
+      function handlePhotoChange(){
+        var input = $('violationPhotoInput');
+        var file = input && input.files && input.files[0] ? input.files[0] : null;
+        if(!file){ clearPrimaryPhoto(); return; }
+        if(!/^image\//i.test(file.type || '')){
+          setText('photoUploadNote','Please choose an image file for the violation letter photo.');
+          try{ input.value = ''; }catch(_e){}
+          clearPrimaryPhoto();
+          return;
+        }
+        if(state.primaryPhotoObjectUrl){
+          try{ URL.revokeObjectURL(state.primaryPhotoObjectUrl); }catch(_e){}
+        }
+        state.primaryPhotoFile = file;
+        state.primaryPhotoObjectUrl = URL.createObjectURL(file);
+        state.primaryPhotoUrl = state.primaryPhotoObjectUrl;
+        renderPhotoPreview();
+        scheduleLetterPreview();
+      }
+      async function uploadPrimaryPhotoForCase(caseId){
+        var file = state.primaryPhotoFile;
+        if(!file || !caseId) return null;
+        var sb = await getClient();
+        if(!sb || !sb.storage || typeof sb.from !== 'function') throw new Error('Supabase storage unavailable');
+        var stamp = Date.now();
+        var extName = safeFileName(file.name || 'violation-photo.jpg');
+        var path = clean(state.selectedCommunityId || 'community') + '/' + caseId + '/' + stamp + '_' + extName;
+        var up = await sb.storage.from('violation-photos').upload(path, file, { cacheControl:'3600', upsert:false, contentType:file.type || 'image/jpeg' });
+        if(up.error) throw up.error;
+        var meta = {
+          case_id: caseId,
+          community_id: state.selectedCommunityId,
+          storage_bucket: 'violation-photos',
+          storage_path: path,
+          file_name: file.name || extName,
+          file_type: file.type || null,
+          file_size: file.size || null,
+          caption: 'Primary violation photo for letter',
+          sort_order: 0,
+          is_primary_for_letter: true,
+          include_on_letter: true
+        };
+        var ins = await sb.from('violation_case_photos').insert(meta).select('id, storage_path').single();
+        if(ins.error){
+          var fallback = {
+            case_id: caseId,
+            community_id: state.selectedCommunityId,
+            storage_bucket: 'violation-photos',
+            storage_path: path,
+            file_name: file.name || extName,
+            file_type: file.type || null,
+            file_size: file.size || null,
+            caption: 'Primary violation photo for letter',
+            sort_order: 0
+          };
+          var retry = await sb.from('violation_case_photos').insert(fallback).select('id, storage_path').single();
+          if(retry.error) throw retry.error;
+          return retry.data;
+        }
+        return ins.data;
+      }
+
       function renderLetterHtml(data){
+        var photoBlock = data.photoUrl ? '<div class="letter-photo-block"><div class="letter-photo-title">Violation Photo</div><img alt="Violation photo evidence" src="' + escapeHtml(data.photoUrl) + '" /><div class="letter-photo-caption">Photo evidence of observed violation.</div></div>' : '';
         var notesBlock = data.notes ? '<div class="letter-section-title">Inspection Notes</div><div class="letter-rule-box">' + escapeHtml(data.notes) + '</div>' : '';
         return '' +
           '<div class="mail-letter">' +
@@ -813,6 +939,7 @@
             '<div class="letter-re-line">RE: ' + escapeHtml(data.letterType + ' for ' + data.categoryName) + '</div>' +
             '<p class="letter-paragraph">Dear ' + escapeHtml(data.homeowner) + ',</p>' +
             '<p class="letter-paragraph">' + escapeHtml(getLetterOpening(data.offenseNumber)) + '</p>' +
+            photoBlock +
             '<table class="letter-detail-table" aria-label="Violation notice details"><tbody>' +
               '<tr><td>Community</td><td>' + escapeHtml(data.communityName) + '</td></tr>' +
               '<tr><td>Property</td><td>' + escapeHtml(data.address + (data.unit ? (' · Unit ' + data.unit) : '')) + '</td></tr>' +
@@ -855,7 +982,8 @@
           action: action,
           categoryName: categoryName || 'Selected Category',
           communityName: state.selectedCommunityName || 'Selected Community',
-          mailingBlock: mailingAddressLines(homeowner, address, unit)
+          mailingBlock: mailingAddressLines(homeowner, address, unit),
+          photoUrl: state.primaryPhotoUrl || ''
         };
         setText('letterTypePill', letterType);
         setText('letterSubject', subject);
@@ -960,11 +1088,24 @@
             .select('id, inspection_id, community_id, community_name, category_id, covenant_id, violation_type, homeowner_name, property_address, unit, manager_notes, offense_number, letter_type, case_status, created_at')
             .single();
           if(res.error) throw res.error;
+          var photoMessage = '';
+          if(state.primaryPhotoFile){
+            try{
+              setText('photoUploadNote','Uploading primary letter photo…');
+              await uploadPrimaryPhotoForCase(res.data && res.data.id);
+              photoMessage = ' Primary letter photo uploaded.';
+              setText('photoUploadNote','Primary letter photo uploaded and linked to this violation case.');
+            }catch(photoErr){
+              console.error('[Zummee Violations v540i] photo upload failed', photoErr);
+              photoMessage = ' Case saved, but photo upload needs attention.';
+              setText('photoUploadNote', clean(photoErr && photoErr.message) || 'Case saved, but photo upload failed. Check the violation-photos storage bucket and policies.');
+            }
+          }
           setStatus('good','Violation case saved');
-          setText('caseSaveNote','Saved. The open violations list has been refreshed from Supabase.');
+          setText('caseSaveNote','Saved.' + photoMessage + ' The open violations list has been refreshed from Supabase.');
           await loadOpenCases();
         }catch(e){
-          console.error('[Zummee Violations v540h] save case failed', e);
+          console.error('[Zummee Violations v540i] save case failed', e);
           setStatus('error','Case save needs attention');
           setText('caseSaveNote', clean(e && e.message) || 'Supabase insert failed.');
         }finally{
@@ -983,7 +1124,7 @@
           await loadOpenCases();
           setStatus('good','Read/write layer connected');
         }catch(e){
-          console.error('[Zummee Violations v540h] boot failed', e);
+          console.error('[Zummee Violations v540i] boot failed', e);
           setStatus('error','Read layer needs attention');
           setText('pageSubtitle','Unable to complete read test');
           if(!state.communities.length) setText('communityReadNote', clean(e && e.message) || 'Community read failed.');
@@ -1007,7 +1148,7 @@
         if(catSelect){
           catSelect.addEventListener('change', function(){
             state.selectedCategoryId = clean(catSelect.value);
-            loadCovenantPreview().catch(function(e){ console.error('[Zummee Violations v540h] covenant load failed', e); renderNoCovenant(clean(e && e.message) || 'Covenant preview failed.'); });
+            loadCovenantPreview().catch(function(e){ console.error('[Zummee Violations v540i] covenant load failed', e); renderNoCovenant(clean(e && e.message) || 'Covenant preview failed.'); });
           });
         }
         ['homeownerNameInput','unitInput','propertyAddressInput','managerNotesInput'].forEach(function(id){
@@ -1018,6 +1159,8 @@
             el.addEventListener('blur', scheduleLetterPreview);
           }
         });
+        var photoInput = $('violationPhotoInput');
+        if(photoInput){ photoInput.addEventListener('change', handlePhotoChange); }
         var offenseSelect = $('offenseNumberSelect');
         if(offenseSelect){ offenseSelect.addEventListener('change', scheduleLetterPreview); }
         boot().then(function(){ scheduleLetterPreview(); });
