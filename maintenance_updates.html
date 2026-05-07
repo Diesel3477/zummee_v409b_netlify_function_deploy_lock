@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-07-v605-native-community-state";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-07-v612-live-maintenance-native-community-state";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Live Maintenance Updates</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="shared/community-state.js?v=2026-05-07-v605"></script>
-<script src="shared/input-undo-guard.js?v=2026-05-07-v605"></script>
-
 <script src="shared/supabase-client.js?v=2026-04-29-v337"></script>
 <script src="shared/maintenance-data.js?v=2026-05-07-v500"></script>
+<script src="shared/community-state.js?v=2026-05-07-v612"></script>
+<script src="shared/input-undo-guard.js?v=2026-05-07-v612"></script>
+
 <script src="zummee_clean_bootstrap.js?v=clean-2026-04-28"></script>
   <script src="shared/header.js?v=2026-04-08-2"></script>
   <link rel="stylesheet" href="shared/header.css?v=2026-03-27-1">
@@ -1147,10 +1147,6 @@ body.live-maintenance-no-blue-header .maintenance-inline-controls #zummeeHdrHub{
     }
     function getPageActiveCommunityId(){
       try{
-        if(window.ZummeeCommunityState && window.ZummeeCommunityState.getActiveCommunityId){
-          const sharedId = String(window.ZummeeCommunityState.getActiveCommunityId() || "").trim();
-          if(sharedId) return sharedId;
-        }
         const nativeSelect = document.getElementById("maintenanceCommunitySelect");
         if (nativeSelect && nativeSelect.value) return String(nativeSelect.value || "").trim();
         const headerSelect = document.getElementById("zummeeCommunitySelect");
@@ -2664,6 +2660,11 @@ body.live-maintenance-no-blue-header .maintenance-inline-controls #zummeeHdrHub{
     name = String(name || "").trim();
     if(!id) return;
     try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.setActiveCommunity === "function"){
+        window.ZummeeCommunityState.setActiveCommunity(id, name, { source:"live-maintenance-native-v612", silent:true });
+      }
+    }catch(_e){}
+    try{
       if(window.ZummeeMaintenanceData && typeof window.ZummeeMaintenanceData.setSelectedCommunity === "function"){
         window.ZummeeMaintenanceData.setSelectedCommunity(id, name);
       }
@@ -2739,135 +2740,154 @@ body.live-maintenance-no-blue-header .maintenance-inline-controls #zummeeHdrHub{
 
 
 
-
-
-
-
-
-
-<script id="zummee-native-community-controller-v605">
+<script id="zummee-live-maintenance-native-community-state-v612">
 /*
-  v605 native community controller.
-  Long-term pattern:
-  - page dropdown is hydrated by shared/community-state.js
-  - no dropdown cloning
-  - no bridge patches
-  - no page-specific default-to-first-community behavior
+  Live Maintenance native community-state integration
+  Build: 2026-05-07-v612
+
+  Long-term rule:
+  - shared/community-state.js owns selected community persistence.
+  - Live Maintenance keeps its working Vendors/resident_work_orders community dropdown source.
+  - This bridge only syncs that dropdown selection into the shared canonical community state.
+  - No clone controller.
+  - No migration bridge.
+  - No old selected-community overwrite.
 */
 (function(){
-  if(window.__ZummeeNativeCommunityControllerV605) return;
-  window.__ZummeeNativeCommunityControllerV605 = true;
+  if(window.__LiveMaintenanceNativeCommunityStateV612) return;
+  window.__LiveMaintenanceNativeCommunityStateV612 = true;
 
-  function findCommunitySelect(){
-    return document.getElementById("zummeeCommunitySelect") ||
-      document.getElementById("maintenanceCommunitySelect") ||
+  function selectEl(){
+    return document.getElementById("maintenanceCommunitySelect") ||
+      document.getElementById("zummeeCommunitySelect") ||
       document.getElementById("communitySelect") ||
       document.querySelector('select[id*="community" i]');
   }
 
-  function pageName(){
-    var path = String(location.pathname || "").toLowerCase();
-    if(path.indexOf("manager_hub") >= 0) return "manager-hub";
-    if(path.indexOf("community_inspections") >= 0) return "community-inspections";
-    if(path.indexOf("resident_work_orders") >= 0) return "work-orders";
-    if(path.indexOf("maintenance_updates") >= 0) return "live-maintenance";
-    return "zummee-page";
-  }
-
-  function refreshPageData(active){
+  function setGlobals(active){
     active = active || {};
-    var id = active.id || active.community_id || "";
-    var name = active.name || active.community_name || "";
+    var id = String(active.id || active.community_id || "").trim();
+    var name = String(active.name || active.community_name || "").trim();
+    if(!id) return;
     try{
       window.currentCommunityId = id;
       window.activeCommunityId = id;
       window.selectedCommunityId = id;
       if(name) window.currentCommunityName = name;
     }catch(_e){}
-
-    // Manager Hub known surfaces.
-    if(pageName() === "manager-hub"){
-      [
-        "bootstrapCommunityGlobals",
-        "applyWeatherContext",
-        "loadWeather",
-        "loadWeatherForCommunity",
-        "loadSmartAlerts",
-        "refreshSmartAlerts",
-        "loadActivityFeed",
-        "refreshActivityFeed",
-        "loadBoardSubmittedItems",
-        "refreshBoardStatus",
-        "loadApprovalSummary",
-        "refreshAnnualAlert",
-        "loadManagerHubData"
-      ].forEach(function(fn){
-        try{ if(typeof window[fn] === "function") window[fn](); }catch(_e){}
-      });
-    }
-
-    // Work Orders / Maintenance / Inspections.
-    [
-      "loadWorkOrders",
-      "loadUpdates",
-      "loadEvents",
-      "populateVendorSelect",
-      "populateVendorDropdown",
-      "loadInspectionData",
-      "refreshVendorDropdownForActiveCommunity"
-    ].forEach(function(fn){
-      try{
-        if(typeof window[fn] === "function"){
-          if(fn === "loadWorkOrders") window[fn]({ clearSelection:true, liveRefreshReason:"community-v605" });
-          else window[fn]();
-        }
-      }catch(_e){}
-    });
-
-    try{ window.dispatchEvent(new CustomEvent("zummee:community-changed", { detail:{ id:id, community_id:id, name:name, source:pageName() } })); }catch(_e){}
-    try{ document.dispatchEvent(new CustomEvent("community:changed", { detail:{ community_id:id, communityId:id, name:name } })); }catch(_e){}
   }
 
-  async function init(){
-    if(!window.ZummeeCommunityState) return;
-    var select = findCommunitySelect();
+  function reloadLiveMaintenance(active){
+    setGlobals(active);
 
-    // Not every page has a visible dropdown yet, but the page still needs active state.
-    if(!select){
-      var activeOnly = await window.ZummeeCommunityState.ensureActiveCommunity({ silent:true });
-      if(activeOnly) refreshPageData(activeOnly);
-      return;
-    }
-
-    await window.ZummeeCommunityState.bindNativeDropdown(select, {
-      source: pageName(),
-      onChange: refreshPageData
-    });
-
-    var active = window.ZummeeCommunityState.getActiveCommunity();
-    if(active && active.id){
-      if(select.value !== active.id){
-        try{ select.value = active.id; }catch(_e){}
-      }
-      refreshPageData(active);
-    }
-  }
-
-  function syncVisibleSelect(){
     try{
-      if(!window.ZummeeCommunityState) return;
-      var active = window.ZummeeCommunityState.getActiveCommunity();
-      var select = findCommunitySelect();
-      if(active && active.id && select && select.value !== active.id) select.value = active.id;
+      if(window.ZummeeMaintenanceData && typeof window.ZummeeMaintenanceData.clearVendorCache === "function"){
+        window.ZummeeMaintenanceData.clearVendorCache();
+      }
+    }catch(_e){}
+
+    try{
+      if(typeof window.loadUpdates === "function") window.loadUpdates();
+    }catch(err){
+      console.warn("[Live Maintenance v612] loadUpdates failed", err);
+    }
+
+    try{
+      if(typeof window.loadEvents === "function") window.loadEvents();
     }catch(_e){}
   }
 
-  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once:true });
-  else setTimeout(init, 60);
+  function syncSelectToCanonical(reason){
+    try{
+      var sel = selectEl();
+      if(!sel || !sel.value || !window.ZummeeCommunityState) return;
+      var opt = sel.selectedOptions && sel.selectedOptions[0] ? sel.selectedOptions[0] : null;
+      var id = String(sel.value || "").trim();
+      var name = String(opt ? opt.textContent : "").trim();
+      if(!id) return;
+      window.ZummeeCommunityState.setActiveCommunity(id, name, {
+        source: reason || "live-maintenance-native-v612",
+        silent: reason !== "live-maintenance-user-change-v612"
+      });
+      setGlobals({ id:id, name:name });
+    }catch(_e){}
+  }
 
-  window.addEventListener("pageshow", function(){ setTimeout(init, 80); setTimeout(syncVisibleSelect, 350); });
-  window.addEventListener("focus", syncVisibleSelect);
-  document.addEventListener("visibilitychange", function(){ if(!document.hidden) syncVisibleSelect(); });
+  async function init(){
+    var sel = selectEl();
+    if(!sel) return;
+
+    // Do not overwrite the Vendors-sourced option list.
+    // Only align value with canonical if that option exists.
+    try{
+      if(window.ZummeeCommunityState){
+        var active = window.ZummeeCommunityState.getActiveCommunity();
+        if(active && active.id){
+          var hasOption = Array.from(sel.options || []).some(function(o){ return String(o.value || "") === String(active.id); });
+          if(hasOption && sel.value !== active.id){
+            sel.value = active.id;
+          }
+          reloadLiveMaintenance(active);
+        }else if(sel.value){
+          syncSelectToCanonical("live-maintenance-initial-v612");
+        }
+      }
+    }catch(_e){}
+
+    if(!sel.__liveMaintenanceNativeCommunityStateV612Bound){
+      sel.__liveMaintenanceNativeCommunityStateV612Bound = true;
+      sel.addEventListener("change", function(){
+        var opt = sel.selectedOptions && sel.selectedOptions[0] ? sel.selectedOptions[0] : null;
+        var id = String(sel.value || "").trim();
+        var name = String(opt ? opt.textContent : "").trim();
+        if(!id) return;
+
+        if(window.ZummeeCommunityState){
+          window.ZummeeCommunityState.setActiveCommunity(id, name, {
+            source: "live-maintenance-user-change-v612"
+          });
+        }
+
+        reloadLiveMaintenance({ id:id, name:name });
+        try{
+          window.dispatchEvent(new CustomEvent("zummee:community-changed", {
+            detail:{ id:id, community_id:id, name:name, source:"live-maintenance-user-change-v612" }
+          }));
+        }catch(_e){}
+      });
+    }
+  }
+
+  function syncFromCanonical(){
+    try{
+      if(!window.ZummeeCommunityState) return;
+      var active = window.ZummeeCommunityState.getActiveCommunity();
+      var sel = selectEl();
+      if(!active || !active.id || !sel) return;
+
+      var hasOption = Array.from(sel.options || []).some(function(o){ return String(o.value || "") === String(active.id); });
+      if(hasOption && sel.value !== active.id){
+        sel.value = active.id;
+        reloadLiveMaintenance(active);
+      }
+    }catch(_e){}
+  }
+
+  if(document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", function(){ setTimeout(init, 120); }, { once:true });
+  }else{
+    setTimeout(init, 120);
+  }
+
+  // The Vendors-source dropdown script may populate after this script; re-sync after it settles.
+  setTimeout(init, 900);
+  setTimeout(init, 1800);
+
+  window.addEventListener("pageshow", function(){ setTimeout(init, 120); setTimeout(syncFromCanonical, 600); });
+  window.addEventListener("focus", syncFromCanonical);
+  document.addEventListener("visibilitychange", function(){
+    if(!document.hidden) syncFromCanonical();
+  });
 })();
 </script>
 
