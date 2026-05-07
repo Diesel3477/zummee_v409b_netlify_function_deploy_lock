@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-07-v602-manager-hub-community-state";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-07-v603-manager-hub-dropdown-single-owner";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <style id="zummee-v412-smart-alert-early-hide-css">
   html:not([data-zummee-smart-alerts-v426-ready="1"]) #smartAlertStrip .mh2-alert{visibility:hidden!important;opacity:0!important;}
 
@@ -122,7 +122,7 @@
     })();
   </script>
   <script>
-window.__MH_VERSION = 'v602_clean_community_state_manager_hub';
+window.__MH_VERSION = 'v603_clean_dropdown_single_owner';
 
     (function(){
       try{
@@ -6691,40 +6691,47 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
 </script>
 
 
-<script id="zummee-manager-community-controller-v602">
+
+
+<script id="zummee-manager-community-controller-v603">
 /*
   Manager Hub Community Controller
-  Build: 2026-05-07-v602
+  Build: 2026-05-07-v603
 
-  This is the single Manager Hub community owner:
-  - shared/community-state.js hydrates the dropdown from assigned communities.
-  - Canonical last-write-wins community state is the source of truth.
-  - URL parameters do not overwrite an existing canonical community.
-  - Changing the dropdown updates canonical state and reloads Manager Hub surfaces.
+  Clean fix for the dropdown reversion bug:
+  - Manager Hub had legacy change listeners attached to #zummeeCommunitySelect.
+  - Those listeners could immediately restore the previous community.
+  - This controller hydrates assigned communities, then replaces the select node with a clean clone.
+  - The cloned dropdown has one owner: shared/community-state.js.
 */
 (function(){
-  if(window.__ZummeeManagerCommunityControllerV602) return;
-  window.__ZummeeManagerCommunityControllerV602 = true;
+  if(window.__ZummeeManagerCommunityControllerV603) return;
+  window.__ZummeeManagerCommunityControllerV603 = true;
+
+  var UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   function $(id){ return document.getElementById(id); }
+  function isUuid(v){ return UUID_RE.test(String(v||'').trim()); }
 
-  function dispatchLegacyCommunityEvents(id, name){
-    try{ document.dispatchEvent(new CustomEvent('community:changed', { detail:{ community_id:id, communityId:id, name:name || '' } })); }catch(_e){}
-    try{ window.dispatchEvent(new CustomEvent('zummee:community-context-changed', { detail:{ community_id:id, communityId:id, name:name || '' } })); }catch(_e){}
-    try{ window.dispatchEvent(new CustomEvent('zummee:community-changed', { detail:{ id:id, community_id:id, name:name || '', source:'manager-hub' } })); }catch(_e){}
+  function getSelect(){
+    return $('zummeeCommunitySelect');
   }
 
-  function updateUrl(id, name){
-    try{
-      if(!id) return;
-      var url = new URL(location.href);
-      url.searchParams.set('community_id', id);
-      if(name) url.searchParams.set('community_name', name);
-      history.replaceState(null, '', url.toString());
-    }catch(_e){}
+  function cloneSelectWithoutLegacyListeners(select){
+    if(!select || select.__zummeeManagerV603CleanOwner) return select;
+
+    var clone = select.cloneNode(true);
+    clone.id = select.id;
+    clone.name = select.name || 'community';
+    clone.className = select.className || '';
+    clone.setAttribute('aria-label', select.getAttribute('aria-label') || 'Active community');
+    clone.__zummeeManagerV603CleanOwner = true;
+
+    try{ select.parentNode.replaceChild(clone, select); }catch(_e){ return select; }
+    return clone;
   }
 
-  function getActive(){
+  function activeFromState(){
     try{
       if(window.ZummeeCommunityState && window.ZummeeCommunityState.getActiveCommunity){
         return window.ZummeeCommunityState.getActiveCommunity();
@@ -6733,22 +6740,49 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     return null;
   }
 
-  async function reloadManagerHubForCommunity(id, name){
-    id = String(id || '').trim();
-    name = String(name || '').trim();
-    if(!id) return;
+  function writeLegacyKeys(id, name){
+    if(!isUuid(id)) return;
+    try{
+      ['zummee_active_community_id','zummee_selected_community_id','zummeeActiveCommunityId','activeCommunityId','currentCommunityId','zummee_community_id','zummee_selected_community_v1'].forEach(function(k){
+        localStorage.setItem(k,id); sessionStorage.setItem(k,id);
+      });
+      if(name){
+        ['zummee_active_community_name','zummeeCurrentCommunityName','currentCommunityName','activeCommunityName','zummee_community'].forEach(function(k){
+          localStorage.setItem(k,name); sessionStorage.setItem(k,name);
+        });
+      }
+      window.currentCommunityId=id;
+      window.activeCommunityId=id;
+      window.selectedCommunityId=id;
+      window.zummeeSelectedCommunityId=id;
+      if(name) window.currentCommunityName=name;
+    }catch(_e){}
+  }
 
-    try{ window.currentCommunityId = id; window.activeCommunityId = id; window.selectedCommunityId = id; window.zummeeSelectedCommunityId = id; if(name) window.currentCommunityName = name; }catch(_e){}
+  function updateUrl(id, name){
+    try{
+      if(!isUuid(id)) return;
+      var url = new URL(location.href);
+      url.searchParams.set('community_id', id);
+      if(name) url.searchParams.set('community_name', name);
+      history.replaceState(null, '', url.toString());
+    }catch(_e){}
+  }
+
+  function dispatchCommunityEvents(id, name){
+    try{ window.dispatchEvent(new CustomEvent('zummee:community-changed', { detail:{ id:id, community_id:id, name:name || '', source:'manager-hub' } })); }catch(_e){}
+    try{ window.dispatchEvent(new CustomEvent('zummee:community-context-changed', { detail:{ community_id:id, communityId:id, name:name || '' } })); }catch(_e){}
+    try{ document.dispatchEvent(new CustomEvent('community:changed', { detail:{ community_id:id, communityId:id, name:name || '' } })); }catch(_e){}
+  }
+
+  function refreshManagerSurfaces(id, name){
+    writeLegacyKeys(id, name);
     updateUrl(id, name);
 
-    // Keep old manager hub functions working while they are gradually refactored.
-    try{ if(typeof window.bootstrapCommunityGlobals === 'function') window.bootstrapCommunityGlobals(); }catch(_e){}
-    try{ if(typeof window.applyWeatherContext === 'function') window.applyWeatherContext(); }catch(_e){}
-
-    dispatchLegacyCommunityEvents(id, name);
-
-    // Reload known surfaces if their functions exist. These calls are intentionally defensive.
+    // Defensive surface refresh. Existing Manager Hub functions stay intact.
     [
+      'bootstrapCommunityGlobals',
+      'applyWeatherContext',
       'loadWeather',
       'loadWeatherForCommunity',
       'loadSmartAlerts',
@@ -6764,54 +6798,103 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
       try{ if(typeof window[fn] === 'function') window[fn](); }catch(_e){}
     });
 
-    try{ console.info('[Manager Hub v602] active community', id, name); }catch(_e){}
+    dispatchCommunityEvents(id, name);
+    try{ console.info('[Manager Hub v603] active community:', id, name); }catch(_e){}
   }
 
-  async function hydrate(){
-    var select = $('zummeeCommunitySelect');
-    if(!select || !window.ZummeeCommunityState) return;
+  async function buildCleanDropdown(){
+    if(!window.ZummeeCommunityState) return;
 
-    var result = await window.ZummeeCommunityState.hydrateCommunityDropdown(select, { source:'manager-hub', force:false });
+    var select = getSelect();
+    if(!select) return;
+
+    // Load assigned communities from shared/community-state once.
+    var assigned = await window.ZummeeCommunityState.loadAssignedCommunities({ force:false });
     var active = window.ZummeeCommunityState.getActiveCommunity();
-    if(active && active.id){
-      if(select.value !== active.id){
-        try{ select.value = active.id; }catch(_e){}
-      }
-      reloadManagerHubForCommunity(active.id, active.name || '');
+
+    if(!assigned || !assigned.length){
+      select.innerHTML = '<option value="">No assigned communities found</option>';
+      return;
     }
 
-    if(!select.__zummeeManagerV602Bound){
-      select.__zummeeManagerV602Bound = true;
-      select.addEventListener('change', function(){
+    // If active is missing or invalid, the shared state chooses first assigned once.
+    if(!active || !assigned.some(function(c){ return c.id === active.id; })){
+      active = await window.ZummeeCommunityState.ensureActiveCommunity({ silent:true });
+    }
+
+    select.innerHTML = assigned.map(function(c){
+      var id = String(c.id || '').replace(/"/g,'&quot;');
+      var name = String(c.name || c.id || '')
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;');
+      return '<option value="' + id + '">' + name + '</option>';
+    }).join('');
+
+    if(active && active.id){
+      select.value = active.id;
+    }
+
+    // Critical: replace the old select node so old Manager Hub listeners are removed.
+    select = cloneSelectWithoutLegacyListeners(select);
+
+    // Reapply options/value to the clean clone.
+    select.innerHTML = assigned.map(function(c){
+      var id = String(c.id || '').replace(/"/g,'&quot;');
+      var name = String(c.name || c.id || '')
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;');
+      return '<option value="' + id + '">' + name + '</option>';
+    }).join('');
+    if(active && active.id) select.value = active.id;
+
+    if(!select.__zummeeManagerV603Bound){
+      select.__zummeeManagerV603Bound = true;
+      select.addEventListener('change', function(ev){
+        // Keep this select under one owner. Stop old delegated/capture listeners from reapplying stale values.
+        try{ ev.stopImmediatePropagation(); }catch(_e){}
+        try{ ev.stopPropagation(); }catch(_e){}
+
         var opt = select.selectedOptions && select.selectedOptions[0] ? select.selectedOptions[0] : null;
         var id = String(select.value || '').trim();
         var name = String(opt ? opt.textContent : '').trim();
+
+        if(!isUuid(id)) return;
+
         if(window.ZummeeCommunityState){
-          window.ZummeeCommunityState.setActiveCommunity(id, name, { source:'manager-hub-dropdown' });
+          window.ZummeeCommunityState.setActiveCommunity(id, name, { source:'manager-hub-dropdown-v603' });
+        }else{
+          writeLegacyKeys(id, name);
         }
-        reloadManagerHubForCommunity(id, name);
-      });
+
+        refreshManagerSurfaces(id, name);
+      }, true);
+    }
+
+    if(active && active.id){
+      refreshManagerSurfaces(active.id, active.name || '');
     }
   }
 
-  function forceLatestState(){
-    try{
-      if(!window.ZummeeCommunityState) return;
-      var active = getActive();
-      var select = $('zummeeCommunitySelect');
-      if(active && active.id){
-        if(select && select.value !== active.id) select.value = active.id;
-        reloadManagerHubForCommunity(active.id, active.name || '');
-      }
-    }catch(_e){}
+  function forceLatestIntoDropdown(){
+    var select = getSelect();
+    var active = activeFromState();
+    if(!select || !active || !active.id) return;
+    if(select.value !== active.id){
+      try{ select.value = active.id; }catch(_e){}
+    }
   }
 
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hydrate, { once:true });
-  else setTimeout(hydrate, 40);
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(buildCleanDropdown, 80); }, { once:true });
+  }else{
+    setTimeout(buildCleanDropdown, 80);
+  }
 
-  window.addEventListener('pageshow', function(){ setTimeout(hydrate, 50); setTimeout(forceLatestState, 350); });
-  window.addEventListener('focus', forceLatestState);
-  document.addEventListener('visibilitychange', function(){ if(!document.hidden) forceLatestState(); });
+  window.addEventListener('pageshow', function(){ setTimeout(buildCleanDropdown, 80); setTimeout(forceLatestIntoDropdown, 450); });
+  window.addEventListener('focus', forceLatestIntoDropdown);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) forceLatestIntoDropdown(); });
 })();
 </script>
 
