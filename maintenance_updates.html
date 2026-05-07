@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-07-v504-live-maintenance-dropdown-button-style-match";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-07-v600-community-persistence";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Live Maintenance Updates</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="shared/supabase-client.js?v=2026-04-29-v337"></script>
 <script src="shared/maintenance-data.js?v=2026-05-07-v500"></script>
+<script src="shared/community-state.js?v=2026-05-07-v600"></script>
 <script src="zummee_clean_bootstrap.js?v=clean-2026-04-28"></script>
   <script src="shared/header.js?v=2026-04-08-2"></script>
   <link rel="stylesheet" href="shared/header.css?v=2026-03-27-1">
@@ -1144,6 +1145,10 @@ body.live-maintenance-no-blue-header .maintenance-inline-controls #zummeeHdrHub{
     }
     function getPageActiveCommunityId(){
       try{
+        if(window.ZummeeCommunityState && window.ZummeeCommunityState.getActiveCommunityId){
+          const sharedId = String(window.ZummeeCommunityState.getActiveCommunityId() || "").trim();
+          if(sharedId) return sharedId;
+        }
         const nativeSelect = document.getElementById("maintenanceCommunitySelect");
         if (nativeSelect && nativeSelect.value) return String(nativeSelect.value || "").trim();
         const headerSelect = document.getElementById("zummeeCommunitySelect");
@@ -2730,6 +2735,46 @@ body.live-maintenance-no-blue-header .maintenance-inline-controls #zummeeHdrHub{
 })();
 </script>
 
+
+
+<script id="zummee-community-persistence-live-maintenance-v600">
+/* v600 — Community persistence bridge for Live Maintenance */
+(function(){
+  if(window.__liveMaintenanceCommunityPersistenceV600) return;
+  window.__liveMaintenanceCommunityPersistenceV600 = true;
+
+  async function hydrate(){
+    try{
+      if(!window.ZummeeCommunityState) return;
+      var sel = document.getElementById("maintenanceCommunitySelect") || document.getElementById("zummeeCommunitySelect") || document.querySelector('select[id*="community" i]');
+      if(sel){
+        await window.ZummeeCommunityState.hydrateCommunityDropdown(sel, { source:"live-maintenance" });
+      }else{
+        await window.ZummeeCommunityState.ensureActiveCommunity({ silent:true });
+      }
+      var active = window.ZummeeCommunityState.getActiveCommunity();
+      if(active && active.id){
+        try{ window.currentCommunityId = active.id; }catch(_e){}
+      }
+      try{ if(typeof loadUpdates === "function") loadUpdates(); }catch(_e){}
+    }catch(err){
+      console.warn("[Live Maintenance v600] community hydrate failed", err);
+    }
+  }
+
+  window.addEventListener("zummee:community-changed", function(){
+    try{
+      if(window.ZummeeMaintenanceData) window.ZummeeMaintenanceData.clearVendorCache?.();
+      if(typeof loadUpdates === "function") loadUpdates();
+      if(typeof loadEvents === "function") loadEvents();
+    }catch(_e){}
+  });
+
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", hydrate, { once:true });
+  else setTimeout(hydrate, 80);
+  setTimeout(hydrate, 1000);
+})();
+</script>
 
 </body>
 </html>
