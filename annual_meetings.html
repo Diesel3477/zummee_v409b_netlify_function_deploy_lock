@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-08-v626-annual-meetings-remove-community-label";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-08-v627-annual-meetings-direct-supabase-data";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annual Meetings</title>
@@ -1362,6 +1362,450 @@
 
   window.addEventListener('pageshow', function(){ setTimeout(load, 150); });
   window.addEventListener('focus', load);
+})();
+</script>
+
+
+<script id="annual-meetings-direct-supabase-data-v627">
+/*
+  Zummee Annual Meetings Direct Supabase Data Engine
+  Build: 2026-05-08-v627
+
+  Long-term purpose:
+  - Annual Meetings page owns its own load/save state directly.
+  - Hidden ops.html iframe is no longer the primary data source for the fields.
+  - Data is stored per selected community_id.
+  - Uses annual_meeting_settings first, with safe fallbacks for existing schemas.
+*/
+(function(){
+  if(window.__AnnualMeetingsDirectDataV627) return;
+  window.__AnnualMeetingsDirectDataV627 = true;
+
+  const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
+
+  const TABLES = [
+    'annual_meeting_settings',
+    'annual_meetings',
+    'annual_meeting_records'
+  ];
+
+  const DEFAULT_ENTRY = {
+    lastDate:'',
+    nextDate:'',
+    associationLegalName:'',
+    quorumPercent:'',
+    seatsOverride:'',
+    meetingTime:'7:00 PM',
+    meetingFormat:'in_person',
+    meetingLocation:'',
+    meetingLink:'',
+    nominationDeadline:'',
+    proxyReturnDeadline:'',
+    lastLocked:false
+  };
+
+  let currentRecordId = '';
+  let currentTable = '';
+  let currentEntry = Object.assign({}, DEFAULT_ENTRY);
+  let currentLogoUrl = '';
+
+  function s(v){ return String(v == null ? '' : v).trim(); }
+
+  function getEl(id){ return document.getElementById(id); }
+
+  async function getClient(){
+    try{ if(window.supabaseClient && window.supabaseClient.from) return window.supabaseClient; }catch(_e){}
+    try{ if(window.sb && window.sb.from) return window.sb; }catch(_e){}
+    try{ if(typeof ensureSupabase === 'function'){ const c = await ensureSupabase(); if(c && c.from) return c; } }catch(_e){}
+    try{
+      if(window.supabase && window.supabase.createClient){
+        if(!window.__annualMeetingsSbV627) window.__annualMeetingsSbV627 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        return window.__annualMeetingsSbV627;
+      }
+    }catch(_e){}
+    return null;
+  }
+
+  function activeCommunity(){
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const a = window.ZummeeCommunityState.getActiveCommunity();
+        if(a && a.id) return { id:s(a.id), name:s(a.name) };
+      }
+    }catch(_e){}
+    try{
+      const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+      const obj = raw ? JSON.parse(raw) : null;
+      if(obj && obj.id) return { id:s(obj.id), name:s(obj.name) };
+    }catch(_e2){}
+    try{
+      return {
+        id: s(new URLSearchParams(location.search).get('community_id')) || s(localStorage.getItem('activeCommunityId')) || s(localStorage.getItem('currentCommunityId')) || s(localStorage.getItem('zummee_selected_community_id')),
+        name: s(new URLSearchParams(location.search).get('community_name')) || s(localStorage.getItem('activeCommunityName')) || s(localStorage.getItem('currentCommunityName'))
+      };
+    }catch(_e3){}
+    return { id:'', name:'' };
+  }
+
+  function addOneYear(dateStr){
+    if(!dateStr) return '';
+    try{
+      const d = new Date(dateStr + 'T00:00:00');
+      if(Number.isNaN(d.getTime())) return '';
+      d.setFullYear(d.getFullYear() + 1);
+      return d.toISOString().slice(0,10);
+    }catch(_e){ return ''; }
+  }
+
+  function minusDays(dateStr, days){
+    if(!dateStr) return '';
+    try{
+      const d = new Date(dateStr + 'T00:00:00');
+      if(Number.isNaN(d.getTime())) return '';
+      d.setDate(d.getDate() - Number(days || 0));
+      return d.toISOString().slice(0,10);
+    }catch(_e){ return ''; }
+  }
+
+  function formatDate(v){
+    if(!v) return '—';
+    try{
+      return new Date(v + 'T00:00:00').toLocaleDateString(undefined,{month:'long',day:'numeric',year:'numeric'});
+    }catch(_e){ return String(v); }
+  }
+
+  function normalizeRow(row){
+    row = row || {};
+    let data = {};
+    try{
+      if(row.data && typeof row.data === 'object') data = row.data;
+      else if(row.settings && typeof row.settings === 'object') data = row.settings;
+      else if(row.payload && typeof row.payload === 'object') data = row.payload;
+    }catch(_e){}
+
+    return Object.assign({}, DEFAULT_ENTRY, {
+      lastDate: s(row.last_annual_meeting_date || row.lastDate || row.last_date || data.lastDate || data.last_annual_meeting_date),
+      nextDate: s(row.next_annual_meeting_date || row.nextDate || row.next_date || data.nextDate || data.next_annual_meeting_date),
+      associationLegalName: s(row.association_legal_name || row.associationLegalName || data.associationLegalName || data.association_legal_name),
+      quorumPercent: s(row.quorum_percent || row.quorumPercent || data.quorumPercent || data.quorum_percent),
+      seatsOverride: s(row.seats_override || row.seatsOverride || data.seatsOverride || data.seats_override),
+      meetingTime: s(row.meeting_time || row.meetingTime || data.meetingTime || data.meeting_time) || DEFAULT_ENTRY.meetingTime,
+      meetingFormat: s(row.meeting_format || row.meetingFormat || data.meetingFormat || data.meeting_format) || DEFAULT_ENTRY.meetingFormat,
+      meetingLocation: s(row.meeting_location || row.meetingLocation || data.meetingLocation || data.meeting_location),
+      meetingLink: s(row.meeting_link || row.meetingLink || data.meetingLink || data.meeting_link),
+      nominationDeadline: s(row.nomination_deadline || row.nominationDeadline || data.nominationDeadline || data.nomination_deadline),
+      proxyReturnDeadline: s(row.proxy_return_deadline || row.proxyReturnDeadline || data.proxyReturnDeadline || data.proxy_return_deadline),
+      lastLocked: !!(row.last_locked || row.lastLocked || row.locked || data.lastLocked || data.last_locked)
+    });
+  }
+
+  function buildPayload(entry, community){
+    entry = Object.assign({}, DEFAULT_ENTRY, entry || {});
+    const expectedNextDate = entry.nextDate || addOneYear(entry.lastDate);
+    const sendDate = minusDays(expectedNextDate, 30);
+
+    return {
+      community_id: community.id,
+      last_annual_meeting_date: entry.lastDate || null,
+      next_annual_meeting_date: entry.nextDate || null,
+      association_legal_name: entry.associationLegalName || null,
+      quorum_percent: entry.quorumPercent === '' ? null : Number(entry.quorumPercent),
+      seats_override: entry.seatsOverride === '' ? null : Number(entry.seatsOverride),
+      meeting_time: entry.meetingTime || null,
+      meeting_format: entry.meetingFormat || null,
+      meeting_location: entry.meetingLocation || null,
+      meeting_link: entry.meetingLink || null,
+      nomination_deadline: entry.nominationDeadline || null,
+      proxy_return_deadline: entry.proxyReturnDeadline || null,
+      expected_next_date: expectedNextDate || null,
+      thirty_day_send_date: sendDate || null,
+      last_locked: !!entry.lastLocked,
+      data: entry,
+      updated_at: new Date().toISOString()
+    };
+  }
+
+  function setStatus(text, kind){
+    const statusText = getEl('statusText');
+    const dot = getEl('statusDot');
+    const pillText = getEl('statusPillText');
+    if(statusText) statusText.textContent = text || '';
+    if(pillText){
+      if(kind === 'loading') pillText.textContent = 'Loading annual meeting status...';
+      else if(kind === 'good') pillText.textContent = 'Annual meeting ready';
+      else if(kind === 'locked') pillText.textContent = 'Records locked';
+      else if(kind === 'error') pillText.textContent = 'Needs setup';
+      else pillText.textContent = 'Needs setup';
+    }
+    if(dot) dot.className = kind === 'good' || kind === 'locked' ? 'dot good' : 'dot';
+  }
+
+  function fillMeetingTimes(){
+    const el = getEl('meetingTime');
+    if(!el || el.options.length) return;
+    const arr=[];
+    for(let h=7; h<=21; h++){
+      ['00','30'].forEach(mm=>{
+        const hh=((h+11)%12)+1;
+        const ampm=h<12?'AM':'PM';
+        arr.push(`${hh}:${mm} ${ampm}`);
+      });
+    }
+    el.innerHTML = arr.map(v=>`<option value="${v}">${v}</option>`).join('');
+  }
+
+  function setVal(id, value){
+    const el = getEl(id);
+    if(el) el.value = value || '';
+  }
+
+  function renderEntry(){
+    fillMeetingTimes();
+
+    const c = activeCommunity();
+    const communityName = getEl('communityName');
+    if(communityName) communityName.textContent = c.name || 'Selected Community';
+
+    const e = Object.assign({}, DEFAULT_ENTRY, currentEntry || {});
+    const expected = e.nextDate || addOneYear(e.lastDate);
+    const sendDate = minusDays(expected, 30);
+    const seats = e.seatsOverride || '—';
+
+    setVal('lastDate', e.lastDate);
+    setVal('nextDate', e.nextDate);
+    setVal('associationLegalName', e.associationLegalName);
+    setVal('quorumPercent', e.quorumPercent);
+    setVal('seatsOverride', e.seatsOverride);
+    setVal('meetingTime', e.meetingTime || DEFAULT_ENTRY.meetingTime);
+    setVal('meetingFormat', e.meetingFormat || DEFAULT_ENTRY.meetingFormat);
+    setVal('meetingLocation', e.meetingLocation);
+    setVal('meetingLink', e.meetingLink);
+    setVal('nominationDeadline', e.nominationDeadline);
+    setVal('proxyReturnDeadline', e.proxyReturnDeadline);
+
+    const expectedDate = getEl('expectedDate');
+    if(expectedDate) expectedDate.textContent = formatDate(expected);
+
+    const sendDateEl = getEl('sendDate');
+    if(sendDateEl) sendDateEl.textContent = formatDate(sendDate);
+
+    const seatsCount = getEl('seatsCount');
+    if(seatsCount) seatsCount.textContent = String(seats || '—');
+
+    const lockBtn = getEl('lockBtn');
+    if(lockBtn) lockBtn.textContent = e.lastLocked ? 'Unlock Records' : 'Lock Records';
+
+    const disabled = !!e.lastLocked;
+    ['lastDate','nextDate','associationLegalName','quorumPercent','seatsOverride','meetingTime','meetingFormat','meetingLocation','meetingLink','nominationDeadline','proxyReturnDeadline'].forEach(id=>{
+      const el = getEl(id);
+      if(el) el.disabled = disabled;
+    });
+
+    setStatus(e.lastLocked ? 'Annual meeting info is locked and ready.' : 'Annual meeting workspace ready.', e.lastLocked ? 'locked' : 'good');
+
+    try{ if(window.ZummeeAnnualMeetingsLoadLogo) window.ZummeeAnnualMeetingsLoadLogo(); }catch(_logoE){}
+  }
+
+  function collectEntry(){
+    return {
+      lastDate: s(getEl('lastDate') && getEl('lastDate').value),
+      nextDate: s(getEl('nextDate') && getEl('nextDate').value),
+      associationLegalName: s(getEl('associationLegalName') && getEl('associationLegalName').value),
+      quorumPercent: s(getEl('quorumPercent') && getEl('quorumPercent').value),
+      seatsOverride: s(getEl('seatsOverride') && getEl('seatsOverride').value),
+      meetingTime: s(getEl('meetingTime') && getEl('meetingTime').value) || DEFAULT_ENTRY.meetingTime,
+      meetingFormat: s(getEl('meetingFormat') && getEl('meetingFormat').value) || DEFAULT_ENTRY.meetingFormat,
+      meetingLocation: s(getEl('meetingLocation') && getEl('meetingLocation').value),
+      meetingLink: s(getEl('meetingLink') && getEl('meetingLink').value),
+      nominationDeadline: s(getEl('nominationDeadline') && getEl('nominationDeadline').value),
+      proxyReturnDeadline: s(getEl('proxyReturnDeadline') && getEl('proxyReturnDeadline').value),
+      lastLocked: !!(currentEntry && currentEntry.lastLocked)
+    };
+  }
+
+  async function selectExisting(client, table, communityId){
+    try{
+      const res = await client.from(table)
+        .select('*')
+        .eq('community_id', communityId)
+        .order('updated_at', { ascending:false, nullsFirst:false })
+        .limit(1)
+        .maybeSingle();
+      if(res && !res.error && res.data) return res.data;
+    }catch(_e){}
+    return null;
+  }
+
+  async function upsertRecord(client, table, payload){
+    // Try update existing known row first.
+    if(currentRecordId){
+      try{
+        const res = await client.from(table).update(payload).eq('id', currentRecordId).select('*').maybeSingle();
+        if(res && !res.error && res.data) return res.data;
+      }catch(_e){}
+    }
+
+    // Then upsert by community_id.
+    try{
+      const res = await client.from(table).upsert(payload, { onConflict:'community_id' }).select('*').maybeSingle();
+      if(res && !res.error && res.data) return res.data;
+    }catch(_e){}
+
+    // Last fallback insert.
+    try{
+      const res = await client.from(table).insert(payload).select('*').maybeSingle();
+      if(res && !res.error && res.data) return res.data;
+    }catch(_e2){}
+
+    throw new Error('Could not save annual meeting record to ' + table);
+  }
+
+  async function loadDirect(){
+    const c = activeCommunity();
+    if(!c.id){
+      setStatus('Select a community to load annual meeting data.', 'error');
+      return false;
+    }
+
+    setStatus('Loading annual meeting data...', 'loading');
+
+    const client = await getClient();
+    if(!client){
+      setStatus('Could not connect to Supabase.', 'error');
+      return false;
+    }
+
+    for(const table of TABLES){
+      const row = await selectExisting(client, table, c.id);
+      if(row){
+        currentTable = table;
+        currentRecordId = s(row.id);
+        currentEntry = normalizeRow(row);
+        renderEntry();
+        return true;
+      }
+    }
+
+    // No row exists yet. Use default but do not treat it as failure.
+    currentTable = TABLES[0];
+    currentRecordId = '';
+    currentEntry = Object.assign({}, DEFAULT_ENTRY);
+    renderEntry();
+    setStatus('Annual meeting workspace ready. No saved setup yet.', 'good');
+    return true;
+  }
+
+  async function saveDirect(){
+    const c = activeCommunity();
+    if(!c.id){
+      alert('Select a community first.');
+      return false;
+    }
+
+    if(currentEntry && currentEntry.lastLocked){
+      setStatus('Records are locked. Unlock them to make changes.', 'locked');
+      return false;
+    }
+
+    const client = await getClient();
+    if(!client){
+      alert('Could not connect to Supabase.');
+      return false;
+    }
+
+    currentEntry = collectEntry();
+    const table = currentTable || TABLES[0];
+    const payload = buildPayload(currentEntry, c);
+
+    try{
+      const row = await upsertRecord(client, table, payload);
+      currentTable = table;
+      currentRecordId = s(row && row.id);
+      currentEntry = normalizeRow(row || payload);
+      renderEntry();
+      setStatus('Annual meeting info saved.', 'good');
+      return true;
+    }catch(err){
+      console.error('[Annual Meetings v627] save failed', err);
+      alert('Could not save Annual Meeting info. The annual_meeting_settings table may need to be created.');
+      setStatus('Could not save annual meeting info.', 'error');
+      return false;
+    }
+  }
+
+  async function toggleLockDirect(){
+    if(!currentEntry) currentEntry = Object.assign({}, DEFAULT_ENTRY);
+    if(!currentEntry.lastLocked && !s(getEl('lastDate') && getEl('lastDate').value)){
+      alert('Enter the last annual meeting date first.');
+      return false;
+    }
+
+    if(currentEntry.lastLocked){
+      const ok = confirm('Unlock Annual Meeting fields so the dates and meeting details can be changed?');
+      if(!ok) return false;
+    }
+
+    currentEntry = collectEntry();
+    currentEntry.lastLocked = !currentEntry.lastLocked;
+    await saveDirect();
+    renderEntry();
+    setStatus(currentEntry.lastLocked ? 'Records locked.' : 'Records unlocked.', currentEntry.lastLocked ? 'locked' : 'good');
+    return true;
+  }
+
+  function patchButtons(){
+    const saveBtn = getEl('saveBtn');
+    if(saveBtn && !saveBtn.__annualDirectSaveV627){
+      saveBtn.__annualDirectSaveV627 = true;
+      saveBtn.addEventListener('click', function(e){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        saveDirect();
+      }, true);
+    }
+
+    const lockBtn = getEl('lockBtn');
+    if(lockBtn && !lockBtn.__annualDirectLockV627){
+      lockBtn.__annualDirectLockV627 = true;
+      lockBtn.addEventListener('click', function(e){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        toggleLockDirect();
+      }, true);
+    }
+
+    const select = getEl('annualCommunitySelect');
+    if(select && !select.__annualDirectCommunityV627){
+      select.__annualDirectCommunityV627 = true;
+      select.addEventListener('change', function(){
+        setTimeout(loadDirect, 120);
+      });
+    }
+  }
+
+  window.ZummeeAnnualMeetingsDirect = {
+    load: loadDirect,
+    save: saveDirect,
+    toggleLock: toggleLockDirect,
+    render: renderEntry,
+    collect: collectEntry
+  };
+
+  function start(){
+    fillMeetingTimes();
+    patchButtons();
+    setTimeout(loadDirect, 300);
+    setTimeout(loadDirect, 1200);
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', start, { once:true });
+  }else{
+    start();
+  }
+
+  window.addEventListener('pageshow', function(){ setTimeout(loadDirect, 250); });
 })();
 </script>
 
