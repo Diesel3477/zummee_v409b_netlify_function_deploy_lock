@@ -43,7 +43,7 @@
 
 
 
-<script>window.ZUMMEE_BUILD="2026-05-08-v621-manager-hub-single-ops-writer";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-08-v618-manager-hub-authoritative-ops-pill";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <script id="zummee-manager-canonical-preboot-v608">
 /*
@@ -4776,8 +4776,12 @@ html[data-theme="dark"] .mh2-ask-close,html[data-theme="dark"] .mh2-ask-modal .m
           urgentActivity = 0;
         }
 
-        // v621: Daily Ops / Operations Portal is owned only by the Supabase Operations summary engine.
-        // Do not repaint this card from board/live legacy counts.
+        setToolCardState('dailyOpsCard', {
+          tone: boardOverdue ? 'urgent' : (boardOpen || liveEvents ? 'gold' : 'good'),
+          badge: boardOverdue ? 'Needs attention' : (boardOpen || liveEvents ? 'Active' : 'Ready'),
+          metric1: boardOpen,
+          metric2: boardOverdue + urgentWorkOrders
+        });
         setToolCardState('boardMemberHubCard', {
           tone: boardOverdue ? 'urgent' : (boardOpen ? 'gold' : 'good'),
           badge: boardOverdue ? 'Overdue' : (boardOpen ? 'Open' : 'Clear'),
@@ -4820,8 +4824,7 @@ html[data-theme="dark"] .mh2-ask-close,html[data-theme="dark"] .mh2-ask-modal .m
         setToolCardState('inspectionsCard', { tone: inspectionWos ? 'gold' : 'good', badge: inspectionWos ? 'Inspection open' : 'Field ready', metric1: inspectionWos, metric2: inspectionWos ? 'Follow-up' : 'Ready' });
         setToolCardState('annualMeetingsCard', { tone: approvalsOverdue ? 'urgent' : (approvals ? 'gold' : 'good'), badge: approvalsOverdue ? 'Overdue' : (approvals ? 'Open approvals' : 'Ready'), metric1: approvals, metric2: approvalsOverdue ? approvalsOverdue : (approvals ? 'In progress' : 'Clear') });
         setToolCardState('preferredVendorsCard', { tone: 'good', badge: 'Directory ready', metric1: 'Ready', metric2: 'On' });
-        // v621: Reminders card is owned only by the Supabase Operations summary engine.
-        // Do not repaint this card from board legacy counts.
+        setToolCardState('remindersCard', { tone: boardOverdue ? 'urgent' : (boardOpen ? 'gold' : 'good'), badge: boardOverdue ? 'Overdue' : (boardOpen ? 'Due soon' : 'Clear'), metric1: boardOpen, metric2: boardOverdue });
         setToolCardState('communityTextingCard', { tone: 'good', badge: 'Text ready', metric1: 'Ready', metric2: 'Live' });
         setToolCardState('companyDirectoryCard', { tone: 'good', badge: 'Directory', metric1: 'Ready', metric2: 'Company' });
         setToolCardState('managerTrainingCard', { tone: 'good', badge: 'Guide', metric1: 'Ready', metric2: 'Reference' });
@@ -7586,42 +7589,162 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
 </script>
 
 
-<script id="manager-hub-v621-single-ops-writer-boot">
+<script id="manager-hub-v618-authoritative-ops-pill-guard">
 /*
-  Manager Hub v621 — Single Operations Writer
+  Manager Hub v618 — Authoritative Operations Portal Pill Guard
 
-  Long-term ownership:
-  - Supabase Operations summary is the only writer for:
-    - Operations Portal pill
-    - Daily Ops card
-    - Reminders card
-  - Legacy core card loader no longer writes those cards.
-  - No MutationObserver fight.
-  - No textContent guard.
-  - No protected setter.
+  The v617 Supabase summary is correct, but older Manager Hub loaders can overwrite
+  the pill back to a stale count after the correct count renders.
+  This guard makes the Supabase Operations summary authoritative.
 */
 (function(){
-  if(window.__ManagerHubSingleOpsWriterBootV621) return;
-  window.__ManagerHubSingleOpsWriterBootV621 = true;
+  if(window.__ManagerHubAuthoritativeOpsPillGuardV618) return;
+  window.__ManagerHubAuthoritativeOpsPillGuardV618 = true;
 
-  async function refresh(){
+  function s(v){ return String(v == null ? '' : v).trim(); }
+  function $(id){ return document.getElementById(id); }
+
+  function summary(){
     try{
-      if(typeof window.refreshManagerHubOperationsPortalPill === 'function'){
-        return await window.refreshManagerHubOperationsPortalPill();
+      if(typeof window.getManagerHubOperationsPortalSummary === 'function'){
+        return window.getManagerHubOperationsPortalSummary();
       }
-    }catch(err){
-      console.warn('[Manager Hub v621] Operations single-writer refresh failed', err);
-    }
-    return null;
+    }catch(_e){}
+    return window.__ManagerHubOpsPortalSummaryV616 || null;
   }
 
-  function boot(){
-    [100, 400, 900, 1600, 2600, 4200, 6500].forEach(function(ms){
-      setTimeout(refresh, ms);
+  function applySummary(sum){
+    sum = sum || summary();
+    if(!sum || typeof sum.count === 'undefined') return false;
+
+    var count = Number(sum.count || 0);
+    var overdue = Number(sum.overdue || 0);
+
+    var pill = $('mh2OperationsPortalPill');
+    var title = $('mh2OperationsPortalPillTitle');
+    var badge = $('mh2OperationsPortalPillBadge');
+
+    if(pill){
+      pill.dataset.authoritativeOpsCount = String(count);
+      pill.classList.remove('is-loading','is-clear','is-due');
+      pill.classList.add(count ? 'is-due' : 'is-clear');
+    }
+
+    if(title){
+      title.dataset.authoritativeOpsText = count ? (count + ' operations item' + (count === 1 ? '' : 's') + ' pending') : 'Operations Portal clear';
+      title.textContent = title.dataset.authoritativeOpsText;
+    }
+
+    if(badge){
+      badge.dataset.authoritativeOpsText = count ? (count + ' pending') : 'Clear';
+      badge.textContent = badge.dataset.authoritativeOpsText;
+    }
+
+    updateActionCards(sum);
+    return true;
+  }
+
+  function updateActionCards(sum){
+    var count = Number(sum && sum.count || 0);
+    var overdue = Number(sum && sum.overdue || 0);
+
+    var cards = [
+      $('dailyOpsCard'),
+      $('remindersCard')
+    ].filter(Boolean);
+
+    cards.forEach(function(card){
+      card.dataset.authoritativeOpsCount = String(count);
+      card.classList.remove('mh2-tool-card--gold','mh2-tool-card--urgent');
+      if(overdue) card.classList.add('mh2-tool-card--urgent');
+      else if(count) card.classList.add('mh2-tool-card--gold');
+
+      var tone = card.querySelector('[data-role="tone"]');
+      var metric1 = card.querySelector('[data-role="metric1"]');
+      var metric2 = card.querySelector('[data-role="metric2"]');
+
+      if(tone){
+        tone.textContent = overdue ? 'Overdue' : (count ? 'Pending' : 'Clear');
+        tone.className = 'mh2-tool-pill' + (overdue ? ' is-urgent' : (count ? ' is-gold' : ' is-good'));
+      }
+      if(metric1) metric1.textContent = String(count);
+      if(metric2) metric2.textContent = overdue ? (String(overdue) + ' overdue') : (count ? 'Pending' : 'Clear');
     });
   }
 
-  window.refreshManagerHubOperationsPortalPillStable = refresh;
+  async function authoritativeRefresh(){
+    try{
+      if(typeof window.refreshManagerHubOperationsPortalPill === 'function'){
+        var sum = await window.refreshManagerHubOperationsPortalPill();
+        if(sum) applySummary(sum);
+        else applySummary();
+      }else{
+        applySummary();
+      }
+    }catch(err){
+      console.warn('[Manager Hub v618] authoritative ops refresh failed', err);
+      applySummary();
+    }
+  }
+
+  function reapplyIfStale(){
+    var sum = summary();
+    if(!sum || typeof sum.count === 'undefined') return;
+
+    var count = Number(sum.count || 0);
+    var expectedTitle = count ? (count + ' operations item' + (count === 1 ? '' : 's') + ' pending') : 'Operations Portal clear';
+    var expectedBadge = count ? (count + ' pending') : 'Clear';
+
+    var title = $('mh2OperationsPortalPillTitle');
+    var badge = $('mh2OperationsPortalPillBadge');
+
+    if((title && s(title.textContent) !== expectedTitle) || (badge && s(badge.textContent) !== expectedBadge)){
+      applySummary(sum);
+    }
+  }
+
+  function watch(){
+    var nodes = [
+      $('mh2OperationsPortalPill'),
+      $('mh2OperationsPortalPillTitle'),
+      $('mh2OperationsPortalPillBadge'),
+      $('dailyOpsCard'),
+      $('remindersCard')
+    ].filter(Boolean);
+
+    nodes.forEach(function(node){
+      if(node.__opsAuthoritativeObservedV618) return;
+      node.__opsAuthoritativeObservedV618 = true;
+
+      try{
+        var observer = new MutationObserver(function(){
+          clearTimeout(node.__opsAuthoritativeTimerV618);
+          node.__opsAuthoritativeTimerV618 = setTimeout(reapplyIfStale, 25);
+        });
+        observer.observe(node, { childList:true, subtree:true, characterData:true, attributes:true });
+      }catch(_e){}
+    });
+  }
+
+  function boot(){
+    watch();
+    authoritativeRefresh();
+
+    // Old Manager Hub scripts can finish late. Re-assert the Supabase count after them.
+    [150, 400, 900, 1500, 2500, 4000, 6500, 9000, 12000, 18000, 25000].forEach(function(ms){
+      setTimeout(authoritativeRefresh, ms);
+    });
+
+    // Lightweight steady-state guard in case legacy interval writers are still running.
+    if(!window.__ManagerHubOpsAuthoritativeIntervalV618){
+      window.__ManagerHubOpsAuthoritativeIntervalV618 = setInterval(function(){
+        watch();
+        reapplyIfStale();
+      }, 1200);
+    }
+  }
+
+  window.refreshManagerHubOperationsPortalPillAuthoritative = authoritativeRefresh;
 
   if(document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', boot, { once:true });
@@ -7630,7 +7753,7 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
   }
 
   window.addEventListener('pageshow', function(){ setTimeout(boot, 100); });
-  window.addEventListener('focus', function(){ setTimeout(refresh, 100); });
+  window.addEventListener('focus', function(){ setTimeout(authoritativeRefresh, 100); });
   window.addEventListener('zummee:community-changed', function(){ setTimeout(boot, 150); });
 })();
 </script>
