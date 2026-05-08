@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
 
-<script id="manager-hub-v632-deterministic-smart-alerts-marker">
-window.ZUMMEE_BUILD = "2026-05-08-v632-manager-hub-deterministic-smart-alerts";
-window.__MANAGER_HUB_V632_DETERMINISTIC_SMART_ALERTS = true;
-console.info("[Manager Hub v632] deterministic smart alerts loaded", window.ZUMMEE_BUILD);
+<script id="manager-hub-v633-accessible-smart-alerts-marker">
+window.ZUMMEE_BUILD = "2026-05-08-v633-manager-hub-accessible-smart-alerts";
+window.__MANAGER_HUB_V633_ACCESSIBLE_SMART_ALERTS = true;
+console.info("[Manager Hub v633] accessible smart alerts loaded", window.ZUMMEE_BUILD);
 </script>
 
-<script id="manager-hub-v632-deterministic-smart-alerts">
+<script id="manager-hub-v633-accessible-smart-alerts">
 (function(){
-  if(window.__ManagerHubDeterministicSmartAlertsV632) return;
-  window.__ManagerHubDeterministicSmartAlertsV632 = true;
+  if(window.__ManagerHubAccessibleSmartAlertsV633) return;
+  window.__ManagerHubAccessibleSmartAlertsV633 = true;
 
   const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
@@ -29,7 +29,6 @@ console.info("[Manager Hub v632] deterministic smart alerts loaded", window.ZUMM
 
   async function ensureSupabaseSdk(){
     if(window.supabase && typeof window.supabase.createClient === 'function') return true;
-
     const existing = document.querySelector('script[src*="supabase-js"]');
     if(existing){
       for(let i=0;i<40;i++){
@@ -37,18 +36,7 @@ console.info("[Manager Hub v632] deterministic smart alerts loaded", window.ZUMM
         await sleep(100);
       }
     }
-
-    return new Promise(function(resolve){
-      try{
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-        script.onload = function(){ resolve(!!(window.supabase && window.supabase.createClient)); };
-        script.onerror = function(){ resolve(false); };
-        document.head.appendChild(script);
-      }catch(_e){
-        resolve(false);
-      }
-    });
+    return false;
   }
 
   function findExistingClient(){
@@ -91,11 +79,11 @@ console.info("[Manager Hub v632] deterministic smart alerts loaded", window.ZUMM
 
     try{
       if(window.supabase && typeof window.supabase.createClient === 'function'){
-        if(!window.__ManagerHubSmartAlertsSbV632){
-          window.__ManagerHubSmartAlertsSbV632 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        if(!window.__ManagerHubSmartAlertsSbV633){
+          window.__ManagerHubSmartAlertsSbV633 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         }
-        if(window.__ManagerHubSmartAlertsSbV632 && typeof window.__ManagerHubSmartAlertsSbV632.from === 'function'){
-          return { client:window.__ManagerHubSmartAlertsSbV632, source:'v632-created-client' };
+        if(window.__ManagerHubSmartAlertsSbV633 && typeof window.__ManagerHubSmartAlertsSbV633.from === 'function'){
+          return { client:window.__ManagerHubSmartAlertsSbV633, source:'v633-created-client' };
         }
       }
     }catch(err){
@@ -255,34 +243,24 @@ console.info("[Manager Hub v632] deterministic smart alerts loaded", window.ZUMM
     return result;
   }
 
-  function annualMatchesCommunity(row, community){
-    if(!row || !community || !community.id) return false;
-    if(s(row.community_id) === community.id) return true;
-    const m = metadata(row);
-    if(s(m.community_id) === community.id) return true;
-
-    const name = s(community.name).toLowerCase();
-    if(!name) return false;
-    const vals = [row.community_name,row.community,row.property_name,row.association_name,m.community_name,m.community,m.property_name,m.association_name]
-      .map(x => s(x).toLowerCase()).filter(Boolean);
-    return vals.some(v => v === name || v.indexOf(name) !== -1 || name.indexOf(v) !== -1);
-  }
-
   async function loadAnnual(client, clientSource, community){
     if(!client || !uuidish(community.id)){
       return { ok:false, label:'annual', source:'none', clientSource, communityId:community.id, error:'Missing client or valid community', count:0, rows:[], totalRows:0 };
     }
 
-    const res = await client.from('annual_meeting_packet_requests')
-      .select('*')
-      .limit(200);
+    // Stable accessible source. Do not query annual_meeting_packet_requests from Manager Hub;
+    // that table is currently blocked by access control checks.
+    const res = await client.from('annual_meeting_settings')
+      .select('id,community_id,next_annual_meeting_date,updated_at,created_at')
+      .eq('community_id', community.id)
+      .limit(20);
 
     if(res && res.error){
-      return { ok:false, label:'annual', source:'annual_meeting_packet_requests', clientSource, communityId:community.id, error:res.error.message || JSON.stringify(res.error), count:0, rows:[], totalRows:0 };
+      return { ok:false, label:'annual', source:'annual_meeting_settings', clientSource, communityId:community.id, error:res.error.message || JSON.stringify(res.error), count:0, rows:[], totalRows:0 };
     }
 
-    return normalize('annual', 'annual_meeting_packet_requests', clientSource, community, res && res.data, function(row){
-      return annualMatchesCommunity(row, community) && !isClosed(row);
+    return normalize('annual', 'annual_meeting_settings', clientSource, community, res && res.data, function(row){
+      return !!(row && row.next_annual_meeting_date);
     });
   }
 
@@ -324,7 +302,7 @@ console.info("[Manager Hub v632] deterministic smart alerts loaded", window.ZUMM
     };
 
     state.latest = summary;
-    window.__ManagerHubSmartAlertsSummaryV632 = summary;
+    window.__ManagerHubSmartAlertsSummaryV633 = summary;
     return summary;
   }
 
@@ -335,7 +313,7 @@ console.info("[Manager Hub v632] deterministic smart alerts loaded", window.ZUMM
     opts = opts || {};
     const tone = opts.tone || 'good';
 
-    card.dataset.smartAlertsV632 = 'true';
+    card.dataset.smartAlertsV633 = 'true';
     card.style.display = '';
     card.style.visibility = 'visible';
     card.style.opacity = '1';
@@ -382,15 +360,15 @@ console.info("[Manager Hub v632] deterministic smart alerts loaded", window.ZUMM
     const annualOverdue = Number(summary.annualOverdue || 0);
     setAlert('mh2AlertApprovals', {
       tone: annualOverdue > 0 ? 'urgent' : (annualCount > 0 ? 'attention' : 'good'),
-      title:'Annual meeting approvals',
-      badge: annualOverdue > 0 ? (annualOverdue + ' overdue') : (annualCount > 0 ? (annualCount + ' pending') : 'Clear'),
-      copy: annualCount > 0 ? (annualCount + ' annual meeting approval item' + (annualCount === 1 ? '' : 's') + ' in progress.') : 'No annual meeting approvals need attention right now.',
-      href:'annual_meeting_status.html'
+      title:'Annual meetings',
+      badge: annualOverdue > 0 ? (annualOverdue + ' overdue') : (annualCount > 0 ? (annualCount + ' active') : 'Clear'),
+      copy: annualCount > 0 ? (annualCount + ' annual meeting setup record' + (annualCount === 1 ? '' : 's') + ' active for this community.') : 'No annual meeting setup needs attention right now.',
+      href:'annual_meetings.html'
     });
 
     try{ document.documentElement.setAttribute('data-zummee-smart-alerts-v426-ready', '1'); }catch(_e){}
 
-    console.info('[Manager Hub v632] deterministic smart alerts rendered', summary);
+    console.info('[Manager Hub v633] accessible smart alerts rendered', summary);
     return true;
   }
 
@@ -417,7 +395,7 @@ console.info("[Manager Hub v632] deterministic smart alerts loaded", window.ZUMM
           loadedAt:Date.now()
         };
         state.latest = fallback;
-        window.__ManagerHubSmartAlertsSummaryV632 = fallback;
+        window.__ManagerHubSmartAlertsSummaryV633 = fallback;
         render(fallback);
         return fallback;
       }finally{
@@ -430,11 +408,11 @@ console.info("[Manager Hub v632] deterministic smart alerts loaded", window.ZUMM
 
   window.refreshManagerHubCanonicalSmartAlerts = refresh;
   window.refreshManagerHubSmartCardsAuthoritative = refresh;
-  window.getManagerHubSmartCardsSummary = function(){ return window.__ManagerHubSmartAlertsSummaryV632 || state.latest || null; };
+  window.getManagerHubSmartCardsSummary = function(){ return window.__ManagerHubSmartAlertsSummaryV633 || state.latest || null; };
   window.getManagerHubSmartCardsDeploymentStatus = function(){
     return {
       build: window.ZUMMEE_BUILD || '',
-      deterministicMarker: !!window.__MANAGER_HUB_V632_DETERMINISTIC_SMART_ALERTS,
+      accessibleMarker: !!window.__MANAGER_HUB_V633_ACCESSIBLE_SMART_ALERTS,
       helperType: typeof window.refreshManagerHubCanonicalSmartAlerts,
       summary: window.getManagerHubSmartCardsSummary()
     };
@@ -456,6 +434,9 @@ console.info("[Manager Hub v632] deterministic smart alerts loaded", window.ZUMM
   window.addEventListener('zummee:community-changed', function(){ setTimeout(boot, 150); });
 })();
 </script>
+
+
+
 
 
 
@@ -516,7 +497,7 @@ console.info("[Manager Hub v632] deterministic smart alerts loaded", window.ZUMM
 
 
 
-<script>window.ZUMMEE_BUILD = "2026-05-08-v632-manager-hub-deterministic-smart-alerts";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD = "2026-05-08-v633-manager-hub-accessible-smart-alerts";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <script id="zummee-manager-canonical-preboot-v608">
 /*
