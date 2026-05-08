@@ -1,6 +1,7 @@
 <!doctype html>
 <html>
 <head>
+<script>window.ZUMMEE_BUILD="2026-05-08-v617-annual-meetings-native-community-state";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annual Meetings</title>
@@ -14,6 +15,8 @@
     })();
   </script>
   <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <script src="shared/community-state.js?v=2026-05-08-v617"></script>
+  <script src="shared/input-undo-guard.js?v=2026-05-08-v617"></script>
   <style>
   :root{
     --navy:#17324d;--navy2:#234d73;--muted:#5f7388;--bg:#ffffff;--card:#f6f1e1;--white:#ffffff;
@@ -208,8 +211,8 @@ body.dark-mode .mh2-stat-box {
         <div class="brand">Annual Meetings</div>
       </div>
       <div class="topActions">
-        <a class="btn ghost" href="manager_hub.html">← Back to Hub</a>
-        <a class="btn secondary" href="annual_meeting_records.html">Open Archive</a>
+        <a id="annualBackToHub" class="btn ghost" href="manager_hub.html">← Back to Hub</a>
+        <a id="annualArchiveLink" class="btn secondary" href="annual_meeting_records.html">Open Archive</a>
       </div>
     </section>
 
@@ -394,6 +397,24 @@ body.dark-mode .mh2-stat-box {
     }catch(_e){}
     return '';
   }
+
+  function getCanonicalCommunityName(){
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const active = window.ZummeeCommunityState.getActiveCommunity();
+        if(active && active.name) return String(active.name || '').trim();
+      }
+    }catch(_e0){}
+    try{
+      const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+      const parsed = raw ? JSON.parse(raw) : null;
+      if(parsed && parsed.name) return String(parsed.name || '').trim();
+    }catch(_e00){}
+    try{
+      return String(window.localStorage.getItem('zummee_active_community_name') || window.localStorage.getItem('currentCommunityName') || window.localStorage.getItem('activeCommunityName') || '').trim();
+    }catch(_e){}
+    return '';
+  }
   function fillMeetingTimes(){
     const arr=[];
     for(let h=7; h<=21; h++) ['00','30'].forEach(mm=>{ const hh=((h+11)%12)+1; const ampm=h<12?'AM':'PM'; arr.push(`${hh}:${mm} ${ampm}`); });
@@ -402,11 +423,22 @@ body.dark-mode .mh2-stat-box {
 
   function getActiveCommunityId(){
     try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const active = window.ZummeeCommunityState.getActiveCommunity();
+        if(active && active.id) return String(active.id || '').trim();
+      }
+    }catch(_e0){}
+    try{
+      const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+      const parsed = raw ? JSON.parse(raw) : null;
+      if(parsed && parsed.id) return String(parsed.id || '').trim();
+    }catch(_e00){}
+    try{
       const qp = new URLSearchParams(window.location.search).get('community_id');
       if(qp) return String(qp).trim();
     }catch(_e){}
     try{
-      return String(localStorage.getItem('selectedCommunityId') || localStorage.getItem('activeCommunityId') || localStorage.getItem('currentCommunityId') || '').trim();
+      return String(localStorage.getItem('zummee_active_community_id') || localStorage.getItem('selectedCommunityId') || localStorage.getItem('activeCommunityId') || localStorage.getItem('currentCommunityId') || '').trim();
     }catch(_e2){}
     return '';
   }
@@ -414,28 +446,56 @@ body.dark-mode .mh2-stat-box {
   function seedCommunityContext(){
     const communityId = getActiveCommunityId();
     if(!communityId) return;
-    try{ localStorage.setItem('selectedCommunityId', communityId); }catch(_e){}
-    try{ localStorage.setItem('activeCommunityId', communityId); }catch(_e2){}
-    try{ localStorage.setItem('currentCommunityId', communityId); }catch(_e3){}
+    const activeName = getCanonicalCommunityName();
+    setCommunityStorage(communityId, activeName, { source:'annual-meetings-seed-v617', silent:true });
   }
 
-  function setCommunityStorage(id, name){
+  function setCommunityStorage(id, name, options){
+    options = options || {};
     const cid = String(id || '').trim();
     const cname = String(name || '').trim();
     if(!cid) return;
-    try{ localStorage.setItem('selectedCommunityId', cid); }catch(_e){}
-    try{ localStorage.setItem('activeCommunityId', cid); }catch(_e2){}
-    try{ localStorage.setItem('currentCommunityId', cid); }catch(_e3){}
-    try{ localStorage.setItem('zummee_selected_community_id', cid); }catch(_e4){}
-    try{ localStorage.setItem('zummee_selected_community_v1', cid); }catch(_e5){}
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.setActiveCommunity === 'function'){
+        window.ZummeeCommunityState.setActiveCommunity(cid, cname || '', {
+          source: options.source || 'annual-meetings-v617',
+          silent: options.silent !== false
+        });
+      }
+    }catch(_e0){}
+    try{
+      const state = { id: cid, name: cname, updatedAt: Date.now(), source: options.source || 'annual-meetings-v617' };
+      localStorage.setItem('zummee_active_community_v601', JSON.stringify(state));
+      sessionStorage.setItem('zummee_active_community_v601', JSON.stringify(state));
+    }catch(_e00){}
+    ['zummee_active_community_id','selectedCommunityId','activeCommunityId','currentCommunityId','zummee_selected_community_id','zummee_selected_community_v1','zummeeActiveCommunityId','zummee_community_id'].forEach(function(k){
+      try{ localStorage.setItem(k, cid); sessionStorage.setItem(k, cid); }catch(_e){}
+    });
     if(cname){
-      try{ localStorage.setItem('currentCommunityName', cname); }catch(_e6){}
-      try{ localStorage.setItem('activeCommunityName', cname); }catch(_e7){}
+      ['zummee_active_community_name','currentCommunityName','activeCommunityName','zummeeCurrentCommunityName','zummee_community','zummee_selected_community_name'].forEach(function(k){
+        try{ localStorage.setItem(k, cname); sessionStorage.setItem(k, cname); }catch(_e){}
+      });
     }
+    try{
+      window.currentCommunityId = cid;
+      window.activeCommunityId = cid;
+      window.selectedCommunityId = cid;
+      if(cname) window.currentCommunityName = cname;
+    }catch(_e8){}
   }
 
   async function getCommunityList(){
     const win = getWin();
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.loadAssignedCommunities === 'function'){
+        const rows = await window.ZummeeCommunityState.loadAssignedCommunities({ force:false });
+        if(Array.isArray(rows) && rows.length){
+          return rows.map(function(row){
+            return { id:String((row&&row.id)||row.community_id||'').trim(), name:String((row&&row.name)||row.community_name||row.community||'').trim() };
+          }).filter(function(row){ return row.id && row.name; });
+        }
+      }
+    }catch(err){ console.warn('shared community-state list load failed', err); }
     try{
       if(win && typeof win.loadCommunities === 'function'){
         const rows = await win.loadCommunities();
@@ -447,7 +507,7 @@ body.dark-mode .mh2-stat-box {
       }
     }catch(err){ console.warn('community list load failed', err); }
     const selectedId = getActiveCommunityId();
-    const selectedName = getCommunityName(win) || 'Selected Community';
+    const selectedName = getCanonicalCommunityName() || getCommunityName(win) || 'Selected Community';
     return selectedId ? [{ id:selectedId, name:selectedName }] : [];
   }
 
@@ -473,20 +533,21 @@ body.dark-mode .mh2-stat-box {
     if(!els.annualCommunitySelect.value && activeId) els.annualCommunitySelect.value = activeId;
   }
 
-  function switchCommunityFromPicker(){
+  async function switchCommunityFromPicker(){
     const sel = els.annualCommunitySelect;
     if(!sel) return;
     const id = String(sel.value || '').trim();
     const name = sel.options && sel.selectedIndex >= 0 ? String(sel.options[sel.selectedIndex].text || '').trim() : '';
     if(!id) return;
-    setCommunityStorage(id, name);
+    setCommunityStorage(id, name, { source:'annual-meetings-dropdown-v617', silent:false });
+    updateAnnualLinks({ id:id, name:name });
     try{
-      const url = new URL(window.location.href);
-      url.searchParams.set('community_id', id);
-      window.location.href = url.toString();
-    }catch(_e){
-      window.location.href = 'annual_meetings.html?community_id=' + encodeURIComponent(id);
-    }
+      window.dispatchEvent(new CustomEvent('zummee:community-changed', {
+        detail:{ id:id, community_id:id, name:name, source:'annual-meetings-dropdown-v617' }
+      }));
+    }catch(_e){}
+    try{ await hydrateBridge(); }catch(_eHydrate){}
+    try{ render(); }catch(_eRender){}
   }
 
   async function hydrateBridge(){
@@ -614,9 +675,26 @@ body.dark-mode .mh2-stat-box {
     }
   }
 
+  function updateAnnualLinks(active){
+    active = active || { id:getActiveCommunityId(), name:getCanonicalCommunityName() };
+    if(!active.id) return;
+    const q = '?community_id=' + encodeURIComponent(active.id) + (active.name ? '&community_name=' + encodeURIComponent(active.name) : '');
+    try{
+      const hub = document.getElementById('annualBackToHub');
+      if(hub) hub.href = 'manager_hub.html' + q;
+      const archive = document.getElementById('annualArchiveLink');
+      if(archive) archive.href = 'annual_meeting_records.html' + q;
+      const url = new URL(window.location.href);
+      url.searchParams.set('community_id', active.id);
+      if(active.name) url.searchParams.set('community_name', active.name);
+      history.replaceState(null, '', url.toString());
+    }catch(_e){}
+  }
+
   async function init(){
     fillMeetingTimes();
     seedCommunityContext();
+    updateAnnualLinks({ id:getActiveCommunityId(), name:getCanonicalCommunityName() });
     try{ if(els.annualCommunitySelect) els.annualCommunitySelect.addEventListener('change', switchCommunityFromPicker); }catch(_eBind){}
     setStatus('Loading live annual meeting data…');
     let tries = 0;
@@ -697,7 +775,8 @@ body.dark-mode .mh2-stat-box {
   document.getElementById('presentationBtn').addEventListener('click', async function(){
     try{ await saveAll(); }catch(_e){}
     const communityId = getActiveCommunityId();
-    window.location.href = 'annual_presentation.html' + (communityId ? ('?community_id=' + encodeURIComponent(communityId)) : '');
+    const communityName = getCanonicalCommunityName();
+    window.location.href = 'annual_presentation.html' + (communityId ? ('?community_id=' + encodeURIComponent(communityId) + (communityName ? '&community_name=' + encodeURIComponent(communityName) : '')) : '');
   });
 
   ['lastDate','nextDate','associationLegalName','quorumPercent','seatsOverride','meetingTime','meetingFormat','meetingLocation','meetingLink','nominationDeadline','proxyReturnDeadline'].forEach(id=>{
@@ -711,5 +790,49 @@ body.dark-mode .mh2-stat-box {
 <script src="company_logo_sync.js"></script>
 
   <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+
+<script id="zummee-annual-meetings-native-community-state-v617">
+(function(){
+  if(window.__AnnualMeetingsNativeCommunityStateV617) return;
+  window.__AnnualMeetingsNativeCommunityStateV617 = true;
+  function getActive(){
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        var active = window.ZummeeCommunityState.getActiveCommunity();
+        if(active && active.id) return active;
+      }
+    }catch(_e){}
+    try{
+      var raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+      return raw ? JSON.parse(raw) : null;
+    }catch(_e2){ return null; }
+  }
+  function syncVisible(){
+    var active = getActive();
+    if(!active || !active.id) return;
+    try{
+      var sel = document.getElementById('annualCommunitySelect');
+      if(sel && Array.from(sel.options || []).some(function(o){ return String(o.value) === String(active.id); }) && sel.value !== active.id){
+        sel.value = active.id;
+      }
+    }catch(_e){}
+    try{
+      var nameEl = document.getElementById('communityName');
+      if(nameEl && active.name) nameEl.textContent = active.name;
+    }catch(_e2){}
+    try{
+      var q = '?community_id=' + encodeURIComponent(active.id) + (active.name ? '&community_name=' + encodeURIComponent(active.name) : '');
+      var hub = document.getElementById('annualBackToHub');
+      if(hub) hub.href = 'manager_hub.html' + q;
+      var archive = document.getElementById('annualArchiveLink');
+      if(archive) archive.href = 'annual_meeting_records.html' + q;
+    }catch(_e3){}
+  }
+  window.addEventListener('pageshow', function(){ setTimeout(syncVisible, 120); });
+  window.addEventListener('focus', syncVisible);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) syncVisible(); });
+})();
+</script>
+
 </body>
 </html>
