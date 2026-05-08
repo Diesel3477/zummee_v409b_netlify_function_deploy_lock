@@ -1,11 +1,12 @@
 <!doctype html>
 <html>
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-08-v623-annual-meetings-real-logo-one-row-header";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-08-v625-annual-meetings-clean-long-term-rebuild";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annual Meetings</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="shared/supabase-client.js?v=2026-05-08-v625"></script>
 
   <script>
     (function(){
@@ -16,711 +17,536 @@
     })();
   </script>
   <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
-  <style>
+  <script src="shared/community-state.js?v=2026-05-08-v617"></script>
+  <script src="shared/input-undo-guard.js?v=2026-05-08-v617"></script>
+  
+
+
+
+<style id="annual-meetings-clean-long-term-v625">
   :root{
-    --navy:#17324d;--navy2:#234d73;--muted:#5f7388;--bg:#ffffff;--card:#f6f1e1;--white:#ffffff;
-    --line:rgba(23,50,77,.10);--shadow:0 12px 30px rgba(15,47,74,.08);--radius:24px;
-    --good:#2e9d5b;--warn:#d59b00;
+    --zm-navy:#17324c;
+    --zm-blue:#9fc4ff;
+    --zm-blue-soft:#edf4ff;
+    --zm-border:#d9e1ea;
+    --zm-muted:#5d6b7a;
+    --zm-bg:#f4f6fa;
+    --zm-card:#ffffff;
+    --zm-soft:#f8fafc;
+    --zm-gold:#fff8da;
+    --zm-good:#2e9d5b;
+    --zm-warn:#d59b00;
   }
+
   *{box-sizing:border-box}
-  body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--navy)}
-  .shell{max-width:1180px;margin:0 auto;padding:18px 14px 28px}
-  .topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:#0f2f4a;color:#fff;padding:20px 22px;border-radius:30px;box-shadow:0 18px 42px rgba(15,47,74,.18)}
-  .brandWrap{display:flex;flex-direction:column;gap:4px}
-  .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:900;color:rgba(255,255,255,.72)}
-  .brand{font-size:34px;font-weight:900;line-height:1;letter-spacing:-.03em}
-  .topActions{display:flex;gap:10px;flex-wrap:wrap}
-  .btn{appearance:none;border:none;border-radius:999px;padding:0 18px;min-height:46px;font-weight:900;font-size:15px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;transition:.18s ease;background:var(--navy);color:#fff;box-shadow:0 8px 18px rgba(15,47,74,.14)}
-  .btn:hover{transform:translateY(-1px)}
-  .btn.secondary{background:#fff;color:var(--navy);box-shadow:0 8px 18px rgba(0,0,0,.09)}
-  .btn.ghost{background:rgba(255,255,255,.12);color:#fff;box-shadow:none;border:1px solid rgba(255,255,255,.18)}
-    h1{margin:0 0 6px;font-size:34px;line-height:1.04;letter-spacing:-.04em}
-  .lede{margin:0;color:var(--muted);font-size:15px;line-height:1.45}
-  .statusRow{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
-  .pill{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-weight:900;color:var(--navy);font-size:14px}
-  .dot{width:8px;height:8px;border-radius:999px;background:var(--warn)}
-  .dot.good{background:var(--good)}
-  .workspace{background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);padding:20px}
-  .workspaceHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
-  .workspaceTitle{font-size:26px;font-weight:900;letter-spacing:-.03em}
-  .workspaceSub{margin-top:4px;max-width:760px;color:var(--muted);font-size:14px;line-height:1.42}
-  .workspaceMeta{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  .pill.small{padding:8px 12px;font-size:13px}
-  .communityPicker{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;background:#fff;border:1px solid rgba(255,255,255,.18);box-shadow:0 8px 18px rgba(0,0,0,.08);min-height:42px}
-  .communityPicker label{font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#5f7388;white-space:nowrap}
-  .communityPicker select{appearance:none;border:none;background:transparent;color:var(--navy);font-weight:900;font-size:14px;min-width:220px;outline:none;padding-right:8px}
-  .workspaceMeta .communityPicker{background:#fff;border:1px solid var(--line);box-shadow:none;min-height:40px}
-  .workspaceMeta .communityPicker label{color:#5f7388}
-  @media (max-width: 900px){ .communityPicker{width:100%} .communityPicker select{min-width:0;width:100%} }
-  .statusText{width:100%;font-weight:800;color:var(--muted);font-size:13px;margin-top:2px}
-  .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:stretch}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:12px 14px;box-shadow:0 8px 18px rgba(15,47,74,.05);height:100%}
-  .card h2{margin:0 0 8px;font-size:16px;line-height:1.1;letter-spacing:-.02em}
-  .fieldGrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 10px}
-  .noticeGrid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
-  .compactGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px;row-gap:10px;align-items:start}
-  .compactGrid > .field{min-width:0;width:100%}
-  .scheduleCard .readonlyStat,.noticeCard .readonlyStat{min-height:58px;border-radius:14px;border:1px solid rgba(23,50,77,.08);background:#fff;padding:10px 12px;display:flex;flex-direction:column;justify-content:center}
-  .scheduleCard .readonlyStat strong,.noticeCard .readonlyStat strong{display:block;margin:0 0 4px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:900;color:#677a8f;white-space:nowrap}
-  .scheduleCard .readonlyStat span,.noticeCard .readonlyStat span{font-size:16px;font-weight:900;line-height:1.2;color:var(--navy)}
-  .compactLabel{display:block;margin:0 0 4px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:900;color:#677a8f;line-height:1.2}
-  .dateField{min-width:0;width:100%}
-  .dateField input{display:block;width:100%;max-width:100%;min-width:0;min-height:44px;height:44px;font-weight:800;font-size:14px;padding:0 12px}
-  .noticeCard .compactLabel{white-space:nowrap;letter-spacing:.04em}
-
-  .scheduleCard,.noticeCard{display:flex;flex-direction:column;justify-content:flex-start}
-  .scheduleCard .compactGrid,.noticeCard .compactGrid{margin-top:2px}
-  .scheduleCard .dateField,.noticeCard .dateField{min-width:0;overflow:hidden}
-  .scheduleCard .dateField input,.noticeCard .dateField input{display:block;width:100%;max-width:100%;min-width:0;height:42px;min-height:42px;padding:0 14px;border-radius:16px;font-size:13px;font-weight:800;text-align:left;line-height:42px;-webkit-appearance:none;appearance:none;background:#fff}
-  .scheduleCard .dateField input::-webkit-date-and-time-value,.noticeCard .dateField input::-webkit-date-and-time-value{text-align:left}
-  .scheduleCard .dateField input::-webkit-calendar-picker-indicator,.noticeCard .dateField input::-webkit-calendar-picker-indicator{opacity:.72}
-  .noticeCard{min-height:204px}
-  .scheduleCard input[type="date"],.noticeCard input[type="date"]{-webkit-appearance:none;appearance:none}
-  .field.span2{grid-column:1/-1}
-  .card.span2{grid-column:1/-1}
-  label{display:block;margin:0 0 4px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:900;color:#677a8f}
-  input,select,textarea{width:100%;min-width:0;min-height:36px;height:36px;border-radius:12px;border:1px solid rgba(23,50,77,.12);background:#fff;color:var(--navy);padding:0 10px;font-size:14px;box-shadow:none;outline:none}
-  textarea{padding:8px 10px;min-height:72px;height:auto;resize:vertical}
-  .readonly{display:flex;align-items:center;min-height:36px;border-radius:12px;border:1px solid rgba(23,50,77,.08);background:#fff;padding:0 10px;font-size:14px;font-weight:900;color:var(--navy)}
-  .subtle{font-size:12px;line-height:1.42;color:var(--muted)}
-  .miniGrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 10px}
-  .miniStat{background:#fff;border:1px solid rgba(23,50,77,.08);border-radius:14px;padding:10px}
-  .miniStat strong{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#677a8f;margin-bottom:4px}
-  .miniStat span{font-size:16px;font-weight:900;line-height:1.2;color:var(--navy)}
-  .logoBox{background:#fff;border:1px dashed rgba(23,50,77,.18);border-radius:14px;min-height:66px;padding:10px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-weight:800;font-size:12px;text-align:center}
-  .logoBox img{max-width:210px;max-height:64px;object-fit:contain}
-  .actionBar{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:14px;align-items:start}
-  .actionBar .btn{min-height:42px;padding:0 18px;width:100%}
-  .actionBar .secondaryRow{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
-  .hiddenFrame{position:absolute;left:-99999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none}
-  @media (max-width: 700px){.grid,.actionBar,.actionBar .secondaryRow{grid-template-columns:1fr}.compactGrid,.fieldGrid,.miniGrid{grid-template-columns:1fr}.shell{padding:14px 10px 24px}h1{font-size:30px}.workspaceTitle{font-size:24px}}
-
-/* DARK MODE — MANAGER ACTIONS FINAL */
-body.dark-mode .mh2-stat-box,
-body.dark-mode .mh2-kpi,
-body.dark-mode .mh2-mini-stat {
-  background: #f3f4f6 !important;
-  border: 1px solid rgba(255,255,255,0.08);
-}
-body.dark-mode .mh2-stat-value,
-body.dark-mode .mh2-card-value,
-body.dark-mode .mh2-kpi-value {
-  color: #0b0f14 !important;
-  font-weight: 700;
-}
-body.dark-mode .mh2-stat-label,
-body.dark-mode .mh2-card-label {
-  color: #4b5563 !important;
-}
-body.dark-mode .mh2-stat-box {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.25),
-    0 6px 16px rgba(0,0,0,0.25);
-}
-
-
-.mh2-actions .mh2-btn--ghost{display:none !important;}
-</style>
-<style>
-/* FORCE white text in Status & Details section */
-#boardSubmittedItemsSection,
-#boardSubmittedItemsSection *:not(button),
-#boardMemberHubStatus,
-#boardMemberHubStatus *:not(button),
-#annualMeetingApprovals,
-#annualMeetingApprovals *:not(button) {
-  color: #ffffff !important;
-}
-
-/* Secondary text (slightly dimmed white) */
-#boardSubmittedItemsSection .muted,
-#boardMemberHubStatus .muted,
-#annualMeetingApprovals .muted {
-  color: rgba(255,255,255,0.75) !important;
-}
-
-/* DARK MODE — MANAGER ACTIONS FINAL */
-body.dark-mode .mh2-stat-box,
-body.dark-mode .mh2-kpi,
-body.dark-mode .mh2-mini-stat {
-  background: #f3f4f6 !important;
-  border: 1px solid rgba(255,255,255,0.08);
-}
-body.dark-mode .mh2-stat-value,
-body.dark-mode .mh2-card-value,
-body.dark-mode .mh2-kpi-value {
-  color: #0b0f14 !important;
-  font-weight: 700;
-}
-body.dark-mode .mh2-stat-label,
-body.dark-mode .mh2-card-label {
-  color: #4b5563 !important;
-}
-body.dark-mode .mh2-stat-box {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.25),
-    0 6px 16px rgba(0,0,0,0.25);
-}
-
-</style>
-<style>
-/* HARD OVERRIDE — force white text in dark section */
-.hub-zone:last-of-type,
-.hub-zone:last-of-type *:not(button):not(.badge):not(.pill) {
-  color: #ffffff !important;
-}
-
-/* Slightly softer for secondary text */
-.hub-zone:last-of-type .muted,
-.hub-zone:last-of-type p,
-.hub-zone:last-of-type span {
-  color: rgba(255,255,255,0.75) !important;
-}
-
-/* DARK MODE — MANAGER ACTIONS FINAL */
-body.dark-mode .mh2-stat-box,
-body.dark-mode .mh2-kpi,
-body.dark-mode .mh2-mini-stat {
-  background: #f3f4f6 !important;
-  border: 1px solid rgba(255,255,255,0.08);
-}
-body.dark-mode .mh2-stat-value,
-body.dark-mode .mh2-card-value,
-body.dark-mode .mh2-kpi-value {
-  color: #0b0f14 !important;
-  font-weight: 700;
-}
-body.dark-mode .mh2-stat-label,
-body.dark-mode .mh2-card-label {
-  color: #4b5563 !important;
-}
-body.dark-mode .mh2-stat-box {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.25),
-    0 6px 16px rgba(0,0,0,0.25);
-}
-
-</style>
-
-
-
-
-
-
-
-
-
-<style id="annual-meetings-ci-header-v622">
-  /*
-    v622 — Annual Meetings header rebuilt from the Community Inspections pattern.
-    This intentionally avoids the old topbar/am-header class chain.
-  */
-  :root{
-    --am-navy:#17324c;
-    --am-blue:#9fc4ff;
-    --am-blue-soft:#eaf3ff;
-    --am-border:#d9e1ea;
-    --am-muted:#5d6b7a;
-    --am-bg:#f4f6fa;
-    --am-card:#ffffff;
-  }
 
   body{
-    background:var(--am-bg) !important;
-    color:var(--am-navy) !important;
+    margin:0;
+    background:var(--zm-bg);
+    color:var(--zm-navy);
+    font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
   }
 
   .shell{
-    max-width:1180px !important;
-    margin:26px auto 40px !important;
-    padding:0 16px 36px !important;
+    max-width:1180px;
+    margin:26px auto 40px;
+    padding:0 16px 36px;
   }
 
-  .annual-ci-header{
-    background:#fff !important;
-    border:2px solid var(--am-blue) !important;
-    border-radius:30px !important;
-    box-shadow:0 12px 28px rgba(15,53,84,.06) !important;
-    padding:28px !important;
-    margin-bottom:24px !important;
+  .am-page-header{
+    background:#fff;
+    border:2px solid var(--zm-blue);
+    border-radius:30px;
+    padding:28px;
+    box-shadow:0 12px 28px rgba(15,53,84,.06);
+    margin-bottom:24px;
   }
 
-  .annual-ci-header-top{
-    display:grid !important;
-    grid-template-columns:minmax(0,1fr) auto !important;
-    gap:24px !important;
-    align-items:start !important;
+  .am-header-top{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 220px;
+    gap:24px;
+    align-items:start;
   }
 
-  .annual-ci-title-wrap{
-    min-width:0 !important;
+  .am-eyebrow{
+    margin:0 0 8px;
+    color:#5d6b7a;
+    font-size:12px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    font-weight:900;
   }
 
-  .annual-ci-eyebrow{
-    margin:0 0 8px !important;
-    color:#5d6b7a !important;
-    font-size:12px !important;
-    letter-spacing:.16em !important;
-    text-transform:uppercase !important;
-    font-weight:900 !important;
+  .am-title{
+    margin:0;
+    color:var(--zm-navy);
+    font-size:44px;
+    line-height:1.02;
+    letter-spacing:-.045em;
+    font-weight:900;
   }
 
-  .annual-ci-title{
-    margin:0 !important;
-    color:var(--am-navy) !important;
-    font-size:42px !important;
-    line-height:1.02 !important;
-    letter-spacing:-.045em !important;
-    font-weight:900 !important;
+  .am-subtitle{
+    margin:12px 0 0;
+    max-width:690px;
+    color:var(--zm-muted);
+    font-size:15px;
+    line-height:1.45;
+    font-weight:650;
   }
 
-  .annual-ci-subtitle{
-    margin:12px 0 0 !important;
-    max-width:680px !important;
-    color:var(--am-muted) !important;
-    font-size:15px !important;
-    line-height:1.45 !important;
-    font-weight:650 !important;
+  .am-logo-shell{
+    min-height:82px;
+    display:flex;
+    align-items:flex-start;
+    justify-content:flex-end;
   }
 
-  .annual-ci-logo-wrap{
-    display:flex !important;
-    align-items:flex-start !important;
-    justify-content:flex-end !important;
+  .am-logo-card{
+    width:210px;
+    min-height:76px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#fff;
+    border:0;
+    padding:4px;
   }
 
-  .annual-ci-logo-card{
-    width:190px !important;
-    min-height:82px !important;
-    border-radius:22px !important;
-    background:#fff !important;
-    display:flex !important;
-    align-items:center !important;
-    justify-content:center !important;
-    padding:10px 14px !important;
-    border:0 !important;
-    box-shadow:none !important;
+  .am-logo-card img{
+    max-width:200px;
+    max-height:70px;
+    width:auto;
+    height:auto;
+    object-fit:contain;
+    display:block;
   }
 
-  .annual-ci-logo-card img{
-    max-width:180px !important;
-    max-height:64px !important;
-    width:auto !important;
-    height:auto !important;
-    object-fit:contain !important;
-    display:block !important;
+  .am-logo-card img[hidden]{
+    display:none!important;
   }
 
-  .headerLogoFallback{
-    display:flex !important;
-    flex-direction:column !important;
-    align-items:center !important;
-    justify-content:center !important;
-    line-height:1 !important;
+  .am-logo-loading{
+    font-size:11px;
+    letter-spacing:.10em;
+    text-transform:uppercase;
+    color:#8aa0b5;
+    font-weight:900;
   }
 
-  .headerLogoWord{
-    font-size:38px !important;
-    font-weight:900 !important;
-    letter-spacing:.06em !important;
-    color:#2a90d0 !important;
+  .am-header-controls{
+    margin-top:24px;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 170px 170px;
+    gap:12px;
+    align-items:center;
   }
 
-  .headerLogoSub{
-    font-size:12px !important;
-    font-weight:800 !important;
-    letter-spacing:.08em !important;
-    text-transform:uppercase !important;
-    color:#4e7db0 !important;
-    margin-top:4px !important;
+  .am-community-picker{
+    min-height:58px;
+    border:2px solid #d7e7fb;
+    background:#fff;
+    border-radius:28px;
+    padding:8px 18px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    width:100%;
   }
 
-  .annual-ci-header-controls{
-    margin-top:24px !important;
-    display:grid !important;
-    grid-template-columns:minmax(0,1fr) auto !important;
-    gap:14px !important;
-    align-items:center !important;
+  .am-community-picker label{
+    margin:0;
+    white-space:nowrap;
+    font-size:12px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    font-weight:900;
+    color:#5d6b7a;
   }
 
-  .annual-ci-community-picker{
-    min-height:58px !important;
-    border:2px solid #d7e7fb !important;
-    background:#fff !important;
-    border-radius:28px !important;
-    padding:8px 18px !important;
-    display:flex !important;
-    align-items:center !important;
-    gap:14px !important;
-    box-shadow:none !important;
-    width:100% !important;
+  .am-community-picker select{
+    appearance:none;
+    -webkit-appearance:none;
+    flex:1 1 auto;
+    min-width:0;
+    min-height:42px;
+    height:42px;
+    border:0;
+    background:transparent;
+    color:var(--zm-navy);
+    font-size:17px;
+    font-weight:900;
+    padding:0 28px 0 0;
+    outline:none;
   }
 
-  .annual-ci-community-picker label{
-    margin:0 !important;
-    white-space:nowrap !important;
-    font-size:12px !important;
-    letter-spacing:.12em !important;
-    text-transform:uppercase !important;
-    font-weight:900 !important;
-    color:#5d6b7a !important;
+  .am-header-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:58px;
+    width:100%;
+    border-radius:999px;
+    text-decoration:none;
+    font-size:16px;
+    font-weight:900;
+    color:var(--zm-navy);
+    background:#fff;
+    white-space:nowrap;
   }
 
-  .annual-ci-community-picker select{
-    appearance:none !important;
-    -webkit-appearance:none !important;
-    min-height:42px !important;
-    height:42px !important;
-    flex:1 1 auto !important;
-    min-width:0 !important;
-    border:0 !important;
-    background:transparent !important;
-    color:var(--am-navy) !important;
-    font-size:17px !important;
-    font-weight:900 !important;
-    padding:0 28px 0 0 !important;
-    outline:none !important;
-    box-shadow:none !important;
+  .am-header-btn.soft{
+    background:var(--zm-blue-soft);
+    border:2px solid #bcd6f3;
   }
 
-  .annual-ci-actions{
-    display:flex !important;
-    align-items:center !important;
-    justify-content:flex-end !important;
-    gap:12px !important;
-    flex-wrap:nowrap !important;
-  }
-
-  .annual-ci-btn{
-    display:inline-flex !important;
-    align-items:center !important;
-    justify-content:center !important;
-    min-height:58px !important;
-    min-width:170px !important;
-    padding:0 24px !important;
-    border-radius:999px !important;
-    text-decoration:none !important;
-    font-size:16px !important;
-    font-weight:900 !important;
-    color:var(--am-navy) !important;
-    background:#fff !important;
-    box-shadow:none !important;
-    white-space:nowrap !important;
-  }
-
-  .annual-ci-btn-light{
-    border:2px solid #bcd6f3 !important;
-    background:#edf4ff !important;
-  }
-
-  .annual-ci-btn-outline{
-    border:2px solid var(--am-navy) !important;
-    background:#fff !important;
+  .am-header-btn.outline{
+    background:#fff;
+    border:2px solid var(--zm-navy);
   }
 
   .workspace{
-    background:#fff !important;
-    border:2px solid var(--am-navy) !important;
-    border-radius:30px !important;
-    box-shadow:0 12px 28px rgba(15,53,84,.06) !important;
-    padding:28px !important;
+    background:#fff;
+    border:2px solid var(--zm-navy);
+    border-radius:30px;
+    box-shadow:0 12px 28px rgba(15,53,84,.06);
+    padding:28px;
   }
 
   .workspaceHead{
-    margin-bottom:18px !important;
+    display:block;
+    margin-bottom:18px;
   }
 
   .workspaceTitle{
-    font-size:30px !important;
-    color:var(--am-navy) !important;
+    margin:0;
+    color:var(--zm-navy);
+    font-size:30px;
+    line-height:1.08;
+    letter-spacing:-.035em;
+    font-weight:900;
   }
 
   .workspaceSub{
-    color:var(--am-muted) !important;
-    font-size:15px !important;
+    margin:8px 0 0;
+    color:var(--zm-muted);
+    font-size:15px;
+    line-height:1.45;
+    font-weight:600;
   }
 
-  .annual-status-row{
-    margin-top:16px !important;
+  .workspaceMeta{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    margin-top:18px;
+  }
+
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:10px 14px;
+    border-radius:999px;
+    background:var(--zm-gold);
+    border:1px solid rgba(23,50,77,.10);
+    color:var(--zm-navy);
+    font-size:14px;
+    font-weight:900;
+  }
+
+  .pill.small{font-size:14px}
+
+  .dot{
+    width:8px;
+    height:8px;
+    border-radius:999px;
+    background:var(--zm-warn);
+  }
+
+  .dot.good{background:var(--zm-good)}
+
+  .statusText{
+    margin-top:14px;
+    color:var(--zm-muted);
+    font-size:14px;
+    font-weight:800;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:18px;
+    align-items:stretch;
   }
 
   .card{
-    background:#fff !important;
-    border:1.5px solid var(--am-border) !important;
-    border-radius:24px !important;
-    box-shadow:none !important;
-    padding:18px !important;
+    background:#fff;
+    border:1.5px solid var(--zm-border);
+    border-radius:24px;
+    padding:18px;
+    box-shadow:none;
   }
+
+  .card.span2{grid-column:1/-1}
 
   .card h2{
-    font-size:18px !important;
-    color:var(--am-navy) !important;
-    margin-bottom:12px !important;
+    margin:0 0 14px;
+    color:var(--zm-navy);
+    font-size:19px;
+    line-height:1.1;
+    font-weight:900;
+    letter-spacing:-.02em;
   }
 
-  input, select, textarea{
-    border:1.5px solid var(--am-border) !important;
-    border-radius:16px !important;
-    min-height:46px !important;
-    height:46px !important;
-    font-size:15px !important;
-    color:var(--am-navy) !important;
-    background:#fff !important;
+  .fieldGrid,
+  .compactGrid,
+  .miniGrid{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:12px;
+  }
+
+  .field.span2{grid-column:1/-1}
+
+  label,
+  .compactLabel,
+  .miniStat strong,
+  .readonlyStat strong{
+    display:block;
+    margin:0 0 6px;
+    color:#677a8f;
+    font-size:11px;
+    letter-spacing:.10em;
+    text-transform:uppercase;
+    font-weight:900;
+  }
+
+  input,
+  select,
+  textarea{
+    width:100%;
+    min-width:0;
+    min-height:46px;
+    height:46px;
+    border-radius:16px;
+    border:1.5px solid var(--zm-border);
+    background:#fff;
+    color:var(--zm-navy);
+    padding:0 14px;
+    font-size:15px;
+    outline:none;
+    box-shadow:none;
+  }
+
+  textarea{
+    height:auto;
+    min-height:88px;
+    padding:10px 14px;
+    resize:vertical;
   }
 
   .readonly,
   .miniStat,
-  .scheduleCard .readonlyStat,
-  .noticeCard .readonlyStat,
+  .readonlyStat,
   .logoBox{
-    background:#f8fafc !important;
-    border:1.5px solid var(--am-border) !important;
-    border-radius:18px !important;
+    background:var(--zm-soft);
+    border:1.5px solid var(--zm-border);
+    border-radius:18px;
   }
 
-  .actionBar .btn{
-    min-height:52px !important;
-    border-radius:999px !important;
-    font-size:16px !important;
-    font-weight:900 !important;
+  .readonly{
+    min-height:46px;
+    display:flex;
+    align-items:center;
+    padding:0 14px;
+    font-size:16px;
+    font-weight:900;
   }
 
-  .actionBar > .btn:nth-child(1),
-  .actionBar > .btn:nth-child(2){
-    background:var(--am-navy) !important;
-    color:#fff !important;
-    border:2px solid var(--am-navy) !important;
+  .readonlyStat{
+    min-height:76px;
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
   }
 
-  .actionBar .secondaryRow .btn{
-    background:#fff !important;
-    color:var(--am-navy) !important;
-    border:2px solid var(--am-navy) !important;
+  .readonlyStat span,
+  .miniStat span{
+    color:var(--zm-navy);
+    font-size:18px;
+    font-weight:900;
+  }
+
+  .miniStat{padding:14px}
+
+  .logoBox{
+    min-height:94px;
+    padding:14px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--zm-muted);
+    font-weight:800;
+    font-size:13px;
+    text-align:center;
+  }
+
+  .logoBox img{
+    max-width:230px;
+    max-height:72px;
+    object-fit:contain;
+  }
+
+  .subtle{
+    color:var(--zm-muted);
+    font-size:14px;
+    line-height:1.55;
+  }
+
+  .actionBar{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:12px;
+    margin-top:18px;
+  }
+
+  .actionBar .secondaryRow{
+    grid-column:1/-1;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:12px;
+  }
+
+  .btn{
+    appearance:none;
+    border-radius:999px;
+    min-height:52px;
+    padding:0 18px;
+    font-size:16px;
+    font-weight:900;
+    cursor:pointer;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    background:var(--zm-navy);
+    color:#fff;
+    border:2px solid var(--zm-navy);
+    box-shadow:none;
+  }
+
+  .btn.secondary{
+    background:#fff;
+    color:var(--zm-navy);
+  }
+
+  .hiddenFrame{
+    position:absolute;
+    left:-99999px;
+    top:0;
+    width:1px;
+    height:1px;
+    opacity:0;
+    pointer-events:none;
   }
 
   @media (max-width: 860px){
-    .annual-ci-header{
-      padding:24px !important;
+    .shell{padding:0 14px 32px}
+    .am-page-header,
+    .workspace{padding:24px}
+
+    .am-header-top{
+      grid-template-columns:minmax(0,1fr) 200px;
+      gap:18px;
     }
 
-    .annual-ci-header-top{
-      grid-template-columns:minmax(0,1fr) 190px !important;
-      gap:18px !important;
+    .am-title{font-size:40px}
+    .am-subtitle{font-size:14px}
+
+    .am-logo-card{
+      width:190px;
     }
 
-    .annual-ci-title{
-      font-size:38px !important;
+    .am-logo-card img{
+      max-width:185px;
+      max-height:66px;
     }
 
-    .annual-ci-subtitle{
-      font-size:14px !important;
+    .am-header-controls{
+      grid-template-columns:minmax(0,1fr) 155px 155px;
+      gap:10px;
     }
 
-    .annual-ci-header-controls{
-      grid-template-columns:1fr !important;
-    }
-
-    .annual-ci-actions{
-      justify-content:stretch !important;
-    }
-
-    .annual-ci-btn{
-      flex:1 1 0 !important;
-      min-width:0 !important;
+    .am-header-btn{
+      font-size:15px;
+      padding:0 12px;
     }
   }
 
   @media (max-width: 640px){
-    .annual-ci-header-top{
-      grid-template-columns:1fr !important;
+    .am-header-top,
+    .am-header-controls,
+    .grid,
+    .fieldGrid,
+    .compactGrid,
+    .miniGrid,
+    .actionBar,
+    .actionBar .secondaryRow{
+      grid-template-columns:1fr;
     }
 
-    .annual-ci-logo-wrap{
-      justify-content:flex-start !important;
+    .am-logo-shell{
+      justify-content:flex-start;
     }
 
-    .annual-ci-logo-card{
-      width:180px !important;
-    }
-
-    .annual-ci-actions{
-      flex-direction:column !important;
-    }
-
-    .annual-ci-btn{
-      width:100% !important;
-    }
-  }
-</style>
-
-
-<style id="annual-meetings-v623-real-logo-one-row">
-  /* v623 — fix real logo display and keep dropdown/buttons on one row for iPad */
-  .annual-ci-header{
-    padding:26px 28px !important;
-  }
-
-  .annual-ci-header-top{
-    grid-template-columns:minmax(0,1fr) 210px !important;
-    gap:22px !important;
-    align-items:start !important;
-  }
-
-  .annual-ci-logo-card{
-    width:210px !important;
-    min-height:82px !important;
-    padding:8px 10px !important;
-    border:0 !important;
-    box-shadow:none !important;
-    background:transparent !important;
-  }
-
-  .annual-ci-logo-img{
-    max-width:200px !important;
-    max-height:74px !important;
-    width:auto !important;
-    height:auto !important;
-    object-fit:contain !important;
-    display:block !important;
-  }
-
-  .annual-ci-logo-img[hidden]{
-    display:none !important;
-  }
-
-  .annual-ci-logo-loading{
-    color:#8aa0b5 !important;
-    font-size:12px !important;
-    font-weight:800 !important;
-    letter-spacing:.06em !important;
-    text-transform:uppercase !important;
-  }
-
-  .annual-ci-header-controls{
-    grid-template-columns:minmax(0,1fr) 170px 170px !important;
-    gap:12px !important;
-    align-items:center !important;
-  }
-
-  .annual-ci-actions{
-    display:contents !important;
-  }
-
-  .annual-ci-btn{
-    min-width:0 !important;
-    width:100% !important;
-    min-height:58px !important;
-    padding:0 18px !important;
-  }
-
-  .annual-ci-community-picker{
-    width:100% !important;
-    min-width:0 !important;
-  }
-
-  .annual-ci-community-picker select{
-    font-size:17px !important;
-  }
-
-  @media (max-width: 860px){
-    .annual-ci-header-top{
-      grid-template-columns:minmax(0,1fr) 190px !important;
-      gap:18px !important;
-    }
-
-    .annual-ci-logo-card{
-      width:190px !important;
-    }
-
-    .annual-ci-logo-img{
-      max-width:185px !important;
-      max-height:68px !important;
-    }
-
-    .annual-ci-header-controls{
-      grid-template-columns:minmax(0,1fr) 160px 160px !important;
-      gap:10px !important;
-    }
-
-    .annual-ci-btn{
-      font-size:15px !important;
-      padding:0 14px !important;
-    }
-
-    .annual-ci-title{
-      font-size:38px !important;
-    }
-  }
-
-  @media (max-width: 700px){
-    .annual-ci-header-controls{
-      grid-template-columns:1fr !important;
-    }
-
-    .annual-ci-actions{
-      display:flex !important;
-      flex-direction:row !important;
-      gap:10px !important;
-    }
-
-    .annual-ci-btn{
-      flex:1 1 0 !important;
-    }
-  }
-
-  @media (max-width: 560px){
-    .annual-ci-header-top{
-      grid-template-columns:1fr !important;
-    }
-
-    .annual-ci-logo-wrap{
-      justify-content:flex-start !important;
-    }
+    .am-header-btn{width:100%}
   }
 </style>
 
 </head>
 <body>
   <main class="shell">
-    <section class="annual-ci-header" aria-label="Annual Meetings header">
-      <div class="annual-ci-header-top">
-        <div class="annual-ci-title-wrap">
-          <div class="annual-ci-eyebrow">Dedicated Workspace</div>
-          <h1 class="annual-ci-title">Annual Meetings</h1>
-          <p class="annual-ci-subtitle">Manage annual meeting details, lock records, generate packets, and keep approvals tied to the selected community.</p>
+    <section class="am-page-header" aria-label="Annual Meetings header">
+      <div class="am-header-top">
+        <div>
+          <div class="am-eyebrow">Dedicated Workspace</div>
+          <h1 class="am-title">Annual Meetings</h1>
+          <p class="am-subtitle">Manage annual meeting details, lock records, generate packets, and keep approvals tied to the selected community.</p>
         </div>
 
-        <div class="annual-ci-logo-wrap" aria-label="Management company logo">
-          <div class="annual-ci-logo-card" id="headerLogoBox">
-            <img id="annualHeaderCompanyLogo" class="annual-ci-logo-img" alt="Management company logo" hidden>
-            <span id="annualHeaderLogoFallback" class="annual-ci-logo-loading">Company logo</span>
+        <div class="am-logo-shell" aria-label="Management company logo">
+          <div class="am-logo-card" id="headerLogoBox">
+            <img id="annualHeaderCompanyLogo" alt="Management company logo" hidden>
+            <span id="annualHeaderLogoFallback" class="am-logo-loading">Loading logo...</span>
           </div>
         </div>
       </div>
 
-      <div class="annual-ci-header-controls">
-        <div class="communityPicker annualCommunityPicker annual-ci-community-picker">
+      <div class="am-header-controls">
+        <div class="am-community-picker">
           <label for="annualCommunitySelect">Community</label>
           <select id="annualCommunitySelect" aria-label="Select community"></select>
         </div>
-
-        <div class="annual-ci-actions">
-          <a class="annual-ci-btn annual-ci-btn-light" href="manager_hub.html">Back to Hub</a>
-          <a class="annual-ci-btn annual-ci-btn-outline" href="annual_meeting_records.html">Open Archive</a>
-        </div>
+        <a id="annualBackToHub" class="am-header-btn soft" href="manager_hub.html">Back to Hub</a>
+        <a id="annualArchiveLink" class="am-header-btn outline" href="annual_meeting_records.html">Open Archive</a>
       </div>
     </section>
 
     <section class="workspace">
       <div class="workspaceHead">
-        <div>
-          <div class="workspaceTitle">Annual Meeting Workspace</div>
-          <div class="workspaceSub">Manage annual meeting details, lock records, and generate packets.</div>
-        </div>
-        <div class="workspaceMeta annual-status-row">
+        <div class="workspaceTitle">Annual Meeting Workspace</div>
+        <div class="workspaceSub">Manage annual meeting details, lock records, and generate packets.</div>
+
+        <div class="workspaceMeta">
           <div class="pill small" id="communityPill">Community: <span id="communityName" style="font-weight:900"></span></div>
           <div class="pill small" id="statusPill"><span class="dot" id="statusDot"></span><span id="statusPillText">Loading annual meeting status…</span></div>
         </div>
+
         <div class="statusText" id="statusText">Loading live annual meeting data…</div>
       </div>
 
@@ -775,6 +601,7 @@ body.dark-mode .mh2-stat-box {
               <select id="meetingFormat">
                 <option value="in_person">In-Person Meeting</option>
                 <option value="virtual">Virtual Meeting</option>
+                <option value="hybrid">Hybrid Meeting</option>
               </select>
             </div>
             <div class="field">
@@ -790,7 +617,7 @@ body.dark-mode .mh2-stat-box {
 
         <div class="card noticeCard">
           <h2>Notice Setup</h2>
-          <div class="compactGrid">
+          <div class="compactGrid noticeGrid">
             <div class="field dateField">
               <label class="compactLabel" for="nominationDeadline">Nomination Deadline</label>
               <input id="nominationDeadline" type="date">
@@ -805,10 +632,16 @@ body.dark-mode .mh2-stat-box {
         <div class="card span2">
           <h2>Packet Setup</h2>
           <div class="miniGrid">
-            <div class="miniStat"><strong>30-Day Send Date</strong><span id="sendDate">—</span></div>
-            <div class="miniStat"><strong>Seats Up For Election</strong><span id="seatsCount">—</span></div>
+            <div class="miniStat">
+              <strong>30-Day Send Date</strong>
+              <span id="sendDate">—</span>
+            </div>
+            <div class="miniStat">
+              <strong>Seats Up for Election</strong>
+              <span id="seatsCount">—</span>
+            </div>
           </div>
-          <div style="margin-top:12px">
+          <div style="margin-top:14px">
             <label>Company Master Logo</label>
             <div class="logoBox" id="logoBox">No company logo uploaded yet</div>
           </div>
@@ -822,14 +655,13 @@ body.dark-mode .mh2-stat-box {
 
       <div class="actionBar">
         <button class="btn" id="saveBtn" type="button">Save Annual Meeting Info</button>
-        <button class="btn" id="packetBtn" type="button">Generate Annual Meeting Packet</button>
+        <button class="btn" id="lockBtn" type="button">Lock Records</button>
         <div class="secondaryRow">
-          <button class="btn secondary" id="lockBtn" type="button">Lock Records</button>
+          <button class="btn secondary" id="packetBtn" type="button">Generate / Preview Packet</button>
           <button class="btn secondary" id="presentationBtn" type="button">Create Annual Presentation</button>
         </div>
       </div>
     </section>
-  </main>
 
   <iframe id="opsFrame" class="hiddenFrame" src="ops.html" title="Annual meeting backend frame"></iframe>
 
@@ -888,6 +720,24 @@ body.dark-mode .mh2-stat-box {
     }catch(_e){}
     return '';
   }
+
+  function getCanonicalCommunityName(){
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const active = window.ZummeeCommunityState.getActiveCommunity();
+        if(active && active.name) return String(active.name || '').trim();
+      }
+    }catch(_e0){}
+    try{
+      const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+      const parsed = raw ? JSON.parse(raw) : null;
+      if(parsed && parsed.name) return String(parsed.name || '').trim();
+    }catch(_e00){}
+    try{
+      return String(window.localStorage.getItem('zummee_active_community_name') || window.localStorage.getItem('currentCommunityName') || window.localStorage.getItem('activeCommunityName') || '').trim();
+    }catch(_e){}
+    return '';
+  }
   function fillMeetingTimes(){
     const arr=[];
     for(let h=7; h<=21; h++) ['00','30'].forEach(mm=>{ const hh=((h+11)%12)+1; const ampm=h<12?'AM':'PM'; arr.push(`${hh}:${mm} ${ampm}`); });
@@ -896,11 +746,22 @@ body.dark-mode .mh2-stat-box {
 
   function getActiveCommunityId(){
     try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const active = window.ZummeeCommunityState.getActiveCommunity();
+        if(active && active.id) return String(active.id || '').trim();
+      }
+    }catch(_e0){}
+    try{
+      const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+      const parsed = raw ? JSON.parse(raw) : null;
+      if(parsed && parsed.id) return String(parsed.id || '').trim();
+    }catch(_e00){}
+    try{
       const qp = new URLSearchParams(window.location.search).get('community_id');
       if(qp) return String(qp).trim();
     }catch(_e){}
     try{
-      return String(localStorage.getItem('selectedCommunityId') || localStorage.getItem('activeCommunityId') || localStorage.getItem('currentCommunityId') || '').trim();
+      return String(localStorage.getItem('zummee_active_community_id') || localStorage.getItem('selectedCommunityId') || localStorage.getItem('activeCommunityId') || localStorage.getItem('currentCommunityId') || '').trim();
     }catch(_e2){}
     return '';
   }
@@ -908,28 +769,56 @@ body.dark-mode .mh2-stat-box {
   function seedCommunityContext(){
     const communityId = getActiveCommunityId();
     if(!communityId) return;
-    try{ localStorage.setItem('selectedCommunityId', communityId); }catch(_e){}
-    try{ localStorage.setItem('activeCommunityId', communityId); }catch(_e2){}
-    try{ localStorage.setItem('currentCommunityId', communityId); }catch(_e3){}
+    const activeName = getCanonicalCommunityName();
+    setCommunityStorage(communityId, activeName, { source:'annual-meetings-seed-v617', silent:true });
   }
 
-  function setCommunityStorage(id, name){
+  function setCommunityStorage(id, name, options){
+    options = options || {};
     const cid = String(id || '').trim();
     const cname = String(name || '').trim();
     if(!cid) return;
-    try{ localStorage.setItem('selectedCommunityId', cid); }catch(_e){}
-    try{ localStorage.setItem('activeCommunityId', cid); }catch(_e2){}
-    try{ localStorage.setItem('currentCommunityId', cid); }catch(_e3){}
-    try{ localStorage.setItem('zummee_selected_community_id', cid); }catch(_e4){}
-    try{ localStorage.setItem('zummee_selected_community_v1', cid); }catch(_e5){}
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.setActiveCommunity === 'function'){
+        window.ZummeeCommunityState.setActiveCommunity(cid, cname || '', {
+          source: options.source || 'annual-meetings-v617',
+          silent: options.silent !== false
+        });
+      }
+    }catch(_e0){}
+    try{
+      const state = { id: cid, name: cname, updatedAt: Date.now(), source: options.source || 'annual-meetings-v617' };
+      localStorage.setItem('zummee_active_community_v601', JSON.stringify(state));
+      sessionStorage.setItem('zummee_active_community_v601', JSON.stringify(state));
+    }catch(_e00){}
+    ['zummee_active_community_id','selectedCommunityId','activeCommunityId','currentCommunityId','zummee_selected_community_id','zummee_selected_community_v1','zummeeActiveCommunityId','zummee_community_id'].forEach(function(k){
+      try{ localStorage.setItem(k, cid); sessionStorage.setItem(k, cid); }catch(_e){}
+    });
     if(cname){
-      try{ localStorage.setItem('currentCommunityName', cname); }catch(_e6){}
-      try{ localStorage.setItem('activeCommunityName', cname); }catch(_e7){}
+      ['zummee_active_community_name','currentCommunityName','activeCommunityName','zummeeCurrentCommunityName','zummee_community','zummee_selected_community_name'].forEach(function(k){
+        try{ localStorage.setItem(k, cname); sessionStorage.setItem(k, cname); }catch(_e){}
+      });
     }
+    try{
+      window.currentCommunityId = cid;
+      window.activeCommunityId = cid;
+      window.selectedCommunityId = cid;
+      if(cname) window.currentCommunityName = cname;
+    }catch(_e8){}
   }
 
   async function getCommunityList(){
     const win = getWin();
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.loadAssignedCommunities === 'function'){
+        const rows = await window.ZummeeCommunityState.loadAssignedCommunities({ force:false });
+        if(Array.isArray(rows) && rows.length){
+          return rows.map(function(row){
+            return { id:String((row&&row.id)||row.community_id||'').trim(), name:String((row&&row.name)||row.community_name||row.community||'').trim() };
+          }).filter(function(row){ return row.id && row.name; });
+        }
+      }
+    }catch(err){ console.warn('shared community-state list load failed', err); }
     try{
       if(win && typeof win.loadCommunities === 'function'){
         const rows = await win.loadCommunities();
@@ -941,7 +830,7 @@ body.dark-mode .mh2-stat-box {
       }
     }catch(err){ console.warn('community list load failed', err); }
     const selectedId = getActiveCommunityId();
-    const selectedName = getCommunityName(win) || 'Selected Community';
+    const selectedName = getCanonicalCommunityName() || getCommunityName(win) || 'Selected Community';
     return selectedId ? [{ id:selectedId, name:selectedName }] : [];
   }
 
@@ -967,20 +856,21 @@ body.dark-mode .mh2-stat-box {
     if(!els.annualCommunitySelect.value && activeId) els.annualCommunitySelect.value = activeId;
   }
 
-  function switchCommunityFromPicker(){
+  async function switchCommunityFromPicker(){
     const sel = els.annualCommunitySelect;
     if(!sel) return;
     const id = String(sel.value || '').trim();
     const name = sel.options && sel.selectedIndex >= 0 ? String(sel.options[sel.selectedIndex].text || '').trim() : '';
     if(!id) return;
-    setCommunityStorage(id, name);
+    setCommunityStorage(id, name, { source:'annual-meetings-dropdown-v617', silent:false });
+    updateAnnualLinks({ id:id, name:name });
     try{
-      const url = new URL(window.location.href);
-      url.searchParams.set('community_id', id);
-      window.location.href = url.toString();
-    }catch(_e){
-      window.location.href = 'annual_meetings.html?community_id=' + encodeURIComponent(id);
-    }
+      window.dispatchEvent(new CustomEvent('zummee:community-changed', {
+        detail:{ id:id, community_id:id, name:name, source:'annual-meetings-dropdown-v617' }
+      }));
+    }catch(_e){}
+    try{ await hydrateBridge(); }catch(_eHydrate){}
+    try{ render(); }catch(_eRender){}
   }
 
   async function hydrateBridge(){
@@ -1008,172 +898,6 @@ body.dark-mode .mh2-stat-box {
     return { win, entry, expected, sendDate, seatsCount };
   }
 
-  const BRAND_SB_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
-  const BRAND_SB_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
-  async function getBrandSb(){
-    try{
-      if(window.__annualBrandSb) return window.__annualBrandSb;
-      if(!window.supabase || typeof window.supabase.createClient !== 'function') return null;
-      window.__annualBrandSb = window.supabase.createClient(BRAND_SB_URL, BRAND_SB_KEY);
-      return window.__annualBrandSb;
-    }catch(_e){ return null; }
-  }
-  function parseBrandLogoRef(raw){
-    raw = String(raw || '').trim();
-    if(!raw) return null;
-    if(/^https?:\/\//i.test(raw)) return { url: raw };
-    return { bucket:'company_logos', path: raw };
-  }
-  function pickBrandLogoValue(row){
-    row = row || {};
-    return row.logo_url || row.logoUrl || row.logo_path || row.logoPath || row.company_logo_url || row.companyLogoUrl || row.company_logo || row.logo || row.image_url || row.brand_logo_url || '';
-  }
-  function setAnnualHeaderLogo(url, alt, fallbackName){
-    const finalUrl = String(url || '').trim();
-    const finalAlt = String(alt || fallbackName || 'Management company logo').trim() || 'Management company logo';
-    const logoImg = document.getElementById('annualHeaderCompanyLogo');
-    const fallback = document.getElementById('annualHeaderLogoFallback');
-
-    function clearLogo(){
-      if(logoImg){
-        logoImg.hidden = true;
-        logoImg.removeAttribute('src');
-        logoImg.classList.remove('is-ready');
-      }
-      if(fallback){
-        fallback.hidden = false;
-        fallback.textContent = finalAlt || 'Company logo';
-      }
-      return false;
-    }
-
-    if(!finalUrl) return clearLogo();
-
-    if(logoImg){
-      logoImg.onload = function(){
-        logoImg.hidden = false;
-        logoImg.classList.add('is-ready');
-        if(fallback) fallback.hidden = true;
-      };
-      logoImg.onerror = clearLogo;
-      logoImg.alt = finalAlt;
-      logoImg.src = finalUrl;
-    }
-
-    if(els.logoBox){
-      els.logoBox.innerHTML = `<img src="${finalUrl}" alt="${finalAlt}">`;
-    }
-    return true;
-  }
-  async function deriveAnnualCompanyId(){
-    const communityId = getActiveCommunityId();
-    if(!communityId) return '';
-    const sb = await getBrandSb();
-    if(!sb) return '';
-    const attempts = [
-      { table:'PropertyCommunities' },
-      { table:'property_communities' }
-    ];
-    for(const a of attempts){
-      try{
-        const res = await sb.from(a.table).select('company_id').eq('id', communityId).maybeSingle();
-        const companyId = String(res && res.data && res.data.company_id || '').trim();
-        if(companyId) return companyId;
-      }catch(_e){}
-    }
-    try{
-      const userRes = await sb.auth.getUser();
-      const userId = String(userRes && userRes.data && userRes.data.user && userRes.data.user.id || '').trim();
-      if(!userId) return '';
-      const res = await sb.from('userdirectory').select('company_id').eq('auth_user_id', userId).maybeSingle();
-      return String(res && res.data && res.data.company_id || '').trim();
-    }catch(_e2){}
-    return '';
-  }
-  async function fetchAnnualBrandLogoRow(companyId){
-    const sb = await getBrandSb();
-    if(!sb || !companyId) return null;
-    const attempts = [
-      { table:'companies', cols:'id,name,logo_path,logo_url', by:'id' },
-      { table:'Companies', cols:'id,name,logo_path,logo_url', by:'id' },
-      { table:'company_branding', cols:'id,company_id,name,logo_path,logo_url', by:'company_id' },
-      { table:'CompanyBranding', cols:'id,company_id,name,logo_path,logo_url', by:'company_id' }
-    ];
-    for(const a of attempts){
-      try{
-        const res = await sb.from(a.table).select(a.cols).eq(a.by, companyId).maybeSingle();
-        if(res && !res.error && res.data && pickBrandLogoValue(res.data)) return res.data;
-      }catch(_e){}
-    }
-    return null;
-  }
-
-  function loadAnnualBrandLogoFromManagerHubCache(){
-    const candidates = [];
-    try{
-      for(let i=0;i<sessionStorage.length;i++){
-        const key = sessionStorage.key(i) || '';
-        if(key.indexOf('mh2_brand_logo_v1_') === 0){
-          const obj = JSON.parse(sessionStorage.getItem(key) || 'null');
-          if(obj && obj.url) candidates.push({ url:obj.url, alt:obj.alt || obj.name || 'Management company logo' });
-        }
-      }
-    }catch(_e){}
-    try{
-      for(let i=0;i<localStorage.length;i++){
-        const key = localStorage.key(i) || '';
-        const lower = key.toLowerCase();
-        if(lower.indexOf('logo') !== -1 || lower.indexOf('brand') !== -1){
-          const raw = localStorage.getItem(key) || '';
-          if(/^https?:\/\//i.test(raw) || /^data:image\//i.test(raw)) candidates.push({ url:raw, alt:'Management company logo' });
-          else {
-            try{
-              const obj = JSON.parse(raw);
-              if(obj && obj.url) candidates.push({ url:obj.url, alt:obj.alt || obj.name || 'Management company logo' });
-              if(obj && obj.logo_url) candidates.push({ url:obj.logo_url, alt:obj.alt || obj.name || 'Management company logo' });
-              if(obj && obj.logoUrl) candidates.push({ url:obj.logoUrl, alt:obj.alt || obj.name || 'Management company logo' });
-            }catch(_jsonErr){}
-          }
-        }
-      }
-    }catch(_e2){}
-
-    for(const c of candidates){
-      if(c && c.url && setAnnualHeaderLogo(c.url, c.alt || 'Management company logo', c.alt || 'Management company logo')) return true;
-    }
-    return false;
-  }
-
-  async function loadAnnualBrandLogo(){
-    try{
-      loadAnnualBrandLogoFromManagerHubCache();
-      const companyId = await deriveAnnualCompanyId();
-      if(!companyId) return false;
-      const cacheKey = 'mh2_brand_logo_v1_' + companyId;
-      try{
-        const cached = JSON.parse(sessionStorage.getItem(cacheKey) || 'null');
-        if(cached && cached.url) setAnnualHeaderLogo(cached.url, cached.alt || 'Company Logo', cached.alt || 'Company logo');
-      }catch(_cacheErr){}
-      const row = await fetchAnnualBrandLogoRow(companyId);
-      if(!row) return false;
-      const ref = parseBrandLogoRef(pickBrandLogoValue(row));
-      if(!ref) return false;
-      const sb = await getBrandSb();
-      let url = String(ref.url || '').trim();
-      if(!url && ref.bucket && ref.path && sb && sb.storage && sb.storage.from){
-        const pub = sb.storage.from(ref.bucket).getPublicUrl(ref.path);
-        url = String(pub && pub.data && pub.data.publicUrl || '').trim();
-      }
-      if(!url) return false;
-      setAnnualHeaderLogo(url, String(row.name || 'Company Logo'), String(row.name || 'Company logo'));
-      try{ sessionStorage.setItem(cacheKey, JSON.stringify({ url:url, alt:String(row.name || 'Company Logo') })); }catch(_e){}
-      return true;
-    }catch(err){
-      console.warn('[Annual Meetings] header logo load skipped', err);
-      return false;
-    }
-  }
-
   function render(){
     const data = readState();
     if(!data) return;
@@ -1197,16 +921,13 @@ body.dark-mode .mh2-stat-box {
     els.lockBtn.textContent = entry.lastLocked ? 'Unlock Records' : 'Lock Records';
     els.statusPillText.textContent = entry.lastLocked ? 'Records locked' : (entry.nextDate ? 'Meeting scheduled' : 'Needs setup');
     setStatus(entry.lastLocked ? 'Annual meeting info is locked and ready.' : 'Annual meeting workspace ready.', entry.lastLocked || entry.nextDate ? 'good' : '');
+    try{ if(window.ZummeeAnnualMeetingsLoadLogo) window.ZummeeAnnualMeetingsLoadLogo(); }catch(_logoE){}
     try{
       const logoUrl = typeof win.getMasterCompanyLogoDataUrl === 'function' ? (win.getMasterCompanyLogoDataUrl() || '') : '';
       const logoName = typeof win.getMasterCompanyLogoName === 'function' ? (win.getMasterCompanyLogoName() || '') : '';
-      if(logoUrl) setAnnualHeaderLogo(logoUrl, 'Company Logo', logoName || 'Company Logo');
-      else setAnnualHeaderLogo('', 'Company Logo', logoName || 'No company logo uploaded yet');
-      loadAnnualBrandLogo();
-    }catch(_e){
-      setAnnualHeaderLogo('', 'Company Logo', 'No company logo uploaded yet');
-      loadAnnualBrandLogo();
-    }
+      if(logoUrl){ els.logoBox.innerHTML = `<img src="${logoUrl}" alt="Company Logo">`; }
+      else { els.logoBox.textContent = logoName || 'No company logo uploaded yet'; }
+    }catch(_e){ els.logoBox.textContent = 'No company logo uploaded yet'; }
     const disabled = !!entry.lastLocked;
     ['lastDate','associationLegalName','quorumPercent','seatsOverride','meetingTime','meetingFormat','meetingLocation','meetingLink','nominationDeadline','proxyReturnDeadline'].forEach(id=>{ els[id].disabled = disabled; });
     // next date remains editable while unlocked only
@@ -1278,9 +999,26 @@ body.dark-mode .mh2-stat-box {
     }
   }
 
+  function updateAnnualLinks(active){
+    active = active || { id:getActiveCommunityId(), name:getCanonicalCommunityName() };
+    if(!active.id) return;
+    const q = '?community_id=' + encodeURIComponent(active.id) + (active.name ? '&community_name=' + encodeURIComponent(active.name) : '');
+    try{
+      const hub = document.getElementById('annualBackToHub');
+      if(hub) hub.href = 'manager_hub.html' + q;
+      const archive = document.getElementById('annualArchiveLink');
+      if(archive) archive.href = 'annual_meeting_records.html' + q;
+      const url = new URL(window.location.href);
+      url.searchParams.set('community_id', active.id);
+      if(active.name) url.searchParams.set('community_name', active.name);
+      history.replaceState(null, '', url.toString());
+    }catch(_e){}
+  }
+
   async function init(){
     fillMeetingTimes();
     seedCommunityContext();
+    updateAnnualLinks({ id:getActiveCommunityId(), name:getCanonicalCommunityName() });
     try{ if(els.annualCommunitySelect) els.annualCommunitySelect.addEventListener('change', switchCommunityFromPicker); }catch(_eBind){}
     setStatus('Loading live annual meeting data…');
     let tries = 0;
@@ -1294,7 +1032,6 @@ body.dark-mode .mh2-stat-box {
           clearInterval(timer);
           try{ win.document.documentElement.style.background='transparent'; win.document.body.style.background='transparent'; }catch(_e){}
           render();
-          try{ loadAnnualBrandLogo(); setTimeout(loadAnnualBrandLogo, 800); setTimeout(loadAnnualBrandLogo, 2200); }catch(_eLogo){}
           return;
         }
       }catch(_e){}
@@ -1362,7 +1099,8 @@ body.dark-mode .mh2-stat-box {
   document.getElementById('presentationBtn').addEventListener('click', async function(){
     try{ await saveAll(); }catch(_e){}
     const communityId = getActiveCommunityId();
-    window.location.href = 'annual_presentation.html' + (communityId ? ('?community_id=' + encodeURIComponent(communityId)) : '');
+    const communityName = getCanonicalCommunityName();
+    window.location.href = 'annual_presentation.html' + (communityId ? ('?community_id=' + encodeURIComponent(communityId) + (communityName ? '&community_name=' + encodeURIComponent(communityName) : '')) : '');
   });
 
   ['lastDate','nextDate','associationLegalName','quorumPercent','seatsOverride','meetingTime','meetingFormat','meetingLocation','meetingLink','nominationDeadline','proxyReturnDeadline'].forEach(id=>{
@@ -1376,5 +1114,243 @@ body.dark-mode .mh2-stat-box {
 <script src="company_logo_sync.js"></script>
 
   <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+
+<script id="zummee-annual-meetings-native-community-state-v617">
+(function(){
+  if(window.__AnnualMeetingsNativeCommunityStateV617) return;
+  window.__AnnualMeetingsNativeCommunityStateV617 = true;
+  function getActive(){
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        var active = window.ZummeeCommunityState.getActiveCommunity();
+        if(active && active.id) return active;
+      }
+    }catch(_e){}
+    try{
+      var raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+      return raw ? JSON.parse(raw) : null;
+    }catch(_e2){ return null; }
+  }
+  function syncVisible(){
+    var active = getActive();
+    if(!active || !active.id) return;
+    try{
+      var sel = document.getElementById('annualCommunitySelect');
+      if(sel && Array.from(sel.options || []).some(function(o){ return String(o.value) === String(active.id); }) && sel.value !== active.id){
+        sel.value = active.id;
+      }
+    }catch(_e){}
+    try{
+      var nameEl = document.getElementById('communityName');
+      if(nameEl && active.name) nameEl.textContent = active.name;
+    }catch(_e2){}
+    try{
+      var q = '?community_id=' + encodeURIComponent(active.id) + (active.name ? '&community_name=' + encodeURIComponent(active.name) : '');
+      var hub = document.getElementById('annualBackToHub');
+      if(hub) hub.href = 'manager_hub.html' + q;
+      var archive = document.getElementById('annualArchiveLink');
+      if(archive) archive.href = 'annual_meeting_records.html' + q;
+    }catch(_e3){}
+  }
+  window.addEventListener('pageshow', function(){ setTimeout(syncVisible, 120); });
+  window.addEventListener('focus', syncVisible);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) syncVisible(); });
+})();
+</script>
+
+
+<script id="annual-meetings-direct-logo-loader-v625">
+(function(){
+  if(window.__AnnualMeetingsDirectLogoLoaderV625) return;
+  window.__AnnualMeetingsDirectLogoLoaderV625 = true;
+
+  const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
+
+  function s(v){ return String(v == null ? '' : v).trim(); }
+
+  async function client(){
+    try{ if(window.supabaseClient && window.supabaseClient.from) return window.supabaseClient; }catch(_e){}
+    try{ if(window.sb && window.sb.from) return window.sb; }catch(_e){}
+    try{ if(typeof ensureSupabase === 'function'){ const c = await ensureSupabase(); if(c && c.from) return c; } }catch(_e){}
+    try{
+      if(window.supabase && window.supabase.createClient){
+        if(!window.__annualLogoSb) window.__annualLogoSb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        return window.__annualLogoSb;
+      }
+    }catch(_e){}
+    return null;
+  }
+
+  function activeCommunityId(){
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const a = window.ZummeeCommunityState.getActiveCommunity();
+        if(a && a.id) return s(a.id);
+      }
+    }catch(_e){}
+    try{
+      const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+      const obj = raw ? JSON.parse(raw) : null;
+      if(obj && obj.id) return s(obj.id);
+    }catch(_e2){}
+    try{
+      return s(new URLSearchParams(location.search).get('community_id')) ||
+        s(localStorage.getItem('activeCommunityId')) ||
+        s(localStorage.getItem('currentCommunityId')) ||
+        s(localStorage.getItem('zummee_selected_community_id'));
+    }catch(_e3){}
+    return '';
+  }
+
+  function parseLogoRef(raw){
+    raw = s(raw);
+    if(!raw) return null;
+    if(/^https?:\/\//i.test(raw) || /^data:image\//i.test(raw)) return { url:raw };
+    try{
+      const obj = JSON.parse(raw);
+      if(obj && obj.url) return { url:s(obj.url) };
+      if(obj && obj.publicUrl) return { url:s(obj.publicUrl) };
+      if(obj && obj.bucket && obj.path) return { bucket:s(obj.bucket), path:s(obj.path) };
+    }catch(_e){}
+    return { bucket:'company_logos', path:raw };
+  }
+
+  function pick(row){
+    row = row || {};
+    return row.logo_path || row.logo_url || row.logoPath || row.logoUrl || row.company_logo_url || row.companyLogoUrl || row.company_logo || row.logo || row.image_url || row.brand_logo_url || '';
+  }
+
+  function paint(url, alt){
+    url = s(url);
+    alt = s(alt) || 'Management company logo';
+    const img = document.getElementById('annualHeaderCompanyLogo');
+    const fallback = document.getElementById('annualHeaderLogoFallback');
+    const box = document.getElementById('logoBox');
+
+    if(!img) return false;
+    if(!url){
+      img.hidden = true;
+      img.removeAttribute('src');
+      if(fallback){ fallback.hidden = false; fallback.textContent = 'Logo unavailable'; }
+      return false;
+    }
+
+    img.onload = function(){
+      img.hidden = false;
+      if(fallback) fallback.hidden = true;
+    };
+    img.onerror = function(){
+      img.hidden = true;
+      img.removeAttribute('src');
+      if(fallback){ fallback.hidden = false; fallback.textContent = 'Logo unavailable'; }
+    };
+    img.alt = alt;
+    img.src = url;
+
+    if(box) box.innerHTML = '<img src="' + url + '" alt="' + alt.replace(/"/g,'&quot;') + '">';
+    return true;
+  }
+
+  async function companyIdFromCommunity(sb, communityId){
+    if(!sb || !communityId) return '';
+
+    for(const table of ['PropertyCommunities','property_communities','Communities','communities']){
+      try{
+        const res = await sb.from(table).select('company_id').eq('id', communityId).maybeSingle();
+        const id = s(res && res.data && res.data.company_id);
+        if(id) return id;
+      }catch(_e){}
+    }
+
+    try{
+      return s(localStorage.getItem('zummee_company_id')) || s(sessionStorage.getItem('zummee_company_id'));
+    }catch(_e2){ return ''; }
+  }
+
+  async function logoRow(sb, companyId){
+    if(!sb || !companyId) return null;
+    const tries = [
+      { table:'companies', cols:'id,name,logo_path', by:'id' },
+      { table:'companies', cols:'id,name,logo_url', by:'id' },
+      { table:'Companies', cols:'id,name,logo_path', by:'id' },
+      { table:'Companies', cols:'id,name,logo_url', by:'id' },
+      { table:'company_branding', cols:'id,company_id,name,logo_path', by:'company_id' },
+      { table:'company_branding', cols:'id,company_id,name,logo_url', by:'company_id' },
+      { table:'CompanyBranding', cols:'id,company_id,name,logo_path', by:'company_id' },
+      { table:'CompanyBranding', cols:'id,company_id,name,logo_url', by:'company_id' }
+    ];
+
+    for(const t of tries){
+      try{
+        const res = await sb.from(t.table).select(t.cols).eq(t.by, companyId).maybeSingle();
+        if(res && !res.error && res.data && pick(res.data)) return res.data;
+      }catch(_e){}
+    }
+    return null;
+  }
+
+  async function load(){
+    try{
+      // Fast path from Manager Hub cache.
+      for(let i=0;i<sessionStorage.length;i++){
+        const key = sessionStorage.key(i) || '';
+        if(key.indexOf('mh2_brand_logo_v1_') === 0){
+          const cached = JSON.parse(sessionStorage.getItem(key) || 'null');
+          if(cached && cached.url){
+            paint(cached.url, cached.alt || 'Management company logo');
+            return true;
+          }
+        }
+      }
+    }catch(_e){}
+
+    try{
+      const sb = await client();
+      const cid = activeCommunityId();
+      const companyId = await companyIdFromCommunity(sb, cid);
+      if(!companyId) throw new Error('No company id');
+      const row = await logoRow(sb, companyId);
+      if(!row) throw new Error('No logo row');
+      const ref = parseLogoRef(pick(row));
+      if(!ref) throw new Error('No logo ref');
+
+      let url = s(ref.url);
+      if(!url && ref.bucket && ref.path && sb.storage && sb.storage.from){
+        const pub = sb.storage.from(ref.bucket).getPublicUrl(ref.path);
+        url = s(pub && pub.data && pub.data.publicUrl);
+      }
+      if(!url) throw new Error('No logo URL');
+
+      paint(url, row.name || 'Management company logo');
+      try{
+        sessionStorage.setItem('mh2_brand_logo_v1_' + companyId, JSON.stringify({
+          url:url,
+          alt:row.name || 'Management company logo',
+          isCompany:true
+        }));
+      }catch(_cache){}
+      return true;
+    }catch(err){
+      console.warn('[Annual Meetings v625] company logo unavailable', err);
+      paint('', 'Management company logo');
+      return false;
+    }
+  }
+
+  window.ZummeeAnnualMeetingsLoadLogo = load;
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(load, 150); setTimeout(load, 1000); }, { once:true });
+  }else{
+    setTimeout(load, 150);
+    setTimeout(load, 1000);
+  }
+
+  window.addEventListener('pageshow', function(){ setTimeout(load, 150); });
+  window.addEventListener('focus', load);
+})();
+</script>
+
 </body>
 </html>
