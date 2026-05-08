@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-08-v627-annual-meetings-direct-supabase-data";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-08-v628-annual-meetings-field-alignment-fix";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annual Meetings</title>
@@ -522,6 +522,161 @@
   }
 </style>
 
+
+<style id="annual-meetings-v628-field-alignment-fix">
+  /*
+    v628 — Fix Annual Meetings field overlap/misalignment.
+    Scope only to Annual Meetings cards/forms.
+  */
+
+  .workspace{
+    overflow:hidden !important;
+  }
+
+  .grid{
+    align-items:start !important;
+  }
+
+  .card{
+    min-width:0 !important;
+    overflow:hidden !important;
+  }
+
+  .fieldGrid,
+  .compactGrid,
+  .noticeGrid,
+  .miniGrid{
+    display:grid !important;
+    grid-template-columns:repeat(2, minmax(0, 1fr)) !important;
+    gap:14px !important;
+    width:100% !important;
+    align-items:start !important;
+  }
+
+  .field,
+  .dateField{
+    min-width:0 !important;
+    width:100% !important;
+    overflow:visible !important;
+  }
+
+  .field.span2{
+    grid-column:1 / -1 !important;
+  }
+
+  .scheduleCard input,
+  .noticeCard input,
+  .card input,
+  .card select,
+  .card textarea{
+    display:block !important;
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+  }
+
+  .scheduleCard input[type="date"],
+  .noticeCard input[type="date"]{
+    -webkit-appearance:none !important;
+    appearance:none !important;
+    height:52px !important;
+    min-height:52px !important;
+    line-height:52px !important;
+    padding:0 16px !important;
+    text-align:left !important;
+    font-size:15px !important;
+    border-radius:18px !important;
+  }
+
+  .scheduleCard input[type="date"]::-webkit-date-and-time-value,
+  .noticeCard input[type="date"]::-webkit-date-and-time-value{
+    text-align:left !important;
+    min-height:52px !important;
+  }
+
+  .scheduleCard input[type="date"]::-webkit-calendar-picker-indicator,
+  .noticeCard input[type="date"]::-webkit-calendar-picker-indicator{
+    margin-left:auto !important;
+    opacity:.75 !important;
+  }
+
+  .readonlyStat{
+    width:100% !important;
+    min-width:0 !important;
+  }
+
+  .readonlyStat span{
+    word-break:normal !important;
+    white-space:normal !important;
+  }
+
+  .meetingDetailsCard .fieldGrid,
+  .card .fieldGrid{
+    gap:14px 16px !important;
+  }
+
+  label,
+  .compactLabel{
+    min-height:28px !important;
+    line-height:1.15 !important;
+    white-space:normal !important;
+    overflow-wrap:normal !important;
+  }
+
+  .noticeCard{
+    min-height:0 !important;
+  }
+
+  .noticeCard .compactGrid{
+    grid-template-columns:repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .logoBox{
+    min-height:108px !important;
+  }
+
+  @media (max-width: 900px){
+    .workspace{
+      padding:24px !important;
+    }
+
+    .grid{
+      grid-template-columns:repeat(2, minmax(0, 1fr)) !important;
+      gap:18px !important;
+    }
+
+    .fieldGrid,
+    .compactGrid,
+    .noticeGrid,
+    .miniGrid{
+      gap:12px !important;
+    }
+
+    input,
+    select{
+      font-size:15px !important;
+    }
+  }
+
+  @media (max-width: 720px){
+    .grid,
+    .fieldGrid,
+    .compactGrid,
+    .noticeGrid,
+    .miniGrid,
+    .actionBar,
+    .actionBar .secondaryRow{
+      grid-template-columns:1fr !important;
+    }
+
+    label,
+    .compactLabel{
+      min-height:0 !important;
+    }
+  }
+</style>
+
 </head>
 <body>
   <main class="shell">
@@ -602,7 +757,7 @@
           </div>
         </div>
 
-        <div class="card">
+        <div class="card meetingDetailsCard">
           <h2>Meeting Details</h2>
           <div class="fieldGrid">
             <div class="field">
