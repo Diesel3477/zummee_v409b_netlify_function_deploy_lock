@@ -2,13 +2,6 @@
 <html lang="en">
 <head>
 
-<script id="manager-hub-v617-recovery-cleanup-marker">
-window.ZUMMEE_BUILD = "2026-05-08-v617-manager-hub-recovery-cleanup-only";
-window.__MANAGER_HUB_V617_RECOVERY_CLEANUP_ONLY = true;
-console.info("[Manager Hub v617] recovery cleanup only loaded", window.ZUMMEE_BUILD);
-</script>
-
-
 <style id="zummee-manager-smooth-return-css-v611">
   /*
     v611: Smooth Manager Hub return.
@@ -50,7 +43,7 @@ console.info("[Manager Hub v617] recovery cleanup only loaded", window.ZUMMEE_BU
 
 
 
-<script>window.ZUMMEE_BUILD="2026-05-08-v617-manager-hub-recovery-cleanup-only";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-08-v616-manager-hub-ops-reminders-pill";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <script id="zummee-manager-canonical-preboot-v608">
 /*
@@ -442,8 +435,6 @@ window.__MH_VERSION = 'v611_smooth_return_no_jump';
     window.addEventListener('zummee:community-changed', resetForCommunityChange);
   })();
   
-
-  </script>
 
   <script>
     (function(){
@@ -3081,65 +3072,6 @@ html[data-theme="dark"] .mh2-ask-close,html[data-theme="dark"] .mh2-ask-modal .m
   }
 }
 </style>
-
-<script id="manager-hub-v617-community-assignment-guard">
-(function(){
-  if(window.__ManagerHubCommunityAssignmentGuardV617) return;
-  window.__ManagerHubCommunityAssignmentGuardV617 = true;
-
-  function isLegacyBadCommunityAssignmentRequest(input){
-    try{
-      var url = typeof input === "string" ? input : (input && input.url ? input.url : "");
-      if(!url || url.indexOf("/rest/v1/community_assignments?") === -1) return false;
-
-      var decoded = "";
-      try{ decoded = decodeURIComponent(url); }catch(_e){ decoded = url; }
-
-      return (
-        decoded.indexOf("select=community_id&user_id=") !== -1 ||
-        decoded.indexOf("select=community_id&auth_user_id=") !== -1 ||
-        decoded.indexOf("select=community_id,user_id") !== -1 ||
-        decoded.indexOf("select=community_id,auth_user_id") !== -1
-      );
-    }catch(_err){
-      return false;
-    }
-  }
-
-  function emptyCommunityAssignmentsResponse(){
-    return new Response(JSON.stringify([]), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "X-Zummee-Guard": "manager-hub-v617-community-assignments"
-      }
-    });
-  }
-
-  if(window.fetch && !window.__ManagerHubOriginalFetchV617){
-    window.__ManagerHubOriginalFetchV617 = window.fetch.bind(window);
-    window.fetch = function(input, init){
-      if(isLegacyBadCommunityAssignmentRequest(input)){
-        try{
-          console.info("[Manager Hub v617] blocked legacy community_assignments lookup", typeof input === "string" ? input : input.url);
-        }catch(_e){}
-        return Promise.resolve(emptyCommunityAssignmentsResponse());
-      }
-      return window.__ManagerHubOriginalFetchV617(input, init);
-    };
-  }
-
-  window.getManagerHubRecoveryCleanupStatus = function(){
-    return {
-      build: window.ZUMMEE_BUILD || "",
-      marker: !!window.__MANAGER_HUB_V617_RECOVERY_CLEANUP_ONLY,
-      communityAssignmentGuard: !!window.__ManagerHubCommunityAssignmentGuardV617,
-      fetchGuardInstalled: !!window.__ManagerHubOriginalFetchV617
-    };
-  };
-})();
-</script>
-
 </head>
 <body class="manager-hub-page">
   <main class="mh2-page">
@@ -7653,6 +7585,292 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
       setTimeout(scheduleRefreshes, 150);
     }
   }, true);
+})();
+</script>
+
+
+<script id="manager-hub-v617-audit-only">
+/*
+  Manager Hub v617 Audit Only
+
+  Purpose:
+  - Inspect current v616 Manager Hub behavior without changing UI or data.
+  - No smart-card rendering changes.
+  - No fetch interception.
+  - No Operations Portal count changes.
+  - No community source changes.
+*/
+(function(){
+  if(window.__ManagerHubAuditOnlyV617) return;
+  window.__ManagerHubAuditOnlyV617 = true;
+
+  function s(v){ return String(v == null ? "" : v).trim(); }
+  function safeJson(raw){
+    try{ return raw ? JSON.parse(raw) : null; }catch(_e){ return null; }
+  }
+  function text(sel){
+    var node = document.querySelector(sel);
+    return node ? s(node.textContent) : "";
+  }
+  function exists(sel){
+    return !!document.querySelector(sel);
+  }
+  function getStorage(keys){
+    var out = {};
+    keys.forEach(function(k){
+      try{
+        out[k] = {
+          local: localStorage.getItem(k),
+          session: sessionStorage.getItem(k)
+        };
+      }catch(_e){
+        out[k] = { local:null, session:null, error:String(_e) };
+      }
+    });
+    return out;
+  }
+  function getActiveCommunity(){
+    var fromShared = null;
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === "function"){
+        fromShared = window.ZummeeCommunityState.getActiveCommunity();
+      }
+    }catch(e){
+      fromShared = { error:String(e) };
+    }
+
+    var dropdown = null;
+    try{
+      var sel = document.getElementById("zummeeCommunitySelect") ||
+                document.getElementById("communitySelect") ||
+                document.querySelector("select[data-community-select], select[name='community']");
+      if(sel){
+        var opt = sel.options && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+        dropdown = {
+          id: sel.value || "",
+          text: opt ? s(opt.textContent) : "",
+          optionCount: sel.options ? sel.options.length : 0
+        };
+      }
+    }catch(e2){
+      dropdown = { error:String(e2) };
+    }
+
+    var canonical = safeJson(localStorage.getItem("zummee_active_community_v601") || sessionStorage.getItem("zummee_active_community_v601") || "");
+
+    return {
+      sharedState: fromShared,
+      dropdown: dropdown,
+      canonicalStorage: canonical,
+      scalarStorage: getStorage([
+        "zummee_active_community_id",
+        "zummee_selected_community_id",
+        "zummeeActiveCommunityId",
+        "activeCommunityId",
+        "currentCommunityId",
+        "zummee_active_community_name",
+        "zummee_selected_community_name",
+        "currentCommunityName",
+        "activeCommunityName"
+      ])
+    };
+  }
+  function getSupabaseStatus(){
+    var candidates = [];
+    [
+      "supabaseClient",
+      "sb",
+      "supabaseClientV2",
+      "ZUMMEE_SUPABASE",
+      "__zummeeSupabase",
+      "zummeeSupabase",
+      "__sb"
+    ].forEach(function(name){
+      try{
+        var c = window[name];
+        candidates.push({
+          name:name,
+          exists:!!c,
+          hasFrom:!!(c && typeof c.from === "function"),
+          hasAuth:!!(c && c.auth)
+        });
+      }catch(e){
+        candidates.push({ name:name, error:String(e) });
+      }
+    });
+
+    return {
+      sdkPresent: !!(window.supabase && typeof window.supabase.createClient === "function"),
+      candidates: candidates,
+      helpers: {
+        getSupabase: typeof window.getSupabase,
+        ensureSupabaseSync: typeof window.ensureSupabaseSync,
+        requireSb: typeof window.requireSb
+      }
+    };
+  }
+  function getSmartAlerts(){
+    var ids = ["mh2AlertBoard","mh2AlertActivity","mh2AlertApprovals"];
+    var cards = {};
+    ids.forEach(function(id){
+      var el = document.getElementById(id);
+      if(!el){
+        cards[id] = { exists:false };
+        return;
+      }
+      cards[id] = {
+        exists:true,
+        visible: !(el.offsetParent === null) && getComputedStyle(el).visibility !== "hidden" && getComputedStyle(el).opacity !== "0",
+        display:getComputedStyle(el).display,
+        visibility:getComputedStyle(el).visibility,
+        opacity:getComputedStyle(el).opacity,
+        classes: el.className,
+        href: el.getAttribute("href") || "",
+        title: text("#" + id + " .mh2-alert-title"),
+        badge: text("#" + id + " .mh2-alert-badge"),
+        copy: text("#" + id + " .mh2-alert-copy"),
+        dataset: Object.assign({}, el.dataset || {})
+      };
+    });
+
+    var stability = null;
+    try{
+      var st = window.__ZUMMEE_V522_SMART_ALERT_STABILITY__;
+      stability = st ? {
+        version: st.version,
+        allowReady: st.allowReady,
+        pendingReady: st.pendingReady,
+        suppress: st.suppress,
+        startedAt: st.startedAt,
+        hasObserver: !!st.observer,
+        lastStableKeys: st.lastStable ? Object.keys(st.lastStable) : []
+      } : null;
+    }catch(e){
+      stability = { error:String(e) };
+    }
+
+    return {
+      readyAttribute: document.documentElement.getAttribute("data-zummee-smart-alerts-v426-ready"),
+      stripExists: !!document.getElementById("smartAlertStrip"),
+      stripText: text("#smartAlertStrip").slice(0, 600),
+      cards: cards,
+      stabilityController: stability,
+      cacheKeys: Object.keys(localStorage).filter(function(k){ return k.indexOf("zummee_manager_smart_alerts_stable_v522") === 0; })
+    };
+  }
+  function getOperationsPill(){
+    var oldPill = document.getElementById("mh2OperationsPortalPill");
+    var stablePill = document.getElementById("mh2OpsPortalPillStable");
+    function pillInfo(el){
+      if(!el) return { exists:false };
+      return {
+        exists:true,
+        id: el.id,
+        visible: !(el.offsetParent === null) && getComputedStyle(el).visibility !== "hidden" && getComputedStyle(el).opacity !== "0",
+        classes: el.className,
+        href: el.getAttribute("href") || "",
+        text: s(el.textContent),
+        dataset: Object.assign({}, el.dataset || {})
+      };
+    }
+    return {
+      oldPill: pillInfo(oldPill),
+      stablePill: pillInfo(stablePill),
+      oldTitle: text("#mh2OperationsPortalPillTitle"),
+      oldBadge: text("#mh2OperationsPortalPillBadge"),
+      stableTitle: text("#mh2OpsPortalPillTitleStable"),
+      stableBadge: text("#mh2OpsPortalPillBadgeStable"),
+      helpers: {
+        refreshManagerHubOperationsPortalPill: typeof window.refreshManagerHubOperationsPortalPill,
+        refreshManagerHubOperationsPortalPillStable: typeof window.refreshManagerHubOperationsPortalPillStable,
+        refreshManagerHubOperationsPortalPillAuthoritative: typeof window.refreshManagerHubOperationsPortalPillAuthoritative,
+        getManagerHubOperationsPortalSummary: typeof window.getManagerHubOperationsPortalSummary
+      },
+      summary: (typeof window.getManagerHubOperationsPortalSummary === "function" ? window.getManagerHubOperationsPortalSummary() : null)
+    };
+  }
+  function getScriptInventory(){
+    var scripts = Array.prototype.slice.call(document.scripts || []);
+    return scripts.map(function(script, index){
+      return {
+        index:index,
+        id: script.id || "",
+        src: script.src || "",
+        inlineStart: script.src ? "" : s(script.textContent).slice(0, 120)
+      };
+    }).filter(function(item){
+      return item.id ||
+        item.src.indexOf("shared/") !== -1 ||
+        item.src.indexOf("supabase") !== -1 ||
+        item.inlineStart.indexOf("Smart") !== -1 ||
+        item.inlineStart.indexOf("smart") !== -1 ||
+        item.inlineStart.indexOf("community") !== -1 ||
+        item.inlineStart.indexOf("Operations") !== -1;
+    });
+  }
+  function getConsoleRiskFlags(){
+    return {
+      scriptTagCount: document.querySelectorAll("script").length,
+      styleTagCount: document.querySelectorAll("style").length,
+      hasV623toV633ExperimentalMarkers: [
+        "v623",
+        "v624",
+        "v625",
+        "v626",
+        "v627",
+        "v628",
+        "v629",
+        "v630",
+        "v631",
+        "v632",
+        "v633"
+      ].filter(function(v){
+        return document.documentElement.outerHTML.indexOf("manager-hub-" + v) !== -1;
+      }),
+      currentBuild: window.ZUMMEE_BUILD || "",
+      mhVersion: window.__MH_VERSION || ""
+    };
+  }
+
+  window.auditManagerHubState = function(){
+    var report = {
+      auditBuild: "2026-05-08-v617-audit-only",
+      timestamp: new Date().toISOString(),
+      page: {
+        href: location.href,
+        title: document.title,
+        build: window.ZUMMEE_BUILD || "",
+        mhVersion: window.__MH_VERSION || ""
+      },
+      riskFlags: getConsoleRiskFlags(),
+      activeCommunity: getActiveCommunity(),
+      supabase: getSupabaseStatus(),
+      smartAlerts: getSmartAlerts(),
+      operationsPill: getOperationsPill(),
+      scriptInventory: getScriptInventory()
+    };
+    window.__MANAGER_HUB_AUDIT_V617_LAST_REPORT = report;
+    console.info("[Manager Hub v617 Audit Only]", report);
+    return report;
+  };
+
+  window.printManagerHubAuditSummary = function(){
+    var r = window.auditManagerHubState();
+    var compact = {
+      build: r.page.build,
+      mhVersion: r.page.mhVersion,
+      community: r.activeCommunity.dropdown || r.activeCommunity.canonicalStorage || r.activeCommunity.sharedState,
+      smartReady: r.smartAlerts.readyAttribute,
+      board: r.smartAlerts.cards.mh2AlertBoard,
+      maintenance: r.smartAlerts.cards.mh2AlertActivity,
+      annual: r.smartAlerts.cards.mh2AlertApprovals,
+      operationsPill: r.operationsPill,
+      supabase: r.supabase,
+      experimentalMarkers: r.riskFlags.hasV623toV633ExperimentalMarkers
+    };
+    console.log(compact);
+    return compact;
+  };
 })();
 </script>
 
