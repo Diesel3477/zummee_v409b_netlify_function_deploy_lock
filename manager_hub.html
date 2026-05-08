@@ -281,6 +281,87 @@ window.__MH_VERSION = 'v611_smooth_return_no_jump';
   </script>
   <link rel="icon" type="image/png" href="favicon.png" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script id="manager-hub-v619-community-assignments-legacy-guard">
+/*
+  Manager Hub v619 — Community Assignments Legacy Guard
+
+  Purpose:
+  - Stop repeated bad community_assignments requests that use legacy/nonexistent columns.
+  - Does not change the canonical dropdown source.
+  - Does not change smart cards.
+  - Does not change Operations Portal pill.
+*/
+(function(){
+  if(window.__ManagerHubV619CommunityAssignmentsGuard) return;
+  window.__ManagerHubV619CommunityAssignmentsGuard = true;
+
+  function isBadLegacyCommunityAssignmentRequest(input){
+    try{
+      var url = typeof input === "string" ? input : (input && input.url ? input.url : "");
+      if(!url || url.indexOf("/rest/v1/community_assignments?") === -1) return false;
+
+      var decoded = "";
+      try{ decoded = decodeURIComponent(url); }catch(_e){ decoded = url; }
+
+      return (
+        decoded.indexOf("select=community_id&user_id=") !== -1 ||
+        decoded.indexOf("select=community_id&auth_user_id=") !== -1 ||
+        decoded.indexOf("select=community_id,user_id") !== -1 ||
+        decoded.indexOf("select=community_id,auth_user_id") !== -1
+      );
+    }catch(_err){
+      return false;
+    }
+  }
+
+  function guardedEmptyResponse(){
+    return new Response(JSON.stringify([]), {
+      status: 200,
+      statusText: "OK",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Zummee-Guard": "manager-hub-v619-community-assignments"
+      }
+    });
+  }
+
+  if(window.fetch && !window.__ManagerHubOriginalFetchV619){
+    window.__ManagerHubOriginalFetchV619 = window.fetch.bind(window);
+
+    window.fetch = function(input, init){
+      if(isBadLegacyCommunityAssignmentRequest(input)){
+        try{
+          console.info("[Manager Hub v619] blocked legacy community_assignments lookup", typeof input === "string" ? input : input.url);
+        }catch(_e){}
+        return Promise.resolve(guardedEmptyResponse());
+      }
+      return window.__ManagerHubOriginalFetchV619(input, init);
+    };
+  }
+
+  window.getManagerHubV619GuardStatus = function(){
+    return {
+      guardInstalled: !!window.__ManagerHubV619CommunityAssignmentsGuard,
+      fetchWrapped: !!window.__ManagerHubOriginalFetchV619,
+      smartCardsVisible: ["mh2AlertBoard","mh2AlertActivity","mh2AlertApprovals"].map(function(id){
+        var el = document.getElementById(id);
+        if(!el) return { id:id, exists:false };
+        var cs = getComputedStyle(el);
+        return {
+          id:id,
+          exists:true,
+          visible: !(el.offsetParent === null) && cs.display !== "none" && cs.visibility !== "hidden" && cs.opacity !== "0",
+          display: cs.display,
+          visibility: cs.visibility,
+          opacity: cs.opacity
+        };
+      })
+    };
+  };
+})();
+</script>
+
   <script src="shared/community-state.js?v=2026-05-07-v615"></script>
   <script src="shared/input-undo-guard.js?v=2026-05-07-v615"></script>
   <!-- shared/zummee-design-system.css removed: file not present in stable build -->
@@ -7553,7 +7634,8 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
       annual: r.smartAlerts.annual,
       operationsPill: r.operationsPill,
       supabase: r.supabase,
-      experimentalMarkers: r.riskFlags.experimentalMarkers
+      experimentalMarkers: r.riskFlags.experimentalMarkers,
+      communityAssignmentGuardV619: (typeof window.getManagerHubV619GuardStatus === "function" ? window.getManagerHubV619GuardStatus() : null)
     };
     console.log(compact);
     return compact;
