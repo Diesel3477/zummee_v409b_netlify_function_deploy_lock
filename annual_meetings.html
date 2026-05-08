@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-08-v629-annual-meeting-auto-date-reminder";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-08-v630-annual-meeting-expected-date-only";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annual Meetings</title>
@@ -1965,10 +1965,21 @@
 </script>
 
 
-<script id="annual-meetings-auto-date-reminder-v629">
+
+
+<script id="annual-meetings-expected-date-reminder-v630">
+/*
+  Zummee Annual Meetings Schedule Automation
+  Build: 2026-05-08-v630
+
+  Correct behavior:
+  - Last Annual Meeting Date calculates Expected Next Date only.
+  - Next Annual Meeting Date remains employee-selected/manual.
+  - Annual Meeting Notice, Packet Setup, and 3-month reminder use Next Annual Meeting Date.
+*/
 (function(){
-  if(window.__AnnualMeetingsAutoDateReminderV629) return;
-  window.__AnnualMeetingsAutoDateReminderV629 = true;
+  if(window.__AnnualMeetingsExpectedDateReminderV630) return;
+  window.__AnnualMeetingsExpectedDateReminderV630 = true;
 
   const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
@@ -1982,8 +1993,8 @@
     try{ if(typeof ensureSupabase === 'function'){ const c = await ensureSupabase(); if(c && c.from) return c; } }catch(_e){}
     try{
       if(window.supabase && window.supabase.createClient){
-        if(!window.__annualReminderSbV629) window.__annualReminderSbV629 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        return window.__annualReminderSbV629;
+        if(!window.__annualReminderSbV630) window.__annualReminderSbV630 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        return window.__annualReminderSbV630;
       }
     }catch(_e){}
     return null;
@@ -2020,6 +2031,16 @@
     }catch(_e){ return ''; }
   }
 
+  function isoAddDays(dateStr, days){
+    if(!dateStr) return '';
+    try{
+      const d = new Date(dateStr + 'T00:00:00');
+      if(Number.isNaN(d.getTime())) return '';
+      d.setDate(d.getDate() + Number(days || 0));
+      return d.toISOString().slice(0,10);
+    }catch(_e){ return ''; }
+  }
+
   function isoAddMonths(dateStr, months){
     if(!dateStr) return '';
     try{
@@ -2046,55 +2067,45 @@
     if(dot && (kind === 'good' || kind === 'reminder')) dot.className = 'dot good';
   }
 
-  function refreshScheduleDates(options){
-    options = options || {};
+  function refreshScheduleDates(){
     const last = el('lastDate');
     const next = el('nextDate');
     const expected = el('expectedDate');
     const sendDate = el('sendDate');
 
     const lastVal = s(last && last.value);
-    const computedNext = isoAddYears(lastVal, 1);
+    const actualNextVal = s(next && next.value);
 
-    if(next && computedNext){
-      const shouldWrite = options.force || !s(next.value) || next.dataset.autoAnnualNext === '1';
-      if(shouldWrite){
-        next.value = computedNext;
-        next.dataset.autoAnnualNext = '1';
-      }
-    }
+    // Expected date is only an estimate based on the last annual meeting date.
+    const expectedNext = isoAddYears(lastVal, 1);
+    if(expected) expected.textContent = formatDate(expectedNext);
 
-    const finalNext = s(next && next.value) || computedNext;
-    if(expected) expected.textContent = formatDate(finalNext);
+    // Packet / notice send date must use the employee-selected actual next meeting date.
+    // Annual notice is generally 30 days before the actual meeting date.
+    if(sendDate) sendDate.textContent = formatDate(isoAddDays(actualNextVal, -30));
 
-    // Keep the existing Packet Setup 30-day send date accurate.
-    if(sendDate) sendDate.textContent = formatDate(isoAddMonths(finalNext, -1));
-
-    return finalNext;
+    return {
+      expectedNext,
+      actualNext: actualNextVal
+    };
   }
 
-  function markManualNextDate(){
-    const next = el('nextDate');
-    if(next) next.dataset.autoAnnualNext = '0';
-    refreshScheduleDates({ force:false });
+  function reminderDueDate(actualNextDate){
+    return isoAddMonths(actualNextDate, -3);
   }
 
-  function reminderDueDate(nextDate){
-    return isoAddMonths(nextDate, -3);
-  }
-
-  async function upsertAnnualReminder(nextDate){
+  async function upsertAnnualReminder(actualNextDate){
     const community = activeCommunity();
-    if(!community.id || !nextDate) return false;
+    if(!community.id || !actualNextDate) return false;
 
-    const due = reminderDueDate(nextDate);
+    const due = reminderDueDate(actualNextDate);
     if(!due) return false;
 
     const sb = await client();
     if(!sb) return false;
 
     const title = 'Annual Meeting';
-    const note = 'Annual Meeting is scheduled for ' + formatDate(nextDate) + '. Begin 3-month preparation workflow.';
+    const note = 'Annual Meeting is scheduled for ' + formatDate(actualNextDate) + '. Begin 3-month preparation workflow.';
 
     const basePayload = {
       community_id: community.id,
@@ -2112,7 +2123,6 @@
     const attempts = ['ops_reminders','reminders','operations_reminders'];
 
     for(const table of attempts){
-      // Update by source_key when the column exists.
       try{
         const existing = await sb.from(table)
           .select('id')
@@ -2127,7 +2137,6 @@
         }
       }catch(_e){}
 
-      // Update by title fallback for schemas without source_key.
       try{
         const existing2 = await sb.from(table)
           .select('id')
@@ -2152,21 +2161,25 @@
   }
 
   async function saveThenReminder(){
-    refreshScheduleDates({ force:false });
-    let saved = true;
+    const dates = refreshScheduleDates();
 
+    if(!dates.actualNext){
+      alert('Please choose the actual Next Annual Meeting Date before saving. The expected date is only an estimate.');
+      return false;
+    }
+
+    let saved = true;
     try{
       if(window.ZummeeAnnualMeetingsDirect && typeof window.ZummeeAnnualMeetingsDirect.save === 'function'){
         saved = await window.ZummeeAnnualMeetingsDirect.save();
       }
     }catch(err){
-      console.error('[Annual Meetings v629] base save failed', err);
+      console.error('[Annual Meetings v630] base save failed', err);
       saved = false;
     }
 
     if(saved){
-      const nextDate = s(el('nextDate') && el('nextDate').value) || refreshScheduleDates({ force:false });
-      const ok = await upsertAnnualReminder(nextDate);
+      const ok = await upsertAnnualReminder(dates.actualNext);
       if(ok){
         setStatus('Annual meeting info saved. 3-month reminder scheduled.', 'reminder');
       }else{
@@ -2182,20 +2195,20 @@
     const next = el('nextDate');
     const saveBtn = el('saveBtn');
 
-    if(last && !last.__annualAutoNextV629){
-      last.__annualAutoNextV629 = true;
-      last.addEventListener('input', function(){ refreshScheduleDates({ force:true }); });
-      last.addEventListener('change', function(){ refreshScheduleDates({ force:true }); });
+    if(last && !last.__annualExpectedOnlyV630){
+      last.__annualExpectedOnlyV630 = true;
+      last.addEventListener('input', refreshScheduleDates);
+      last.addEventListener('change', refreshScheduleDates);
     }
 
-    if(next && !next.__annualManualNextV629){
-      next.__annualManualNextV629 = true;
-      next.addEventListener('input', markManualNextDate);
-      next.addEventListener('change', markManualNextDate);
+    if(next && !next.__annualActualNextV630){
+      next.__annualActualNextV630 = true;
+      next.addEventListener('input', refreshScheduleDates);
+      next.addEventListener('change', refreshScheduleDates);
     }
 
-    if(saveBtn && !saveBtn.__annualSaveReminderV629){
-      saveBtn.__annualSaveReminderV629 = true;
+    if(saveBtn && !saveBtn.__annualSaveReminderV630){
+      saveBtn.__annualSaveReminderV630 = true;
       saveBtn.addEventListener('click', function(e){
         e.preventDefault();
         e.stopImmediatePropagation();
@@ -2203,8 +2216,8 @@
       }, true);
     }
 
-    setTimeout(function(){ refreshScheduleDates({ force:false }); }, 250);
-    setTimeout(function(){ refreshScheduleDates({ force:false }); }, 1200);
+    setTimeout(refreshScheduleDates, 250);
+    setTimeout(refreshScheduleDates, 1200);
   }
 
   window.ZummeeAnnualMeetingScheduleAutomation = {
@@ -2221,7 +2234,7 @@
 
   window.addEventListener('pageshow', function(){
     setTimeout(bind, 150);
-    setTimeout(function(){ refreshScheduleDates({ force:false }); }, 500);
+    setTimeout(refreshScheduleDates, 500);
   });
 })();
 </script>
