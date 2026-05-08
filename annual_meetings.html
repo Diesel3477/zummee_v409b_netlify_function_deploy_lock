@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-08-v642-annual-meetings-stable-architecture";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-08-v643-annual-strict-community-dropdown";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annual Meetings</title>
@@ -1252,19 +1252,31 @@
 
   function bestVendorId(row){
     row = row || {};
-    const keys = ['community_id','property_community_id','communityId','propertyCommunityId','community_uuid','community','id'];
-    for(const k of keys){ if(uuidish(row[k])) return s(row[k]); }
-    for(const k of keys){ if(row[k]) return s(row[k]); }
+
+    // v643 strict rule:
+    // Vendors may ONLY provide the community foreign key.
+    // Never use Vendors.id or Vendors.name because those are vendor fields.
+    const keys = [
+      'community_id',
+      'property_community_id',
+      'communityId',
+      'propertyCommunityId',
+      'property_community',
+      'community_uuid'
+    ];
+
+    for(const k of keys){
+      const value = s(row[k]);
+      if(value && uuidish(value)) return value;
+    }
+
     return '';
   }
 
   function bestVendorName(row){
-    row = row || {};
-    const keys = ['community_name','communityName','community_label','communityLabel','property_community_name','propertyCommunityName','association_name','associationName','label','name','community'];
-    for(const k of keys){
-      const value = s(row[k]);
-      if(value && !uuidish(value)) return value;
-    }
+    // v643 strict rule:
+    // Do not trust Vendor row name/label/community as the community name.
+    // Community display names must come from PropertyCommunities.
     return '';
   }
 
@@ -1290,24 +1302,29 @@
   async function communitiesFromVendors(client){
     try{
       const res = await client.from('Vendors').select('*').limit(1000);
-      if(res && res.error) return [];
+      if(res && res.error){
+        console.warn('[Annual v643] Vendors select(*) failed', res.error);
+        return [];
+      }
 
       const rows = Array.isArray(res && res.data) ? res.data : [];
       if(!rows.length) return [];
 
-      const direct = [];
-      const ids = [];
+      // v643 strict rule:
+      // Vendors can only contribute community_id / property_community_id.
+      // We then resolve names from PropertyCommunities so the dropdown is real communities only.
+      const ids = rows.map(bestVendorId).filter(Boolean);
+      const named = await namesForCommunityIds(client, ids);
 
-      rows.forEach(function(row){
-        const id = bestVendorId(row);
-        const name = bestVendorName(row);
-        if(id && name) direct.push({ id, name });
-        else if(id) ids.push(id);
+      console.info('[Annual v643] strict vendor community ids', {
+        vendorRows: rows.length,
+        communityIds: Array.from(new Set(ids)),
+        communities: named
       });
 
-      const named = await namesForCommunityIds(client, ids);
-      return dedupeCommunities(direct.concat(named));
-    }catch(_e){
+      return dedupeCommunities(named);
+    }catch(err){
+      console.warn('[Annual v643] Vendors community load failed', err);
       return [];
     }
   }
