@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-08-v647-annual-current-community-reminder-only";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-08-v648-annual-meetings-stable-baseline";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annual Meetings</title>
@@ -690,6 +690,28 @@
   #saveBtn.is-saving{opacity:.82!important;cursor:wait!important}
   #saveBtn.is-saved{background:#1f7a4d!important;border-color:#1f7a4d!important;color:#fff!important}
 </style>
+
+
+<script id="annual-meetings-v648-stable-baseline-marker">
+/*
+  Zummee Annual Meetings Stable Baseline
+  Build: 2026-05-08-v648
+
+  Locked architecture:
+  - Annual Meeting settings save/load source: public.annual_meeting_settings
+  - Seats Up for Election source: public.BoardMembers.term_end
+  - Operations Reminder source: public.ops_reminders
+  - Reminder behavior: current selected community only
+  - Community dropdown source: strict community IDs, resolved to real PropertyCommunities names
+  - No ops.html iframe bridge
+  - No legacy annual_meetings table as workspace save target
+  - No shared header/dark-mode/design-system dependency for this page
+
+  Next workflow:
+  - Packet generation must read from annual_meeting_settings.
+*/
+window.ZUMMEE_ANNUAL_MEETINGS_STABLE_BASELINE = "v648";
+</script>
 
 </head>
 <body>
@@ -2196,6 +2218,29 @@
   }
 
   window.addEventListener('pageshow', function(){ setTimeout(init, 150); });
+})();
+</script>
+
+
+<script id="annual-meetings-v648-baseline-helpers">
+(function(){
+  if(window.__AnnualMeetingsStableBaselineV648) return;
+  window.__AnnualMeetingsStableBaselineV648 = true;
+
+  window.getAnnualMeetingsStableBaseline = function(){
+    return {
+      baseline: "v648",
+      build: window.ZUMMEE_BUILD || "",
+      settingsTable: "annual_meeting_settings",
+      seatsSource: "BoardMembers.term_end",
+      remindersSource: "ops_reminders",
+      reminderScope: "current selected community only",
+      packetSource: "annual_meeting_settings",
+      legacyWorkspaceSaveTarget: false
+    };
+  };
+
+  console.info("[Annual Meetings] Stable baseline locked", window.getAnnualMeetingsStableBaseline());
 })();
 </script>
 
