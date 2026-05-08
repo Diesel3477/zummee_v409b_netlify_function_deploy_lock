@@ -43,7 +43,7 @@
 
 
 
-<script>window.ZUMMEE_BUILD="2026-05-08-v618-manager-hub-authoritative-ops-pill";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-08-v619-manager-hub-kill-legacy-ops-overwrite";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <script id="zummee-manager-canonical-preboot-v608">
 /*
@@ -3072,6 +3072,15 @@ html[data-theme="dark"] .mh2-ask-close,html[data-theme="dark"] .mh2-ask-modal .m
   }
 }
 </style>
+
+<script id="manager-hub-v619-ops-authoritative-mode">
+  window.__ManagerHubOpsAuthoritativeModeV619 = true;
+  window.__ManagerHubOpsOwnedCardIdsV619 = {
+    dailyOpsCard: true,
+    remindersCard: true
+  };
+</script>
+
 </head>
 <body class="manager-hub-page">
   <main class="mh2-page">
@@ -4314,6 +4323,19 @@ html[data-theme="dark"] .mh2-ask-close,html[data-theme="dark"] .mh2-ask-modal .m
         }
       }
       function setToolCardState(cardId, opts){
+        /*
+          v619: Daily Ops / Operations Portal and Reminders are now owned by the
+          Supabase Operations Portal summary engine. Do not let legacy core-card
+          logic repaint these cards with stale board/activity counts.
+        */
+        try{
+          if(window.__ManagerHubOpsAuthoritativeModeV619 &&
+             window.__ManagerHubOpsOwnedCardIdsV619 &&
+             window.__ManagerHubOpsOwnedCardIdsV619[cardId]){
+            return;
+          }
+        }catch(_opsOwnedErr){}
+
         var card = $(cardId);
         if(!card) return;
         opts = opts || {};
@@ -7755,6 +7777,43 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
   window.addEventListener('pageshow', function(){ setTimeout(boot, 100); });
   window.addEventListener('focus', function(){ setTimeout(authoritativeRefresh, 100); });
   window.addEventListener('zummee:community-changed', function(){ setTimeout(boot, 150); });
+})();
+</script>
+
+
+<script id="manager-hub-v619-final-ops-refresh">
+(function(){
+  if(window.__ManagerHubFinalOpsRefreshV619) return;
+  window.__ManagerHubFinalOpsRefreshV619 = true;
+
+  async function refresh(){
+    try{
+      if(typeof window.refreshManagerHubOperationsPortalPillAuthoritative === 'function'){
+        await window.refreshManagerHubOperationsPortalPillAuthoritative();
+        return;
+      }
+      if(typeof window.refreshManagerHubOperationsPortalPill === 'function'){
+        await window.refreshManagerHubOperationsPortalPill();
+      }
+    }catch(err){
+      console.warn('[Manager Hub v619] final ops refresh failed', err);
+    }
+  }
+
+  function boot(){
+    [100, 300, 700, 1200, 2200, 4000, 7000, 11000].forEach(function(ms){
+      setTimeout(refresh, ms);
+    });
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', boot, { once:true });
+  }else{
+    boot();
+  }
+
+  window.addEventListener('pageshow', function(){ setTimeout(boot, 100); });
+  window.addEventListener('focus', function(){ setTimeout(refresh, 100); });
 })();
 </script>
 
