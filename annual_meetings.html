@@ -1,10 +1,11 @@
 <!doctype html>
 <html>
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-08-v618-annual-meetings-zummee-style-refresh";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-08-v619-annual-meetings-header-logo-wire";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annual Meetings</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
     (function(){
@@ -291,6 +292,19 @@ body.dark-mode .mh2-stat-box {
     .topbarSide,.topActions{width:100%}
     .headerLogoBox{width:100%;order:0}
     .grid,.actionBar,.actionBar .secondaryRow,.fieldGrid,.compactGrid,.miniGrid{grid-template-columns:1fr}
+  }
+</style>
+
+
+<style id="annual-meetings-header-logo-v619">
+  .topbarMain{align-items:flex-start!important}
+  .topbarSide{display:flex!important;flex-direction:column!important;align-items:flex-end!important;justify-content:flex-start!important;gap:12px!important;min-width:240px}
+  .headerLogoBox{width:220px!important;min-width:220px!important;min-height:96px!important}
+  .topActions{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:10px!important;width:220px!important}
+  .topActions .btn{width:100%!important}
+  @media (max-width: 900px){
+    .topbarSide{align-items:stretch!important;width:100%!important;min-width:0!important}
+    .headerLogoBox,.topActions{width:100%!important;min-width:0!important}
   }
 </style>
 
@@ -620,6 +634,111 @@ body.dark-mode .mh2-stat-box {
     return { win, entry, expected, sendDate, seatsCount };
   }
 
+  const BRAND_SB_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+  const BRAND_SB_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
+  async function getBrandSb(){
+    try{
+      if(window.__annualBrandSb) return window.__annualBrandSb;
+      if(!window.supabase || typeof window.supabase.createClient !== 'function') return null;
+      window.__annualBrandSb = window.supabase.createClient(BRAND_SB_URL, BRAND_SB_KEY);
+      return window.__annualBrandSb;
+    }catch(_e){ return null; }
+  }
+  function parseBrandLogoRef(raw){
+    raw = String(raw || '').trim();
+    if(!raw) return null;
+    if(/^https?:\/\//i.test(raw)) return { url: raw };
+    return { bucket:'company_logos', path: raw };
+  }
+  function pickBrandLogoValue(row){
+    row = row || {};
+    return row.logo_url || row.logoUrl || row.logo_path || row.logoPath || row.company_logo_url || row.companyLogoUrl || row.company_logo || row.logo || row.image_url || row.brand_logo_url || '';
+  }
+  function setAnnualHeaderLogo(url, alt, fallbackName){
+    const finalUrl = String(url || '').trim();
+    const finalAlt = String(alt || fallbackName || 'Company Logo').trim() || 'Company Logo';
+    const headerLogoBox = document.getElementById('headerLogoBox');
+    if(finalUrl){
+      const markup = `<img src="${finalUrl}" alt="${finalAlt}">`;
+      if(headerLogoBox) headerLogoBox.innerHTML = markup;
+      if(els.logoBox) els.logoBox.innerHTML = markup;
+      return true;
+    }
+    if(els.logoBox) els.logoBox.textContent = String(fallbackName || 'No company logo uploaded yet');
+    if(headerLogoBox) headerLogoBox.innerHTML = `<div class="headerLogoFallback"><span class="headerLogoWord">SIXES</span><span class="headerLogoSub">Management Group</span></div>`;
+    return false;
+  }
+  async function deriveAnnualCompanyId(){
+    const communityId = getActiveCommunityId();
+    if(!communityId) return '';
+    const sb = await getBrandSb();
+    if(!sb) return '';
+    const attempts = [
+      { table:'PropertyCommunities' },
+      { table:'property_communities' }
+    ];
+    for(const a of attempts){
+      try{
+        const res = await sb.from(a.table).select('company_id').eq('id', communityId).maybeSingle();
+        const companyId = String(res && res.data && res.data.company_id || '').trim();
+        if(companyId) return companyId;
+      }catch(_e){}
+    }
+    try{
+      const userRes = await sb.auth.getUser();
+      const userId = String(userRes && userRes.data && userRes.data.user && userRes.data.user.id || '').trim();
+      if(!userId) return '';
+      const res = await sb.from('userdirectory').select('company_id').eq('auth_user_id', userId).maybeSingle();
+      return String(res && res.data && res.data.company_id || '').trim();
+    }catch(_e2){}
+    return '';
+  }
+  async function fetchAnnualBrandLogoRow(companyId){
+    const sb = await getBrandSb();
+    if(!sb || !companyId) return null;
+    const attempts = [
+      { table:'companies', cols:'id,name,logo_path,logo_url', by:'id' },
+      { table:'Companies', cols:'id,name,logo_path,logo_url', by:'id' },
+      { table:'company_branding', cols:'id,company_id,name,logo_path,logo_url', by:'company_id' },
+      { table:'CompanyBranding', cols:'id,company_id,name,logo_path,logo_url', by:'company_id' }
+    ];
+    for(const a of attempts){
+      try{
+        const res = await sb.from(a.table).select(a.cols).eq(a.by, companyId).maybeSingle();
+        if(res && !res.error && res.data && pickBrandLogoValue(res.data)) return res.data;
+      }catch(_e){}
+    }
+    return null;
+  }
+  async function loadAnnualBrandLogo(){
+    try{
+      const companyId = await deriveAnnualCompanyId();
+      if(!companyId) return false;
+      const cacheKey = 'mh2_brand_logo_v1_' + companyId;
+      try{
+        const cached = JSON.parse(sessionStorage.getItem(cacheKey) || 'null');
+        if(cached && cached.url) setAnnualHeaderLogo(cached.url, cached.alt || 'Company Logo', cached.alt || 'Company logo');
+      }catch(_cacheErr){}
+      const row = await fetchAnnualBrandLogoRow(companyId);
+      if(!row) return false;
+      const ref = parseBrandLogoRef(pickBrandLogoValue(row));
+      if(!ref) return false;
+      const sb = await getBrandSb();
+      let url = String(ref.url || '').trim();
+      if(!url && ref.bucket && ref.path && sb && sb.storage && sb.storage.from){
+        const pub = sb.storage.from(ref.bucket).getPublicUrl(ref.path);
+        url = String(pub && pub.data && pub.data.publicUrl || '').trim();
+      }
+      if(!url) return false;
+      setAnnualHeaderLogo(url, String(row.name || 'Company Logo'), String(row.name || 'Company logo'));
+      try{ sessionStorage.setItem(cacheKey, JSON.stringify({ url:url, alt:String(row.name || 'Company Logo') })); }catch(_e){}
+      return true;
+    }catch(err){
+      console.warn('[Annual Meetings] header logo load skipped', err);
+      return false;
+    }
+  }
+
   function render(){
     const data = readState();
     if(!data) return;
@@ -646,18 +765,12 @@ body.dark-mode .mh2-stat-box {
     try{
       const logoUrl = typeof win.getMasterCompanyLogoDataUrl === 'function' ? (win.getMasterCompanyLogoDataUrl() || '') : '';
       const logoName = typeof win.getMasterCompanyLogoName === 'function' ? (win.getMasterCompanyLogoName() || '') : '';
-      const headerLogoBox = document.getElementById('headerLogoBox');
-      if(logoUrl){
-        els.logoBox.innerHTML = `<img src="${logoUrl}" alt="Company Logo">`;
-        if(headerLogoBox) headerLogoBox.innerHTML = `<img src="${logoUrl}" alt="Company Logo">`;
-      } else {
-        els.logoBox.textContent = logoName || 'No company logo uploaded yet';
-        if(headerLogoBox) headerLogoBox.innerHTML = `<div class="headerLogoFallback"><span class="headerLogoWord">SIXES</span><span class="headerLogoSub">Management Group</span></div>`;
-      }
+      if(logoUrl) setAnnualHeaderLogo(logoUrl, 'Company Logo', logoName || 'Company Logo');
+      else setAnnualHeaderLogo('', 'Company Logo', logoName || 'No company logo uploaded yet');
+      loadAnnualBrandLogo();
     }catch(_e){
-      els.logoBox.textContent = 'No company logo uploaded yet';
-      const headerLogoBox = document.getElementById('headerLogoBox');
-      if(headerLogoBox) headerLogoBox.innerHTML = `<div class="headerLogoFallback"><span class="headerLogoWord">SIXES</span><span class="headerLogoSub">Management Group</span></div>`;
+      setAnnualHeaderLogo('', 'Company Logo', 'No company logo uploaded yet');
+      loadAnnualBrandLogo();
     }
     const disabled = !!entry.lastLocked;
     ['lastDate','associationLegalName','quorumPercent','seatsOverride','meetingTime','meetingFormat','meetingLocation','meetingLink','nominationDeadline','proxyReturnDeadline'].forEach(id=>{ els[id].disabled = disabled; });
@@ -746,6 +859,7 @@ body.dark-mode .mh2-stat-box {
           clearInterval(timer);
           try{ win.document.documentElement.style.background='transparent'; win.document.body.style.background='transparent'; }catch(_e){}
           render();
+          try{ loadAnnualBrandLogo(); setTimeout(loadAnnualBrandLogo, 800); setTimeout(loadAnnualBrandLogo, 2200); }catch(_eLogo){}
           return;
         }
       }catch(_e){}
