@@ -1,545 +1,2269 @@
-/*
-  Zummee Shared Community State
-  Build: 2026-05-07-v601-community-persistence-last-write-wins
+<!doctype html>
+<html>
+<head>
+<script>window.ZUMMEE_BUILD="2026-05-08-v631-annual-settings-save-only";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Annual Meetings</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="shared/supabase-client.js?v=2026-05-08-v625"></script>
 
-  Purpose:
-  - One app-wide selected community that persists across pages.
-  - No page should default back to Biltmore Parc unless there is no saved active community.
-  - Assigned communities are loaded once from community_assignments and then hydrated into page dropdowns.
-  - Legacy keys are still written for backwards compatibility while the app migrates.
+  <script>
+    (function(){
+      try{
+        var t = localStorage.getItem('mh2-theme') || localStorage.getItem('zummee-theme') || (localStorage.getItem('zummee_dark_mode') === 'true' ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
+    })();
+  </script>
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <script src="shared/community-state.js?v=2026-05-08-v617"></script>
+  <script src="shared/input-undo-guard.js?v=2026-05-08-v617"></script>
+  
 
-  Canonical keys:
-  - zummee_active_community_id
-  - zummee_active_community_name
-*/
+
+
+<style id="annual-meetings-clean-long-term-v625">
+  :root{
+    --zm-navy:#17324c;
+    --zm-blue:#9fc4ff;
+    --zm-blue-soft:#edf4ff;
+    --zm-border:#d9e1ea;
+    --zm-muted:#5d6b7a;
+    --zm-bg:#f4f6fa;
+    --zm-card:#ffffff;
+    --zm-soft:#f8fafc;
+    --zm-gold:#fff8da;
+    --zm-good:#2e9d5b;
+    --zm-warn:#d59b00;
+  }
+
+  *{box-sizing:border-box}
+
+  body{
+    margin:0;
+    background:var(--zm-bg);
+    color:var(--zm-navy);
+    font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .shell{
+    max-width:1180px;
+    margin:26px auto 40px;
+    padding:0 16px 36px;
+  }
+
+  .am-page-header{
+    background:#fff;
+    border:2px solid var(--zm-blue);
+    border-radius:30px;
+    padding:28px;
+    box-shadow:0 12px 28px rgba(15,53,84,.06);
+    margin-bottom:24px;
+  }
+
+  .am-header-top{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 220px;
+    gap:24px;
+    align-items:start;
+  }
+
+  .am-eyebrow{
+    margin:0 0 8px;
+    color:#5d6b7a;
+    font-size:12px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    font-weight:900;
+  }
+
+  .am-title{
+    margin:0;
+    color:var(--zm-navy);
+    font-size:44px;
+    line-height:1.02;
+    letter-spacing:-.045em;
+    font-weight:900;
+  }
+
+  .am-subtitle{
+    margin:12px 0 0;
+    max-width:690px;
+    color:var(--zm-muted);
+    font-size:15px;
+    line-height:1.45;
+    font-weight:650;
+  }
+
+  .am-logo-shell{
+    min-height:82px;
+    display:flex;
+    align-items:flex-start;
+    justify-content:flex-end;
+  }
+
+  .am-logo-card{
+    width:210px;
+    min-height:76px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#fff;
+    border:0;
+    padding:4px;
+  }
+
+  .am-logo-card img{
+    max-width:200px;
+    max-height:70px;
+    width:auto;
+    height:auto;
+    object-fit:contain;
+    display:block;
+  }
+
+  .am-logo-card img[hidden]{
+    display:none!important;
+  }
+
+  .am-logo-loading{
+    font-size:11px;
+    letter-spacing:.10em;
+    text-transform:uppercase;
+    color:#8aa0b5;
+    font-weight:900;
+  }
+
+  .am-header-controls{
+    margin-top:24px;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 170px 170px;
+    gap:12px;
+    align-items:center;
+  }
+
+  .am-community-picker{
+    min-height:58px;
+    border:2px solid #d7e7fb;
+    background:#fff;
+    border-radius:28px;
+    padding:8px 18px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    width:100%;
+  }
+
+  .am-community-picker label{
+    margin:0;
+    white-space:nowrap;
+    font-size:12px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    font-weight:900;
+    color:#5d6b7a;
+  }
+
+  .am-community-picker select{
+    appearance:none;
+    -webkit-appearance:none;
+    flex:1 1 auto;
+    min-width:0;
+    min-height:42px;
+    height:42px;
+    border:0;
+    background:transparent;
+    color:var(--zm-navy);
+    font-size:17px;
+    font-weight:900;
+    padding:0 28px 0 0;
+    outline:none;
+  }
+
+  .am-header-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:58px;
+    width:100%;
+    border-radius:999px;
+    text-decoration:none;
+    font-size:16px;
+    font-weight:900;
+    color:var(--zm-navy);
+    background:#fff;
+    white-space:nowrap;
+  }
+
+  .am-header-btn.soft{
+    background:var(--zm-blue-soft);
+    border:2px solid #bcd6f3;
+  }
+
+  .am-header-btn.outline{
+    background:#fff;
+    border:2px solid var(--zm-navy);
+  }
+
+  .workspace{
+    background:#fff;
+    border:2px solid var(--zm-navy);
+    border-radius:30px;
+    box-shadow:0 12px 28px rgba(15,53,84,.06);
+    padding:28px;
+  }
+
+  .workspaceHead{
+    display:block;
+    margin-bottom:18px;
+  }
+
+  .workspaceTitle{
+    margin:0;
+    color:var(--zm-navy);
+    font-size:30px;
+    line-height:1.08;
+    letter-spacing:-.035em;
+    font-weight:900;
+  }
+
+  .workspaceSub{
+    margin:8px 0 0;
+    color:var(--zm-muted);
+    font-size:15px;
+    line-height:1.45;
+    font-weight:600;
+  }
+
+  .workspaceMeta{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    margin-top:18px;
+  }
+
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:10px 14px;
+    border-radius:999px;
+    background:var(--zm-gold);
+    border:1px solid rgba(23,50,77,.10);
+    color:var(--zm-navy);
+    font-size:14px;
+    font-weight:900;
+  }
+
+  .pill.small{font-size:14px}
+
+  .dot{
+    width:8px;
+    height:8px;
+    border-radius:999px;
+    background:var(--zm-warn);
+  }
+
+  .dot.good{background:var(--zm-good)}
+
+  .statusText{
+    margin-top:14px;
+    color:var(--zm-muted);
+    font-size:14px;
+    font-weight:800;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:18px;
+    align-items:stretch;
+  }
+
+  .card{
+    background:#fff;
+    border:1.5px solid var(--zm-border);
+    border-radius:24px;
+    padding:18px;
+    box-shadow:none;
+  }
+
+  .card.span2{grid-column:1/-1}
+
+  .card h2{
+    margin:0 0 14px;
+    color:var(--zm-navy);
+    font-size:19px;
+    line-height:1.1;
+    font-weight:900;
+    letter-spacing:-.02em;
+  }
+
+  .fieldGrid,
+  .compactGrid,
+  .miniGrid{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:12px;
+  }
+
+  .field.span2{grid-column:1/-1}
+
+  label,
+  .compactLabel,
+  .miniStat strong,
+  .readonlyStat strong{
+    display:block;
+    margin:0 0 6px;
+    color:#677a8f;
+    font-size:11px;
+    letter-spacing:.10em;
+    text-transform:uppercase;
+    font-weight:900;
+  }
+
+  input,
+  select,
+  textarea{
+    width:100%;
+    min-width:0;
+    min-height:46px;
+    height:46px;
+    border-radius:16px;
+    border:1.5px solid var(--zm-border);
+    background:#fff;
+    color:var(--zm-navy);
+    padding:0 14px;
+    font-size:15px;
+    outline:none;
+    box-shadow:none;
+  }
+
+  textarea{
+    height:auto;
+    min-height:88px;
+    padding:10px 14px;
+    resize:vertical;
+  }
+
+  .readonly,
+  .miniStat,
+  .readonlyStat,
+  .logoBox{
+    background:var(--zm-soft);
+    border:1.5px solid var(--zm-border);
+    border-radius:18px;
+  }
+
+  .readonly{
+    min-height:46px;
+    display:flex;
+    align-items:center;
+    padding:0 14px;
+    font-size:16px;
+    font-weight:900;
+  }
+
+  .readonlyStat{
+    min-height:76px;
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+  }
+
+  .readonlyStat span,
+  .miniStat span{
+    color:var(--zm-navy);
+    font-size:18px;
+    font-weight:900;
+  }
+
+  .miniStat{padding:14px}
+
+  .logoBox{
+    min-height:94px;
+    padding:14px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--zm-muted);
+    font-weight:800;
+    font-size:13px;
+    text-align:center;
+  }
+
+  .logoBox img{
+    max-width:230px;
+    max-height:72px;
+    object-fit:contain;
+  }
+
+  .subtle{
+    color:var(--zm-muted);
+    font-size:14px;
+    line-height:1.55;
+  }
+
+  .actionBar{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:12px;
+    margin-top:18px;
+  }
+
+  .actionBar .secondaryRow{
+    grid-column:1/-1;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:12px;
+  }
+
+  .btn{
+    appearance:none;
+    border-radius:999px;
+    min-height:52px;
+    padding:0 18px;
+    font-size:16px;
+    font-weight:900;
+    cursor:pointer;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    background:var(--zm-navy);
+    color:#fff;
+    border:2px solid var(--zm-navy);
+    box-shadow:none;
+  }
+
+  .btn.secondary{
+    background:#fff;
+    color:var(--zm-navy);
+  }
+
+  .hiddenFrame{
+    position:absolute;
+    left:-99999px;
+    top:0;
+    width:1px;
+    height:1px;
+    opacity:0;
+    pointer-events:none;
+  }
+
+  @media (max-width: 860px){
+    .shell{padding:0 14px 32px}
+    .am-page-header,
+    .workspace{padding:24px}
+
+    .am-header-top{
+      grid-template-columns:minmax(0,1fr) 200px;
+      gap:18px;
+    }
+
+    .am-title{font-size:40px}
+    .am-subtitle{font-size:14px}
+
+    .am-logo-card{
+      width:190px;
+    }
+
+    .am-logo-card img{
+      max-width:185px;
+      max-height:66px;
+    }
+
+    .am-header-controls{
+      grid-template-columns:minmax(0,1fr) 155px 155px;
+      gap:10px;
+    }
+
+    .am-header-btn{
+      font-size:15px;
+      padding:0 12px;
+    }
+  }
+
+  @media (max-width: 640px){
+    .am-header-top,
+    .am-header-controls,
+    .grid,
+    .fieldGrid,
+    .compactGrid,
+    .miniGrid,
+    .actionBar,
+    .actionBar .secondaryRow{
+      grid-template-columns:1fr;
+    }
+
+    .am-logo-shell{
+      justify-content:flex-start;
+    }
+
+    .am-header-btn{width:100%}
+  }
+</style>
+
+
+<style id="annual-meetings-v626-remove-community-label">
+  .am-community-picker{
+    padding:8px 18px !important;
+  }
+
+  .am-community-picker select{
+    width:100% !important;
+    flex:1 1 auto !important;
+    padding-left:0 !important;
+    font-size:17px !important;
+  }
+</style>
+
+
+<style id="annual-meetings-v628-field-alignment-fix">
+  /*
+    v628 — Fix Annual Meetings field overlap/misalignment.
+    Scope only to Annual Meetings cards/forms.
+  */
+
+  .workspace{
+    overflow:hidden !important;
+  }
+
+  .grid{
+    align-items:start !important;
+  }
+
+  .card{
+    min-width:0 !important;
+    overflow:hidden !important;
+  }
+
+  .fieldGrid,
+  .compactGrid,
+  .noticeGrid,
+  .miniGrid{
+    display:grid !important;
+    grid-template-columns:repeat(2, minmax(0, 1fr)) !important;
+    gap:14px !important;
+    width:100% !important;
+    align-items:start !important;
+  }
+
+  .field,
+  .dateField{
+    min-width:0 !important;
+    width:100% !important;
+    overflow:visible !important;
+  }
+
+  .field.span2{
+    grid-column:1 / -1 !important;
+  }
+
+  .scheduleCard input,
+  .noticeCard input,
+  .card input,
+  .card select,
+  .card textarea{
+    display:block !important;
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+  }
+
+  .scheduleCard input[type="date"],
+  .noticeCard input[type="date"]{
+    -webkit-appearance:none !important;
+    appearance:none !important;
+    height:52px !important;
+    min-height:52px !important;
+    line-height:52px !important;
+    padding:0 16px !important;
+    text-align:left !important;
+    font-size:15px !important;
+    border-radius:18px !important;
+  }
+
+  .scheduleCard input[type="date"]::-webkit-date-and-time-value,
+  .noticeCard input[type="date"]::-webkit-date-and-time-value{
+    text-align:left !important;
+    min-height:52px !important;
+  }
+
+  .scheduleCard input[type="date"]::-webkit-calendar-picker-indicator,
+  .noticeCard input[type="date"]::-webkit-calendar-picker-indicator{
+    margin-left:auto !important;
+    opacity:.75 !important;
+  }
+
+  .readonlyStat{
+    width:100% !important;
+    min-width:0 !important;
+  }
+
+  .readonlyStat span{
+    word-break:normal !important;
+    white-space:normal !important;
+  }
+
+  .meetingDetailsCard .fieldGrid,
+  .card .fieldGrid{
+    gap:14px 16px !important;
+  }
+
+  label,
+  .compactLabel{
+    min-height:28px !important;
+    line-height:1.15 !important;
+    white-space:normal !important;
+    overflow-wrap:normal !important;
+  }
+
+  .noticeCard{
+    min-height:0 !important;
+  }
+
+  .noticeCard .compactGrid{
+    grid-template-columns:repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .logoBox{
+    min-height:108px !important;
+  }
+
+  @media (max-width: 900px){
+    .workspace{
+      padding:24px !important;
+    }
+
+    .grid{
+      grid-template-columns:repeat(2, minmax(0, 1fr)) !important;
+      gap:18px !important;
+    }
+
+    .fieldGrid,
+    .compactGrid,
+    .noticeGrid,
+    .miniGrid{
+      gap:12px !important;
+    }
+
+    input,
+    select{
+      font-size:15px !important;
+    }
+  }
+
+  @media (max-width: 720px){
+    .grid,
+    .fieldGrid,
+    .compactGrid,
+    .noticeGrid,
+    .miniGrid,
+    .actionBar,
+    .actionBar .secondaryRow{
+      grid-template-columns:1fr !important;
+    }
+
+    label,
+    .compactLabel{
+      min-height:0 !important;
+    }
+  }
+</style>
+
+</head>
+<body>
+  <main class="shell">
+    <section class="am-page-header" aria-label="Annual Meetings header">
+      <div class="am-header-top">
+        <div>
+          <div class="am-eyebrow">Dedicated Workspace</div>
+          <h1 class="am-title">Annual Meetings</h1>
+          <p class="am-subtitle">Manage annual meeting details, lock records, generate packets, and keep approvals tied to the selected community.</p>
+        </div>
+
+        <div class="am-logo-shell" aria-label="Management company logo">
+          <div class="am-logo-card" id="headerLogoBox">
+            <img id="annualHeaderCompanyLogo" alt="Management company logo" hidden>
+            <span id="annualHeaderLogoFallback" class="am-logo-loading">Loading logo...</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="am-header-controls">
+        <div class="am-community-picker">
+          <select id="annualCommunitySelect" aria-label="Select community"></select>
+        </div>
+        <a id="annualBackToHub" class="am-header-btn soft" href="manager_hub.html">Back to Hub</a>
+        <a id="annualArchiveLink" class="am-header-btn outline" href="annual_meeting_records.html">Open Archive</a>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <div class="workspaceHead">
+        <div class="workspaceTitle">Annual Meeting Workspace</div>
+        <div class="workspaceSub">Manage annual meeting details, lock records, and generate packets.</div>
+
+        <div class="workspaceMeta">
+          <div class="pill small" id="communityPill">Community: <span id="communityName" style="font-weight:900"></span></div>
+          <div class="pill small" id="statusPill"><span class="dot" id="statusDot"></span><span id="statusPillText">Loading annual meeting status…</span></div>
+        </div>
+
+        <div class="statusText" id="statusText">Loading live annual meeting data…</div>
+      </div>
+
+      <div class="grid">
+        <div class="card scheduleCard">
+          <h2>Meeting Schedule</h2>
+          <div class="compactGrid">
+            <div class="field dateField">
+              <label class="compactLabel" for="lastDate">Last Annual Meeting Date</label>
+              <input id="lastDate" type="date">
+            </div>
+            <div class="field dateField">
+              <label class="compactLabel" for="nextDate">Next Annual Meeting Date</label>
+              <input id="nextDate" type="date">
+            </div>
+            <div class="field span2">
+              <div class="readonlyStat">
+                <strong>Expected Next Date</strong>
+                <span id="expectedDate">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Association Info</h2>
+          <div class="fieldGrid">
+            <div class="field span2">
+              <label for="associationLegalName">Association Legal Name</label>
+              <input id="associationLegalName" type="text" placeholder="Exact legal association name">
+            </div>
+            <div class="field">
+              <label for="quorumPercent">Quorum %</label>
+              <input id="quorumPercent" type="number" placeholder="e.g. 30">
+            </div>
+            <div class="field">
+              <label for="seatsOverride">Seats Up for Election</label>
+              <input id="seatsOverride" type="number" placeholder="Auto if blank">
+            </div>
+          </div>
+        </div>
+
+        <div class="card meetingDetailsCard">
+          <h2>Meeting Details</h2>
+          <div class="fieldGrid">
+            <div class="field">
+              <label for="meetingTime">Meeting Time</label>
+              <select id="meetingTime"></select>
+            </div>
+            <div class="field">
+              <label for="meetingFormat">Meeting Format</label>
+              <select id="meetingFormat">
+                <option value="in_person">In-Person Meeting</option>
+                <option value="virtual">Virtual Meeting</option>
+                <option value="hybrid">Hybrid Meeting</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="meetingLocation">Meeting Location</label>
+              <input id="meetingLocation" type="text" placeholder="Clubhouse / address">
+            </div>
+            <div class="field">
+              <label for="meetingLink">Virtual Meeting Link</label>
+              <input id="meetingLink" type="url" placeholder="https://...">
+            </div>
+          </div>
+        </div>
+
+        <div class="card noticeCard">
+          <h2>Notice Setup</h2>
+          <div class="compactGrid noticeGrid">
+            <div class="field dateField">
+              <label class="compactLabel" for="nominationDeadline">Nomination Deadline</label>
+              <input id="nominationDeadline" type="date">
+            </div>
+            <div class="field dateField">
+              <label class="compactLabel" for="proxyReturnDeadline">Proxy Return Deadline</label>
+              <input id="proxyReturnDeadline" type="date">
+            </div>
+          </div>
+        </div>
+
+        <div class="card span2">
+          <h2>Packet Setup</h2>
+          <div class="miniGrid">
+            <div class="miniStat">
+              <strong>30-Day Send Date</strong>
+              <span id="sendDate">—</span>
+            </div>
+            <div class="miniStat">
+              <strong>Seats Up for Election</strong>
+              <span id="seatsCount">—</span>
+            </div>
+          </div>
+          <div style="margin-top:14px">
+            <label>Company Master Logo</label>
+            <div class="logoBox" id="logoBox">No company logo uploaded yet</div>
+          </div>
+        </div>
+
+        <div class="card span2">
+          <h2>Packet Notes</h2>
+          <p class="subtle">The packet uses the shared Notice, Proxy, and Nomination templates. It pulls in community dates, quorum %, board roster, seats up for election, the supervisor-managed return email, and the supervisor-managed company master logo.</p>
+        </div>
+      </div>
+
+      <div class="actionBar">
+        <button class="btn" id="saveBtn" type="button">Save Annual Meeting Info</button>
+        <button class="btn" id="lockBtn" type="button">Lock Records</button>
+        <div class="secondaryRow">
+          <button class="btn secondary" id="packetBtn" type="button">Generate / Preview Packet</button>
+          <button class="btn secondary" id="presentationBtn" type="button">Create Annual Presentation</button>
+        </div>
+      </div>
+    </section>
+
+  <iframe id="opsFrame" class="hiddenFrame" src="ops.html" title="Annual meeting backend frame"></iframe>
+
+<script>
 (function(){
-  if(window.ZummeeCommunityState && window.ZummeeCommunityState.version === "2026-05-07-v601") return;
-
-  const VERSION = "2026-05-07-v601";
-  const SUPABASE_URL = window.SUPABASE_URL || "https://slcwuuwyrgnmlmxpcaim.supabase.co";
-  const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864";
-
-  const ID_KEYS = [
-    "zummee_active_community_id",
-    "zummeeActiveCommunityId",
-    "activeCommunityId",
-    "currentCommunityId",
-    "zummee_selected_community_id",
-    "zummee_selected_community_v1",
-    "zummee_community_id"
-  ];
-
-  const NAME_KEYS = [
-    "zummee_active_community_name",
-    "zummeeActiveCommunityName",
-    "activeCommunityName",
-    "currentCommunityName",
-    "zummeeCurrentCommunityName",
-    "zummee_selected_community_name"
-  ];
-
-  const CANONICAL_STATE_KEY = "zummee_active_community_v601";
-
-  function readCanonicalState(){
-    try{
-      const raw = localStorage.getItem(CANONICAL_STATE_KEY) || sessionStorage.getItem(CANONICAL_STATE_KEY) || "";
-      const parsed = safeJson(raw, null);
-      if(parsed && parsed.id){
-        return {
-          id: str(parsed.id),
-          name: str(parsed.name),
-          updatedAt: Number(parsed.updatedAt || parsed.ts || 0) || 0,
-          source: str(parsed.source || "")
-        };
-      }
-    }catch(_e){}
-    return null;
-  }
-
-  function writeCanonicalState(id, name, opts={}){
-    const state = {
-      id: str(id),
-      name: str(name),
-      updatedAt: Number(opts.updatedAt || Date.now()),
-      source: str(opts.source || "unknown")
-    };
-    try{
-      localStorage.setItem(CANONICAL_STATE_KEY, JSON.stringify(state));
-      sessionStorage.setItem(CANONICAL_STATE_KEY, JSON.stringify(state));
-    }catch(_e){}
-    return state;
-  }
-
-  let assignedCache = null;
-  let assignedCacheAt = 0;
-  let hydrationInProgress = new WeakSet();
-
-  function str(v){ return String(v ?? "").trim(); }
-  function safeJson(raw, fallback=null){ try{ return raw ? JSON.parse(raw) : fallback; }catch(_e){ return fallback; } }
-  function uniqueById(rows){
-    const out = [];
-    const seen = new Set();
-    (Array.isArray(rows) ? rows : []).forEach(row => {
-      const id = str(row && (row.id || row.community_id || row.communityId || row.value));
-      if(!id || seen.has(id)) return;
-      seen.add(id);
-      const name = str(row.name || row.community_name || row.communityName || row.label || row.text || row.title || id);
-      out.push({ id, name, raw: row });
-    });
-    return out;
-  }
-
-  async function getClient(){
-    try{ if(window.sb && typeof window.sb.from === "function") return window.sb; }catch(_e){}
-    try{ if(window.supabaseClient && typeof window.supabaseClient.from === "function") return window.supabaseClient; }catch(_e){}
-    try{ if(typeof window.ensureSupabase === "function"){ const c = await window.ensureSupabase(); if(c && typeof c.from === "function") return c; } }catch(_e){}
-    try{
-      if(window.supabase && typeof window.supabase.createClient === "function"){
-        const c = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-          auth:{ persistSession:false, autoRefreshToken:false, detectSessionInUrl:false }
-        });
-        try{ window.supabaseClient = window.supabaseClient || c; window.sb = window.sb || c; }catch(_e){}
-        return c;
-      }
-    }catch(_e){}
-    return null;
-  }
-
-  async function maybeRefreshSessionObject(parsed, sourceKey){
-    try{
-      const exp = Number(parsed?.expires_at || parsed?.currentSession?.expires_at || parsed?.session?.expires_at || 0);
-      const refreshToken = str(parsed?.refresh_token || parsed?.currentSession?.refresh_token || parsed?.session?.refresh_token);
-      const now = Math.floor(Date.now() / 1000);
-      if(!refreshToken) return parsed;
-      if(exp && exp > (now + 60)) return parsed;
-
-      const res = await fetch(SUPABASE_URL + "/auth/v1/token?grant_type=refresh_token", {
-        method:"POST",
-        headers:{ "Content-Type":"application/json", "apikey": SUPABASE_ANON_KEY },
-        body: JSON.stringify({ refresh_token: refreshToken })
-      });
-      const raw = await res.text();
-      const next = safeJson(raw, null);
-      if(res.ok && next && next.access_token){
-        const merged = Object.assign({}, parsed || {}, next);
-        try{ localStorage.setItem(sourceKey, JSON.stringify(merged)); }catch(_e){}
-        return merged;
-      }
-    }catch(_e){}
-    return parsed;
-  }
-
-  function tokenFromObject(obj){
-    if(!obj || typeof obj !== "object") return "";
-    return str(
-      obj.access_token ||
-      obj.accessToken ||
-      obj?.currentSession?.access_token ||
-      obj?.session?.access_token ||
-      obj?.data?.session?.access_token
-    );
-  }
-
-  async function getAccessToken(){
-    try{
-      if(window.ZummeeAuth && typeof window.ZummeeAuth.getAccessToken === "function"){
-        const t = await window.ZummeeAuth.getAccessToken({ redirect:false, timeoutMs:1600 });
-        if(t) return str(t);
-      }
-    }catch(_e){}
-
-    const keys = [
-      "sb-zummee-auth",
-      "sb-slcwuuwyrgnmlmxpcaim-auth-token",
-      "supabase.auth.token",
-      "zummee_supabase_session",
-      "zummee_session_v1"
-    ];
-
-    async function readKey(key){
-      try{
-        const raw = localStorage.getItem(key) || sessionStorage.getItem(key) || "";
-        if(!raw) return "";
-        let parsed = safeJson(raw, null);
-        parsed = await maybeRefreshSessionObject(parsed, key);
-        return tokenFromObject(parsed);
-      }catch(_e){ return ""; }
-    }
-
-    for(const key of keys){
-      const t = await readKey(key);
-      if(t) return t;
-    }
-
-    for(const store of [localStorage, sessionStorage]){
-      try{
-        for(let i=0; i<store.length; i++){
-          const key = store.key(i);
-          if(!key) continue;
-          if(/auth/i.test(key) && /supabase|zummee|sb-/i.test(key)){
-            const t = await readKey(key);
-            if(t) return t;
-          }
-        }
-      }catch(_e){}
-    }
-
-    try{
-      const c = await getClient();
-      if(c?.auth?.getSession){
-        const sess = await c.auth.getSession();
-        const t = sess?.data?.session?.access_token;
-        if(t) return str(t);
-      }
-    }catch(_e){}
-    return "";
-  }
-
-  async function rest(path, opts={}){
-    const token = await getAccessToken();
-    const headers = Object.assign({
-      apikey: SUPABASE_ANON_KEY,
-      "Content-Type":"application/json"
-    }, opts.headers || {});
-    if(token) headers.Authorization = "Bearer " + token;
-
-    const res = await fetch(SUPABASE_URL + "/rest/v1/" + path, Object.assign({}, opts, { headers }));
-    const raw = await res.text();
-    const data = safeJson(raw, raw);
-    if(!res.ok){
-      const err = new Error((data && (data.message || data.error)) || raw || ("REST failed: " + res.status));
-      err.status = res.status;
-      err.response = data;
-      throw err;
-    }
-    return data;
-  }
-
-  async function getCurrentUserId(){
-    try{
-      const c = await getClient();
-      if(c?.auth?.getSession){
-        const sess = await c.auth.getSession();
-        const id = sess?.data?.session?.user?.id;
-        if(id) return str(id);
-      }
-    }catch(_e){}
-    try{
-      const token = await getAccessToken();
-      if(token){
-        const res = await fetch(SUPABASE_URL + "/auth/v1/user", {
-          headers:{ apikey: SUPABASE_ANON_KEY, Authorization:"Bearer " + token }
-        });
-        const data = await res.json();
-        if(data && data.id) return str(data.id);
-      }
-    }catch(_e){}
-    try{
-      const raw = localStorage.getItem("zummee_session_v1") || sessionStorage.getItem("zummee_session_v1") || "";
-      const parsed = safeJson(raw, null);
-      return str(parsed?.userId || parsed?.user?.id || parsed?.id);
-    }catch(_e){}
-    return "";
-  }
-
-  function readStoredId(){
-    const canonical = readCanonicalState();
-    if(canonical && canonical.id) return canonical.id;
-
-    for(const key of ID_KEYS){
-      try{
-        const v = str(localStorage.getItem(key) || sessionStorage.getItem(key));
-        if(v) return v;
-      }catch(_e){}
-    }
-    return "";
-  }
-
-  function readStoredName(){
-    const canonical = readCanonicalState();
-    if(canonical && canonical.name) return canonical.name;
-
-    for(const key of NAME_KEYS){
-      try{
-        const v = str(localStorage.getItem(key) || sessionStorage.getItem(key));
-        if(v) return v;
-      }catch(_e){}
-    }
-    return "";
-  }
-
-  function setActiveCommunity(id, name, opts={}){
-    id = str(id);
-    name = str(name);
-    if(!id) return null;
-
-    const previousId = readStoredId();
-    const canonicalState = writeCanonicalState(id, name, { source: opts.source || "unknown", updatedAt: opts.updatedAt });
-
-    ID_KEYS.forEach(key => {
-      try{ localStorage.setItem(key, id); sessionStorage.setItem(key, id); }catch(_e){}
-    });
-    if(name){
-      NAME_KEYS.forEach(key => {
-        try{ localStorage.setItem(key, name); sessionStorage.setItem(key, name); }catch(_e){}
-      });
-    }
-
-    try{
-      window.currentCommunityId = id;
-      window.activeCommunityId = id;
-      window.zummeeActiveCommunityId = id;
-      window.__zummeeActiveCommunityId = id;
-      if(name){
-        window.currentCommunityName = name;
-        window.activeCommunityName = name;
-        window.__zummeeActiveCommunityName = name;
-      }
-    }catch(_e){}
-
-    const detail = { id, name, previousId, source: opts.source || "unknown" };
-    if(!opts.silent && previousId !== id){
-      try{ window.dispatchEvent(new CustomEvent("zummee:community-changed", { detail })); }catch(_e){}
-      try{ document.dispatchEvent(new CustomEvent("zummee:community-changed", { detail })); }catch(_e){}
-      try{ localStorage.setItem("zummee_community_change_ping", JSON.stringify({ id, name, at: canonicalState.updatedAt, source: opts.source || "unknown" })); }catch(_e){}
-    }
-    return { id, name };
-  }
-
-  function getActiveCommunity(){
-    const id = readStoredId();
-    const name = readStoredName();
-    return id ? { id, name } : null;
-  }
-
-  async function lookupCommunityNames(ids){
-    ids = [...new Set((ids || []).map(str).filter(Boolean))];
-    if(!ids.length) return [];
-
-    const fallback = ids.map(id => ({ id, name:id }));
-
-    const tableAttempts = [
-      "PropertyCommunities",
-      "Communities"
-    ];
-
-    for(const table of tableAttempts){
-      try{
-        const rows = await rest(table + "?select=*&id=in.(" + ids.map(encodeURIComponent).join(",") + ")");
-        const byId = new Map();
-        (Array.isArray(rows) ? rows : []).forEach(c => {
-          const id = str(c.id || c.community_id || c.value);
-          if(!id) return;
-          byId.set(id, {
-            id,
-            name: str(c.community_name || c.name || c.label || c.title || c.property_name || id),
-            raw: c
-          });
-        });
-        if(byId.size) return ids.map(id => byId.get(id) || { id, name:id });
-      }catch(err){
-        console.warn("[ZummeeCommunityState] name lookup failed for", table, err);
-      }
-    }
-
-    return fallback;
-  }
-
-  async function loadAssignedCommunities(opts={}){
-    const now = Date.now();
-    if(!opts.force && assignedCache && (now - assignedCacheAt) < 30000){
-      return assignedCache.slice();
-    }
-
-    const userId = await getCurrentUserId();
-    let communities = [];
-
-    if(userId){
-      const assignmentQueries = [
-        "community_assignments?select=community_id&user_id=eq." + encodeURIComponent(userId),
-        "community_assignments?select=community_id&auth_user_id=eq." + encodeURIComponent(userId),
-        "community_assignments?select=community_id&employee_id=eq." + encodeURIComponent(userId)
-      ];
-
-      for(const q of assignmentQueries){
-        try{
-          const rows = await rest(q);
-          const ids = uniqueById((Array.isArray(rows) ? rows : []).map(r => ({ id:r.community_id }))).map(c => c.id);
-          if(ids.length){
-            communities = await lookupCommunityNames(ids);
-            break;
-          }
-        }catch(err){
-          // Try the next known assignment key. Do not fail hard.
-          console.warn("[ZummeeCommunityState] assignment query skipped", q, err);
-        }
-      }
-    }
-
-    // Fallback to existing local/header communities only if assignment source returns nothing.
-    if(!communities.length){
-      const localRows = [];
-      try{
-        const keys = ["zummee_header_communities","zummee_communities_v1","communities","assignedCommunities"];
-        keys.forEach(key => {
-          const raw = localStorage.getItem(key) || sessionStorage.getItem(key) || "";
-          const parsed = safeJson(raw, []);
-          const arr = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.communities) ? parsed.communities : []);
-          arr.forEach(c => localRows.push(c));
-        });
-      }catch(_e){}
-      communities = uniqueById(localRows);
-    }
-
-    assignedCache = uniqueById(communities).sort((a,b) =>
-      str(a.name || a.id).localeCompare(str(b.name || b.id), undefined, { sensitivity:"base" })
-    );
-    assignedCacheAt = now;
-
-    try{ localStorage.setItem("zummee_assigned_communities_cache_v600", JSON.stringify(assignedCache)); }catch(_e){}
-    return assignedCache.slice();
-  }
-
-  async function ensureActiveCommunity(opts={}){
-    const assigned = await loadAssignedCommunities({ force: !!opts.force });
-    const current = getActiveCommunity();
-
-    if(current && assigned.some(c => c.id === current.id)){
-      const matched = assigned.find(c => c.id === current.id);
-      if(matched && matched.name && matched.name !== current.name){
-        setActiveCommunity(matched.id, matched.name, { source:"ensure-name-sync", silent:true });
-        return { id: matched.id, name: matched.name };
-      }
-      return current;
-    }
-
-    if(current && !assigned.length){
-      return current;
-    }
-
-    if(assigned.length){
-      const first = assigned[0];
-      return setActiveCommunity(first.id, first.name, { source:"ensure-first-assigned", silent: !!opts.silent });
-    }
-
-    return null;
-  }
-
-  async function hydrateCommunityDropdown(selectOrSelector, opts={}){
-    const select = typeof selectOrSelector === "string"
-      ? document.querySelector(selectOrSelector)
-      : selectOrSelector;
-
-    if(!select || hydrationInProgress.has(select)) return null;
-    hydrationInProgress.add(select);
-
-    try{
-      const assigned = await loadAssignedCommunities({ force: !!opts.force });
-      const active = await ensureActiveCommunity({ force: false, silent:true });
-
-      if(!assigned.length){
-        select.innerHTML = '<option value="">No assigned communities found</option>';
-        return null;
-      }
-
-      const prior = str(select.value || active?.id || readStoredId());
-      select.innerHTML = assigned.map(c =>
-        '<option value="' + c.id.replace(/"/g,"&quot;") + '">' +
-        str(c.name || c.id).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;") +
-        '</option>'
-      ).join("");
-
-      const chosen = assigned.find(c => c.id === prior) || assigned.find(c => c.id === active?.id) || assigned[0];
-      select.value = chosen.id;
-      setActiveCommunity(chosen.id, chosen.name, { source: opts.source || "hydrate", silent:true });
-
-      if(!select.__zummeeCommunityStateBound){
-        select.__zummeeCommunityStateBound = true;
-        select.addEventListener("change", function(){
-          const opt = select.selectedOptions && select.selectedOptions[0] ? select.selectedOptions[0] : null;
-          const id = str(select.value);
-          const name = str(opt ? opt.textContent : "");
-          setActiveCommunity(id, name, { source: opts.source || "dropdown" });
-        });
-      }
-
-      return { active: chosen, assigned };
-    }finally{
-      hydrationInProgress.delete(select);
-    }
-  }
-
-  function bindExistingDropdowns(){
-    const selectors = [
-      "#zummeeCommunitySelect",
-      "#maintenanceCommunitySelect",
-      "#communitySelect",
-      'select[id*="community" i]'
-    ];
-
-    const seen = new Set();
-    selectors.forEach(sel => {
-      document.querySelectorAll(sel).forEach(node => {
-        if(!node || seen.has(node)) return;
-        seen.add(node);
-        hydrateCommunityDropdown(node, { source:"auto-bind" }).catch(err => {
-          console.warn("[ZummeeCommunityState] dropdown hydrate failed", err);
-        });
-      });
-    });
-  }
-
-  function listenForCrossTabChanges(){
-    window.addEventListener("storage", function(e){
-      if(!e || !e.newValue) return;
-      if(e.key !== "zummee_community_change_ping" && e.key !== CANONICAL_STATE_KEY) return;
-      const data = safeJson(e.newValue, null);
-      if(!data || !data.id) return;
-
-      const incomingAt = Number(data.at || data.updatedAt || 0) || Date.now();
-      const current = readCanonicalState();
-      if(current && current.updatedAt && current.updatedAt > incomingAt) return;
-
-      setActiveCommunity(data.id, data.name || "", { source:"storage", silent:true, updatedAt: incomingAt });
-      try{ window.dispatchEvent(new CustomEvent("zummee:community-changed", { detail:{ id:data.id, name:data.name || "", source:"storage" } })); }catch(_e){}
-    });
-  }
-
-  window.ZummeeCommunityState = {
-    version: VERSION,
-    getActiveCommunity,
-    setActiveCommunity,
-    ensureActiveCommunity,
-    loadAssignedCommunities,
-    hydrateCommunityDropdown,
-    bindExistingDropdowns,
-    getActiveCommunityId(){ return readStoredId(); },
-    getActiveCommunityName(){ return readStoredName(); },
-    getSelectedCommunityId(){ return readStoredId(); },
-    readCanonicalState,
-    forceSyncDropdown(selectOrSelector){
-      const select = typeof selectOrSelector === "string" ? document.querySelector(selectOrSelector) : selectOrSelector;
-      const active = getActiveCommunity();
-      if(select && active && active.id && select.value !== active.id){
-        try{ select.value = active.id; }catch(_e){}
-      }
-      return active;
-    },
-    clearCache(){ assignedCache = null; assignedCacheAt = 0; },
-    rest,
-    getAccessToken,
-    getCurrentUserId
+  const frame = document.getElementById('opsFrame');
+  const els = {
+    statusText: document.getElementById('statusText'),
+    statusPillText: document.getElementById('statusPillText'),
+    statusDot: document.getElementById('statusDot'),
+    communityName: document.getElementById('communityName'),
+    annualCommunitySelect: document.getElementById('annualCommunitySelect'),
+    lastDate: document.getElementById('lastDate'),
+    expectedDate: document.getElementById('expectedDate'),
+    nextDate: document.getElementById('nextDate'),
+    associationLegalName: document.getElementById('associationLegalName'),
+    quorumPercent: document.getElementById('quorumPercent'),
+    seatsOverride: document.getElementById('seatsOverride'),
+    meetingTime: document.getElementById('meetingTime'),
+    meetingFormat: document.getElementById('meetingFormat'),
+    meetingLocation: document.getElementById('meetingLocation'),
+    meetingLink: document.getElementById('meetingLink'),
+    nominationDeadline: document.getElementById('nominationDeadline'),
+    proxyReturnDeadline: document.getElementById('proxyReturnDeadline'),
+    sendDate: document.getElementById('sendDate'),
+    seatsCount: document.getElementById('seatsCount'),
+    logoBox: document.getElementById('logoBox'),
+    lockBtn: document.getElementById('lockBtn'),
+    saveBtn: document.getElementById('saveBtn'),
+    packetBtn: document.getElementById('packetBtn'),
+    presentationBtn: document.getElementById('presentationBtn')
   };
 
-  // Legacy global helpers some pages already call.
-  window.getActiveCommunityId = window.getActiveCommunityId || function(){ return readStoredId(); };
-  window.setActiveCommunityId = window.setActiveCommunityId || function(id, name){ return setActiveCommunity(id, name || ""); };
-
-  listenForCrossTabChanges();
-
-  if(document.readyState === "loading"){
-    document.addEventListener("DOMContentLoaded", bindExistingDropdowns, { once:true });
-  }else{
-    setTimeout(bindExistingDropdowns, 50);
+  function setStatus(text, kind){
+    els.statusText.textContent = text;
+    if(kind === 'good'){
+      els.statusDot.className = 'dot good';
+    }else{
+      els.statusDot.className = 'dot';
+    }
   }
+
+  function pad(v){ return v ? String(v) : ''; }
+  function formatDate(v){
+    if(!v) return '—';
+    try{ return new Date(v + 'T00:00:00').toLocaleDateString(undefined,{month:'long',day:'numeric',year:'numeric'}); }catch(_e){ return String(v); }
+  }
+  function getWin(){ try{ return frame.contentWindow; }catch(_e){ return null; } }
+  function getCommunityName(win){
+    try{
+      if(win && typeof win.getSelectedCommunityName === 'function') return String(win.getSelectedCommunityName() || '').trim();
+      if(win && win.ZummeeAuth && typeof win.ZummeeAuth.getSelectedCommunityName === 'function') return String(win.ZummeeAuth.getSelectedCommunityName() || '').trim();
+    }catch(_e){}
+    try{
+      return String(window.localStorage.getItem('currentCommunityName') || window.localStorage.getItem('activeCommunityName') || '').trim();
+    }catch(_e){}
+    return '';
+  }
+
+  function getCanonicalCommunityName(){
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const active = window.ZummeeCommunityState.getActiveCommunity();
+        if(active && active.name) return String(active.name || '').trim();
+      }
+    }catch(_e0){}
+    try{
+      const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+      const parsed = raw ? JSON.parse(raw) : null;
+      if(parsed && parsed.name) return String(parsed.name || '').trim();
+    }catch(_e00){}
+    try{
+      return String(window.localStorage.getItem('zummee_active_community_name') || window.localStorage.getItem('currentCommunityName') || window.localStorage.getItem('activeCommunityName') || '').trim();
+    }catch(_e){}
+    return '';
+  }
+  function fillMeetingTimes(){
+    const arr=[];
+    for(let h=7; h<=21; h++) ['00','30'].forEach(mm=>{ const hh=((h+11)%12)+1; const ampm=h<12?'AM':'PM'; arr.push(`${hh}:${mm} ${ampm}`); });
+    els.meetingTime.innerHTML = arr.map(v=>`<option value="${v}">${v}</option>`).join('');
+  }
+
+  function getActiveCommunityId(){
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const active = window.ZummeeCommunityState.getActiveCommunity();
+        if(active && active.id) return String(active.id || '').trim();
+      }
+    }catch(_e0){}
+    try{
+      const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+      const parsed = raw ? JSON.parse(raw) : null;
+      if(parsed && parsed.id) return String(parsed.id || '').trim();
+    }catch(_e00){}
+    try{
+      const qp = new URLSearchParams(window.location.search).get('community_id');
+      if(qp) return String(qp).trim();
+    }catch(_e){}
+    try{
+      return String(localStorage.getItem('zummee_active_community_id') || localStorage.getItem('selectedCommunityId') || localStorage.getItem('activeCommunityId') || localStorage.getItem('currentCommunityId') || '').trim();
+    }catch(_e2){}
+    return '';
+  }
+
+  function seedCommunityContext(){
+    const communityId = getActiveCommunityId();
+    if(!communityId) return;
+    const activeName = getCanonicalCommunityName();
+    setCommunityStorage(communityId, activeName, { source:'annual-meetings-seed-v617', silent:true });
+  }
+
+  function setCommunityStorage(id, name, options){
+    options = options || {};
+    const cid = String(id || '').trim();
+    const cname = String(name || '').trim();
+    if(!cid) return;
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.setActiveCommunity === 'function'){
+        window.ZummeeCommunityState.setActiveCommunity(cid, cname || '', {
+          source: options.source || 'annual-meetings-v617',
+          silent: options.silent !== false
+        });
+      }
+    }catch(_e0){}
+    try{
+      const state = { id: cid, name: cname, updatedAt: Date.now(), source: options.source || 'annual-meetings-v617' };
+      localStorage.setItem('zummee_active_community_v601', JSON.stringify(state));
+      sessionStorage.setItem('zummee_active_community_v601', JSON.stringify(state));
+    }catch(_e00){}
+    ['zummee_active_community_id','selectedCommunityId','activeCommunityId','currentCommunityId','zummee_selected_community_id','zummee_selected_community_v1','zummeeActiveCommunityId','zummee_community_id'].forEach(function(k){
+      try{ localStorage.setItem(k, cid); sessionStorage.setItem(k, cid); }catch(_e){}
+    });
+    if(cname){
+      ['zummee_active_community_name','currentCommunityName','activeCommunityName','zummeeCurrentCommunityName','zummee_community','zummee_selected_community_name'].forEach(function(k){
+        try{ localStorage.setItem(k, cname); sessionStorage.setItem(k, cname); }catch(_e){}
+      });
+    }
+    try{
+      window.currentCommunityId = cid;
+      window.activeCommunityId = cid;
+      window.selectedCommunityId = cid;
+      if(cname) window.currentCommunityName = cname;
+    }catch(_e8){}
+  }
+
+  async function getCommunityList(){
+    const win = getWin();
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.loadAssignedCommunities === 'function'){
+        const rows = await window.ZummeeCommunityState.loadAssignedCommunities({ force:false });
+        if(Array.isArray(rows) && rows.length){
+          return rows.map(function(row){
+            return { id:String((row&&row.id)||row.community_id||'').trim(), name:String((row&&row.name)||row.community_name||row.community||'').trim() };
+          }).filter(function(row){ return row.id && row.name; });
+        }
+      }
+    }catch(err){ console.warn('shared community-state list load failed', err); }
+    try{
+      if(win && typeof win.loadCommunities === 'function'){
+        const rows = await win.loadCommunities();
+        if(Array.isArray(rows) && rows.length){
+          return rows.map(function(row){
+            return { id:String((row&&row.id)||'').trim(), name:String((row&&row.name)||'').trim() };
+          }).filter(function(row){ return row.id && row.name; });
+        }
+      }
+    }catch(err){ console.warn('community list load failed', err); }
+    const selectedId = getActiveCommunityId();
+    const selectedName = getCanonicalCommunityName() || getCommunityName(win) || 'Selected Community';
+    return selectedId ? [{ id:selectedId, name:selectedName }] : [];
+  }
+
+  async function populateCommunitySelect(){
+    if(!els.annualCommunitySelect) return;
+    const list = await getCommunityList();
+    const activeId = getActiveCommunityId();
+    els.annualCommunitySelect.innerHTML = '';
+    if(!list.length){
+      const opt = document.createElement('option');
+      opt.value = activeId || '';
+      opt.textContent = getCommunityName(getWin()) || 'Selected Community';
+      els.annualCommunitySelect.appendChild(opt);
+      return;
+    }
+    list.forEach(function(item){
+      const opt = document.createElement('option');
+      opt.value = item.id;
+      opt.textContent = item.name;
+      if(item.id === activeId) opt.selected = true;
+      els.annualCommunitySelect.appendChild(opt);
+    });
+    if(!els.annualCommunitySelect.value && activeId) els.annualCommunitySelect.value = activeId;
+  }
+
+  async function switchCommunityFromPicker(){
+    const sel = els.annualCommunitySelect;
+    if(!sel) return;
+    const id = String(sel.value || '').trim();
+    const name = sel.options && sel.selectedIndex >= 0 ? String(sel.options[sel.selectedIndex].text || '').trim() : '';
+    if(!id) return;
+    setCommunityStorage(id, name, { source:'annual-meetings-dropdown-v617', silent:false });
+    updateAnnualLinks({ id:id, name:name });
+    try{
+      window.dispatchEvent(new CustomEvent('zummee:community-changed', {
+        detail:{ id:id, community_id:id, name:name, source:'annual-meetings-dropdown-v617' }
+      }));
+    }catch(_e){}
+    try{ await hydrateBridge(); }catch(_eHydrate){}
+    try{ render(); }catch(_eRender){}
+  }
+
+  async function hydrateBridge(){
+    const win = getWin();
+    if(!win) return false;
+    try{ seedCommunityContext(); }catch(_e){}
+    try{
+      if(typeof win.hydrateAnnualMeetingInputsFromCloud === 'function'){
+        await win.hydrateAnnualMeetingInputsFromCloud();
+      }
+    }catch(err){ console.warn('annual bridge hydrate failed', err); }
+    try{
+      if(typeof win.render === 'function') win.render();
+    }catch(_eRender){}
+    return true;
+  }
+
+  function readState(){
+    const win = getWin();
+    if(!win || typeof win.getBoardCriticalEntry !== 'function') return null;
+    const entry = win.getBoardCriticalEntry('annualMeeting') || {};
+    const expected = typeof win.addOneYear === 'function' ? (win.addOneYear(entry.lastDate) || '') : '';
+    const sendDate = typeof win.getAnnualMeetingSendDate === 'function' ? (win.getAnnualMeetingSendDate() || '') : '';
+    const seatsCount = typeof win.getSeatsUpForElection === 'function' ? (win.getSeatsUpForElection() || '') : '';
+    return { win, entry, expected, sendDate, seatsCount };
+  }
+
+  function render(){
+    const data = readState();
+    if(!data) return;
+    const { win, entry, expected, sendDate, seatsCount } = data;
+    els.communityName.textContent = getCommunityName(win) || 'Selected Community';
+    try{ if(els.annualCommunitySelect){ const activeId = getActiveCommunityId(); if(activeId) els.annualCommunitySelect.value = activeId; } }catch(_eSel){}
+    els.lastDate.value = pad(entry.lastDate);
+    els.expectedDate.textContent = formatDate(expected);
+    els.nextDate.value = pad(entry.nextDate);
+    els.associationLegalName.value = pad(entry.associationLegalName);
+    els.quorumPercent.value = pad(entry.quorumPercent);
+    els.seatsOverride.value = pad(entry.seatsOverride);
+    els.meetingTime.value = pad(entry.meetingTime || '7:00 PM');
+    els.meetingFormat.value = pad(entry.meetingFormat || 'in_person');
+    els.meetingLocation.value = pad(entry.meetingLocation);
+    els.meetingLink.value = pad(entry.meetingLink);
+    els.nominationDeadline.value = pad(entry.nominationDeadline);
+    els.proxyReturnDeadline.value = pad(entry.proxyReturnDeadline);
+    els.sendDate.textContent = formatDate(sendDate);
+    els.seatsCount.textContent = String(seatsCount || '—');
+    els.lockBtn.textContent = entry.lastLocked ? 'Unlock Records' : 'Lock Records';
+    els.statusPillText.textContent = entry.lastLocked ? 'Records locked' : (entry.nextDate ? 'Meeting scheduled' : 'Needs setup');
+    setStatus(entry.lastLocked ? 'Annual meeting info is locked and ready.' : 'Annual meeting workspace ready.', entry.lastLocked || entry.nextDate ? 'good' : '');
+    try{ if(window.ZummeeAnnualMeetingsLoadLogo) window.ZummeeAnnualMeetingsLoadLogo(); }catch(_logoE){}
+    try{
+      const logoUrl = typeof win.getMasterCompanyLogoDataUrl === 'function' ? (win.getMasterCompanyLogoDataUrl() || '') : '';
+      const logoName = typeof win.getMasterCompanyLogoName === 'function' ? (win.getMasterCompanyLogoName() || '') : '';
+      if(logoUrl){ els.logoBox.innerHTML = `<img src="${logoUrl}" alt="Company Logo">`; }
+      else { els.logoBox.textContent = logoName || 'No company logo uploaded yet'; }
+    }catch(_e){ els.logoBox.textContent = 'No company logo uploaded yet'; }
+    const disabled = !!entry.lastLocked;
+    ['lastDate','associationLegalName','quorumPercent','seatsOverride','meetingTime','meetingFormat','meetingLocation','meetingLink','nominationDeadline','proxyReturnDeadline'].forEach(id=>{ els[id].disabled = disabled; });
+    // next date remains editable while unlocked only
+    els.nextDate.disabled = !!entry.lastLocked;
+  }
+
+  async function saveAll(){
+    const data = readState();
+    if(!data) return;
+    const { win } = data;
+    try{
+      if(typeof win.ensureBoardCriticalDatesShape === 'function') win.ensureBoardCriticalDatesShape();
+      const current = (typeof win.getBoardCriticalEntry === 'function') ? (win.getBoardCriticalEntry('annualMeeting') || {}) : null;
+      if(!current) throw new Error('Annual meeting entry is not ready');
+      if(current.lastLocked){ setStatus('Records are locked. Unlock them to make changes.'); return; }
+      current.lastDate = els.lastDate.value || '';
+      current.nextDate = els.nextDate.value || '';
+      const fieldMap = {
+        associationLegalName: els.associationLegalName.value,
+        quorumPercent: els.quorumPercent.value,
+        meetingTime: els.meetingTime.value,
+        meetingFormat: els.meetingFormat.value,
+        meetingLocation: els.meetingLocation.value,
+        meetingLink: els.meetingLink.value,
+        nominationDeadline: els.nominationDeadline.value,
+        proxyReturnDeadline: els.proxyReturnDeadline.value,
+        seatsOverride: els.seatsOverride.value
+      };
+      Object.entries(fieldMap).forEach(([key, value])=>{
+        if(typeof win.persistAnnualMeetingField === 'function') win.persistAnnualMeetingField(key, value || '');
+        else current[key] = String(value || '');
+      });
+      if(typeof win.saveState === 'function') win.saveState();
+      try{ if(typeof win.pushOpsCloud === 'function') await win.pushOpsCloud(); }catch(_e){}
+      try{ if(typeof win.hydrateAnnualMeetingInputsFromCloud === 'function') await win.hydrateAnnualMeetingInputsFromCloud(); }catch(_e2){}
+      render();
+      setStatus('Annual meeting info saved.', 'good');
+    }catch(err){
+      console.error(err);
+      setStatus('Could not save annual meeting info.');
+      alert('Could not save Annual Meeting info.');
+    }
+  }
+
+  async function toggleLock(){
+    const data = readState();
+    if(!data) return;
+    const { win } = data;
+    try{
+      if(typeof win.ensureBoardCriticalDatesShape === 'function') win.ensureBoardCriticalDatesShape();
+      const current = (typeof win.getBoardCriticalEntry === 'function') ? (win.getBoardCriticalEntry('annualMeeting') || {}) : null;
+      if(!current) throw new Error('Annual meeting entry is not ready');
+      if(!current.lastLocked && !(els.lastDate.value || '').trim()){
+        alert('Enter the last annual meeting date first.');
+        return;
+      }
+      if(current.lastLocked){
+        const okUnlock = window.confirm('Unlock Annual Meeting fields so the dates and meeting details can be changed?');
+        if(!okUnlock) return;
+      }
+      current.lastLocked = !current.lastLocked;
+      if(typeof win.saveState === 'function') win.saveState();
+      try{ if(typeof win.scheduleOpsCloud === 'function') win.scheduleOpsCloud(); }catch(_e){}
+      render();
+      setStatus(current.lastLocked ? 'Records locked.' : 'Records unlocked.', 'good');
+    }catch(err){
+      console.error(err);
+      alert('Could not update lock status.');
+    }
+  }
+
+  function updateAnnualLinks(active){
+    active = active || { id:getActiveCommunityId(), name:getCanonicalCommunityName() };
+    if(!active.id) return;
+    const q = '?community_id=' + encodeURIComponent(active.id) + (active.name ? '&community_name=' + encodeURIComponent(active.name) : '');
+    try{
+      const hub = document.getElementById('annualBackToHub');
+      if(hub) hub.href = 'manager_hub.html' + q;
+      const archive = document.getElementById('annualArchiveLink');
+      if(archive) archive.href = 'annual_meeting_records.html' + q;
+      const url = new URL(window.location.href);
+      url.searchParams.set('community_id', active.id);
+      if(active.name) url.searchParams.set('community_name', active.name);
+      history.replaceState(null, '', url.toString());
+    }catch(_e){}
+  }
+
+  async function init(){
+    fillMeetingTimes();
+    seedCommunityContext();
+    updateAnnualLinks({ id:getActiveCommunityId(), name:getCanonicalCommunityName() });
+    try{ if(els.annualCommunitySelect) els.annualCommunitySelect.addEventListener('change', switchCommunityFromPicker); }catch(_eBind){}
+    setStatus('Loading live annual meeting data…');
+    let tries = 0;
+    const timer = setInterval(async function(){
+      tries += 1;
+      const win = getWin();
+      try{
+        if(win && typeof win.getBoardCriticalEntry === 'function' && win.document && win.document.body){
+          try{ await hydrateBridge(); }catch(_eHydrate){}
+          try{ await populateCommunitySelect(); }catch(_eCommunityList){}
+          clearInterval(timer);
+          try{ win.document.documentElement.style.background='transparent'; win.document.body.style.background='transparent'; }catch(_e){}
+          render();
+          return;
+        }
+      }catch(_e){}
+      if(tries > 150){ clearInterval(timer); setStatus('Could not load annual meeting data.'); }
+    }, 300);
+  }
+
+  document.getElementById('saveBtn').addEventListener('click', saveAll);
+  document.getElementById('lockBtn').addEventListener('click', toggleLock);
+  document.getElementById('packetBtn').addEventListener('click', async function(){
+    const data = readState();
+    if(!data) return;
+    try{
+      await saveAll();
+    }catch(_e){}
+    try{
+      const win = data.win;
+      if(!win) throw new Error('Annual meeting engine is not available.');
+      if(typeof win.ensureBoardCriticalDatesShape === 'function') win.ensureBoardCriticalDatesShape();
+      if(typeof win.getAnnualPacketData !== 'function') throw new Error('Packet preview is not available in this build.');
+      const packetData = win.getAnnualPacketData() || {};
+      const missingFields = (typeof win.getAnnualMeetingMissingFields === 'function') ? win.getAnnualMeetingMissingFields(packetData) : [];
+      if(Array.isArray(missingFields) && missingFields.length){
+        alert('Complete Annual Meeting details first: ' + missingFields.join(', '));
+        return;
+      }
+      setStatus('Building annual meeting packet preview…');
+      const mailing = (typeof win.fetchAnnualPacketCompanyMailing === 'function') ? await win.fetchAnnualPacketCompanyMailing() : {};
+      Object.assign(packetData, mailing || {});
+      const owners = (typeof win.fetchAnnualPacketOwners === 'function') ? await win.fetchAnnualPacketOwners() : [];
+      const ownerRows = (Array.isArray(owners) && owners.length) ? owners : [{ name:'', unit:'', street:'', city:'', state:'', zip:'' }];
+      const pdfAttachment = (typeof win.buildAnnualMeetingPdfAttachment === 'function')
+        ? await win.buildAnnualMeetingPdfAttachment(packetData, ownerRows)
+        : null;
+      if(!pdfAttachment || !pdfAttachment.content) throw new Error('Preview PDF could not be generated.');
+      let previewDraftId = null;
+      if(typeof win.stashAnnualMeetingPreviewDraft === 'function'){
+        previewDraftId = win.stashAnnualMeetingPreviewDraft({
+          data: packetData,
+          html: '',
+          residentCount: Array.isArray(ownerRows) ? ownerRows.length : 0,
+          packetMeta: { pdf_attachment: pdfAttachment }
+        });
+      }
+      const payload = {
+        createdAt: new Date().toISOString(),
+        data: packetData,
+        previewDraftId: previewDraftId,
+        residentCount: Array.isArray(ownerRows) ? ownerRows.length : 0,
+        packetMeta: { pdf_attachment: pdfAttachment }
+      };
+      const storeKey = (typeof win.getAnnualPacketPreviewStoreKey === 'function')
+        ? win.getAnnualPacketPreviewStoreKey()
+        : 'zummee_annual_packet_preview_page_v1';
+      try{ localStorage.setItem(storeKey, JSON.stringify(payload)); }catch(_eStore){}
+      try{ window.__annualMeetingPreviewAttachment = pdfAttachment; }catch(_e){}
+      setStatus('Opening annual meeting packet preview…', 'good');
+      window.location.href = 'annual_packet_preview.html';
+    }catch(err){
+      console.error(err);
+      setStatus('Could not open the annual meeting packet preview.');
+      alert((err && err.message) ? err.message : 'Could not open the packet preview.');
+    }
+  });
+  document.getElementById('presentationBtn').addEventListener('click', async function(){
+    try{ await saveAll(); }catch(_e){}
+    const communityId = getActiveCommunityId();
+    const communityName = getCanonicalCommunityName();
+    window.location.href = 'annual_presentation.html' + (communityId ? ('?community_id=' + encodeURIComponent(communityId) + (communityName ? '&community_name=' + encodeURIComponent(communityName) : '')) : '');
+  });
+
+  ['lastDate','nextDate','associationLegalName','quorumPercent','seatsOverride','meetingTime','meetingFormat','meetingLocation','meetingLink','nominationDeadline','proxyReturnDeadline'].forEach(id=>{
+    document.getElementById(id).addEventListener('change', function(){ if(id === 'lastDate'){ const data = readState(); const win = data && data.win; const exp = (win && typeof win.addOneYear === 'function') ? win.addOneYear(els.lastDate.value) : ''; els.expectedDate.textContent = formatDate(exp); } });
+  });
+
+  frame.addEventListener('load', init);
+  init();
 })();
+</script>
+<script src="company_logo_sync.js"></script>
+
+  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+
+<script id="zummee-annual-meetings-native-community-state-v617">
+(function(){
+  if(window.__AnnualMeetingsNativeCommunityStateV617) return;
+  window.__AnnualMeetingsNativeCommunityStateV617 = true;
+  function getActive(){
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        var active = window.ZummeeCommunityState.getActiveCommunity();
+        if(active && active.id) return active;
+      }
+    }catch(_e){}
+    try{
+      var raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+      return raw ? JSON.parse(raw) : null;
+    }catch(_e2){ return null; }
+  }
+  function syncVisible(){
+    var active = getActive();
+    if(!active || !active.id) return;
+    try{
+      var sel = document.getElementById('annualCommunitySelect');
+      if(sel && Array.from(sel.options || []).some(function(o){ return String(o.value) === String(active.id); }) && sel.value !== active.id){
+        sel.value = active.id;
+      }
+    }catch(_e){}
+    try{
+      var nameEl = document.getElementById('communityName');
+      if(nameEl && active.name) nameEl.textContent = active.name;
+    }catch(_e2){}
+    try{
+      var q = '?community_id=' + encodeURIComponent(active.id) + (active.name ? '&community_name=' + encodeURIComponent(active.name) : '');
+      var hub = document.getElementById('annualBackToHub');
+      if(hub) hub.href = 'manager_hub.html' + q;
+      var archive = document.getElementById('annualArchiveLink');
+      if(archive) archive.href = 'annual_meeting_records.html' + q;
+    }catch(_e3){}
+  }
+  window.addEventListener('pageshow', function(){ setTimeout(syncVisible, 120); });
+  window.addEventListener('focus', syncVisible);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) syncVisible(); });
+})();
+</script>
+
+
+<script id="annual-meetings-direct-logo-loader-v625">
+(function(){
+  if(window.__AnnualMeetingsDirectLogoLoaderV625) return;
+  window.__AnnualMeetingsDirectLogoLoaderV625 = true;
+
+  const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
+
+  function s(v){ return String(v == null ? '' : v).trim(); }
+
+  async function client(){
+    try{ if(window.supabaseClient && window.supabaseClient.from) return window.supabaseClient; }catch(_e){}
+    try{ if(window.sb && window.sb.from) return window.sb; }catch(_e){}
+    try{ if(typeof ensureSupabase === 'function'){ const c = await ensureSupabase(); if(c && c.from) return c; } }catch(_e){}
+    try{
+      if(window.supabase && window.supabase.createClient){
+        if(!window.__annualLogoSb) window.__annualLogoSb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        return window.__annualLogoSb;
+      }
+    }catch(_e){}
+    return null;
+  }
+
+  function activeCommunityId(){
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const a = window.ZummeeCommunityState.getActiveCommunity();
+        if(a && a.id) return s(a.id);
+      }
+    }catch(_e){}
+    try{
+      const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+      const obj = raw ? JSON.parse(raw) : null;
+      if(obj && obj.id) return s(obj.id);
+    }catch(_e2){}
+    try{
+      return s(new URLSearchParams(location.search).get('community_id')) ||
+        s(localStorage.getItem('activeCommunityId')) ||
+        s(localStorage.getItem('currentCommunityId')) ||
+        s(localStorage.getItem('zummee_selected_community_id'));
+    }catch(_e3){}
+    return '';
+  }
+
+  function parseLogoRef(raw){
+    raw = s(raw);
+    if(!raw) return null;
+    if(/^https?:\/\//i.test(raw) || /^data:image\//i.test(raw)) return { url:raw };
+    try{
+      const obj = JSON.parse(raw);
+      if(obj && obj.url) return { url:s(obj.url) };
+      if(obj && obj.publicUrl) return { url:s(obj.publicUrl) };
+      if(obj && obj.bucket && obj.path) return { bucket:s(obj.bucket), path:s(obj.path) };
+    }catch(_e){}
+    return { bucket:'company_logos', path:raw };
+  }
+
+  function pick(row){
+    row = row || {};
+    return row.logo_path || row.logo_url || row.logoPath || row.logoUrl || row.company_logo_url || row.companyLogoUrl || row.company_logo || row.logo || row.image_url || row.brand_logo_url || '';
+  }
+
+  function paint(url, alt){
+    url = s(url);
+    alt = s(alt) || 'Management company logo';
+    const img = document.getElementById('annualHeaderCompanyLogo');
+    const fallback = document.getElementById('annualHeaderLogoFallback');
+    const box = document.getElementById('logoBox');
+
+    if(!img) return false;
+    if(!url){
+      img.hidden = true;
+      img.removeAttribute('src');
+      if(fallback){ fallback.hidden = false; fallback.textContent = 'Logo unavailable'; }
+      return false;
+    }
+
+    img.onload = function(){
+      img.hidden = false;
+      if(fallback) fallback.hidden = true;
+    };
+    img.onerror = function(){
+      img.hidden = true;
+      img.removeAttribute('src');
+      if(fallback){ fallback.hidden = false; fallback.textContent = 'Logo unavailable'; }
+    };
+    img.alt = alt;
+    img.src = url;
+
+    if(box) box.innerHTML = '<img src="' + url + '" alt="' + alt.replace(/"/g,'&quot;') + '">';
+    return true;
+  }
+
+  async function companyIdFromCommunity(sb, communityId){
+    if(!sb || !communityId) return '';
+
+    for(const table of ['PropertyCommunities','property_communities','Communities','communities']){
+      try{
+        const res = await sb.from(table).select('company_id').eq('id', communityId).maybeSingle();
+        const id = s(res && res.data && res.data.company_id);
+        if(id) return id;
+      }catch(_e){}
+    }
+
+    try{
+      return s(localStorage.getItem('zummee_company_id')) || s(sessionStorage.getItem('zummee_company_id'));
+    }catch(_e2){ return ''; }
+  }
+
+  async function logoRow(sb, companyId){
+    if(!sb || !companyId) return null;
+    const tries = [
+      { table:'companies', cols:'id,name,logo_path', by:'id' },
+      { table:'companies', cols:'id,name,logo_url', by:'id' },
+      { table:'Companies', cols:'id,name,logo_path', by:'id' },
+      { table:'Companies', cols:'id,name,logo_url', by:'id' },
+      { table:'company_branding', cols:'id,company_id,name,logo_path', by:'company_id' },
+      { table:'company_branding', cols:'id,company_id,name,logo_url', by:'company_id' },
+      { table:'CompanyBranding', cols:'id,company_id,name,logo_path', by:'company_id' },
+      { table:'CompanyBranding', cols:'id,company_id,name,logo_url', by:'company_id' }
+    ];
+
+    for(const t of tries){
+      try{
+        const res = await sb.from(t.table).select(t.cols).eq(t.by, companyId).maybeSingle();
+        if(res && !res.error && res.data && pick(res.data)) return res.data;
+      }catch(_e){}
+    }
+    return null;
+  }
+
+  async function load(){
+    try{
+      // Fast path from Manager Hub cache.
+      for(let i=0;i<sessionStorage.length;i++){
+        const key = sessionStorage.key(i) || '';
+        if(key.indexOf('mh2_brand_logo_v1_') === 0){
+          const cached = JSON.parse(sessionStorage.getItem(key) || 'null');
+          if(cached && cached.url){
+            paint(cached.url, cached.alt || 'Management company logo');
+            return true;
+          }
+        }
+      }
+    }catch(_e){}
+
+    try{
+      const sb = await client();
+      const cid = activeCommunityId();
+      const companyId = await companyIdFromCommunity(sb, cid);
+      if(!companyId) throw new Error('No company id');
+      const row = await logoRow(sb, companyId);
+      if(!row) throw new Error('No logo row');
+      const ref = parseLogoRef(pick(row));
+      if(!ref) throw new Error('No logo ref');
+
+      let url = s(ref.url);
+      if(!url && ref.bucket && ref.path && sb.storage && sb.storage.from){
+        const pub = sb.storage.from(ref.bucket).getPublicUrl(ref.path);
+        url = s(pub && pub.data && pub.data.publicUrl);
+      }
+      if(!url) throw new Error('No logo URL');
+
+      paint(url, row.name || 'Management company logo');
+      try{
+        sessionStorage.setItem('mh2_brand_logo_v1_' + companyId, JSON.stringify({
+          url:url,
+          alt:row.name || 'Management company logo',
+          isCompany:true
+        }));
+      }catch(_cache){}
+      return true;
+    }catch(err){
+      console.warn('[Annual Meetings v625] company logo unavailable', err);
+      paint('', 'Management company logo');
+      return false;
+    }
+  }
+
+  window.ZummeeAnnualMeetingsLoadLogo = load;
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(load, 150); setTimeout(load, 1000); }, { once:true });
+  }else{
+    setTimeout(load, 150);
+    setTimeout(load, 1000);
+  }
+
+  window.addEventListener('pageshow', function(){ setTimeout(load, 150); });
+  window.addEventListener('focus', load);
+})();
+</script>
+
+
+<script id="annual-meetings-direct-supabase-data-v627">
+/*
+  Zummee Annual Meetings Direct Supabase Data Engine
+  Build: 2026-05-08-v627
+
+  Long-term purpose:
+  - Annual Meetings page owns its own load/save state directly.
+  - Hidden ops.html iframe is no longer the primary data source for the fields.
+  - Data is stored per selected community_id.
+  - Uses annual_meeting_settings first, with safe fallbacks for existing schemas.
+*/
+(function(){
+  if(window.__AnnualMeetingsDirectDataV627) return;
+  window.__AnnualMeetingsDirectDataV627 = true;
+
+  const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
+
+  const TABLES = [
+    'annual_meeting_settings',
+    'annual_meetings',
+    'annual_meeting_records'
+  ];
+
+  const WRITE_TABLE = 'annual_meeting_settings';
+
+  const DEFAULT_ENTRY = {
+    lastDate:'',
+    nextDate:'',
+    associationLegalName:'',
+    quorumPercent:'',
+    seatsOverride:'',
+    meetingTime:'7:00 PM',
+    meetingFormat:'in_person',
+    meetingLocation:'',
+    meetingLink:'',
+    nominationDeadline:'',
+    proxyReturnDeadline:'',
+    lastLocked:false
+  };
+
+  let currentRecordId = '';
+  let currentTable = '';
+  let currentEntry = Object.assign({}, DEFAULT_ENTRY);
+  let currentLogoUrl = '';
+
+  function s(v){ return String(v == null ? '' : v).trim(); }
+
+  function getEl(id){ return document.getElementById(id); }
+
+  async function getClient(){
+    try{ if(window.supabaseClient && window.supabaseClient.from) return window.supabaseClient; }catch(_e){}
+    try{ if(window.sb && window.sb.from) return window.sb; }catch(_e){}
+    try{ if(typeof ensureSupabase === 'function'){ const c = await ensureSupabase(); if(c && c.from) return c; } }catch(_e){}
+    try{
+      if(window.supabase && window.supabase.createClient){
+        if(!window.__annualMeetingsSbV627) window.__annualMeetingsSbV627 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        return window.__annualMeetingsSbV627;
+      }
+    }catch(_e){}
+    return null;
+  }
+
+  function activeCommunity(){
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const a = window.ZummeeCommunityState.getActiveCommunity();
+        if(a && a.id) return { id:s(a.id), name:s(a.name) };
+      }
+    }catch(_e){}
+    try{
+      const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+      const obj = raw ? JSON.parse(raw) : null;
+      if(obj && obj.id) return { id:s(obj.id), name:s(obj.name) };
+    }catch(_e2){}
+    try{
+      return {
+        id: s(new URLSearchParams(location.search).get('community_id')) || s(localStorage.getItem('activeCommunityId')) || s(localStorage.getItem('currentCommunityId')) || s(localStorage.getItem('zummee_selected_community_id')),
+        name: s(new URLSearchParams(location.search).get('community_name')) || s(localStorage.getItem('activeCommunityName')) || s(localStorage.getItem('currentCommunityName'))
+      };
+    }catch(_e3){}
+    return { id:'', name:'' };
+  }
+
+  function addOneYear(dateStr){
+    if(!dateStr) return '';
+    try{
+      const d = new Date(dateStr + 'T00:00:00');
+      if(Number.isNaN(d.getTime())) return '';
+      d.setFullYear(d.getFullYear() + 1);
+      return d.toISOString().slice(0,10);
+    }catch(_e){ return ''; }
+  }
+
+  function minusDays(dateStr, days){
+    if(!dateStr) return '';
+    try{
+      const d = new Date(dateStr + 'T00:00:00');
+      if(Number.isNaN(d.getTime())) return '';
+      d.setDate(d.getDate() - Number(days || 0));
+      return d.toISOString().slice(0,10);
+    }catch(_e){ return ''; }
+  }
+
+  function formatDate(v){
+    if(!v) return '—';
+    try{
+      return new Date(v + 'T00:00:00').toLocaleDateString(undefined,{month:'long',day:'numeric',year:'numeric'});
+    }catch(_e){ return String(v); }
+  }
+
+  function normalizeRow(row){
+    row = row || {};
+    let data = {};
+    try{
+      if(row.data && typeof row.data === 'object') data = row.data;
+      else if(row.settings && typeof row.settings === 'object') data = row.settings;
+      else if(row.payload && typeof row.payload === 'object') data = row.payload;
+    }catch(_e){}
+
+    return Object.assign({}, DEFAULT_ENTRY, {
+      lastDate: s(row.last_annual_meeting_date || row.lastDate || row.last_date || data.lastDate || data.last_annual_meeting_date),
+      nextDate: s(row.next_annual_meeting_date || row.nextDate || row.next_date || data.nextDate || data.next_annual_meeting_date),
+      associationLegalName: s(row.association_legal_name || row.associationLegalName || data.associationLegalName || data.association_legal_name),
+      quorumPercent: s(row.quorum_percent || row.quorumPercent || data.quorumPercent || data.quorum_percent),
+      seatsOverride: s(row.seats_override || row.seatsOverride || data.seatsOverride || data.seats_override),
+      meetingTime: s(row.meeting_time || row.meetingTime || data.meetingTime || data.meeting_time) || DEFAULT_ENTRY.meetingTime,
+      meetingFormat: s(row.meeting_format || row.meetingFormat || data.meetingFormat || data.meeting_format) || DEFAULT_ENTRY.meetingFormat,
+      meetingLocation: s(row.meeting_location || row.meetingLocation || data.meetingLocation || data.meeting_location),
+      meetingLink: s(row.meeting_link || row.meetingLink || data.meetingLink || data.meeting_link),
+      nominationDeadline: s(row.nomination_deadline || row.nominationDeadline || data.nominationDeadline || data.nomination_deadline),
+      proxyReturnDeadline: s(row.proxy_return_deadline || row.proxyReturnDeadline || data.proxyReturnDeadline || data.proxy_return_deadline),
+      lastLocked: !!(row.last_locked || row.lastLocked || row.locked || data.lastLocked || data.last_locked)
+    });
+  }
+
+  function buildPayload(entry, community){
+    entry = Object.assign({}, DEFAULT_ENTRY, entry || {});
+    const expectedNextDate = entry.nextDate || addOneYear(entry.lastDate);
+    const sendDate = minusDays(expectedNextDate, 30);
+
+    return {
+      community_id: community.id,
+      last_annual_meeting_date: entry.lastDate || null,
+      next_annual_meeting_date: entry.nextDate || null,
+      association_legal_name: entry.associationLegalName || null,
+      quorum_percent: entry.quorumPercent === '' ? null : Number(entry.quorumPercent),
+      seats_override: entry.seatsOverride === '' ? null : Number(entry.seatsOverride),
+      meeting_time: entry.meetingTime || null,
+      meeting_format: entry.meetingFormat || null,
+      meeting_location: entry.meetingLocation || null,
+      meeting_link: entry.meetingLink || null,
+      nomination_deadline: entry.nominationDeadline || null,
+      proxy_return_deadline: entry.proxyReturnDeadline || null,
+      expected_next_date: expectedNextDate || null,
+      thirty_day_send_date: sendDate || null,
+      last_locked: !!entry.lastLocked,
+      data: entry,
+      updated_at: new Date().toISOString()
+    };
+  }
+
+  function setStatus(text, kind){
+    const statusText = getEl('statusText');
+    const dot = getEl('statusDot');
+    const pillText = getEl('statusPillText');
+    if(statusText) statusText.textContent = text || '';
+    if(pillText){
+      if(kind === 'loading') pillText.textContent = 'Loading annual meeting status...';
+      else if(kind === 'good') pillText.textContent = 'Annual meeting ready';
+      else if(kind === 'locked') pillText.textContent = 'Records locked';
+      else if(kind === 'error') pillText.textContent = 'Needs setup';
+      else pillText.textContent = 'Needs setup';
+    }
+    if(dot) dot.className = kind === 'good' || kind === 'locked' ? 'dot good' : 'dot';
+  }
+
+  function fillMeetingTimes(){
+    const el = getEl('meetingTime');
+    if(!el || el.options.length) return;
+    const arr=[];
+    for(let h=7; h<=21; h++){
+      ['00','30'].forEach(mm=>{
+        const hh=((h+11)%12)+1;
+        const ampm=h<12?'AM':'PM';
+        arr.push(`${hh}:${mm} ${ampm}`);
+      });
+    }
+    el.innerHTML = arr.map(v=>`<option value="${v}">${v}</option>`).join('');
+  }
+
+  function setVal(id, value){
+    const el = getEl(id);
+    if(el) el.value = value || '';
+  }
+
+  function renderEntry(){
+    fillMeetingTimes();
+
+    const c = activeCommunity();
+    const communityName = getEl('communityName');
+    if(communityName) communityName.textContent = c.name || 'Selected Community';
+
+    const e = Object.assign({}, DEFAULT_ENTRY, currentEntry || {});
+    const expected = e.nextDate || addOneYear(e.lastDate);
+    const sendDate = minusDays(expected, 30);
+    const seats = e.seatsOverride || '—';
+
+    setVal('lastDate', e.lastDate);
+    setVal('nextDate', e.nextDate);
+    setVal('associationLegalName', e.associationLegalName);
+    setVal('quorumPercent', e.quorumPercent);
+    setVal('seatsOverride', e.seatsOverride);
+    setVal('meetingTime', e.meetingTime || DEFAULT_ENTRY.meetingTime);
+    setVal('meetingFormat', e.meetingFormat || DEFAULT_ENTRY.meetingFormat);
+    setVal('meetingLocation', e.meetingLocation);
+    setVal('meetingLink', e.meetingLink);
+    setVal('nominationDeadline', e.nominationDeadline);
+    setVal('proxyReturnDeadline', e.proxyReturnDeadline);
+
+    const expectedDate = getEl('expectedDate');
+    if(expectedDate) expectedDate.textContent = formatDate(expected);
+
+    const sendDateEl = getEl('sendDate');
+    if(sendDateEl) sendDateEl.textContent = formatDate(sendDate);
+
+    const seatsCount = getEl('seatsCount');
+    if(seatsCount) seatsCount.textContent = String(seats || '—');
+
+    const lockBtn = getEl('lockBtn');
+    if(lockBtn) lockBtn.textContent = e.lastLocked ? 'Unlock Records' : 'Lock Records';
+
+    const disabled = !!e.lastLocked;
+    ['lastDate','nextDate','associationLegalName','quorumPercent','seatsOverride','meetingTime','meetingFormat','meetingLocation','meetingLink','nominationDeadline','proxyReturnDeadline'].forEach(id=>{
+      const el = getEl(id);
+      if(el) el.disabled = disabled;
+    });
+
+    setStatus(e.lastLocked ? 'Annual meeting info is locked and ready.' : 'Annual meeting workspace ready.', e.lastLocked ? 'locked' : 'good');
+
+    try{ if(window.ZummeeAnnualMeetingsLoadLogo) window.ZummeeAnnualMeetingsLoadLogo(); }catch(_logoE){}
+  }
+
+  function collectEntry(){
+    return {
+      lastDate: s(getEl('lastDate') && getEl('lastDate').value),
+      nextDate: s(getEl('nextDate') && getEl('nextDate').value),
+      associationLegalName: s(getEl('associationLegalName') && getEl('associationLegalName').value),
+      quorumPercent: s(getEl('quorumPercent') && getEl('quorumPercent').value),
+      seatsOverride: s(getEl('seatsOverride') && getEl('seatsOverride').value),
+      meetingTime: s(getEl('meetingTime') && getEl('meetingTime').value) || DEFAULT_ENTRY.meetingTime,
+      meetingFormat: s(getEl('meetingFormat') && getEl('meetingFormat').value) || DEFAULT_ENTRY.meetingFormat,
+      meetingLocation: s(getEl('meetingLocation') && getEl('meetingLocation').value),
+      meetingLink: s(getEl('meetingLink') && getEl('meetingLink').value),
+      nominationDeadline: s(getEl('nominationDeadline') && getEl('nominationDeadline').value),
+      proxyReturnDeadline: s(getEl('proxyReturnDeadline') && getEl('proxyReturnDeadline').value),
+      lastLocked: !!(currentEntry && currentEntry.lastLocked)
+    };
+  }
+
+  async function selectExisting(client, table, communityId){
+    try{
+      const res = await client.from(table)
+        .select('*')
+        .eq('community_id', communityId)
+        .order('updated_at', { ascending:false, nullsFirst:false })
+        .limit(1)
+        .maybeSingle();
+      if(res && !res.error && res.data) return res.data;
+    }catch(_e){}
+    return null;
+  }
+
+
+  async function findAnnualSettingsByCommunity(client, communityId){
+    try{
+      const res = await client.from(WRITE_TABLE)
+        .select('id')
+        .eq('community_id', communityId)
+        .limit(1)
+        .maybeSingle();
+      if(res && !res.error && res.data && res.data.id) return s(res.data.id);
+    }catch(_e){}
+    return '';
+  }
+
+  async function upsertRecord(client, table, payload){
+    // Try update existing known row first.
+    if(currentRecordId){
+      try{
+        const res = await client.from(table).update(payload).eq('id', currentRecordId).select('*').maybeSingle();
+        if(res && !res.error && res.data) return res.data;
+      }catch(_e){}
+    }
+
+    // Then update existing settings row by community_id.
+    try{
+      const existingId = await findAnnualSettingsByCommunity(client, payload.community_id);
+      if(existingId){
+        const resByCommunity = await client.from(table).update(payload).eq('id', existingId).select('*').maybeSingle();
+        if(resByCommunity && !resByCommunity.error && resByCommunity.data) return resByCommunity.data;
+      }
+    }catch(_byCommunityErr){}
+
+    // Then upsert by community_id.
+    try{
+      const res = await client.from(table).upsert(payload, { onConflict:'community_id' }).select('*').maybeSingle();
+      if(res && !res.error && res.data) return res.data;
+    }catch(_e){}
+
+    // Last fallback insert.
+    try{
+      const res = await client.from(table).insert(payload).select('*').maybeSingle();
+      if(res && !res.error && res.data) return res.data;
+    }catch(_e2){}
+
+    throw new Error('Could not save annual meeting record to ' + table);
+  }
+
+  async function loadDirect(){
+    const c = activeCommunity();
+    if(!c.id){
+      setStatus('Select a community to load annual meeting data.', 'error');
+      return false;
+    }
+
+    setStatus('Loading annual meeting data...', 'loading');
+
+    const client = await getClient();
+    if(!client){
+      setStatus('Could not connect to Supabase.', 'error');
+      return false;
+    }
+
+    for(const table of TABLES){
+      const row = await selectExisting(client, table, c.id);
+      if(row){
+        // v631: legacy annual_meetings / annual_meeting_records are read-only fallback sources.
+        // New workspace data must always save into annual_meeting_settings.
+        currentTable = WRITE_TABLE;
+        currentRecordId = table === WRITE_TABLE ? s(row.id) : '';
+        currentEntry = normalizeRow(row);
+        renderEntry();
+        return true;
+      }
+    }
+
+    // No row exists yet. Use default but do not treat it as failure.
+    currentTable = WRITE_TABLE;
+    currentRecordId = '';
+    currentEntry = Object.assign({}, DEFAULT_ENTRY);
+    renderEntry();
+    setStatus('Annual meeting workspace ready. No saved setup yet.', 'good');
+    return true;
+  }
+
+  async function saveDirect(){
+    const c = activeCommunity();
+    if(!c.id){
+      alert('Select a community first.');
+      return false;
+    }
+
+    if(currentEntry && currentEntry.lastLocked){
+      setStatus('Records are locked. Unlock them to make changes.', 'locked');
+      return false;
+    }
+
+    const client = await getClient();
+    if(!client){
+      alert('Could not connect to Supabase.');
+      return false;
+    }
+
+    currentEntry = collectEntry();
+    const table = WRITE_TABLE;
+    const payload = buildPayload(currentEntry, c);
+
+    try{
+      const row = await upsertRecord(client, table, payload);
+      currentTable = table;
+      currentRecordId = s(row && row.id);
+      currentEntry = normalizeRow(row || payload);
+      renderEntry();
+      setStatus('Annual meeting info saved.', 'good');
+      return true;
+    }catch(err){
+      console.error('[Annual Meetings v627] save failed', err);
+      alert('Could not save Annual Meeting info. Please check the Supabase annual_meeting_settings policies or request body.');
+      setStatus('Could not save annual meeting info.', 'error');
+      return false;
+    }
+  }
+
+  async function toggleLockDirect(){
+    if(!currentEntry) currentEntry = Object.assign({}, DEFAULT_ENTRY);
+    if(!currentEntry.lastLocked && !s(getEl('lastDate') && getEl('lastDate').value)){
+      alert('Enter the last annual meeting date first.');
+      return false;
+    }
+
+    if(currentEntry.lastLocked){
+      const ok = confirm('Unlock Annual Meeting fields so the dates and meeting details can be changed?');
+      if(!ok) return false;
+    }
+
+    currentEntry = collectEntry();
+    currentEntry.lastLocked = !currentEntry.lastLocked;
+    await saveDirect();
+    renderEntry();
+    setStatus(currentEntry.lastLocked ? 'Records locked.' : 'Records unlocked.', currentEntry.lastLocked ? 'locked' : 'good');
+    return true;
+  }
+
+  function patchButtons(){
+    const saveBtn = getEl('saveBtn');
+    if(saveBtn && !saveBtn.__annualDirectSaveV627){
+      saveBtn.__annualDirectSaveV627 = true;
+      saveBtn.addEventListener('click', function(e){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        saveDirect();
+      }, true);
+    }
+
+    const lockBtn = getEl('lockBtn');
+    if(lockBtn && !lockBtn.__annualDirectLockV627){
+      lockBtn.__annualDirectLockV627 = true;
+      lockBtn.addEventListener('click', function(e){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        toggleLockDirect();
+      }, true);
+    }
+
+    const select = getEl('annualCommunitySelect');
+    if(select && !select.__annualDirectCommunityV627){
+      select.__annualDirectCommunityV627 = true;
+      select.addEventListener('change', function(){
+        setTimeout(loadDirect, 120);
+      });
+    }
+  }
+
+  window.ZummeeAnnualMeetingsDirect = {
+    load: loadDirect,
+    save: saveDirect,
+    toggleLock: toggleLockDirect,
+    render: renderEntry,
+    collect: collectEntry
+  };
+
+  function start(){
+    fillMeetingTimes();
+    patchButtons();
+    setTimeout(loadDirect, 300);
+    setTimeout(loadDirect, 1200);
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', start, { once:true });
+  }else{
+    start();
+  }
+
+  window.addEventListener('pageshow', function(){ setTimeout(loadDirect, 250); });
+})();
+</script>
+
+
+
+
+<script id="annual-meetings-expected-date-reminder-v630">
+/*
+  Zummee Annual Meetings Schedule Automation
+  Build: 2026-05-08-v630
+
+  Correct behavior:
+  - Last Annual Meeting Date calculates Expected Next Date only.
+  - Next Annual Meeting Date remains employee-selected/manual.
+  - Annual Meeting Notice, Packet Setup, and 3-month reminder use Next Annual Meeting Date.
+*/
+(function(){
+  if(window.__AnnualMeetingsExpectedDateReminderV630) return;
+  window.__AnnualMeetingsExpectedDateReminderV630 = true;
+
+  const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
+
+  function s(v){ return String(v == null ? '' : v).trim(); }
+  function el(id){ return document.getElementById(id); }
+
+  async function client(){
+    try{ if(window.supabaseClient && window.supabaseClient.from) return window.supabaseClient; }catch(_e){}
+    try{ if(window.sb && window.sb.from) return window.sb; }catch(_e){}
+    try{ if(typeof ensureSupabase === 'function'){ const c = await ensureSupabase(); if(c && c.from) return c; } }catch(_e){}
+    try{
+      if(window.supabase && window.supabase.createClient){
+        if(!window.__annualReminderSbV630) window.__annualReminderSbV630 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        return window.__annualReminderSbV630;
+      }
+    }catch(_e){}
+    return null;
+  }
+
+  function activeCommunity(){
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const a = window.ZummeeCommunityState.getActiveCommunity();
+        if(a && a.id) return { id:s(a.id), name:s(a.name) };
+      }
+    }catch(_e){}
+    try{
+      const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+      const obj = raw ? JSON.parse(raw) : null;
+      if(obj && obj.id) return { id:s(obj.id), name:s(obj.name) };
+    }catch(_e2){}
+    try{
+      return {
+        id: s(new URLSearchParams(location.search).get('community_id')) || s(localStorage.getItem('activeCommunityId')) || s(localStorage.getItem('currentCommunityId')) || s(localStorage.getItem('zummee_selected_community_id')),
+        name: s(new URLSearchParams(location.search).get('community_name')) || s(localStorage.getItem('activeCommunityName')) || s(localStorage.getItem('currentCommunityName'))
+      };
+    }catch(_e3){}
+    return { id:'', name:'' };
+  }
+
+  function isoAddYears(dateStr, years){
+    if(!dateStr) return '';
+    try{
+      const d = new Date(dateStr + 'T00:00:00');
+      if(Number.isNaN(d.getTime())) return '';
+      d.setFullYear(d.getFullYear() + Number(years || 0));
+      return d.toISOString().slice(0,10);
+    }catch(_e){ return ''; }
+  }
+
+  function isoAddDays(dateStr, days){
+    if(!dateStr) return '';
+    try{
+      const d = new Date(dateStr + 'T00:00:00');
+      if(Number.isNaN(d.getTime())) return '';
+      d.setDate(d.getDate() + Number(days || 0));
+      return d.toISOString().slice(0,10);
+    }catch(_e){ return ''; }
+  }
+
+  function isoAddMonths(dateStr, months){
+    if(!dateStr) return '';
+    try{
+      const d = new Date(dateStr + 'T00:00:00');
+      if(Number.isNaN(d.getTime())) return '';
+      d.setMonth(d.getMonth() + Number(months || 0));
+      return d.toISOString().slice(0,10);
+    }catch(_e){ return ''; }
+  }
+
+  function formatDate(dateStr){
+    if(!dateStr) return '—';
+    try{
+      return new Date(dateStr + 'T00:00:00').toLocaleDateString(undefined, { month:'long', day:'numeric', year:'numeric' });
+    }catch(_e){ return String(dateStr); }
+  }
+
+  function setStatus(text, kind){
+    const statusText = el('statusText');
+    const dot = el('statusDot');
+    const pillText = el('statusPillText');
+    if(statusText) statusText.textContent = text || '';
+    if(pillText && kind === 'reminder') pillText.textContent = 'Reminder scheduled';
+    if(dot && (kind === 'good' || kind === 'reminder')) dot.className = 'dot good';
+  }
+
+  function refreshScheduleDates(){
+    const last = el('lastDate');
+    const next = el('nextDate');
+    const expected = el('expectedDate');
+    const sendDate = el('sendDate');
+
+    const lastVal = s(last && last.value);
+    const actualNextVal = s(next && next.value);
+
+    // Expected date is only an estimate based on the last annual meeting date.
+    const expectedNext = isoAddYears(lastVal, 1);
+    if(expected) expected.textContent = formatDate(expectedNext);
+
+    // Packet / notice send date must use the employee-selected actual next meeting date.
+    // Annual notice is generally 30 days before the actual meeting date.
+    if(sendDate) sendDate.textContent = formatDate(isoAddDays(actualNextVal, -30));
+
+    return {
+      expectedNext,
+      actualNext: actualNextVal
+    };
+  }
+
+  function reminderDueDate(actualNextDate){
+    return isoAddMonths(actualNextDate, -3);
+  }
+
+  async function upsertAnnualReminder(actualNextDate){
+    const community = activeCommunity();
+    if(!community.id || !actualNextDate) return false;
+
+    const due = reminderDueDate(actualNextDate);
+    if(!due) return false;
+
+    const sb = await client();
+    if(!sb) return false;
+
+    const title = 'Annual Meeting';
+    const note = 'Annual Meeting is scheduled for ' + formatDate(actualNextDate) + '. Begin 3-month preparation workflow.';
+
+    const basePayload = {
+      community_id: community.id,
+      title: title,
+      notes: note,
+      due_date: due,
+      reminder_date: due,
+      status: 'open',
+      category: 'annual_meeting',
+      source: 'annual_meetings',
+      source_key: 'annual_meeting_3_month_reminder',
+      updated_at: new Date().toISOString()
+    };
+
+    const attempts = ['ops_reminders','reminders','operations_reminders'];
+
+    for(const table of attempts){
+      try{
+        const existing = await sb.from(table)
+          .select('id')
+          .eq('community_id', community.id)
+          .eq('source_key', 'annual_meeting_3_month_reminder')
+          .limit(1)
+          .maybeSingle();
+
+        if(existing && !existing.error && existing.data && existing.data.id){
+          const res = await sb.from(table).update(basePayload).eq('id', existing.data.id).select('id').maybeSingle();
+          if(res && !res.error) return true;
+        }
+      }catch(_e){}
+
+      try{
+        const existing2 = await sb.from(table)
+          .select('id')
+          .eq('community_id', community.id)
+          .eq('title', title)
+          .limit(1)
+          .maybeSingle();
+
+        if(existing2 && !existing2.error && existing2.data && existing2.data.id){
+          const res2 = await sb.from(table).update(basePayload).eq('id', existing2.data.id).select('id').maybeSingle();
+          if(res2 && !res2.error) return true;
+        }
+      }catch(_e2){}
+
+      try{
+        const res3 = await sb.from(table).insert(basePayload).select('id').maybeSingle();
+        if(res3 && !res3.error) return true;
+      }catch(_e3){}
+    }
+
+    return false;
+  }
+
+  async function saveThenReminder(){
+    const dates = refreshScheduleDates();
+
+    if(!dates.actualNext){
+      alert('Please choose the actual Next Annual Meeting Date before saving. The expected date is only an estimate.');
+      return false;
+    }
+
+    let saved = true;
+    try{
+      if(window.ZummeeAnnualMeetingsDirect && typeof window.ZummeeAnnualMeetingsDirect.save === 'function'){
+        saved = await window.ZummeeAnnualMeetingsDirect.save();
+      }
+    }catch(err){
+      console.error('[Annual Meetings v630] base save failed', err);
+      saved = false;
+    }
+
+    if(saved){
+      const ok = await upsertAnnualReminder(dates.actualNext);
+      if(ok){
+        setStatus('Annual meeting info saved. 3-month reminder scheduled.', 'reminder');
+      }else{
+        setStatus('Annual meeting info saved. Reminder table may need setup.', 'good');
+      }
+    }
+
+    return saved;
+  }
+
+  function bind(){
+    const last = el('lastDate');
+    const next = el('nextDate');
+    const saveBtn = el('saveBtn');
+
+    if(last && !last.__annualExpectedOnlyV630){
+      last.__annualExpectedOnlyV630 = true;
+      last.addEventListener('input', refreshScheduleDates);
+      last.addEventListener('change', refreshScheduleDates);
+    }
+
+    if(next && !next.__annualActualNextV630){
+      next.__annualActualNextV630 = true;
+      next.addEventListener('input', refreshScheduleDates);
+      next.addEventListener('change', refreshScheduleDates);
+    }
+
+    if(saveBtn && !saveBtn.__annualSaveReminderV630){
+      saveBtn.__annualSaveReminderV630 = true;
+      saveBtn.addEventListener('click', function(e){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        saveThenReminder();
+      }, true);
+    }
+
+    setTimeout(refreshScheduleDates, 250);
+    setTimeout(refreshScheduleDates, 1200);
+  }
+
+  window.ZummeeAnnualMeetingScheduleAutomation = {
+    refresh: refreshScheduleDates,
+    saveThenReminder: saveThenReminder,
+    upsertReminder: upsertAnnualReminder
+  };
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', bind, { once:true });
+  }else{
+    bind();
+  }
+
+  window.addEventListener('pageshow', function(){
+    setTimeout(bind, 150);
+    setTimeout(refreshScheduleDates, 500);
+  });
+})();
+</script>
+
+</body>
+</html>
