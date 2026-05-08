@@ -2,29 +2,24 @@
 <html lang="en">
 <head>
 
-<script id="manager-hub-v627-confirmed-live-marker">
-window.ZUMMEE_BUILD = "2026-05-08-v627-manager-hub-confirmed-smart-cards";
-window.__MANAGER_HUB_V627_CONFIRMED_LIVE = true;
-console.info("[Manager Hub v627] confirmed live smart-card build loaded", window.ZUMMEE_BUILD);
+<script id="manager-hub-v628-smart-card-diagnostic-marker">
+window.ZUMMEE_BUILD = "2026-05-08-v628-manager-hub-smart-card-source-diagnostics";
+window.__MANAGER_HUB_V628_SMART_CARD_DIAGNOSTICS = true;
+console.info("[Manager Hub v628] smart-card source diagnostics loaded", window.ZUMMEE_BUILD);
 </script>
 
-<script id="manager-hub-v627-confirmed-smart-cards">
+<script id="manager-hub-v628-smart-card-source-diagnostics">
 (function(){
-  if(window.__ManagerHubConfirmedSmartCardsV627) return;
-  window.__ManagerHubConfirmedSmartCardsV627 = true;
-  window.__MANAGER_HUB_V627_SMART_CARDS_EXPECTED = true;
+  if(window.__ManagerHubSmartCardDiagnosticsV628) return;
+  window.__ManagerHubSmartCardDiagnosticsV628 = true;
 
   const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
 
-  const state = {
-    loading:false,
-    latest:null,
-    lastGood:{ board:null, maintenance:null, annual:null }
-  };
+  const state = { last:null, loading:false };
 
   function s(v){ return String(v == null ? '' : v).trim(); }
-  function uuidish(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s(v)); }
+  function uuidish(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s(v)); }
 
   function getClient(){
     try{ if(window.supabaseClient && window.supabaseClient.from) return window.supabaseClient; }catch(_e){}
@@ -32,10 +27,10 @@ console.info("[Manager Hub v627] confirmed live smart-card build loaded", window
     try{ if(window.getSupabase){ const c = window.getSupabase(); if(c && c.from) return c; } }catch(_e){}
     try{
       if(window.supabase && window.supabase.createClient){
-        if(!window.__ManagerHubSmartCardsSbV627){
-          window.__ManagerHubSmartCardsSbV627 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        if(!window.__ManagerHubSmartDiagSbV628){
+          window.__ManagerHubSmartDiagSbV628 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         }
-        return window.__ManagerHubSmartCardsSbV627;
+        return window.__ManagerHubSmartDiagSbV628;
       }
     }catch(_e){}
     return null;
@@ -76,193 +71,173 @@ console.info("[Manager Hub v627] confirmed live smart-card build loaded", window
     return { id:'', name:'' };
   }
 
-  function isOpenStatus(row){
-    const st = s(row && (row.status || row.approval_status || row.state || row.workflow_status)).toLowerCase();
+  function isOpenRow(row){
+    const st = s(row && (row.status || row.approval_status || row.state || row.workflow_status || row.board_status)).toLowerCase();
     if(row && (row.archived_at || row.completed_at || row.deleted_at)) return false;
     if(['completed','complete','closed','archived','approved','rejected','done','mailed','cancelled','canceled'].includes(st)) return false;
     return true;
   }
 
-  async function countRows(attempts, communityId, filterFn){
+  async function tryQuery(table, select, communityId, options){
+    options = options || {};
     const sb = getClient();
-    if(!sb || !uuidish(communityId)) return null;
+    const result = {
+      table, select,
+      communityId,
+      ok:false,
+      error:null,
+      totalRows:null,
+      filteredRows:null,
+      sample:null,
+      usedFilter:options.filterLabel || 'open rows'
+    };
 
-    for(const attempt of attempts){
-      try{
-        const res = await sb.from(attempt.table).select(attempt.select || '*').eq('community_id', communityId);
-        if(res && !res.error && Array.isArray(res.data)){
-          return res.data.filter(filterFn || isOpenStatus).length;
-        }
-      }catch(_e){}
+    if(!sb){
+      result.error = 'No Supabase client';
+      return result;
     }
-    return null;
+
+    try{
+      let q = sb.from(table).select(select || '*').limit(200);
+
+      if(options.communityColumn && communityId){
+        q = q.eq(options.communityColumn, communityId);
+      }else if(options.tryNoCommunityFilter !== true && communityId){
+        q = q.eq('community_id', communityId);
+      }
+
+      const res = await q;
+
+      if(res && res.error){
+        result.error = res.error.message || JSON.stringify(res.error);
+        return result;
+      }
+
+      const rows = Array.isArray(res && res.data) ? res.data : [];
+      result.ok = true;
+      result.totalRows = rows.length;
+      result.sample = rows.slice(0, 3);
+
+      const filter = options.filter || isOpenRow;
+      result.filteredRows = rows.filter(filter).length;
+      return result;
+    }catch(err){
+      result.error = err && err.message ? err.message : String(err);
+      return result;
+    }
   }
 
-  function stable(key, value){
-    if(value !== null && value !== undefined && Number.isFinite(Number(value))){
-      state.lastGood[key] = Number(value);
-    }
-    return state.lastGood[key] == null ? 0 : state.lastGood[key];
-  }
+  async function runDiagnostics(){
+    if(state.loading) return state.last;
+    state.loading = true;
 
-  async function loadSummary(){
     const community = activeCommunity();
 
-    const board = await countRows([
-      { table:'BoardMemberActionItems', select:'id,status,approval_status,community_id,archived_at,completed_at' },
-      { table:'notification_events', select:'id,status,event_type,community_id,archived_at,completed_at' },
-      { table:'BoardMeetingMinutesApprovals', select:'id,status,approval_status,community_id,archived_at,completed_at' }
-    ], community.id, isOpenStatus);
+    const boardAttempts = [
+      ['BoardMemberActionItems', '*'],
+      ['board_member_action_items', '*'],
+      ['BoardMemberActionItems', 'id,status,approval_status,community_id,archived_at,completed_at'],
+      ['BoardMeetingMinutesApprovals', '*'],
+      ['BoardMeetingActionItems', '*'],
+      ['BoardMeetingAgendaItems', '*'],
+      ['notification_events', '*']
+    ];
 
-    const maintenance = await countRows([
-      { table:'resident_work_orders', select:'id,status,community_id,archived_at,completed_at' },
-      { table:'work_orders', select:'id,status,community_id,archived_at,completed_at' },
-      { table:'maintenance_requests', select:'id,status,community_id,archived_at,completed_at' }
-    ], community.id, isOpenStatus);
+    const maintenanceAttempts = [
+      ['resident_work_orders', '*'],
+      ['work_orders', '*'],
+      ['maintenance_requests', '*'],
+      ['workorders', '*'],
+      ['resident_maintenance_requests', '*'],
+      ['maintenance_items', '*']
+    ];
 
-    const annual = await countRows([
-      { table:'annual_meeting_board_approvals', select:'id,status,approval_status,community_id,archived_at,completed_at' },
-      { table:'annual_meeting_approvals', select:'id,status,approval_status,community_id,archived_at,completed_at' },
-      { table:'annual_meeting_settings', select:'id,next_annual_meeting_date,community_id' }
-    ], community.id, function(row){
-      if(Object.prototype.hasOwnProperty.call(row, 'next_annual_meeting_date')) return !!row.next_annual_meeting_date;
-      return isOpenStatus(row);
-    });
+    const annualAttempts = [
+      ['annual_meeting_board_approvals', '*'],
+      ['annual_meeting_approvals', '*'],
+      ['annual_meeting_settings', '*'],
+      ['annual_meetings', '*'],
+      ['BoardMeetingMinutesApprovals', '*']
+    ];
+
+    const board = [];
+    const maintenance = [];
+    const annual = [];
+
+    for(const [table, select] of boardAttempts){
+      board.push(await tryQuery(table, select, community.id, { filter:isOpenRow }));
+    }
+
+    for(const [table, select] of maintenanceAttempts){
+      maintenance.push(await tryQuery(table, select, community.id, { filter:isOpenRow }));
+    }
+
+    for(const [table, select] of annualAttempts){
+      annual.push(await tryQuery(table, select, community.id, {
+        filter:function(row){
+          if(row && Object.prototype.hasOwnProperty.call(row, 'next_annual_meeting_date')) return !!row.next_annual_meeting_date;
+          return isOpenRow(row);
+        },
+        filterLabel:'annual active/settings rows'
+      }));
+    }
 
     const summary = {
+      build: window.ZUMMEE_BUILD || '',
       community,
-      board: stable('board', board),
-      maintenance: stable('maintenance', maintenance),
-      annual: stable('annual', annual),
+      board,
+      maintenance,
+      annual,
+      best:{
+        board: board.find(r => r.ok && r.filteredRows > 0) || board.find(r => r.ok) || null,
+        maintenance: maintenance.find(r => r.ok && r.filteredRows > 0) || maintenance.find(r => r.ok) || null,
+        annual: annual.find(r => r.ok && r.filteredRows > 0) || annual.find(r => r.ok) || null
+      },
       loadedAt: Date.now()
     };
 
-    state.latest = summary;
+    state.last = summary;
+    window.__ManagerHubSmartCardDiagnosticsV628Result = summary;
+
+    console.info('[Manager Hub v628] smart-card source diagnostics', summary);
+    try{
+      console.table([].concat(board.map(x => Object.assign({ group:'board' }, x)), maintenance.map(x => Object.assign({ group:'maintenance' }, x)), annual.map(x => Object.assign({ group:'annual' }, x))).map(function(r){
+        return {
+          group:r.group,
+          table:r.table,
+          ok:r.ok,
+          totalRows:r.totalRows,
+          filteredRows:r.filteredRows,
+          error:r.error
+        };
+      }));
+    }catch(_e){}
+
+    state.loading = false;
     return summary;
   }
 
-  function findCard(words, ids){
-    for(const id of (ids || [])){
-      const n = document.getElementById(id);
-      if(n) return n;
-    }
-
-    const nodes = Array.from(document.querySelectorAll('a,button,section,article,div'));
-    return nodes.find(function(n){
-      const text = s(n.innerText || n.textContent).toLowerCase();
-      return words.every(function(w){ return text.indexOf(w) !== -1; });
-    }) || null;
-  }
-
-  function setCard(card, count, label){
-    if(!card) return;
-
-    card.dataset.smartCardsV627 = 'true';
-    card.dataset.smartCount = String(count);
-    card.style.display = '';
-    card.style.visibility = 'visible';
-    card.style.opacity = '1';
-
-    const metric =
-      card.querySelector('[data-role="metric1"]') ||
-      card.querySelector('[data-role="count"]') ||
-      card.querySelector('.count') ||
-      card.querySelector('.metric') ||
-      card.querySelector('.mh2-card-count');
-
-    const badge =
-      card.querySelector('[data-role="tone"]') ||
-      card.querySelector('[data-role="metric2"]') ||
-      card.querySelector('.badge') ||
-      card.querySelector('.pill');
-
-    if(metric) metric.textContent = String(count);
-    if(badge) badge.textContent = count ? label : 'Clear';
-
-    let stableMetric = card.querySelector('.mh-v627-smart-count');
-    if(!metric && !stableMetric){
-      stableMetric = document.createElement('div');
-      stableMetric.className = 'mh-v627-smart-count';
-      stableMetric.style.cssText = 'margin-top:8px;font-size:30px;font-weight:900;color:#17324c;';
-      card.appendChild(stableMetric);
-    }
-    if(stableMetric) stableMetric.textContent = String(count);
-
-    let detail = card.querySelector('.mh-v627-smart-detail');
-    if(!detail){
-      detail = document.createElement('div');
-      detail.className = 'mh-v627-smart-detail';
-      detail.style.cssText = 'margin-top:4px;font-size:13px;font-weight:800;color:#64748b;';
-      card.appendChild(detail);
-    }
-    detail.textContent = count ? label : 'Clear';
-
-    card.classList.toggle('mh2-tool-card--gold', Number(count) > 0);
-  }
-
-  function render(summary){
-    summary = summary || state.latest;
-    if(!summary) return false;
-
-    const boardCard = findCard(['board','review'], ['boardReviewCard','boardReviewStatusCard','boardStatusCard','boardReviewSmartCard']);
-    const maintenanceCard = findCard(['maintenance'], ['maintenanceActivityCard','maintenanceSmartCard','liveMaintenanceCard']);
-    const annualCard = findCard(['annual'], ['annualApprovalsCard','annualMeetingApprovalsCard','annualMeetingsCard']);
-
-    setCard(boardCard, Number(summary.board || 0), 'Needs review');
-    setCard(maintenanceCard, Number(summary.maintenance || 0), 'Open');
-    setCard(annualCard, Number(summary.annual || 0), 'Pending');
-
-    window.__ManagerHubSmartCardsSummaryV627 = summary;
-    console.info('[Manager Hub v627] smart cards rendered', summary);
-    return true;
-  }
-
-  async function refresh(){
-    if(state.loading) return state.latest;
-    state.loading = true;
-    try{
-      const summary = await loadSummary();
-      render(summary);
-      return summary;
-    }catch(err){
-      console.warn('[Manager Hub v627] smart card refresh failed', err);
-      render(state.latest);
-      return state.latest;
-    }finally{
-      state.loading = false;
-    }
-  }
-
-  window.refreshManagerHubSmartCardsAuthoritative = refresh;
-  window.getManagerHubSmartCardsSummary = function(){ return window.__ManagerHubSmartCardsSummaryV627 || state.latest || null; };
+  window.runManagerHubSmartCardSourceDiagnostics = runDiagnostics;
+  window.getManagerHubSmartCardSourceDiagnostics = function(){ return window.__ManagerHubSmartCardDiagnosticsV628Result || state.last || null; };
   window.getManagerHubSmartCardsDeploymentStatus = function(){
     return {
       build: window.ZUMMEE_BUILD || '',
-      confirmedLive: !!window.__MANAGER_HUB_V627_CONFIRMED_LIVE,
-      expected: !!window.__MANAGER_HUB_V627_SMART_CARDS_EXPECTED,
-      helperType: typeof window.refreshManagerHubSmartCardsAuthoritative,
-      summary: window.getManagerHubSmartCardsSummary()
+      diagnosticsMarker: !!window.__MANAGER_HUB_V628_SMART_CARD_DIAGNOSTICS,
+      helperType: typeof window.runManagerHubSmartCardSourceDiagnostics,
+      last: window.getManagerHubSmartCardSourceDiagnostics()
     };
   };
 
-  function boot(){
-    refresh();
-    [250, 800, 1600, 3000, 5200, 8500].forEach(function(ms){
-      setTimeout(refresh, ms);
-    });
-  }
-
   if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', boot, { once:true });
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(runDiagnostics, 400); }, { once:true });
   }else{
-    setTimeout(boot, 0);
+    setTimeout(runDiagnostics, 400);
   }
-
-  window.addEventListener('pageshow', function(){ setTimeout(boot, 150); });
-  window.addEventListener('focus', function(){ setTimeout(refresh, 150); });
-  window.addEventListener('zummee:community-changed', function(){ setTimeout(boot, 150); });
 })();
 </script>
+
+
+
 
 
 
