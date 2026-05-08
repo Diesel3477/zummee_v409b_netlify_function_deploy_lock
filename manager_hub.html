@@ -2,42 +2,110 @@
 <html lang="en">
 <head>
 
-<script id="manager-hub-v630-smart-alerts-no-hang-marker">
-window.ZUMMEE_BUILD = "2026-05-08-v630-manager-hub-smart-alerts-no-hang";
-window.__MANAGER_HUB_V630_SMART_ALERTS_NO_HANG = true;
-console.info("[Manager Hub v630] no-hang smart alerts loaded", window.ZUMMEE_BUILD);
+<script id="manager-hub-v631-smart-alerts-client-ready-marker">
+window.ZUMMEE_BUILD = "2026-05-08-v631-manager-hub-smart-alerts-client-ready";
+window.__MANAGER_HUB_V631_SMART_ALERTS_CLIENT_READY = true;
+console.info("[Manager Hub v631] smart alerts client-ready build loaded", window.ZUMMEE_BUILD);
 </script>
 
-<script id="manager-hub-v630-smart-alerts-no-hang">
+<script id="manager-hub-v631-smart-alerts-client-ready">
 (function(){
-  if(window.__ManagerHubSmartAlertsNoHangV630) return;
-  window.__ManagerHubSmartAlertsNoHangV630 = true;
+  if(window.__ManagerHubSmartAlertsClientReadyV631) return;
+  window.__ManagerHubSmartAlertsClientReadyV631 = true;
 
   const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
-  const TIMEOUT_MS = 4500;
+  const TIMEOUT_MS = 5000;
 
   const state = {
     inFlight:null,
     latest:null,
-    lastGood:{ board:0, maintenance:0, annual:0 }
+    lastGood:{ board:0, maintenance:0, annual:0 },
+    clientReady:false,
+    clientError:''
   };
 
   function s(v){ return String(v == null ? '' : v).trim(); }
   function uuidish(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s(v)); }
+  function sleep(ms){ return new Promise(resolve => setTimeout(resolve, ms)); }
 
-  function getClient(){
-    try{ if(window.supabaseClient && window.supabaseClient.from) return window.supabaseClient; }catch(_e){}
-    try{ if(window.sb && window.sb.from) return window.sb; }catch(_e){}
-    try{ if(window.getSupabase){ const c = window.getSupabase(); if(c && c.from) return c; } }catch(_e){}
+  function getExistingClient(){
+    const names = [
+      'supabaseClient',
+      'sb',
+      'supabaseClientV2',
+      'ZUMMEE_SUPABASE',
+      '__zummeeSupabase',
+      'zummeeSupabase',
+      '__sb'
+    ];
+
+    for(const name of names){
+      try{
+        const c = window[name];
+        if(c && typeof c.from === 'function') return c;
+      }catch(_e){}
+    }
+
     try{
-      if(window.supabase && window.supabase.createClient){
-        if(!window.__ManagerHubSmartAlertsSbV630){
-          window.__ManagerHubSmartAlertsSbV630 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        }
-        return window.__ManagerHubSmartAlertsSbV630;
+      if(window.getSupabase && typeof window.getSupabase === 'function'){
+        const c = window.getSupabase();
+        if(c && typeof c.from === 'function') return c;
       }
     }catch(_e){}
+
+    try{
+      if(window.ensureSupabaseSync && typeof window.ensureSupabaseSync === 'function'){
+        const c = window.ensureSupabaseSync();
+        if(c && typeof c.from === 'function') return c;
+      }
+    }catch(_e){}
+
+    try{
+      if(window.requireSb && typeof window.requireSb === 'function'){
+        const c = window.requireSb();
+        if(c && typeof c.from === 'function') return c;
+      }
+    }catch(_e){}
+
+    try{
+      if(window.supabase && typeof window.supabase.createClient === 'function'){
+        if(!window.__ManagerHubSmartAlertsSbV631){
+          window.__ManagerHubSmartAlertsSbV631 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
+        if(window.__ManagerHubSmartAlertsSbV631 && typeof window.__ManagerHubSmartAlertsSbV631.from === 'function'){
+          return window.__ManagerHubSmartAlertsSbV631;
+        }
+      }
+    }catch(e){
+      state.clientError = e && e.message ? e.message : String(e);
+    }
+
+    return null;
+  }
+
+  async function waitForClient(maxMs){
+    const started = Date.now();
+
+    while(Date.now() - started < maxMs){
+      const c = getExistingClient();
+      if(c){
+        state.clientReady = true;
+        state.clientError = '';
+        return c;
+      }
+      await sleep(150);
+    }
+
+    const c = getExistingClient();
+    if(c){
+      state.clientReady = true;
+      state.clientError = '';
+      return c;
+    }
+
+    state.clientReady = false;
+    state.clientError = 'Supabase client unavailable after wait';
     return null;
   }
 
@@ -215,8 +283,8 @@ console.info("[Manager Hub v630] no-hang smart alerts loaded", window.ZUMMEE_BUI
   }
 
   async function loadSummary(){
-    const sb = getClient();
     const community = activeCommunity();
+    const sb = await waitForClient(8000);
 
     const results = await Promise.all([
       withTimeout(loadBoard(sb, community), 'board'),
@@ -230,6 +298,8 @@ console.info("[Manager Hub v630] no-hang smart alerts loaded", window.ZUMMEE_BUI
 
     const summary = {
       community,
+      clientReady:!!sb,
+      clientError:state.clientError || '',
       board:useCount('board', board),
       boardOverdue:Number(board.overdue || 0),
       maintenance:useCount('maintenance', maintenance),
@@ -241,7 +311,7 @@ console.info("[Manager Hub v630] no-hang smart alerts loaded", window.ZUMMEE_BUI
     };
 
     state.latest = summary;
-    window.__ManagerHubSmartAlertsSummaryV630 = summary;
+    window.__ManagerHubSmartAlertsSummaryV631 = summary;
     return summary;
   }
 
@@ -252,7 +322,7 @@ console.info("[Manager Hub v630] no-hang smart alerts loaded", window.ZUMMEE_BUI
     opts = opts || {};
     const tone = opts.tone || 'good';
 
-    card.dataset.smartAlertsV630 = 'true';
+    card.dataset.smartAlertsV631 = 'true';
     card.style.display = '';
     card.style.visibility = 'visible';
     card.style.opacity = '1';
@@ -309,7 +379,7 @@ console.info("[Manager Hub v630] no-hang smart alerts loaded", window.ZUMMEE_BUI
       document.documentElement.setAttribute('data-zummee-smart-alerts-v426-ready', '1');
     }catch(_e){}
 
-    console.info('[Manager Hub v630] no-hang smart alerts rendered', summary);
+    console.info('[Manager Hub v631] client-ready smart alerts rendered', summary);
     return true;
   }
 
@@ -324,6 +394,8 @@ console.info("[Manager Hub v630] no-hang smart alerts loaded", window.ZUMMEE_BUI
       }catch(err){
         const fallback = state.latest || {
           community:activeCommunity(),
+          clientReady:false,
+          clientError:err && err.message ? err.message : String(err),
           board:Number(state.lastGood.board || 0),
           boardOverdue:0,
           maintenance:Number(state.lastGood.maintenance || 0),
@@ -334,7 +406,7 @@ console.info("[Manager Hub v630] no-hang smart alerts loaded", window.ZUMMEE_BUI
           loadedAt:Date.now()
         };
         state.latest = fallback;
-        window.__ManagerHubSmartAlertsSummaryV630 = fallback;
+        window.__ManagerHubSmartAlertsSummaryV631 = fallback;
         render(fallback);
         return fallback;
       }finally{
@@ -347,19 +419,19 @@ console.info("[Manager Hub v630] no-hang smart alerts loaded", window.ZUMMEE_BUI
 
   window.refreshManagerHubCanonicalSmartAlerts = refresh;
   window.refreshManagerHubSmartCardsAuthoritative = refresh;
-  window.getManagerHubSmartCardsSummary = function(){ return window.__ManagerHubSmartAlertsSummaryV630 || state.latest || null; };
+  window.getManagerHubSmartCardsSummary = function(){ return window.__ManagerHubSmartAlertsSummaryV631 || state.latest || null; };
   window.getManagerHubSmartCardsDeploymentStatus = function(){
     return {
       build: window.ZUMMEE_BUILD || '',
-      noHangMarker: !!window.__MANAGER_HUB_V630_SMART_ALERTS_NO_HANG,
+      clientReadyMarker: !!window.__MANAGER_HUB_V631_SMART_ALERTS_CLIENT_READY,
       helperType: typeof window.refreshManagerHubCanonicalSmartAlerts,
       summary: window.getManagerHubSmartCardsSummary()
     };
   };
 
   function boot(){
-    refresh();
-    [250, 800, 1600, 3000, 5200, 8500, 12000].forEach(function(ms){
+    setTimeout(refresh, 250);
+    [900, 1800, 3500, 6500, 10000, 14000].forEach(function(ms){
       setTimeout(refresh, ms);
     });
   }
@@ -367,7 +439,7 @@ console.info("[Manager Hub v630] no-hang smart alerts loaded", window.ZUMMEE_BUI
   if(document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', boot, { once:true });
   }else{
-    setTimeout(boot, 0);
+    boot();
   }
 
   window.addEventListener('pageshow', function(){ setTimeout(boot, 150); });
@@ -375,6 +447,9 @@ console.info("[Manager Hub v630] no-hang smart alerts loaded", window.ZUMMEE_BUI
   window.addEventListener('zummee:community-changed', function(){ setTimeout(boot, 150); });
 })();
 </script>
+
+
+
 
 
 
@@ -429,7 +504,7 @@ console.info("[Manager Hub v630] no-hang smart alerts loaded", window.ZUMMEE_BUI
 
 
 
-<script>window.ZUMMEE_BUILD = "2026-05-08-v630-manager-hub-smart-alerts-no-hang";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD = "2026-05-08-v631-manager-hub-smart-alerts-client-ready";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <script id="zummee-manager-canonical-preboot-v608">
 /*
