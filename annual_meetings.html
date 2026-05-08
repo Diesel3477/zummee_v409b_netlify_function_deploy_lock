@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-08-v632-annual-meetings-self-contained-save";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-08-v633-annual-save-button-clean-handler";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annual Meetings</title>
@@ -674,6 +674,20 @@
     .compactLabel{
       min-height:0 !important;
     }
+  }
+</style>
+
+
+<style id="annual-meetings-v633-save-button-feedback">
+  #saveBtn.is-saving{
+    opacity:.8 !important;
+    cursor:wait !important;
+  }
+
+  #saveBtn.is-saved{
+    background:#1f7a4d !important;
+    border-color:#1f7a4d !important;
+    color:#fff !important;
   }
 </style>
 
@@ -2469,6 +2483,120 @@
   else bind();
 
   window.addEventListener('pageshow', bind);
+})();
+</script>
+
+
+<script id="annual-meetings-save-button-clean-handler-v633">
+/*
+  v633 — Clean Save button handler
+  Why:
+  - Data is saving, but the visible Save button is still being intercepted by old handlers.
+  - This replaces the button node after load to remove legacy listeners and attaches one clean handler.
+*/
+(function(){
+  if(window.__AnnualMeetingsSaveButtonCleanHandlerV633) return;
+  window.__AnnualMeetingsSaveButtonCleanHandlerV633 = true;
+
+  function el(id){ return document.getElementById(id); }
+
+  function setStatus(text, kind){
+    const statusText = el('statusText');
+    const pill = el('statusPillText');
+    const dot = el('statusDot');
+    if(statusText) statusText.textContent = text || '';
+    if(pill && text) pill.textContent = kind === 'saving' ? 'Saving...' : (kind === 'saved' ? 'Annual meeting ready' : pill.textContent);
+    if(dot && kind === 'saved') dot.className = 'dot good';
+  }
+
+  async function cleanSave(){
+    const btn = el('saveBtn');
+    if(!btn) return false;
+
+    const originalText = btn.textContent || 'Save Annual Meeting Info';
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    btn.classList.add('is-saving');
+    setStatus('Saving annual meeting info...', 'saving');
+
+    try{
+      let ok = false;
+
+      if(window.ZummeeAnnualMeetingsSelfSave && typeof window.ZummeeAnnualMeetingsSelfSave === 'function'){
+        ok = await window.ZummeeAnnualMeetingsSelfSave();
+      } else if(window.ZummeeAnnualMeetingsDirect && typeof window.ZummeeAnnualMeetingsDirect.save === 'function'){
+        ok = await window.ZummeeAnnualMeetingsDirect.save();
+      }
+
+      if(ok){
+        btn.textContent = 'Saved ✓';
+        btn.classList.remove('is-saving');
+        btn.classList.add('is-saved');
+        setStatus('Annual meeting info saved.', 'saved');
+
+        setTimeout(function(){
+          const latest = el('saveBtn');
+          if(latest){
+            latest.disabled = false;
+            latest.textContent = originalText;
+            latest.classList.remove('is-saved');
+          }
+        }, 1200);
+
+        return true;
+      }
+
+      btn.textContent = originalText;
+      btn.disabled = false;
+      btn.classList.remove('is-saving');
+      setStatus('Could not save annual meeting info.', 'error');
+      return false;
+    }catch(err){
+      console.error('[Annual Meetings v633] clean save failed', err);
+      btn.textContent = originalText;
+      btn.disabled = false;
+      btn.classList.remove('is-saving');
+      setStatus('Could not save annual meeting info.', 'error');
+      return false;
+    }
+  }
+
+  function rebuildSaveButton(){
+    const oldBtn = el('saveBtn');
+    if(!oldBtn || oldBtn.__annualCleanButtonV633) return;
+
+    const newBtn = oldBtn.cloneNode(true);
+    newBtn.__annualCleanButtonV633 = true;
+    newBtn.type = 'button';
+    newBtn.disabled = false;
+    newBtn.textContent = 'Save Annual Meeting Info';
+
+    newBtn.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      cleanSave();
+      return false;
+    }, true);
+
+    oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+  }
+
+  window.ZummeeAnnualMeetingsCleanSave = cleanSave;
+
+  function start(){
+    rebuildSaveButton();
+    setTimeout(rebuildSaveButton, 300);
+    setTimeout(rebuildSaveButton, 1200);
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', start, { once:true });
+  }else{
+    start();
+  }
+
+  window.addEventListener('pageshow', start);
 })();
 </script>
 
