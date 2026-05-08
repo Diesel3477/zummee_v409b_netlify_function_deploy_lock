@@ -127,7 +127,7 @@
 </script>
 
 <style id="zummee-v412-smart-alert-early-hide-css">
-  html:not([data-zummee-smart-alerts-v426-ready="1"]) #smartAlertStrip .mh2-alert{visibility:hidden!important;opacity:0!important;}
+  /* v618: retired old smart-alert ready-gate rule */
 
 
 /* v466: compact Manager Hub polish + remove legacy floating debug close pill */
@@ -202,8 +202,8 @@
     min-width:64px!important;
     white-space:nowrap!important;
   }
-  html:not([data-zummee-smart-alerts-v426-ready="1"]) #smartAlertStrip .mh2-alert{visibility:hidden!important;opacity:0!important;}
-  html[data-zummee-smart-alerts-v426-ready="1"] #smartAlertStrip .mh2-alert{visibility:visible!important;opacity:1!important;transition:opacity .16s ease;}
+  /* v618: retired old smart-alert ready-gate rule */
+  /* v618: retired old smart-alert ready-gate rule */
   @media (max-width:760px){
     #smartAlertStrip{min-height:510px!important;}
     #smartAlertStrip .mh2-smart-strip{min-height:390px!important;}
@@ -259,181 +259,6 @@ window.__MH_VERSION = 'v611_smooth_return_no_jump';
     })();
 </script>
 
-  <script id="zummee-v522-smart-alert-stability-controller">
-  (function(){
-    'use strict';
-    if(window.__ZUMMEE_V522_SMART_ALERT_STABILITY__) return;
-
-    var READY_ATTR = 'data-zummee-smart-alerts-v426-ready';
-    var IDS = ['mh2AlertBoard','mh2AlertActivity','mh2AlertApprovals'];
-    var state = window.__ZUMMEE_V522_SMART_ALERT_STABILITY__ = {
-      version: 'v523-smart-alert-layout-reserve-lock',
-      allowReady: false,
-      pendingReady: false,
-      suppress: false,
-      startedAt: Date.now(),
-      lastStable: {},
-      readyTimer: null,
-      observer: null
-    };
-
-    var originalSetAttribute = Element.prototype.setAttribute;
-    var originalRemoveAttribute = Element.prototype.removeAttribute;
-
-    // Block older scripts from making the cards visible before all three cards settle.
-    Element.prototype.setAttribute = function(name, value){
-      try{
-        if(this === document.documentElement && String(name) === READY_ATTR && String(value) === '1' && !state.allowReady){
-          state.pendingReady = true;
-          scheduleReadyCheck(220);
-          return;
-        }
-      }catch(_e){}
-      return originalSetAttribute.apply(this, arguments);
-    };
-
-    function $(id){ return document.getElementById(id); }
-    function text(el, sel){ var node = el && el.querySelector(sel); return node ? String(node.textContent || '').trim() : ''; }
-    function ctxKey(){
-      var id = '';
-      try{
-        var sel = $('zummeeCommunitySelect') || $('communitySelect');
-        if(sel && sel.value) id = String(sel.value || '').trim();
-      }catch(_e){}
-      if(!id){
-        try{ id = String(localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('zummeeActiveCommunityId') || localStorage.getItem('activeCommunityId') || localStorage.getItem('currentCommunityId') || '').trim(); }catch(_e2){}
-      }
-      return id || 'default';
-    }
-    function cacheKey(){ return 'zummee_manager_smart_alerts_stable_v522:' + ctxKey(); }
-    function toneOf(el){
-      if(!el) return 'good';
-      if(el.classList.contains('is-urgent')) return 'urgent';
-      if(el.classList.contains('is-attention')) return 'attention';
-      return 'good';
-    }
-    function isPlaceholderSnapshot(s){
-      if(!s) return true;
-      var joined = [s.title, s.badge, s.copy].join(' ').toLowerCase();
-      return /loading|checking|refreshing|please wait|will appear here after refresh/.test(joined);
-    }
-    function isEmptySnapshot(s){
-      if(!s) return false;
-      var joined = [s.badge, s.copy].join(' ').toLowerCase();
-      return /^(stable|clear|quiet)$/.test(String(s.badge || '').trim().toLowerCase()) || /no open|no active|no current|no approval|no maintenance/.test(joined);
-    }
-    function captureCard(id){
-      var el = $(id);
-      if(!el) return null;
-      return {
-        id: id,
-        tone: toneOf(el),
-        href: el.getAttribute('href') || '',
-        title: text(el, '.mh2-alert-title'),
-        badge: text(el, '.mh2-alert-badge'),
-        copy: text(el, '.mh2-alert-copy')
-      };
-    }
-    function renderCard(snap){
-      if(!snap || !snap.id) return;
-      var el = $(snap.id);
-      if(!el) return;
-      state.suppress = true;
-      try{
-        el.classList.remove('is-good','is-attention','is-urgent');
-        el.classList.add(snap.tone === 'urgent' ? 'is-urgent' : (snap.tone === 'attention' ? 'is-attention' : 'is-good'));
-        if(snap.href) el.setAttribute('href', snap.href);
-        var title = el.querySelector('.mh2-alert-title');
-        var badge = el.querySelector('.mh2-alert-badge');
-        var copy = el.querySelector('.mh2-alert-copy');
-        if(title) title.textContent = snap.title || '';
-        if(badge) badge.textContent = snap.badge || '';
-        if(copy) copy.textContent = snap.copy || '';
-      }catch(_e){} finally{
-        setTimeout(function(){ state.suppress = false; }, 0);
-      }
-    }
-    function readCache(){
-      try{ return JSON.parse(sessionStorage.getItem(cacheKey()) || localStorage.getItem(cacheKey()) || '{}') || {}; }catch(_e){ return {}; }
-    }
-    function writeCache(payload){
-      try{ sessionStorage.setItem(cacheKey(), JSON.stringify(payload || {})); }catch(_e){}
-      try{ localStorage.setItem(cacheKey(), JSON.stringify(payload || {})); }catch(_e2){}
-    }
-    function restoreCachedCards(){
-      var cached = readCache();
-      IDS.forEach(function(id){
-        if(cached[id] && !isPlaceholderSnapshot(cached[id])){
-          state.lastStable[id] = cached[id];
-          renderCard(cached[id]);
-        }
-      });
-    }
-    function captureStableCards(){
-      var cached = readCache();
-      var changed = false;
-      IDS.forEach(function(id){
-        var snap = captureCard(id);
-        if(!snap) return;
-        var prev = state.lastStable[id] || cached[id];
-
-        // Never store loading/checking states.
-        if(isPlaceholderSnapshot(snap)){
-          if(prev && !isPlaceholderSnapshot(prev)) renderCard(prev);
-          return;
-        }
-
-        // During the initial settle window, do not let a late legacy writer flash a populated card to empty.
-        if(Date.now() - state.startedAt < 4200 && prev && !isEmptySnapshot(prev) && isEmptySnapshot(snap)){
-          renderCard(prev);
-          return;
-        }
-
-        state.lastStable[id] = snap;
-        cached[id] = snap;
-        changed = true;
-      });
-      if(changed) writeCache(cached);
-    }
-    function markReady(){
-      captureStableCards();
-      state.allowReady = true;
-      try{ originalSetAttribute.call(document.documentElement, READY_ATTR, '1'); }catch(_e){}
-      try{ console.info('[v522 smart alerts] stable render ready', state.lastStable); }catch(_e2){}
-    }
-    function scheduleReadyCheck(delay){
-      clearTimeout(state.readyTimer);
-      state.readyTimer = setTimeout(function(){ markReady(); }, delay || 360);
-    }
-    function observe(){
-      var strip = $('smartAlertStrip');
-      if(!strip || state.observer) return;
-      state.observer = new MutationObserver(function(){
-        if(state.suppress) return;
-        scheduleReadyCheck(320);
-      });
-      state.observer.observe(strip, {subtree:true, childList:true, characterData:true, attributes:true, attributeFilter:['class','href']});
-    }
-    function resetForCommunityChange(){
-      state.allowReady = false;
-      state.startedAt = Date.now();
-      try{ originalRemoveAttribute.call(document.documentElement, READY_ATTR); }catch(_e){}
-      restoreCachedCards();
-      scheduleReadyCheck(650);
-    }
-    function init(){
-      try{ originalRemoveAttribute.call(document.documentElement, READY_ATTR); }catch(_e){}
-      restoreCachedCards();
-      observe();
-      scheduleReadyCheck(900);
-      setTimeout(markReady, 2800);
-    }
-
-    document.addEventListener('DOMContentLoaded', init, {once:true});
-    window.addEventListener('pageshow', function(){ setTimeout(init, 0); });
-    document.addEventListener('community:changed', resetForCommunityChange);
-    window.addEventListener('zummee:community-changed', resetForCommunityChange);
-  })();
   
 
   <script>
@@ -7589,55 +7414,51 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
 </script>
 
 
-<script id="manager-hub-v617-audit-only">
+<script id="manager-hub-v618-remove-broken-v522-audit">
 /*
-  Manager Hub v617 Audit Only
+  Manager Hub v618 — Remove broken v522 only.
 
   Purpose:
-  - Inspect current v616 Manager Hub behavior without changing UI or data.
-  - No smart-card rendering changes.
-  - No fetch interception.
-  - No Operations Portal count changes.
-  - No community source changes.
+  - Remove malformed v522 smart-alert stability controller.
+  - Keep smart-card renderer unchanged.
+  - Keep community dropdown unchanged.
+  - Keep operations pill unchanged.
+  - Provide audit helpers only.
 */
 (function(){
-  if(window.__ManagerHubAuditOnlyV617) return;
-  window.__ManagerHubAuditOnlyV617 = true;
+  if(window.__ManagerHubV618RemoveBrokenV522Audit) return;
+  window.__ManagerHubV618RemoveBrokenV522Audit = true;
 
   function s(v){ return String(v == null ? "" : v).trim(); }
-  function safeJson(raw){
-    try{ return raw ? JSON.parse(raw) : null; }catch(_e){ return null; }
-  }
+  function safeJson(raw){ try{ return raw ? JSON.parse(raw) : null; }catch(_e){ return null; } }
   function text(sel){
     var node = document.querySelector(sel);
     return node ? s(node.textContent) : "";
   }
-  function exists(sel){
-    return !!document.querySelector(sel);
+  function card(id){
+    var el = document.getElementById(id);
+    if(!el) return { exists:false };
+    var cs = getComputedStyle(el);
+    return {
+      exists:true,
+      visible: !(el.offsetParent === null) && cs.visibility !== "hidden" && cs.opacity !== "0" && cs.display !== "none",
+      display: cs.display,
+      visibility: cs.visibility,
+      opacity: cs.opacity,
+      classes: el.className,
+      href: el.getAttribute("href") || "",
+      title: text("#" + id + " .mh2-alert-title"),
+      badge: text("#" + id + " .mh2-alert-badge"),
+      copy: text("#" + id + " .mh2-alert-copy")
+    };
   }
-  function getStorage(keys){
-    var out = {};
-    keys.forEach(function(k){
-      try{
-        out[k] = {
-          local: localStorage.getItem(k),
-          session: sessionStorage.getItem(k)
-        };
-      }catch(_e){
-        out[k] = { local:null, session:null, error:String(_e) };
-      }
-    });
-    return out;
-  }
-  function getActiveCommunity(){
-    var fromShared = null;
+  function activeCommunity(){
+    var shared = null;
     try{
       if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === "function"){
-        fromShared = window.ZummeeCommunityState.getActiveCommunity();
+        shared = window.ZummeeCommunityState.getActiveCommunity();
       }
-    }catch(e){
-      fromShared = { error:String(e) };
-    }
+    }catch(e){ shared = { error:String(e) }; }
 
     var dropdown = null;
     try{
@@ -7652,189 +7473,18 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
           optionCount: sel.options ? sel.options.length : 0
         };
       }
-    }catch(e2){
-      dropdown = { error:String(e2) };
-    }
-
-    var canonical = safeJson(localStorage.getItem("zummee_active_community_v601") || sessionStorage.getItem("zummee_active_community_v601") || "");
+    }catch(e2){ dropdown = { error:String(e2) }; }
 
     return {
-      sharedState: fromShared,
+      sharedState: shared,
       dropdown: dropdown,
-      canonicalStorage: canonical,
-      scalarStorage: getStorage([
-        "zummee_active_community_id",
-        "zummee_selected_community_id",
-        "zummeeActiveCommunityId",
-        "activeCommunityId",
-        "currentCommunityId",
-        "zummee_active_community_name",
-        "zummee_selected_community_name",
-        "currentCommunityName",
-        "activeCommunityName"
-      ])
-    };
-  }
-  function getSupabaseStatus(){
-    var candidates = [];
-    [
-      "supabaseClient",
-      "sb",
-      "supabaseClientV2",
-      "ZUMMEE_SUPABASE",
-      "__zummeeSupabase",
-      "zummeeSupabase",
-      "__sb"
-    ].forEach(function(name){
-      try{
-        var c = window[name];
-        candidates.push({
-          name:name,
-          exists:!!c,
-          hasFrom:!!(c && typeof c.from === "function"),
-          hasAuth:!!(c && c.auth)
-        });
-      }catch(e){
-        candidates.push({ name:name, error:String(e) });
-      }
-    });
-
-    return {
-      sdkPresent: !!(window.supabase && typeof window.supabase.createClient === "function"),
-      candidates: candidates,
-      helpers: {
-        getSupabase: typeof window.getSupabase,
-        ensureSupabaseSync: typeof window.ensureSupabaseSync,
-        requireSb: typeof window.requireSb
-      }
-    };
-  }
-  function getSmartAlerts(){
-    var ids = ["mh2AlertBoard","mh2AlertActivity","mh2AlertApprovals"];
-    var cards = {};
-    ids.forEach(function(id){
-      var el = document.getElementById(id);
-      if(!el){
-        cards[id] = { exists:false };
-        return;
-      }
-      cards[id] = {
-        exists:true,
-        visible: !(el.offsetParent === null) && getComputedStyle(el).visibility !== "hidden" && getComputedStyle(el).opacity !== "0",
-        display:getComputedStyle(el).display,
-        visibility:getComputedStyle(el).visibility,
-        opacity:getComputedStyle(el).opacity,
-        classes: el.className,
-        href: el.getAttribute("href") || "",
-        title: text("#" + id + " .mh2-alert-title"),
-        badge: text("#" + id + " .mh2-alert-badge"),
-        copy: text("#" + id + " .mh2-alert-copy"),
-        dataset: Object.assign({}, el.dataset || {})
-      };
-    });
-
-    var stability = null;
-    try{
-      var st = window.__ZUMMEE_V522_SMART_ALERT_STABILITY__;
-      stability = st ? {
-        version: st.version,
-        allowReady: st.allowReady,
-        pendingReady: st.pendingReady,
-        suppress: st.suppress,
-        startedAt: st.startedAt,
-        hasObserver: !!st.observer,
-        lastStableKeys: st.lastStable ? Object.keys(st.lastStable) : []
-      } : null;
-    }catch(e){
-      stability = { error:String(e) };
-    }
-
-    return {
-      readyAttribute: document.documentElement.getAttribute("data-zummee-smart-alerts-v426-ready"),
-      stripExists: !!document.getElementById("smartAlertStrip"),
-      stripText: text("#smartAlertStrip").slice(0, 600),
-      cards: cards,
-      stabilityController: stability,
-      cacheKeys: Object.keys(localStorage).filter(function(k){ return k.indexOf("zummee_manager_smart_alerts_stable_v522") === 0; })
-    };
-  }
-  function getOperationsPill(){
-    var oldPill = document.getElementById("mh2OperationsPortalPill");
-    var stablePill = document.getElementById("mh2OpsPortalPillStable");
-    function pillInfo(el){
-      if(!el) return { exists:false };
-      return {
-        exists:true,
-        id: el.id,
-        visible: !(el.offsetParent === null) && getComputedStyle(el).visibility !== "hidden" && getComputedStyle(el).opacity !== "0",
-        classes: el.className,
-        href: el.getAttribute("href") || "",
-        text: s(el.textContent),
-        dataset: Object.assign({}, el.dataset || {})
-      };
-    }
-    return {
-      oldPill: pillInfo(oldPill),
-      stablePill: pillInfo(stablePill),
-      oldTitle: text("#mh2OperationsPortalPillTitle"),
-      oldBadge: text("#mh2OperationsPortalPillBadge"),
-      stableTitle: text("#mh2OpsPortalPillTitleStable"),
-      stableBadge: text("#mh2OpsPortalPillBadgeStable"),
-      helpers: {
-        refreshManagerHubOperationsPortalPill: typeof window.refreshManagerHubOperationsPortalPill,
-        refreshManagerHubOperationsPortalPillStable: typeof window.refreshManagerHubOperationsPortalPillStable,
-        refreshManagerHubOperationsPortalPillAuthoritative: typeof window.refreshManagerHubOperationsPortalPillAuthoritative,
-        getManagerHubOperationsPortalSummary: typeof window.getManagerHubOperationsPortalSummary
-      },
-      summary: (typeof window.getManagerHubOperationsPortalSummary === "function" ? window.getManagerHubOperationsPortalSummary() : null)
-    };
-  }
-  function getScriptInventory(){
-    var scripts = Array.prototype.slice.call(document.scripts || []);
-    return scripts.map(function(script, index){
-      return {
-        index:index,
-        id: script.id || "",
-        src: script.src || "",
-        inlineStart: script.src ? "" : s(script.textContent).slice(0, 120)
-      };
-    }).filter(function(item){
-      return item.id ||
-        item.src.indexOf("shared/") !== -1 ||
-        item.src.indexOf("supabase") !== -1 ||
-        item.inlineStart.indexOf("Smart") !== -1 ||
-        item.inlineStart.indexOf("smart") !== -1 ||
-        item.inlineStart.indexOf("community") !== -1 ||
-        item.inlineStart.indexOf("Operations") !== -1;
-    });
-  }
-  function getConsoleRiskFlags(){
-    return {
-      scriptTagCount: document.querySelectorAll("script").length,
-      styleTagCount: document.querySelectorAll("style").length,
-      hasV623toV633ExperimentalMarkers: [
-        "v623",
-        "v624",
-        "v625",
-        "v626",
-        "v627",
-        "v628",
-        "v629",
-        "v630",
-        "v631",
-        "v632",
-        "v633"
-      ].filter(function(v){
-        return document.documentElement.outerHTML.indexOf("manager-hub-" + v) !== -1;
-      }),
-      currentBuild: window.ZUMMEE_BUILD || "",
-      mhVersion: window.__MH_VERSION || ""
+      canonicalStorage: safeJson(localStorage.getItem("zummee_active_community_v601") || sessionStorage.getItem("zummee_active_community_v601") || "")
     };
   }
 
   window.auditManagerHubState = function(){
     var report = {
-      auditBuild: "2026-05-08-v617-audit-only",
+      auditBuild: "2026-05-08-v618-remove-broken-v522-only",
       timestamp: new Date().toISOString(),
       page: {
         href: location.href,
@@ -7842,15 +7492,50 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
         build: window.ZUMMEE_BUILD || "",
         mhVersion: window.__MH_VERSION || ""
       },
-      riskFlags: getConsoleRiskFlags(),
-      activeCommunity: getActiveCommunity(),
-      supabase: getSupabaseStatus(),
-      smartAlerts: getSmartAlerts(),
-      operationsPill: getOperationsPill(),
-      scriptInventory: getScriptInventory()
+      syntaxFix: {
+        brokenV522ControllerPresent: !!document.getElementById("zummee-v522-smart-alert-stability-controller"),
+        oldV522RuntimeObjectPresent: !!window.__ZUMMEE_V522_SMART_ALERT_STABILITY__,
+        smartReadyAttribute: document.documentElement.getAttribute("data-zummee-smart-alerts-v426-ready")
+      },
+      activeCommunity: activeCommunity(),
+      smartAlerts: {
+        stripExists: !!document.getElementById("smartAlertStrip"),
+        board: card("mh2AlertBoard"),
+        maintenance: card("mh2AlertActivity"),
+        annual: card("mh2AlertApprovals")
+      },
+      operationsPill: {
+        oldPillExists: !!document.getElementById("mh2OperationsPortalPill"),
+        stablePillExists: !!document.getElementById("mh2OpsPortalPillStable"),
+        oldTitle: text("#mh2OperationsPortalPillTitle"),
+        oldBadge: text("#mh2OperationsPortalPillBadge"),
+        stableTitle: text("#mh2OpsPortalPillTitleStable"),
+        stableBadge: text("#mh2OpsPortalPillBadgeStable"),
+        helpers: {
+          refreshManagerHubOperationsPortalPill: typeof window.refreshManagerHubOperationsPortalPill,
+          refreshManagerHubOperationsPortalPillStable: typeof window.refreshManagerHubOperationsPortalPillStable,
+          refreshManagerHubOperationsPortalPillAuthoritative: typeof window.refreshManagerHubOperationsPortalPillAuthoritative,
+          getManagerHubOperationsPortalSummary: typeof window.getManagerHubOperationsPortalSummary
+        },
+        summary: (typeof window.getManagerHubOperationsPortalSummary === "function" ? window.getManagerHubOperationsPortalSummary() : null)
+      },
+      supabase: {
+        sdkPresent: !!(window.supabase && typeof window.supabase.createClient === "function"),
+        supabaseClientPresent: !!(window.supabaseClient && typeof window.supabaseClient.from === "function"),
+        getSupabase: typeof window.getSupabase,
+        ensureSupabaseSync: typeof window.ensureSupabaseSync,
+        requireSb: typeof window.requireSb
+      },
+      riskFlags: {
+        scriptTagCount: document.querySelectorAll("script").length,
+        styleTagCount: document.querySelectorAll("style").length,
+        experimentalMarkers: ["v623","v624","v625","v626","v627","v628","v629","v630","v631","v632","v633"].filter(function(v){
+          return document.documentElement.outerHTML.indexOf("manager-hub-" + v) !== -1;
+        })
+      }
     };
-    window.__MANAGER_HUB_AUDIT_V617_LAST_REPORT = report;
-    console.info("[Manager Hub v617 Audit Only]", report);
+    window.__MANAGER_HUB_AUDIT_V618_LAST_REPORT = report;
+    console.info("[Manager Hub v618 Audit]", report);
     return report;
   };
 
@@ -7859,14 +7544,16 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     var compact = {
       build: r.page.build,
       mhVersion: r.page.mhVersion,
+      brokenV522ControllerPresent: r.syntaxFix.brokenV522ControllerPresent,
+      oldV522RuntimeObjectPresent: r.syntaxFix.oldV522RuntimeObjectPresent,
+      smartReady: r.syntaxFix.smartReadyAttribute,
       community: r.activeCommunity.dropdown || r.activeCommunity.canonicalStorage || r.activeCommunity.sharedState,
-      smartReady: r.smartAlerts.readyAttribute,
-      board: r.smartAlerts.cards.mh2AlertBoard,
-      maintenance: r.smartAlerts.cards.mh2AlertActivity,
-      annual: r.smartAlerts.cards.mh2AlertApprovals,
+      board: r.smartAlerts.board,
+      maintenance: r.smartAlerts.maintenance,
+      annual: r.smartAlerts.annual,
       operationsPill: r.operationsPill,
       supabase: r.supabase,
-      experimentalMarkers: r.riskFlags.hasV623toV633ExperimentalMarkers
+      experimentalMarkers: r.riskFlags.experimentalMarkers
     };
     console.log(compact);
     return compact;
