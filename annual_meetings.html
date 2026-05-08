@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-08-v637-annual-meetings-safe-recovery";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-08-v638-annual-meetings-safe-console-cleanup";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annual Meetings</title>
@@ -17,7 +17,6 @@
     })();
   </script>
   <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
-  <script src="shared/community-state.js?v=2026-05-08-v617"></script>
   <script src="shared/input-undo-guard.js?v=2026-05-08-v617"></script>
   
 
@@ -691,6 +690,89 @@
   }
 </style>
 
+
+<script id="annual-meetings-v638-quiet-compat-shim">
+(function(){
+  if(window.__AnnualMeetingsQuietCompatShimV638) return;
+  window.__AnnualMeetingsQuietCompatShimV638 = true;
+
+  window.getWin = window.getWin || function(){ return window; };
+  window.hydrateBridge = window.hydrateBridge || async function(){ return true; };
+
+  window.getBoardCriticalEntry = window.getBoardCriticalEntry || function(){ return {}; };
+  window.getAnnualMeetingSendDate = window.getAnnualMeetingSendDate || function(){ return ''; };
+  window.getSeatsUpForElection = window.getSeatsUpForElection || function(){ return ''; };
+
+  window.addOneYear = window.addOneYear || function(dateStr){
+    try{
+      if(!dateStr) return '';
+      var d = new Date(String(dateStr) + 'T00:00:00');
+      if(Number.isNaN(d.getTime())) return '';
+      d.setFullYear(d.getFullYear() + 1);
+      return d.toISOString().slice(0,10);
+    }catch(_e){ return ''; }
+  };
+})();
+</script>
+
+
+<script id="annual-meetings-v638-community-state-fallback">
+(function(){
+  if(window.ZummeeCommunityState) return;
+
+  function s(v){ return String(v == null ? '' : v).trim(); }
+
+  function read(){
+    try{
+      var raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+      var obj = raw ? JSON.parse(raw) : null;
+      if(obj && obj.id) return { id:s(obj.id), name:s(obj.name) };
+    }catch(_e){}
+
+    try{
+      var qs = new URLSearchParams(location.search);
+      return {
+        id: s(qs.get('community_id')) || s(localStorage.getItem('zummee_active_community_id')) || s(localStorage.getItem('activeCommunityId')) || s(localStorage.getItem('currentCommunityId')) || s(localStorage.getItem('zummee_selected_community_id')),
+        name: s(qs.get('community_name')) || s(localStorage.getItem('zummee_active_community_name')) || s(localStorage.getItem('activeCommunityName')) || s(localStorage.getItem('currentCommunityName'))
+      };
+    }catch(_e2){}
+
+    return { id:'', name:'' };
+  }
+
+  function write(id, name){
+    id = s(id); name = s(name);
+    if(!id) return;
+    var state = { id:id, name:name, updatedAt:Date.now(), source:'annual-v638-fallback' };
+    try{
+      localStorage.setItem('zummee_active_community_v601', JSON.stringify(state));
+      sessionStorage.setItem('zummee_active_community_v601', JSON.stringify(state));
+      localStorage.setItem('zummee_active_community_id', id);
+      localStorage.setItem('activeCommunityId', id);
+      localStorage.setItem('currentCommunityId', id);
+      localStorage.setItem('zummee_selected_community_id', id);
+      if(name){
+        localStorage.setItem('zummee_active_community_name', name);
+        localStorage.setItem('activeCommunityName', name);
+        localStorage.setItem('currentCommunityName', name);
+      }
+    }catch(_e){}
+  }
+
+  window.ZummeeCommunityState = {
+    version:'annual-v638-fallback',
+    getActiveCommunity: read,
+    getSelectedCommunityId: function(){ return read().id; },
+    getSelectedCommunityName: function(){ return read().name; },
+    setActiveCommunity: function(id, name){ write(id, name); return read(); },
+    loadAssignedCommunities: async function(){
+      var active = read();
+      return active.id ? [{ id:active.id, name:active.name || 'Selected Community' }] : [];
+    }
+  };
+})();
+</script>
+
 </head>
 <body>
   <main class="shell">
@@ -844,8 +926,6 @@
         </div>
       </div>
     </section>
-
-  <iframe id="opsFrame" class="hiddenFrame" src="ops.html" title="Annual meeting backend frame"></iframe>
 
 <script>
 (function(){
