@@ -3,7 +3,9 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Board Member Hub</title>
 
 
-<style id="board-hub-annual-approval-requests-v701-style">
+
+
+<style id="board-hub-annual-approval-requests-v702-style">
   .bhAnnualApprovalWrap {
     margin: 22px auto;
     width: min(1120px, calc(100% - 36px));
@@ -72,16 +74,16 @@
 
 
 
-<script id="board-hub-annual-approval-requests-v701">
+
+
+<script id="board-hub-annual-approval-requests-v702">
 /*
-  Board Member Hub v701 — Annual Meeting Approval Requests
-  Fix over v700:
-  - Adds self-contained Supabase client fallback.
-  - If no global client exists and no supabase-js library exists, loads supabase-js dynamically.
+  Board Member Hub v702 — Annual Meeting Approval Requests
+  Adds direct REST fallback for pages where Supabase client is unavailable.
 */
 (function(){
-  if(window.__BoardHubAnnualApprovalsV701) return;
-  window.__BoardHubAnnualApprovalsV701 = true;
+  if(window.__BoardHubAnnualApprovalsV702) return;
+  window.__BoardHubAnnualApprovalsV702 = true;
 
   const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
@@ -91,6 +93,7 @@
   let loading = false;
   let bound = false;
   let clientPromise = null;
+  let lastTransport = 'none';
 
   function s(v){ return String(v == null ? '' : v).trim(); }
   function el(id){ return document.getElementById(id); }
@@ -124,7 +127,6 @@
 
   async function getClient(){
     if(clientPromise) return clientPromise;
-
     clientPromise = (async function(){
       try{ if(window.supabaseClient && window.supabaseClient.from) return { client:window.supabaseClient, source:'window.supabaseClient' }; }catch(_e){}
       try{ if(window.sb && window.sb.from) return { client:window.sb, source:'window.sb' }; }catch(_e){}
@@ -136,27 +138,94 @@
       }catch(_e2){}
       try{
         if(window.supabase && window.supabase.createClient){
-          if(!window.__BoardHubAnnualApprovalsSbV701){
-            window.__BoardHubAnnualApprovalsSbV701 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+          if(!window.__BoardHubAnnualApprovalsSbV702){
+            window.__BoardHubAnnualApprovalsSbV702 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
           }
-          return { client:window.__BoardHubAnnualApprovalsSbV701, source:'window.supabase.createClient' };
+          return { client:window.__BoardHubAnnualApprovalsSbV702, source:'window.supabase.createClient' };
         }
       }catch(_e3){}
-
       try{
         await loadScript(SUPABASE_CDN);
         if(window.supabase && window.supabase.createClient){
-          window.__BoardHubAnnualApprovalsSbV701 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-          return { client:window.__BoardHubAnnualApprovalsSbV701, source:'dynamic-supabase-js' };
+          window.__BoardHubAnnualApprovalsSbV702 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+          return { client:window.__BoardHubAnnualApprovalsSbV702, source:'dynamic-supabase-js' };
         }
       }catch(err){
-        console.warn('[Board Hub v701] failed to load supabase-js', err);
+        console.warn('[Board Hub v702] supabase-js load failed, REST fallback will be used', err);
       }
-
       return { client:null, source:'none' };
     })();
-
     return clientPromise;
+  }
+
+  function authTokenFromStorage(){
+    const stores = [];
+    try{ stores.push(localStorage); }catch(_e){}
+    try{ stores.push(sessionStorage); }catch(_e){}
+    for(const store of stores){
+      for(let i = 0; i < store.length; i++){
+        const key = store.key(i);
+        if(!key) continue;
+        const val = store.getItem(key);
+        if(!val) continue;
+
+        // Supabase v2 stores auth sessions as JSON with access_token.
+        if(key.indexOf('auth-token') !== -1 || val.indexOf('access_token') !== -1){
+          try{
+            const obj = JSON.parse(val);
+            if(obj && obj.access_token) return obj.access_token;
+            if(obj && obj.currentSession && obj.currentSession.access_token) return obj.currentSession.access_token;
+            if(obj && obj.session && obj.session.access_token) return obj.session.access_token;
+          }catch(_e){}
+        }
+      }
+    }
+    return '';
+  }
+
+  function restHeaders(){
+    const token = authTokenFromStorage();
+    return {
+      apikey: SUPABASE_KEY,
+      Authorization: 'Bearer ' + (token || SUPABASE_KEY),
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation'
+    };
+  }
+
+  function buildQuery(params){
+    return Object.keys(params).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(params[k])).join('&');
+  }
+
+  async function restSelectPendingBoard(communityId){
+    const url = SUPABASE_URL + '/rest/v1/annual_meeting_approval_requests?' + buildQuery({
+      select:'*',
+      current_step:'eq.pending_board',
+      community_id:'eq.' + communityId,
+      archived_at:'is.null',
+      order:'updated_at.desc'
+    });
+    const res = await fetch(url, { headers:restHeaders() });
+    const text = await res.text();
+    if(!res.ok){
+      throw new Error('REST select failed ' + res.status + ': ' + text);
+    }
+    return text ? JSON.parse(text) : [];
+  }
+
+  async function restUpdate(id, patch){
+    const url = SUPABASE_URL + '/rest/v1/annual_meeting_approval_requests?' + buildQuery({ id:'eq.' + id });
+    const res = await fetch(url, {
+      method:'PATCH',
+      headers:restHeaders(),
+      body:JSON.stringify(patch)
+    });
+    const text = await res.text();
+    if(!res.ok){
+      throw new Error('REST update failed ' + res.status + ': ' + text);
+    }
+    const data = text ? JSON.parse(text) : [];
+    return Array.isArray(data) ? data[0] : data;
   }
 
   function activeCommunity(){
@@ -166,7 +235,6 @@
         if(active && active.id) return { id:s(active.id), name:s(active.name), source:'ZummeeCommunityState' };
       }
     }catch(_e){}
-
     const selectors = ['#boardCommunitySelect','#communitySelect','#zummeeCommunitySelect','select[data-community-select]','select[name="community"]'];
     for(const sel of selectors){
       const node = document.querySelector(sel);
@@ -175,42 +243,40 @@
         return { id:s(node.value), name:s(opt && opt.textContent), source:sel };
       }
     }
-
     try{
       const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
       const obj = raw ? JSON.parse(raw) : null;
       if(obj && obj.id) return { id:s(obj.id), name:s(obj.name), source:'storage-v601' };
     }catch(_e2){}
-
     return { id:'', name:'', source:'none' };
   }
 
   function currentUser(){
+    const token = authTokenFromStorage();
+    if(token){
+      try{
+        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        if(payload && payload.sub) return String(payload.sub);
+      }catch(_e){}
+    }
     try{
       const keys = ['zummee_user_id_v1','zummeeUserId','activeUserId','currentUserId'];
       for(const key of keys){
         const v = s(localStorage.getItem(key) || sessionStorage.getItem(key));
         if(v) return v;
       }
-    }catch(_e){}
-    try{
-      const auth = window.__BoardHubAnnualApprovalsSbV701 && window.__BoardHubAnnualApprovalsSbV701.auth;
-      if(auth && auth.getUser){
-        // async unavailable here; RLS handles identity anyway, so this is optional.
-      }
     }catch(_e2){}
     return '';
   }
 
   function ensureContainer(){
-    let wrap = el('bhAnnualApprovalRequestsV701') || el('bhAnnualApprovalRequestsV700');
+    let wrap = el('bhAnnualApprovalRequestsV702') || el('bhAnnualApprovalRequestsV701') || el('bhAnnualApprovalRequestsV700');
     if(wrap){
-      wrap.id = 'bhAnnualApprovalRequestsV701';
+      wrap.id = 'bhAnnualApprovalRequestsV702';
       return wrap;
     }
-
     wrap = document.createElement('section');
-    wrap.id = 'bhAnnualApprovalRequestsV701';
+    wrap.id = 'bhAnnualApprovalRequestsV702';
     wrap.className = 'bhAnnualApprovalWrap';
     wrap.innerHTML =
       '<div class="bhAnnualApprovalHead">' +
@@ -219,9 +285,9 @@
           '<h2 class="bhAnnualApprovalTitle">Packets awaiting Board approval</h2>' +
           '<p class="bhAnnualApprovalSub">Review annual meeting packets routed to the Board. Approved packets automatically move to the next required step.</p>' +
         '</div>' +
-        '<div id="bhAnnualApprovalBadgeV701" class="bhAnnualApprovalBadge">Loading</div>' +
+        '<div id="bhAnnualApprovalBadgeV702" class="bhAnnualApprovalBadge">Loading</div>' +
       '</div>' +
-      '<div id="bhAnnualApprovalListV701" class="bhAnnualApprovalList">' +
+      '<div id="bhAnnualApprovalListV702" class="bhAnnualApprovalList">' +
         '<div class="bhAnnualApprovalEmpty">Loading annual meeting approvals…</div>' +
       '</div>';
 
@@ -238,7 +304,6 @@
     }else{
       anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
     }
-
     return wrap;
   }
 
@@ -251,40 +316,55 @@
       community,
       clientReady:!!sb,
       clientSource:resolved.source,
+      restTokenReady:!!authTokenFromStorage(),
       rows:[],
       error:'',
       source:'annual_meeting_approval_requests',
+      transport:'none',
       loadedAt:Date.now()
     };
 
-    if(!sb){
-      result.error = 'Supabase client not ready';
-      return result;
-    }
     if(!community.id){
       result.error = 'No selected community';
       return result;
     }
 
-    try{
-      const res = await sb
-        .from('annual_meeting_approval_requests')
-        .select('*')
-        .eq('current_step', 'pending_board')
-        .eq('community_id', community.id)
-        .is('archived_at', null)
-        .order('updated_at', { ascending:false });
+    if(sb){
+      try{
+        const res = await sb
+          .from('annual_meeting_approval_requests')
+          .select('*')
+          .eq('current_step', 'pending_board')
+          .eq('community_id', community.id)
+          .is('archived_at', null)
+          .order('updated_at', { ascending:false });
 
-      if(res && res.error){
-        result.error = res.error.message || JSON.stringify(res.error);
-        return result;
+        if(res && !res.error){
+          result.ok = true;
+          result.rows = Array.isArray(res.data) ? res.data : [];
+          result.transport = resolved.source;
+          lastTransport = result.transport;
+          return result;
+        }
+        result.error = res && res.error ? (res.error.message || JSON.stringify(res.error)) : '';
+      }catch(err){
+        result.error = err && err.message ? err.message : String(err);
       }
+    }
 
+    // REST fallback.
+    try{
+      const rows = await restSelectPendingBoard(community.id);
       result.ok = true;
-      result.rows = Array.isArray(res && res.data) ? res.data : [];
+      result.rows = Array.isArray(rows) ? rows : [];
+      result.transport = 'direct-rest';
+      result.clientReady = !!sb;
+      lastTransport = 'direct-rest';
+      result.error = '';
       return result;
     }catch(err){
-      result.error = err && err.message ? err.message : String(err);
+      result.error = (result.error ? result.error + ' | ' : '') + (err && err.message ? err.message : String(err));
+      result.transport = 'failed';
       return result;
     }
   }
@@ -304,7 +384,6 @@
     const note = s(row.approval_note);
     const snapshot = row.packet_preview_snapshot && typeof row.packet_preview_snapshot === 'object' ? row.packet_preview_snapshot : {};
     const communityName = esc((snapshot.community && snapshot.community.name) || activeCommunity().name || row.community_id);
-
     return '' +
       '<article class="bhAnnualApprovalCard" data-approval-id="' + id + '">' +
         '<div class="bhAnnualApprovalCardTop"><div>' +
@@ -330,34 +409,32 @@
 
   function render(result){
     ensureContainer();
-    const list = el('bhAnnualApprovalListV701') || el('bhAnnualApprovalListV700');
-    const badge = el('bhAnnualApprovalBadgeV701') || el('bhAnnualApprovalBadgeV700');
+    const list = el('bhAnnualApprovalListV702') || el('bhAnnualApprovalListV701') || el('bhAnnualApprovalListV700');
+    const badge = el('bhAnnualApprovalBadgeV702') || el('bhAnnualApprovalBadgeV701') || el('bhAnnualApprovalBadgeV700');
     if(!list || !badge) return;
 
     if(!result.ok){
-      badge.textContent = result.clientReady ? 'Needs Setup' : 'Loading Client';
+      badge.textContent = 'Needs Setup';
       list.innerHTML = '<div class="bhAnnualApprovalError">' + esc(result.error || 'Could not load annual meeting approvals.') + '</div>';
       return;
     }
 
     lastRows = result.rows || [];
     badge.textContent = String(lastRows.length) + ' Pending';
-
     if(!lastRows.length){
       list.innerHTML = '<div class="bhAnnualApprovalEmpty">No annual meeting packets are waiting for Board approval for this community.</div>';
       return;
     }
-
     list.innerHTML = lastRows.map(cardHtml).join('');
   }
 
   async function refresh(){
-    if(loading) return window.__BoardHubAnnualApprovalsV701Summary || null;
+    if(loading) return window.__BoardHubAnnualApprovalsV702Summary || null;
     loading = true;
     try{
       ensureContainer();
       const result = await loadRows();
-      window.__BoardHubAnnualApprovalsV701Summary = result;
+      window.__BoardHubAnnualApprovalsV702Summary = result;
       render(result);
       return result;
     }finally{
@@ -365,9 +442,7 @@
     }
   }
 
-  function findRow(id){
-    return (lastRows || []).find(r => s(r.id) === s(id)) || null;
-  }
+  function findRow(id){ return (lastRows || []).find(r => s(r.id) === s(id)) || null; }
 
   function setCardBusy(id, busy){
     const card = document.querySelector('[data-approval-id="' + CSS.escape(id) + '"]');
@@ -375,11 +450,21 @@
     card.querySelectorAll('button').forEach(btn => btn.disabled = !!busy);
   }
 
-  async function approve(id){
+  async function updateRow(id, patch){
     const resolved = await getClient();
     const sb = resolved.client;
+
+    if(sb && lastTransport !== 'direct-rest'){
+      const res = await sb.from('annual_meeting_approval_requests').update(patch).eq('id', id).select('*').maybeSingle();
+      if(res && !res.error) return res.data || null;
+      console.warn('[Board Hub v702] client update failed; trying REST', res && res.error);
+    }
+    return await restUpdate(id, patch);
+  }
+
+  async function approve(id){
     const row = findRow(id);
-    if(!sb || !row) return;
+    if(!row) return;
     setCardBusy(id, true);
     try{
       const patch = Object.assign({}, nextAfterBoard(row), {
@@ -388,34 +473,25 @@
         board_response_note:null,
         updated_at:new Date().toISOString()
       });
-
-      const res = await sb.from('annual_meeting_approval_requests').update(patch).eq('id', id).select('*').maybeSingle();
-      if(res && res.error){
-        alert('Could not approve packet: ' + (res.error.message || JSON.stringify(res.error)));
-        return;
-      }
+      await updateRow(id, patch);
       await refresh();
     }catch(err){
-      alert('Could not approve packet. Check console for details.');
-      console.error('[Board Hub v701] approve failed', err);
+      alert('Could not approve packet: ' + (err && err.message ? err.message : String(err)));
+      console.error('[Board Hub v702] approve failed', err);
     }finally{
       setCardBusy(id, false);
     }
   }
 
   async function reject(id){
-    const resolved = await getClient();
-    const sb = resolved.client;
     const row = findRow(id);
-    if(!sb || !row) return;
-
+    if(!row) return;
     const noteNode = el('bhAnnualRejectNote_' + id);
     const note = s(noteNode && noteNode.value);
     if(!note){
       alert('Add a rejection note before submitting.');
       return;
     }
-
     setCardBusy(id, true);
     try{
       const patch = {
@@ -426,16 +502,11 @@
         board_response_note:note,
         updated_at:new Date().toISOString()
       };
-
-      const res = await sb.from('annual_meeting_approval_requests').update(patch).eq('id', id).select('*').maybeSingle();
-      if(res && res.error){
-        alert('Could not reject packet: ' + (res.error.message || JSON.stringify(res.error)));
-        return;
-      }
+      await updateRow(id, patch);
       await refresh();
     }catch(err){
-      alert('Could not reject packet. Check console for details.');
-      console.error('[Board Hub v701] reject failed', err);
+      alert('Could not reject packet: ' + (err && err.message ? err.message : String(err)));
+      console.error('[Board Hub v702] reject failed', err);
     }finally{
       setCardBusy(id, false);
     }
@@ -447,7 +518,6 @@
     document.addEventListener('click', function(e){
       const btn = e.target && e.target.closest ? e.target.closest('[data-action][data-id]') : null;
       if(!btn) return;
-
       const action = btn.dataset.action;
       const id = btn.dataset.id;
       if(!id) return;
@@ -474,13 +544,18 @@
   window.refreshBoardHubAnnualApprovalRequests = refresh;
   window.getBoardHubAnnualApprovalRequestsStatus = function(){
     return {
-      installed:!!window.__BoardHubAnnualApprovalsV701,
-      summary:window.__BoardHubAnnualApprovalsV701Summary || null,
+      installed:!!window.__BoardHubAnnualApprovalsV702,
+      summary:window.__BoardHubAnnualApprovalsV702Summary || null,
       cardCount:document.querySelectorAll('[data-approval-id]').length,
-      containerExists:!!el('bhAnnualApprovalRequestsV701'),
+      containerExists:!!el('bhAnnualApprovalRequestsV702'),
       community:activeCommunity(),
       supabaseGlobal:!!(window.supabase && window.supabase.createClient),
-      clientCreated:!!window.__BoardHubAnnualApprovalsSbV701
+      clientCreated:!!window.__BoardHubAnnualApprovalsSbV702,
+      restTokenReady:!!authTokenFromStorage(),
+      lastTransport:lastTransport,
+      localStorageKeys:(function(){
+        try{ return Object.keys(localStorage).filter(k => k.indexOf('supabase') !== -1 || k.indexOf('sb-') !== -1).slice(0,10); }catch(_e){ return []; }
+      })()
     };
   };
 
@@ -490,13 +565,11 @@
     refresh();
     setTimeout(refresh, 1200);
     setTimeout(refresh, 3500);
+    setTimeout(refresh, 7000);
   }
 
-  if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', boot, { once:true });
-  }else{
-    boot();
-  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once:true });
+  else boot();
 
   window.addEventListener('pageshow', function(){ setTimeout(refresh, 200); });
   window.addEventListener('focus', function(){ setTimeout(refresh, 200); });
