@@ -43,7 +43,7 @@
 
 
 
-<script>window.ZUMMEE_BUILD="2026-05-08-v624-manager-hub-smart-cards-head-boot";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-08-v625-manager-hub-smart-card-immediate-loader";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <script id="zummee-manager-canonical-preboot-v608">
 /*
@@ -3114,45 +3114,33 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
 </style>
 
 
-<script id="manager-hub-v624-smart-card-boot-marker">
-window.__MANAGER_HUB_V624_SMART_CARDS_EXPECTED = true;
-console.info("[Manager Hub v624] smart-card head boot marker loaded");
-</script>
-
-
-<script id="manager-hub-v624-smart-cards-head-boot">
-/*
-  Manager Hub v623 — Authoritative Smart Cards Stabilizer
-
-  Purpose:
-  - Stop smart cards from disappearing or rendering inconsistently.
-  - Prevent late zero-overwrites from legacy loaders.
-  - Keep the last known good non-null counts visible until a real Supabase result replaces them.
-  - Scope: Board Review, Maintenance Activity, Annual Meeting Approvals.
-
-  This is a stabilizer over the current Manager Hub while we preserve the working Operations pill v622.
-*/
+<script id="manager-hub-v625-smart-card-immediate-loader">
 (function(){
-  if(window.__ManagerHubSmartCardsAuthoritativeV624) return;
-  window.__ManagerHubSmartCardsAuthoritativeV624 = true;
+  if(window.__ManagerHubSmartCardImmediateLoaderV625) return;
+  window.__ManagerHubSmartCardImmediateLoaderV625 = true;
+  window.__MANAGER_HUB_V625_SMART_CARDS_EXPECTED = true;
 
   const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
 
-  function s(v){ return String(v == null ? '' : v).trim(); }
-  function $(id){ return document.getElementById(id); }
-  function uuidish(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s(v)); }
+  const state = {
+    lastSummary:null,
+    lastGood:{ board:null, maintenance:null, annual:null },
+    running:false
+  };
 
-  async function getClient(){
+  function s(v){ return String(v == null ? '' : v).trim(); }
+  function uuidish(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s(v)); }
+
+  function getClient(){
     try{ if(window.supabaseClient && window.supabaseClient.from) return window.supabaseClient; }catch(_e){}
     try{ if(window.sb && window.sb.from) return window.sb; }catch(_e){}
-    try{ if(window.getSupabase){ const c = window.getSupabase(); if(c && c.from) return c; } }catch(_e){}
     try{
       if(window.supabase && window.supabase.createClient){
-        if(!window.__ManagerHubSmartCardsSbV623){
-          window.__ManagerHubSmartCardsSbV623 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        if(!window.__ManagerHubSmartSbV625){
+          window.__ManagerHubSmartSbV625 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         }
-        return window.__ManagerHubSmartCardsSbV623;
+        return window.__ManagerHubSmartSbV625;
       }
     }catch(_e){}
     return null;
@@ -3161,16 +3149,18 @@ console.info("[Manager Hub v624] smart-card head boot marker loaded");
   function activeCommunity(){
     try{
       if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
-        const active = window.ZummeeCommunityState.getActiveCommunity();
-        if(active && active.id) return { id:s(active.id), name:s(active.name) };
+        const a = window.ZummeeCommunityState.getActiveCommunity();
+        if(a && a.id) return { id:s(a.id), name:s(a.name) };
       }
     }catch(_e){}
 
     try{
-      const select = $('zummeeCommunitySelect') || $('communitySelect') || document.querySelector('select[data-community-select], select[name="community"]');
-      if(select && uuidish(select.value)){
-        const opt = select.options && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
-        return { id:s(select.value), name:s(opt && opt.textContent) };
+      const sel = document.getElementById('zummeeCommunitySelect') ||
+                  document.getElementById('communitySelect') ||
+                  document.querySelector('select[data-community-select], select[name="community"]');
+      if(sel && uuidish(sel.value)){
+        const opt = sel.options && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+        return { id:s(sel.value), name:s(opt && opt.textContent) };
       }
     }catch(_e2){}
 
@@ -3180,178 +3170,26 @@ console.info("[Manager Hub v624] smart-card head boot marker loaded");
       if(obj && obj.id) return { id:s(obj.id), name:s(obj.name) };
     }catch(_e3){}
 
-    const idKeys = ['zummee_active_community_id','zummee_selected_community_id','activeCommunityId','currentCommunityId','zummeeActiveCommunityId'];
-    let id = '';
-    idKeys.some(function(k){
+    const keys = ['zummee_active_community_id','zummee_selected_community_id','activeCommunityId','currentCommunityId','zummeeActiveCommunityId'];
+    for(const k of keys){
       try{
         const v = s(localStorage.getItem(k) || sessionStorage.getItem(k));
-        if(uuidish(v)){ id = v; return true; }
-      }catch(_e){}
-      return false;
-    });
+        if(uuidish(v)) return { id:v, name:s(localStorage.getItem('zummee_active_community_name') || localStorage.getItem('activeCommunityName') || '') };
+      }catch(_e4){}
+    }
 
-    const nameKeys = ['zummee_active_community_name','zummee_selected_community_name','activeCommunityName','currentCommunityName'];
-    let name = '';
-    nameKeys.some(function(k){
+    return { id:'', name:'' };
+  }
+
+  async function countFirstWorking(tableAttempts, communityId, filterFn){
+    const sb = getClient();
+    if(!sb || !uuidish(communityId)) return null;
+
+    for(const attempt of tableAttempts){
       try{
-        const v = s(localStorage.getItem(k) || sessionStorage.getItem(k));
-        if(v){ name = v; return true; }
-      }catch(_e){}
-      return false;
-    });
-
-    return { id, name };
-  }
-
-  const state = {
-    communityId:'',
-    lastGood:{},
-    latest:null,
-    loading:false
-  };
-
-  function isValidNumber(n){
-    return Number.isFinite(Number(n)) && Number(n) >= 0;
-  }
-
-  function remember(key, value){
-    const n = Number(value);
-    if(isValidNumber(n)) state.lastGood[key] = n;
-    return state.lastGood[key];
-  }
-
-  function cardByCandidates(candidates){
-    for(const c of candidates){
-      if(typeof c === 'string' && c[0] === '#'){
-        const node = document.querySelector(c);
-        if(node) return node;
-      }
-      const byId = $(c);
-      if(byId) return byId;
-    }
-    return null;
-  }
-
-  function findSmartCards(){
-    const allCards = Array.from(document.querySelectorAll('[id], .mh2-smart-card, .smart-card, .card, a, button, section, div'));
-    function byText(patterns){
-      return allCards.find(function(node){
-        const text = s(node.innerText || node.textContent).toLowerCase();
-        return patterns.every(function(p){ return text.indexOf(p) !== -1; });
-      }) || null;
-    }
-
-    return {
-      board: cardByCandidates([
-        'boardReviewCard',
-        'boardReviewStatusCard',
-        'boardStatusCard',
-        'boardReviewSmartCard',
-        '#boardReviewCard',
-        '#boardReviewStatusCard',
-        '#boardStatusCard'
-      ]) || byText(['board', 'review']),
-
-      maintenance: cardByCandidates([
-        'maintenanceActivityCard',
-        'maintenanceSmartCard',
-        'liveMaintenanceCard',
-        'workOrdersCard',
-        '#maintenanceActivityCard',
-        '#maintenanceSmartCard',
-        '#liveMaintenanceCard'
-      ]) || byText(['maintenance']),
-
-      annual: cardByCandidates([
-        'annualApprovalsCard',
-        'annualMeetingApprovalsCard',
-        'annualMeetingsCard',
-        'annualApprovalCard',
-        '#annualApprovalsCard',
-        '#annualMeetingApprovalsCard'
-      ]) || byText(['annual', 'approval'])
-    };
-  }
-
-  function setCard(card, data){
-    if(!card || !data) return;
-
-    card.dataset.smartAuthoritative = 'true';
-    card.dataset.smartCount = String(data.count);
-    card.classList.remove('is-loading','is-empty','is-hidden');
-    card.style.display = '';
-    card.style.visibility = 'visible';
-    card.style.opacity = '1';
-
-    const countText = String(data.count);
-    const statusText = data.status || (data.count ? 'Needs attention' : 'Clear');
-    const detailText = data.detail || '';
-
-    const countTargets = [
-      card.querySelector('[data-role="metric1"]'),
-      card.querySelector('[data-role="count"]'),
-      card.querySelector('.count'),
-      card.querySelector('.metric'),
-      card.querySelector('.smart-count'),
-      card.querySelector('.mh2-smart-count')
-    ].filter(Boolean);
-
-    const statusTargets = [
-      card.querySelector('[data-role="tone"]'),
-      card.querySelector('[data-role="metric2"]'),
-      card.querySelector('.status'),
-      card.querySelector('.badge'),
-      card.querySelector('.pill')
-    ].filter(Boolean);
-
-    if(countTargets.length){
-      countTargets[0].textContent = countText;
-    }
-
-    if(statusTargets.length){
-      statusTargets[0].textContent = statusText;
-    }
-
-    // If the card has no obvious metric target, add a stable mini metric instead of relying on old text.
-    if(!countTargets.length && !card.querySelector('.mh2-stable-smart-metric')){
-      const metric = document.createElement('div');
-      metric.className = 'mh2-stable-smart-metric';
-      metric.style.cssText = 'margin-top:10px;font-size:34px;font-weight:900;color:#17324c;line-height:1;';
-      card.appendChild(metric);
-    }
-    const stableMetric = card.querySelector('.mh2-stable-smart-metric');
-    if(stableMetric) stableMetric.textContent = countText;
-
-    if(!card.querySelector('.mh2-stable-smart-detail')){
-      const detail = document.createElement('div');
-      detail.className = 'mh2-stable-smart-detail';
-      detail.style.cssText = 'margin-top:6px;font-size:13px;font-weight:800;color:#64748b;';
-      card.appendChild(detail);
-    }
-    const detail = card.querySelector('.mh2-stable-smart-detail');
-    if(detail) detail.textContent = detailText || statusText;
-
-    card.classList.toggle('mh2-tool-card--urgent', Number(data.count) > 0 && data.urgent);
-    card.classList.toggle('mh2-tool-card--gold', Number(data.count) > 0 && !data.urgent);
-  }
-
-  async function countBoardReview(sb, communityId){
-    // Primary known source from prior architecture is BoardMemberActionItems / submitted board items.
-    const attempts = [
-      async () => sb.from('BoardMemberActionItems').select('id,status,community_id').eq('community_id', communityId),
-      async () => sb.from('BoardMeetingMinutesApprovals').select('id,approval_status,community_id').eq('community_id', communityId),
-      async () => sb.from('notification_events').select('id,event_type,status,community_id').eq('community_id', communityId)
-    ];
-
-    for(const fn of attempts){
-      try{
-        const res = await fn();
+        const res = await sb.from(attempt.table).select(attempt.select || '*').eq('community_id', communityId);
         if(res && !res.error && Array.isArray(res.data)){
-          const rows = res.data.filter(function(row){
-            const st = s(row.status || row.approval_status || '').toLowerCase();
-            if(['completed','complete','closed','archived','approved','rejected','done'].includes(st)) return false;
-            return true;
-          });
+          const rows = res.data.filter(filterFn || function(){ return true; });
           return rows.length;
         }
       }catch(_e){}
@@ -3359,180 +3197,176 @@ console.info("[Manager Hub v624] smart-card head boot marker loaded");
     return null;
   }
 
-  async function countMaintenance(sb, communityId){
-    const attempts = [
-      async () => sb.from('resident_work_orders').select('id,status,community_id').eq('community_id', communityId),
-      async () => sb.from('work_orders').select('id,status,community_id').eq('community_id', communityId),
-      async () => sb.from('maintenance_requests').select('id,status,community_id').eq('community_id', communityId)
-    ];
-
-    for(const fn of attempts){
-      try{
-        const res = await fn();
-        if(res && !res.error && Array.isArray(res.data)){
-          const rows = res.data.filter(function(row){
-            const st = s(row.status || '').toLowerCase();
-            if(['completed','complete','closed','archived','cancelled','canceled','rejected'].includes(st)) return false;
-            return true;
-          });
-          return rows.length;
-        }
-      }catch(_e){}
-    }
-    return null;
+  function activeStatus(row){
+    const st = s(row && (row.status || row.approval_status || row.state)).toLowerCase();
+    if(['completed','complete','closed','archived','approved','rejected','done','mailed','cancelled','canceled'].includes(st)) return false;
+    if(row && (row.archived_at || row.completed_at || row.deleted_at)) return false;
+    return true;
   }
 
-  async function countAnnual(sb, communityId){
-    const attempts = [
-      async () => sb.from('annual_meeting_board_approvals').select('id,status,approval_status,community_id').eq('community_id', communityId),
-      async () => sb.from('annual_meeting_approvals').select('id,status,approval_status,community_id').eq('community_id', communityId),
-      async () => sb.from('annual_meeting_settings').select('id,next_annual_meeting_date,community_id').eq('community_id', communityId)
-    ];
-
-    for(const fn of attempts){
-      try{
-        const res = await fn();
-        if(res && !res.error && Array.isArray(res.data)){
-          if(res.data.length && Object.prototype.hasOwnProperty.call(res.data[0], 'next_annual_meeting_date')){
-            return res.data.filter(r => !!r.next_annual_meeting_date).length;
-          }
-          const rows = res.data.filter(function(row){
-            const st = s(row.status || row.approval_status || '').toLowerCase();
-            if(['completed','complete','closed','archived','approved','rejected','done','mailed'].includes(st)) return false;
-            return true;
-          });
-          return rows.length;
-        }
-      }catch(_e){}
-    }
-    return null;
-  }
-
-  async function loadCounts(){
+  async function loadSummary(){
     const community = activeCommunity();
-    const sb = await getClient();
 
-    if(!sb || !uuidish(community.id)){
-      return null;
+    const board = await countFirstWorking([
+      { table:'BoardMemberActionItems', select:'id,status,approval_status,community_id' },
+      { table:'notification_events', select:'id,status,event_type,community_id' },
+      { table:'BoardMeetingMinutesApprovals', select:'id,status,approval_status,community_id' }
+    ], community.id, activeStatus);
+
+    const maintenance = await countFirstWorking([
+      { table:'resident_work_orders', select:'id,status,community_id' },
+      { table:'work_orders', select:'id,status,community_id' },
+      { table:'maintenance_requests', select:'id,status,community_id' }
+    ], community.id, activeStatus);
+
+    const annual = await countFirstWorking([
+      { table:'annual_meeting_board_approvals', select:'id,status,approval_status,community_id' },
+      { table:'annual_meeting_approvals', select:'id,status,approval_status,community_id' },
+      { table:'annual_meeting_settings', select:'id,next_annual_meeting_date,community_id' }
+    ], community.id, function(row){
+      if(Object.prototype.hasOwnProperty.call(row, 'next_annual_meeting_date')) return !!row.next_annual_meeting_date;
+      return activeStatus(row);
+    });
+
+    function stable(key, value){
+      if(value !== null && Number.isFinite(Number(value))){
+        state.lastGood[key] = Number(value);
+      }
+      return state.lastGood[key] == null ? 0 : state.lastGood[key];
     }
 
-    state.communityId = community.id;
-
-    const [board, maintenance, annual] = await Promise.all([
-      countBoardReview(sb, community.id),
-      countMaintenance(sb, community.id),
-      countAnnual(sb, community.id)
-    ]);
-
-    const data = {
+    const summary = {
       community,
-      board: remember('board', board == null ? (state.lastGood.board || 0) : board),
-      maintenance: remember('maintenance', maintenance == null ? (state.lastGood.maintenance || 0) : maintenance),
-      annual: remember('annual', annual == null ? (state.lastGood.annual || 0) : annual),
+      board: stable('board', board),
+      maintenance: stable('maintenance', maintenance),
+      annual: stable('annual', annual),
       loadedAt: Date.now()
     };
 
-    state.latest = data;
-    return data;
+    state.lastSummary = summary;
+    return summary;
   }
 
-  function render(data){
-    data = data || state.latest;
-    if(!data) return false;
+  function findCard(words, ids){
+    for(const id of (ids || [])){
+      const n = document.getElementById(id);
+      if(n) return n;
+    }
 
-    const cards = findSmartCards();
+    const nodes = Array.from(document.querySelectorAll('a,button,section,article,div'));
+    return nodes.find(function(n){
+      const text = s(n.innerText || n.textContent).toLowerCase();
+      return words.every(function(w){ return text.includes(w); });
+    }) || null;
+  }
 
-    setCard(cards.board, {
-      count:data.board,
-      urgent:Number(data.board) > 0,
-      status:Number(data.board) > 0 ? 'Needs review' : 'Clear',
-      detail:Number(data.board) === 1 ? '1 board item pending' : (Number(data.board) + ' board items pending')
-    });
+  function setCard(card, count, label){
+    if(!card) return;
 
-    setCard(cards.maintenance, {
-      count:data.maintenance,
-      urgent:false,
-      status:Number(data.maintenance) > 0 ? 'Open' : 'Clear',
-      detail:Number(data.maintenance) === 1 ? '1 open maintenance item' : (Number(data.maintenance) + ' open maintenance items')
-    });
+    card.style.display = '';
+    card.style.visibility = 'visible';
+    card.style.opacity = '1';
+    card.dataset.smartCardsV625 = 'true';
+    card.dataset.smartCount = String(count);
 
-    setCard(cards.annual, {
-      count:data.annual,
-      urgent:Number(data.annual) > 0,
-      status:Number(data.annual) > 0 ? 'Pending' : 'Clear',
-      detail:Number(data.annual) === 1 ? '1 annual meeting item' : (Number(data.annual) + ' annual meeting items')
-    });
+    const metric =
+      card.querySelector('[data-role="metric1"]') ||
+      card.querySelector('[data-role="count"]') ||
+      card.querySelector('.count') ||
+      card.querySelector('.metric') ||
+      card.querySelector('.mh2-card-count');
 
-    window.__ManagerHubSmartCardsSummaryV624 = data;
-    console.info('[Manager Hub v624] smart cards summary', data);
+    if(metric) metric.textContent = String(count);
+
+    let badge =
+      card.querySelector('[data-role="tone"]') ||
+      card.querySelector('[data-role="metric2"]') ||
+      card.querySelector('.badge') ||
+      card.querySelector('.pill');
+
+    if(badge) badge.textContent = count ? label : 'Clear';
+
+    if(!metric){
+      let stable = card.querySelector('.mh-v625-smart-count');
+      if(!stable){
+        stable = document.createElement('div');
+        stable.className = 'mh-v625-smart-count';
+        stable.style.cssText = 'margin-top:8px;font-size:30px;font-weight:900;color:#17324c;';
+        card.appendChild(stable);
+      }
+      stable.textContent = String(count);
+    }
+
+    let detail = card.querySelector('.mh-v625-smart-detail');
+    if(!detail){
+      detail = document.createElement('div');
+      detail.className = 'mh-v625-smart-detail';
+      detail.style.cssText = 'margin-top:4px;font-size:13px;font-weight:800;color:#64748b;';
+      card.appendChild(detail);
+    }
+    detail.textContent = count ? label : 'Clear';
+  }
+
+  function render(summary){
+    summary = summary || state.lastSummary;
+    if(!summary) return false;
+
+    const boardCard = findCard(['board','review'], ['boardReviewCard','boardReviewStatusCard','boardStatusCard','boardReviewSmartCard']);
+    const maintenanceCard = findCard(['maintenance'], ['maintenanceActivityCard','maintenanceSmartCard','liveMaintenanceCard']);
+    const annualCard = findCard(['annual'], ['annualApprovalsCard','annualMeetingApprovalsCard','annualMeetingsCard']);
+
+    setCard(boardCard, Number(summary.board || 0), 'Needs review');
+    setCard(maintenanceCard, Number(summary.maintenance || 0), 'Open');
+    setCard(annualCard, Number(summary.annual || 0), 'Pending');
+
+    window.__ManagerHubSmartCardsSummaryV625 = summary;
+    console.info('[Manager Hub v625] smart cards rendered', summary);
     return true;
   }
 
   async function refresh(){
-    if(state.loading) return state.latest;
-    state.loading = true;
+    if(state.running) return state.lastSummary;
+    state.running = true;
     try{
-      const data = await loadCounts();
-      if(data) render(data);
-      else render();
-      return data || state.latest;
+      const summary = await loadSummary();
+      render(summary);
+      return summary;
     }catch(err){
-      console.warn('[Manager Hub v624] smart cards refresh failed', err);
-      render();
-      return state.latest;
+      console.warn('[Manager Hub v625] smart card refresh failed', err);
+      render(state.lastSummary);
+      return state.lastSummary;
     }finally{
-      state.loading = false;
+      state.running = false;
     }
   }
 
-  function protectVisibleCards(){
-    // If a legacy loader hides or empties the cards after render, restore the latest known good state.
-    const cards = findSmartCards();
-    Object.keys(cards).forEach(function(key){
-      const card = cards[key];
-      if(!card || card.__smartAuthoritativeObservedV624) return;
-      card.__smartAuthoritativeObservedV624 = true;
-      try{
-        const obs = new MutationObserver(function(){
-          clearTimeout(card.__smartRestoreTimerV624);
-          card.__smartRestoreTimerV624 = setTimeout(function(){
-            if(card.style.display === 'none' || card.style.visibility === 'hidden' || card.offsetParent === null || !s(card.textContent)){
-              render();
-            }
-          }, 60);
-        });
-        obs.observe(card, { childList:true, subtree:true, attributes:true, characterData:true });
-      }catch(_e){}
-    });
-  }
+  window.refreshManagerHubSmartCardsAuthoritative = refresh;
+  window.getManagerHubSmartCardsSummary = function(){ return window.__ManagerHubSmartCardsSummaryV625 || state.lastSummary || null; };
+  window.__ManagerHubSmartCardsImmediateLoaderStatus = function(){
+    return {
+      build: window.ZUMMEE_BUILD,
+      expected: window.__MANAGER_HUB_V625_SMART_CARDS_EXPECTED,
+      helperType: typeof window.refreshManagerHubSmartCardsAuthoritative,
+      summary: window.getManagerHubSmartCardsSummary()
+    };
+  };
 
   function boot(){
-    protectVisibleCards();
     refresh();
-    [250, 800, 1600, 3000, 5200, 8500].forEach(function(ms){
-      setTimeout(function(){ protectVisibleCards(); refresh(); }, ms);
+    [300, 900, 1800, 3500, 6500, 10000].forEach(function(ms){
+      setTimeout(refresh, ms);
     });
   }
-
-  window.refreshManagerHubSmartCardsAuthoritative = refresh;
-  window.getManagerHubSmartCardsSummary = function(){ return window.__ManagerHubSmartCardsSummaryV624 || state.latest || null; };
 
   if(document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', boot, { once:true });
   }else{
-    boot();
+    setTimeout(boot, 0);
   }
 
   window.addEventListener('pageshow', function(){ setTimeout(boot, 150); });
   window.addEventListener('focus', function(){ setTimeout(refresh, 150); });
   window.addEventListener('zummee:community-changed', function(){ setTimeout(boot, 150); });
-
-  document.addEventListener('change', function(e){
-    const t = e && e.target;
-    if(t && t.matches && t.matches('#zummeeCommunitySelect, #communitySelect, select[data-community-select], select[name="community"]')){
-      setTimeout(boot, 150);
-    }
-  }, true);
 })();
 </script>
 
@@ -8115,21 +7949,6 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
       summary: (typeof window.getManagerHubOperationsPortalSummary === 'function' ? window.getManagerHubOperationsPortalSummary() : null)
     };
   };
-})();
-</script>
-
-
-
-
-<script id="manager-hub-v624-smart-card-helper-check">
-(function(){
-  setTimeout(function(){
-    if(typeof window.refreshManagerHubSmartCardsAuthoritative !== 'function'){
-      console.warn("[Manager Hub v624] smart-card helper did not initialize. Check BUILD/caching.");
-    }else{
-      console.info("[Manager Hub v624] smart-card helper available");
-    }
-  }, 500);
 })();
 </script>
 
