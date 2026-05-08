@@ -2,25 +2,25 @@
 <html lang="en">
 <head>
 
-<script id="manager-hub-v629-canonical-smart-alerts-marker">
-window.ZUMMEE_BUILD = "2026-05-08-v629-manager-hub-canonical-smart-alerts";
-window.__MANAGER_HUB_V629_CANONICAL_SMART_ALERTS = true;
-console.info("[Manager Hub v629] canonical smart alerts loaded", window.ZUMMEE_BUILD);
+<script id="manager-hub-v630-smart-alerts-no-hang-marker">
+window.ZUMMEE_BUILD = "2026-05-08-v630-manager-hub-smart-alerts-no-hang";
+window.__MANAGER_HUB_V630_SMART_ALERTS_NO_HANG = true;
+console.info("[Manager Hub v630] no-hang smart alerts loaded", window.ZUMMEE_BUILD);
 </script>
 
-<script id="manager-hub-v629-canonical-smart-alerts">
+<script id="manager-hub-v630-smart-alerts-no-hang">
 (function(){
-  if(window.__ManagerHubCanonicalSmartAlertsV629) return;
-  window.__ManagerHubCanonicalSmartAlertsV629 = true;
+  if(window.__ManagerHubSmartAlertsNoHangV630) return;
+  window.__ManagerHubSmartAlertsNoHangV630 = true;
 
   const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
-  const READY_ATTR = 'data-zummee-smart-alerts-v426-ready';
+  const TIMEOUT_MS = 4500;
 
   const state = {
-    loading:false,
+    inFlight:null,
     latest:null,
-    lastGood:{ board:null, maintenance:null, annual:null }
+    lastGood:{ board:0, maintenance:0, annual:0 }
   };
 
   function s(v){ return String(v == null ? '' : v).trim(); }
@@ -30,13 +30,12 @@ console.info("[Manager Hub v629] canonical smart alerts loaded", window.ZUMMEE_B
     try{ if(window.supabaseClient && window.supabaseClient.from) return window.supabaseClient; }catch(_e){}
     try{ if(window.sb && window.sb.from) return window.sb; }catch(_e){}
     try{ if(window.getSupabase){ const c = window.getSupabase(); if(c && c.from) return c; } }catch(_e){}
-    try{ if(window.requireSb && typeof window.requireSb === 'function'){ const c2 = window.requireSb(); if(c2 && c2.from) return c2; } }catch(_e){}
     try{
       if(window.supabase && window.supabase.createClient){
-        if(!window.__ManagerHubSmartAlertsSbV629){
-          window.__ManagerHubSmartAlertsSbV629 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        if(!window.__ManagerHubSmartAlertsSbV630){
+          window.__ManagerHubSmartAlertsSbV630 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         }
-        return window.__ManagerHubSmartAlertsSbV629;
+        return window.__ManagerHubSmartAlertsSbV630;
       }
     }catch(_e){}
     return null;
@@ -66,15 +65,30 @@ console.info("[Manager Hub v629] canonical smart alerts loaded", window.ZUMMEE_B
       if(obj && obj.id) return { id:s(obj.id), name:s(obj.name) };
     }catch(_e3){}
 
-    const ids = ['zummee_active_community_id','zummee_selected_community_id','activeCommunityId','currentCommunityId','zummeeActiveCommunityId'];
-    for(const key of ids){
-      try{
-        const v = s(localStorage.getItem(key) || sessionStorage.getItem(key));
-        if(uuidish(v)) return { id:v, name:s(localStorage.getItem('zummee_active_community_name') || localStorage.getItem('activeCommunityName') || '') };
-      }catch(_e4){}
-    }
-
     return { id:'', name:'' };
+  }
+
+  function withTimeout(promise, label){
+    return new Promise(function(resolve){
+      let done = false;
+      const timer = setTimeout(function(){
+        if(done) return;
+        done = true;
+        resolve({ ok:false, timeout:true, label, error:'Timed out after ' + TIMEOUT_MS + 'ms', count:null, rows:[] });
+      }, TIMEOUT_MS);
+
+      Promise.resolve(promise).then(function(value){
+        if(done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve(value);
+      }).catch(function(err){
+        if(done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve({ ok:false, label, error:err && err.message ? err.message : String(err), count:null, rows:[] });
+      });
+    });
   }
 
   function metadata(row){
@@ -86,113 +100,84 @@ console.info("[Manager Hub v629] canonical smart alerts loaded", window.ZUMMEE_B
 
   function statusOf(row){
     const m = metadata(row);
-    return s(
-      row && (
-        row.status ||
-        row.approval_status ||
-        row.state ||
-        row.workflow_status ||
-        row.board_status ||
-        row.item_status ||
-        m.status ||
-        m.approval_status ||
-        m.state ||
-        m.workflow_status ||
-        m.board_status
-      )
-    ).toLowerCase();
+    return s(row && (
+      row.status ||
+      row.approval_status ||
+      row.state ||
+      row.workflow_status ||
+      row.board_status ||
+      row.item_status ||
+      m.status ||
+      m.approval_status ||
+      m.state ||
+      m.workflow_status ||
+      m.board_status
+    )).toLowerCase();
   }
 
   function isClosed(row){
     const st = statusOf(row);
     if(row && (row.archived_at || row.completed_at || row.deleted_at || row.closed_at)) return true;
-    if(['completed','complete','closed','archived','approved','rejected','done','mailed','cancelled','canceled','inactive','resolved'].includes(st)) return true;
-    return false;
-  }
-
-  function dateValue(row){
-    return s(row && (row.due_date || row.deadline || row.created_at || row.updated_at || row.next_annual_meeting_date));
+    return ['completed','complete','closed','archived','approved','rejected','done','mailed','cancelled','canceled','inactive','resolved'].includes(st);
   }
 
   function isOverdue(row){
-    const d = dateValue(row).slice(0,10);
-    if(!d) return false;
-    const dt = new Date(d + 'T00:00:00');
+    const raw = s(row && (row.due_date || row.deadline || row.created_at || row.updated_at || row.next_annual_meeting_date)).slice(0,10);
+    if(!raw) return false;
+    const dt = new Date(raw + 'T00:00:00');
     if(Number.isNaN(dt.getTime())) return false;
     const today = new Date(); today.setHours(0,0,0,0);
     return dt.getTime() < today.getTime();
   }
 
-  function stable(key, value){
-    if(value !== null && value !== undefined && Number.isFinite(Number(value))){
-      state.lastGood[key] = Number(value);
-    }
-    return state.lastGood[key] == null ? 0 : state.lastGood[key];
+  function normalizeResult(label, source, rows, filter){
+    rows = Array.isArray(rows) ? rows : [];
+    filter = filter || function(row){ return !isClosed(row); };
+    const open = rows.filter(filter);
+    return {
+      ok:true,
+      label,
+      source,
+      count:open.length,
+      overdue:open.filter(isOverdue).length,
+      rows:open,
+      totalRows:rows.length
+    };
   }
 
   async function loadBoard(sb, community){
-    try{
-      const res = await sb.from('notification_events')
-        .select('id,title,message,metadata,created_at,event_type,community_id,status,archived_at,completed_at')
-        .eq('community_id', community.id)
-        .eq('event_type','board_item_submitted')
-        .limit(200);
+    if(!sb || !uuidish(community.id)) return { ok:false, label:'board', source:'none', error:'No client or community', count:null, rows:[] };
 
-      if(res && !res.error && Array.isArray(res.data)){
-        const open = res.data.filter(row => !isClosed(row));
-        return { count:open.length, overdue:open.filter(isOverdue).length, rows:open, source:'notification_events.board_item_submitted' };
-      }
-      return { count:null, overdue:0, rows:[], source:'notification_events.board_item_submitted', error:res && res.error };
-    }catch(err){
-      return { count:null, overdue:0, rows:[], source:'notification_events.board_item_submitted', error:err };
-    }
+    const res = await sb.from('notification_events')
+      .select('*')
+      .eq('community_id', community.id)
+      .eq('event_type','board_item_submitted')
+      .limit(200);
+
+    if(res && res.error) return { ok:false, label:'board', source:'notification_events.board_item_submitted', error:res.error.message || JSON.stringify(res.error), count:null, rows:[] };
+    return normalizeResult('board', 'notification_events.board_item_submitted', res && res.data);
   }
 
   function isOpenMaintenance(row){
-    const st = statusOf(row);
     if(isClosed(row)) return false;
+    const st = statusOf(row);
     if(['draft','deleted','void'].includes(st)) return false;
     return true;
   }
 
   async function loadMaintenance(sb, community){
-    let open = [];
-    let urgent = [];
-    let error = null;
+    if(!sb || !uuidish(community.id)) return { ok:false, label:'maintenance', source:'none', error:'No client or community', count:null, rows:[] };
 
-    try{
-      const res = await sb.from('resident_work_orders')
-        .select('*')
-        .eq('community_id', community.id)
-        .limit(200);
+    const res = await sb.from('resident_work_orders')
+      .select('*')
+      .eq('community_id', community.id)
+      .limit(200);
 
-      if(res && !res.error && Array.isArray(res.data)){
-        open = res.data.filter(isOpenMaintenance);
-        urgent = open.filter(row => /urgent|emergency|high/i.test(s(row.priority || row.severity || row.level)));
-      }else{
-        error = res && res.error;
-      }
-    }catch(err){
-      error = err;
-    }
+    if(res && res.error) return { ok:false, label:'maintenance', source:'resident_work_orders', error:res.error.message || JSON.stringify(res.error), count:null, rows:[] };
 
-    let live = [];
-    try{
-      const feed = Array.isArray(window.__mh2LiveEvents) ? window.__mh2LiveEvents : [];
-      live = feed.filter(function(e){
-        const t = s(e && (e.type || e.event_type || e.kind || e.category)).toLowerCase();
-        return t === 'maintenance' || t === 'resident_work_order';
-      });
-    }catch(_e){ live = []; }
-
-    return {
-      count:open.length,
-      urgent:urgent.length,
-      live:live.length,
-      rows:open,
-      source:'resident_work_orders + __mh2LiveEvents',
-      error
-    };
+    const normalized = normalizeResult('maintenance', 'resident_work_orders', res && res.data, isOpenMaintenance);
+    normalized.urgent = normalized.rows.filter(row => /urgent|emergency|high/i.test(s(row.priority || row.severity || row.level))).length;
+    return normalized;
   }
 
   function annualMatchesCommunity(row, community){
@@ -203,78 +188,60 @@ console.info("[Manager Hub v629] canonical smart alerts loaded", window.ZUMMEE_B
 
     const name = s(community.name).toLowerCase();
     if(!name) return false;
-    const candidates = [
-      row.community_name,
-      row.community,
-      row.property_name,
-      row.association_name,
-      m.community_name,
-      m.community,
-      m.property_name,
-      m.association_name
-    ].map(x => s(x).toLowerCase()).filter(Boolean);
-
-    return candidates.some(x => x === name || x.indexOf(name) !== -1 || name.indexOf(x) !== -1);
+    const vals = [row.community_name,row.community,row.property_name,row.association_name,m.community_name,m.community,m.property_name,m.association_name]
+      .map(x => s(x).toLowerCase()).filter(Boolean);
+    return vals.some(v => v === name || v.indexOf(name) !== -1 || name.indexOf(v) !== -1);
   }
 
   async function loadAnnual(sb, community){
-    try{
-      const res = await sb.from('annual_meeting_packet_requests')
-        .select('*')
-        .limit(200);
+    if(!sb || !uuidish(community.id)) return { ok:false, label:'annual', source:'none', error:'No client or community', count:null, rows:[] };
 
-      if(res && !res.error && Array.isArray(res.data)){
-        const rows = res.data
-          .filter(row => annualMatchesCommunity(row, community))
-          .filter(row => !isClosed(row));
-        return { count:rows.length, overdue:rows.filter(isOverdue).length, rows, source:'annual_meeting_packet_requests' };
-      }
-      return { count:null, overdue:0, rows:[], source:'annual_meeting_packet_requests', error:res && res.error };
-    }catch(err){
-      return { count:null, overdue:0, rows:[], source:'annual_meeting_packet_requests', error:err };
+    const res = await sb.from('annual_meeting_packet_requests')
+      .select('*')
+      .limit(200);
+
+    if(res && res.error) return { ok:false, label:'annual', source:'annual_meeting_packet_requests', error:res.error.message || JSON.stringify(res.error), count:null, rows:[] };
+
+    return normalizeResult('annual', 'annual_meeting_packet_requests', res && res.data, function(row){
+      return annualMatchesCommunity(row, community) && !isClosed(row);
+    });
+  }
+
+  function useCount(key, result){
+    if(result && Number.isFinite(Number(result.count))){
+      state.lastGood[key] = Number(result.count);
     }
+    return Number(state.lastGood[key] || 0);
   }
 
   async function loadSummary(){
     const sb = getClient();
     const community = activeCommunity();
 
-    if(!sb || !uuidish(community.id)){
-      return {
-        community,
-        board:stable('board', state.lastGood.board),
-        boardOverdue:0,
-        maintenance:stable('maintenance', state.lastGood.maintenance),
-        maintenanceUrgent:0,
-        maintenanceLive:0,
-        annual:stable('annual', state.lastGood.annual),
-        annualOverdue:0,
-        sources:{ error:!sb ? 'No Supabase client' : 'No selected community' },
-        loadedAt:Date.now()
-      };
-    }
-
-    const [board, maintenance, annual] = await Promise.all([
-      loadBoard(sb, community),
-      loadMaintenance(sb, community),
-      loadAnnual(sb, community)
+    const results = await Promise.all([
+      withTimeout(loadBoard(sb, community), 'board'),
+      withTimeout(loadMaintenance(sb, community), 'maintenance'),
+      withTimeout(loadAnnual(sb, community), 'annual')
     ]);
+
+    const board = results[0] || {};
+    const maintenance = results[1] || {};
+    const annual = results[2] || {};
 
     const summary = {
       community,
-      board:stable('board', board.count),
+      board:useCount('board', board),
       boardOverdue:Number(board.overdue || 0),
-      maintenance:stable('maintenance', maintenance.count),
+      maintenance:useCount('maintenance', maintenance),
       maintenanceUrgent:Number(maintenance.urgent || 0),
-      maintenanceLive:Number(maintenance.live || 0),
-      annual:stable('annual', annual.count),
+      annual:useCount('annual', annual),
       annualOverdue:Number(annual.overdue || 0),
       sources:{ board, maintenance, annual },
       loadedAt:Date.now()
     };
 
     state.latest = summary;
-    window.__ManagerHubCanonicalSmartAlertsSummaryV629 = summary;
+    window.__ManagerHubSmartAlertsSummaryV630 = summary;
     return summary;
   }
 
@@ -285,7 +252,7 @@ console.info("[Manager Hub v629] canonical smart alerts loaded", window.ZUMMEE_B
     opts = opts || {};
     const tone = opts.tone || 'good';
 
-    card.dataset.smartAlertsV629 = 'true';
+    card.dataset.smartAlertsV630 = 'true';
     card.style.display = '';
     card.style.visibility = 'visible';
     card.style.opacity = '1';
@@ -320,12 +287,11 @@ console.info("[Manager Hub v629] canonical smart alerts loaded", window.ZUMMEE_B
 
     const maintCount = Number(summary.maintenance || 0);
     const maintUrgent = Number(summary.maintenanceUrgent || 0);
-    const maintLive = Number(summary.maintenanceLive || 0);
     setAlert('mh2AlertActivity', {
-      tone: maintUrgent > 0 ? 'urgent' : ((maintCount > 0 || maintLive > 0) ? 'attention' : 'good'),
+      tone: maintUrgent > 0 ? 'urgent' : (maintCount > 0 ? 'attention' : 'good'),
       title:'Maintenance activity',
-      badge: maintUrgent > 0 ? (maintUrgent + ' urgent') : (maintCount > 0 ? (maintCount + ' open') : (maintLive > 0 ? (maintLive + ' live') : 'Quiet')),
-      copy: maintCount > 0 ? (maintCount + ' open maintenance item' + (maintCount === 1 ? '' : 's') + ' for this community.') : (maintLive > 0 ? (maintLive + ' live maintenance event' + (maintLive === 1 ? '' : 's') + '.') : 'No open maintenance activity for this community.'),
+      badge: maintUrgent > 0 ? (maintUrgent + ' urgent') : (maintCount > 0 ? (maintCount + ' open') : 'Quiet'),
+      copy: maintCount > 0 ? (maintCount + ' open maintenance item' + (maintCount === 1 ? '' : 's') + ' for this community.') : 'No open maintenance activity for this community.',
       href:'maintenance_updates.html'
     });
 
@@ -340,41 +306,52 @@ console.info("[Manager Hub v629] canonical smart alerts loaded", window.ZUMMEE_B
     });
 
     try{
-      const stability = window.__ZUMMEE_V522_SMART_ALERT_STABILITY__;
-      if(stability){
-        stability.allowReady = true;
-        stability.startedAt = Date.now() - 5000;
-      }
-      document.documentElement.setAttribute(READY_ATTR, '1');
+      document.documentElement.setAttribute('data-zummee-smart-alerts-v426-ready', '1');
     }catch(_e){}
 
-    console.info('[Manager Hub v629] canonical smart alerts rendered', summary);
+    console.info('[Manager Hub v630] no-hang smart alerts rendered', summary);
     return true;
   }
 
   async function refresh(){
-    if(state.loading) return state.latest;
-    state.loading = true;
-    try{
-      const summary = await loadSummary();
-      render(summary);
-      return summary;
-    }catch(err){
-      console.warn('[Manager Hub v629] smart alert refresh failed', err);
-      render(state.latest);
-      return state.latest;
-    }finally{
-      state.loading = false;
-    }
+    if(state.inFlight) return state.inFlight;
+
+    state.inFlight = (async function(){
+      try{
+        const summary = await loadSummary();
+        render(summary);
+        return summary;
+      }catch(err){
+        const fallback = state.latest || {
+          community:activeCommunity(),
+          board:Number(state.lastGood.board || 0),
+          boardOverdue:0,
+          maintenance:Number(state.lastGood.maintenance || 0),
+          maintenanceUrgent:0,
+          annual:Number(state.lastGood.annual || 0),
+          annualOverdue:0,
+          sources:{ fatal:err && err.message ? err.message : String(err) },
+          loadedAt:Date.now()
+        };
+        state.latest = fallback;
+        window.__ManagerHubSmartAlertsSummaryV630 = fallback;
+        render(fallback);
+        return fallback;
+      }finally{
+        state.inFlight = null;
+      }
+    })();
+
+    return state.inFlight;
   }
 
-  window.refreshManagerHubSmartCardsAuthoritative = refresh;
   window.refreshManagerHubCanonicalSmartAlerts = refresh;
-  window.getManagerHubSmartCardsSummary = function(){ return window.__ManagerHubCanonicalSmartAlertsSummaryV629 || state.latest || null; };
+  window.refreshManagerHubSmartCardsAuthoritative = refresh;
+  window.getManagerHubSmartCardsSummary = function(){ return window.__ManagerHubSmartAlertsSummaryV630 || state.latest || null; };
   window.getManagerHubSmartCardsDeploymentStatus = function(){
     return {
       build: window.ZUMMEE_BUILD || '',
-      canonicalMarker: !!window.__MANAGER_HUB_V629_CANONICAL_SMART_ALERTS,
+      noHangMarker: !!window.__MANAGER_HUB_V630_SMART_ALERTS_NO_HANG,
       helperType: typeof window.refreshManagerHubCanonicalSmartAlerts,
       summary: window.getManagerHubSmartCardsSummary()
     };
@@ -398,6 +375,9 @@ console.info("[Manager Hub v629] canonical smart alerts loaded", window.ZUMMEE_B
   window.addEventListener('zummee:community-changed', function(){ setTimeout(boot, 150); });
 })();
 </script>
+
+
+
 
 
 
@@ -449,7 +429,7 @@ console.info("[Manager Hub v629] canonical smart alerts loaded", window.ZUMMEE_B
 
 
 
-<script>window.ZUMMEE_BUILD = "2026-05-08-v629-manager-hub-canonical-smart-alerts";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD = "2026-05-08-v630-manager-hub-smart-alerts-no-hang";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <script id="zummee-manager-canonical-preboot-v608">
 /*
