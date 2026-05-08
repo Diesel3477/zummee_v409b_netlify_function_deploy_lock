@@ -2,6 +2,13 @@
 <html lang="en">
 <head>
 
+<script id="manager-hub-v617-recovery-cleanup-marker">
+window.ZUMMEE_BUILD = "2026-05-08-v617-manager-hub-recovery-cleanup-only";
+window.__MANAGER_HUB_V617_RECOVERY_CLEANUP_ONLY = true;
+console.info("[Manager Hub v617] recovery cleanup only loaded", window.ZUMMEE_BUILD);
+</script>
+
+
 <style id="zummee-manager-smooth-return-css-v611">
   /*
     v611: Smooth Manager Hub return.
@@ -43,7 +50,7 @@
 
 
 
-<script>window.ZUMMEE_BUILD="2026-05-08-v616-manager-hub-ops-reminders-pill";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-08-v617-manager-hub-recovery-cleanup-only";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <script id="zummee-manager-canonical-preboot-v608">
 /*
@@ -435,6 +442,8 @@ window.__MH_VERSION = 'v611_smooth_return_no_jump';
     window.addEventListener('zummee:community-changed', resetForCommunityChange);
   })();
   
+
+  </script>
 
   <script>
     (function(){
@@ -3072,6 +3081,65 @@ html[data-theme="dark"] .mh2-ask-close,html[data-theme="dark"] .mh2-ask-modal .m
   }
 }
 </style>
+
+<script id="manager-hub-v617-community-assignment-guard">
+(function(){
+  if(window.__ManagerHubCommunityAssignmentGuardV617) return;
+  window.__ManagerHubCommunityAssignmentGuardV617 = true;
+
+  function isLegacyBadCommunityAssignmentRequest(input){
+    try{
+      var url = typeof input === "string" ? input : (input && input.url ? input.url : "");
+      if(!url || url.indexOf("/rest/v1/community_assignments?") === -1) return false;
+
+      var decoded = "";
+      try{ decoded = decodeURIComponent(url); }catch(_e){ decoded = url; }
+
+      return (
+        decoded.indexOf("select=community_id&user_id=") !== -1 ||
+        decoded.indexOf("select=community_id&auth_user_id=") !== -1 ||
+        decoded.indexOf("select=community_id,user_id") !== -1 ||
+        decoded.indexOf("select=community_id,auth_user_id") !== -1
+      );
+    }catch(_err){
+      return false;
+    }
+  }
+
+  function emptyCommunityAssignmentsResponse(){
+    return new Response(JSON.stringify([]), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "X-Zummee-Guard": "manager-hub-v617-community-assignments"
+      }
+    });
+  }
+
+  if(window.fetch && !window.__ManagerHubOriginalFetchV617){
+    window.__ManagerHubOriginalFetchV617 = window.fetch.bind(window);
+    window.fetch = function(input, init){
+      if(isLegacyBadCommunityAssignmentRequest(input)){
+        try{
+          console.info("[Manager Hub v617] blocked legacy community_assignments lookup", typeof input === "string" ? input : input.url);
+        }catch(_e){}
+        return Promise.resolve(emptyCommunityAssignmentsResponse());
+      }
+      return window.__ManagerHubOriginalFetchV617(input, init);
+    };
+  }
+
+  window.getManagerHubRecoveryCleanupStatus = function(){
+    return {
+      build: window.ZUMMEE_BUILD || "",
+      marker: !!window.__MANAGER_HUB_V617_RECOVERY_CLEANUP_ONLY,
+      communityAssignmentGuard: !!window.__ManagerHubCommunityAssignmentGuardV617,
+      fetchGuardInstalled: !!window.__ManagerHubOriginalFetchV617
+    };
+  };
+})();
+</script>
+
 </head>
 <body class="manager-hub-page">
   <main class="mh2-page">
