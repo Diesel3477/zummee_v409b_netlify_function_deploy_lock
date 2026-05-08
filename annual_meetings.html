@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-08-v633-annual-save-button-clean-handler";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-08-v634-annual-seats-from-board-terms";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annual Meetings</title>
@@ -766,7 +766,7 @@
             </div>
             <div class="field">
               <label for="seatsOverride">Seats Up for Election</label>
-              <input id="seatsOverride" type="number" placeholder="Auto if blank">
+              <input id="seatsOverride" type="number" placeholder="Auto from terms">
             </div>
           </div>
         </div>
@@ -2597,6 +2597,228 @@
   }
 
   window.addEventListener('pageshow', start);
+})();
+</script>
+
+
+<script id="annual-meetings-seats-from-board-terms-v634">
+/*
+  Zummee Annual Meetings Seats Up For Election
+  Build: 2026-05-08-v634
+
+  Long-term behavior:
+  - Seats Up for Election defaults from Operations board member term end dates.
+  - Uses actual Next Annual Meeting Date year.
+  - Counts board members whose term end year matches the next annual meeting year.
+  - Keeps the Seats field editable as an employee override.
+*/
+(function(){
+  if(window.__AnnualMeetingsSeatsFromBoardTermsV634) return;
+  window.__AnnualMeetingsSeatsFromBoardTermsV634 = true;
+
+  const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
+
+  function s(v){ return String(v == null ? '' : v).trim(); }
+  function el(id){ return document.getElementById(id); }
+
+  async function client(){
+    try{ if(window.supabaseClient && window.supabaseClient.from) return window.supabaseClient; }catch(_e){}
+    try{ if(window.sb && window.sb.from) return window.sb; }catch(_e){}
+    try{ if(typeof ensureSupabase === 'function'){ const c = await ensureSupabase(); if(c && c.from) return c; } }catch(_e){}
+    try{
+      if(window.supabase && window.supabase.createClient){
+        if(!window.__annualSeatsSbV634) window.__annualSeatsSbV634 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        return window.__annualSeatsSbV634;
+      }
+    }catch(_e){}
+    return null;
+  }
+
+  function activeCommunity(){
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const a = window.ZummeeCommunityState.getActiveCommunity();
+        if(a && a.id) return { id:s(a.id), name:s(a.name) };
+      }
+    }catch(_e){}
+    try{
+      const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+      const obj = raw ? JSON.parse(raw) : null;
+      if(obj && obj.id) return { id:s(obj.id), name:s(obj.name) };
+    }catch(_e2){}
+    try{
+      const qs = new URLSearchParams(location.search);
+      return {
+        id: s(qs.get('community_id')) || s(localStorage.getItem('zummee_active_community_id')) || s(localStorage.getItem('activeCommunityId')) || s(localStorage.getItem('currentCommunityId')) || s(localStorage.getItem('zummee_selected_community_id')),
+        name: s(qs.get('community_name')) || s(localStorage.getItem('zummee_active_community_name')) || s(localStorage.getItem('activeCommunityName')) || s(localStorage.getItem('currentCommunityName'))
+      };
+    }catch(_e3){}
+    return { id:'', name:'' };
+  }
+
+  function parseYear(value){
+    value = s(value);
+    if(!value) return '';
+    const m = value.match(/^(\d{4})/);
+    if(m) return m[1];
+    const d = new Date(value);
+    if(!Number.isNaN(d.getTime())) return String(d.getFullYear());
+    return '';
+  }
+
+  function nextMeetingYear(){
+    const next = s(el('nextDate') && el('nextDate').value);
+    if(next) return parseYear(next);
+
+    // Fallback only: expected date is not actual, but can help preview before actual date is selected.
+    const expectedText = s(el('expectedDate') && el('expectedDate').textContent);
+    if(expectedText && expectedText !== '—') return parseYear(expectedText);
+
+    return '';
+  }
+
+  function pickTermEnd(row){
+    row = row || {};
+    return row.term_end || row.term_end_date || row.termEnd || row.termEndDate || row.end_date || row.expires_at || row.term_expiration || row.expiration_date || '';
+  }
+
+  function isInactive(row){
+    row = row || {};
+    const status = s(row.status || row.member_status || row.board_status || '').toLowerCase();
+    if(['inactive','archived','deleted','removed','past'].includes(status)) return true;
+    if(row.is_active === false || row.active === false) return true;
+    if(row.archived === true || row.deleted === true) return true;
+    return false;
+  }
+
+  async function loadBoardMembersFromSupabase(){
+    const community = activeCommunity();
+    if(!community.id) return [];
+
+    const sb = await client();
+    if(!sb) return [];
+
+    const tables = [
+      'ops_board_members',
+      'board_members',
+      'community_board_members',
+      'operations_board_members'
+    ];
+
+    const columnSets = [
+      '*',
+      'id,community_id,name,full_name,email,position,role,term_end,term_end_date,status,is_active,archived',
+      'id,community_id,member_name,term_end_date,status'
+    ];
+
+    for(const table of tables){
+      for(const cols of columnSets){
+        try{
+          const res = await sb.from(table)
+            .select(cols)
+            .eq('community_id', community.id);
+
+          if(res && !res.error && Array.isArray(res.data)){
+            return res.data.filter(row => !isInactive(row));
+          }
+        }catch(_e){}
+      }
+    }
+
+    return [];
+  }
+
+  async function countSeatsForElection(){
+    const year = nextMeetingYear();
+    if(!year) return { count:0, year:'', rows:[] };
+
+    const rows = await loadBoardMembersFromSupabase();
+    const matching = rows.filter(row => parseYear(pickTermEnd(row)) === year);
+
+    return {
+      count: matching.length,
+      year,
+      rows: matching
+    };
+  }
+
+  async function updateSeatsFromTerms(options){
+    options = options || {};
+    const field = el('seatsOverride');
+    const display = el('seatsCount');
+
+    if(!field && !display) return;
+
+    const result = await countSeatsForElection();
+
+    // Only auto-fill if empty, previously auto-filled, or caller explicitly forces.
+    const current = s(field && field.value);
+    const shouldWrite = options.force || !current || (field && field.dataset.autoSeatsFromTerms === '1');
+
+    if(field && shouldWrite){
+      field.value = result.count ? String(result.count) : '';
+      field.dataset.autoSeatsFromTerms = '1';
+      field.placeholder = result.year ? ('Auto from ' + result.year + ' terms') : 'Choose next meeting date first';
+    }
+
+    if(display){
+      const value = field && s(field.value) ? s(field.value) : (result.count ? String(result.count) : '—');
+      display.textContent = value;
+    }
+
+    try{
+      window.__AnnualMeetingSeatsTermMatches = result.rows;
+      console.info('[Annual Meetings v634] seats from board terms', result);
+    }catch(_e){}
+  }
+
+  function markManualSeats(){
+    const field = el('seatsOverride');
+    if(field) field.dataset.autoSeatsFromTerms = '0';
+    const display = el('seatsCount');
+    if(display) display.textContent = s(field && field.value) || '—';
+  }
+
+  function bind(){
+    const next = el('nextDate');
+    const last = el('lastDate');
+    const seats = el('seatsOverride');
+
+    if(next && !next.__annualSeatsNextV634){
+      next.__annualSeatsNextV634 = true;
+      next.addEventListener('input', function(){ setTimeout(function(){ updateSeatsFromTerms({force:true}); }, 80); });
+      next.addEventListener('change', function(){ setTimeout(function(){ updateSeatsFromTerms({force:true}); }, 80); });
+    }
+
+    if(last && !last.__annualSeatsLastV634){
+      last.__annualSeatsLastV634 = true;
+      last.addEventListener('change', function(){ setTimeout(function(){ updateSeatsFromTerms({force:false}); }, 200); });
+    }
+
+    if(seats && !seats.__annualSeatsManualV634){
+      seats.__annualSeatsManualV634 = true;
+      seats.addEventListener('input', markManualSeats);
+      seats.addEventListener('change', markManualSeats);
+    }
+
+    setTimeout(function(){ updateSeatsFromTerms({force:false}); }, 500);
+    setTimeout(function(){ updateSeatsFromTerms({force:false}); }, 1600);
+  }
+
+  window.ZummeeAnnualMeetingsSeatsFromTerms = {
+    refresh: updateSeatsFromTerms,
+    count: countSeatsForElection,
+    rows: function(){ return window.__AnnualMeetingSeatsTermMatches || []; }
+  };
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', bind, { once:true });
+  }else{
+    bind();
+  }
+
+  window.addEventListener('pageshow', function(){ setTimeout(bind, 200); });
 })();
 </script>
 
