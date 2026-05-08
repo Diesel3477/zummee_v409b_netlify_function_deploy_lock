@@ -2,6 +2,13 @@
 <html lang="en">
 <head>
 
+<script id="manager-hub-v626-visible-build-diagnostic-script">
+window.ZUMMEE_BUILD = "2026-05-08-v626-manager-hub-visible-build-diagnostic";
+window.__MANAGER_HUB_V626_VISIBLE_DIAGNOSTIC = true;
+console.info("[Manager Hub v626] visible diagnostic build loaded", window.ZUMMEE_BUILD);
+</script>
+
+
 <style id="zummee-manager-smooth-return-css-v611">
   /*
     v611: Smooth Manager Hub return.
@@ -43,7 +50,7 @@
 
 
 
-<script>window.ZUMMEE_BUILD="2026-05-08-v622-manager-hub-stable-ops-dom-owner";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD = "2026-05-08-v626-manager-hub-visible-build-diagnostic";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <script id="zummee-manager-canonical-preboot-v608">
 /*
@@ -3110,6 +3117,293 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-clear{background:linear-gradi
 html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradient(180deg,rgba(79,23,29,.96),rgba(53,14,19,.98));border-color:rgba(239,68,68,.48);}
 @media(max-width:760px){
   #mh2OpsPortalPillStable{align-items:flex-start;flex-direction:column;border-radius:20px;}
+}
+</style>
+
+
+<script id="manager-hub-v625-smart-card-immediate-loader">
+(function(){
+  if(window.__ManagerHubSmartCardImmediateLoaderV625) return;
+  window.__ManagerHubSmartCardImmediateLoaderV625 = true;
+  window.__MANAGER_HUB_V625_SMART_CARDS_EXPECTED = true;
+
+  const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
+
+  const state = {
+    lastSummary:null,
+    lastGood:{ board:null, maintenance:null, annual:null },
+    running:false
+  };
+
+  function s(v){ return String(v == null ? '' : v).trim(); }
+  function uuidish(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s(v)); }
+
+  function getClient(){
+    try{ if(window.supabaseClient && window.supabaseClient.from) return window.supabaseClient; }catch(_e){}
+    try{ if(window.sb && window.sb.from) return window.sb; }catch(_e){}
+    try{
+      if(window.supabase && window.supabase.createClient){
+        if(!window.__ManagerHubSmartSbV625){
+          window.__ManagerHubSmartSbV625 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
+        return window.__ManagerHubSmartSbV625;
+      }
+    }catch(_e){}
+    return null;
+  }
+
+  function activeCommunity(){
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const a = window.ZummeeCommunityState.getActiveCommunity();
+        if(a && a.id) return { id:s(a.id), name:s(a.name) };
+      }
+    }catch(_e){}
+
+    try{
+      const sel = document.getElementById('zummeeCommunitySelect') ||
+                  document.getElementById('communitySelect') ||
+                  document.querySelector('select[data-community-select], select[name="community"]');
+      if(sel && uuidish(sel.value)){
+        const opt = sel.options && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+        return { id:s(sel.value), name:s(opt && opt.textContent) };
+      }
+    }catch(_e2){}
+
+    try{
+      const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+      const obj = raw ? JSON.parse(raw) : null;
+      if(obj && obj.id) return { id:s(obj.id), name:s(obj.name) };
+    }catch(_e3){}
+
+    const keys = ['zummee_active_community_id','zummee_selected_community_id','activeCommunityId','currentCommunityId','zummeeActiveCommunityId'];
+    for(const k of keys){
+      try{
+        const v = s(localStorage.getItem(k) || sessionStorage.getItem(k));
+        if(uuidish(v)) return { id:v, name:s(localStorage.getItem('zummee_active_community_name') || localStorage.getItem('activeCommunityName') || '') };
+      }catch(_e4){}
+    }
+
+    return { id:'', name:'' };
+  }
+
+  async function countFirstWorking(tableAttempts, communityId, filterFn){
+    const sb = getClient();
+    if(!sb || !uuidish(communityId)) return null;
+
+    for(const attempt of tableAttempts){
+      try{
+        const res = await sb.from(attempt.table).select(attempt.select || '*').eq('community_id', communityId);
+        if(res && !res.error && Array.isArray(res.data)){
+          const rows = res.data.filter(filterFn || function(){ return true; });
+          return rows.length;
+        }
+      }catch(_e){}
+    }
+    return null;
+  }
+
+  function activeStatus(row){
+    const st = s(row && (row.status || row.approval_status || row.state)).toLowerCase();
+    if(['completed','complete','closed','archived','approved','rejected','done','mailed','cancelled','canceled'].includes(st)) return false;
+    if(row && (row.archived_at || row.completed_at || row.deleted_at)) return false;
+    return true;
+  }
+
+  async function loadSummary(){
+    const community = activeCommunity();
+
+    const board = await countFirstWorking([
+      { table:'BoardMemberActionItems', select:'id,status,approval_status,community_id' },
+      { table:'notification_events', select:'id,status,event_type,community_id' },
+      { table:'BoardMeetingMinutesApprovals', select:'id,status,approval_status,community_id' }
+    ], community.id, activeStatus);
+
+    const maintenance = await countFirstWorking([
+      { table:'resident_work_orders', select:'id,status,community_id' },
+      { table:'work_orders', select:'id,status,community_id' },
+      { table:'maintenance_requests', select:'id,status,community_id' }
+    ], community.id, activeStatus);
+
+    const annual = await countFirstWorking([
+      { table:'annual_meeting_board_approvals', select:'id,status,approval_status,community_id' },
+      { table:'annual_meeting_approvals', select:'id,status,approval_status,community_id' },
+      { table:'annual_meeting_settings', select:'id,next_annual_meeting_date,community_id' }
+    ], community.id, function(row){
+      if(Object.prototype.hasOwnProperty.call(row, 'next_annual_meeting_date')) return !!row.next_annual_meeting_date;
+      return activeStatus(row);
+    });
+
+    function stable(key, value){
+      if(value !== null && Number.isFinite(Number(value))){
+        state.lastGood[key] = Number(value);
+      }
+      return state.lastGood[key] == null ? 0 : state.lastGood[key];
+    }
+
+    const summary = {
+      community,
+      board: stable('board', board),
+      maintenance: stable('maintenance', maintenance),
+      annual: stable('annual', annual),
+      loadedAt: Date.now()
+    };
+
+    state.lastSummary = summary;
+    return summary;
+  }
+
+  function findCard(words, ids){
+    for(const id of (ids || [])){
+      const n = document.getElementById(id);
+      if(n) return n;
+    }
+
+    const nodes = Array.from(document.querySelectorAll('a,button,section,article,div'));
+    return nodes.find(function(n){
+      const text = s(n.innerText || n.textContent).toLowerCase();
+      return words.every(function(w){ return text.includes(w); });
+    }) || null;
+  }
+
+  function setCard(card, count, label){
+    if(!card) return;
+
+    card.style.display = '';
+    card.style.visibility = 'visible';
+    card.style.opacity = '1';
+    card.dataset.smartCardsV625 = 'true';
+    card.dataset.smartCount = String(count);
+
+    const metric =
+      card.querySelector('[data-role="metric1"]') ||
+      card.querySelector('[data-role="count"]') ||
+      card.querySelector('.count') ||
+      card.querySelector('.metric') ||
+      card.querySelector('.mh2-card-count');
+
+    if(metric) metric.textContent = String(count);
+
+    let badge =
+      card.querySelector('[data-role="tone"]') ||
+      card.querySelector('[data-role="metric2"]') ||
+      card.querySelector('.badge') ||
+      card.querySelector('.pill');
+
+    if(badge) badge.textContent = count ? label : 'Clear';
+
+    if(!metric){
+      let stable = card.querySelector('.mh-v625-smart-count');
+      if(!stable){
+        stable = document.createElement('div');
+        stable.className = 'mh-v625-smart-count';
+        stable.style.cssText = 'margin-top:8px;font-size:30px;font-weight:900;color:#17324c;';
+        card.appendChild(stable);
+      }
+      stable.textContent = String(count);
+    }
+
+    let detail = card.querySelector('.mh-v625-smart-detail');
+    if(!detail){
+      detail = document.createElement('div');
+      detail.className = 'mh-v625-smart-detail';
+      detail.style.cssText = 'margin-top:4px;font-size:13px;font-weight:800;color:#64748b;';
+      card.appendChild(detail);
+    }
+    detail.textContent = count ? label : 'Clear';
+  }
+
+  function render(summary){
+    summary = summary || state.lastSummary;
+    if(!summary) return false;
+
+    const boardCard = findCard(['board','review'], ['boardReviewCard','boardReviewStatusCard','boardStatusCard','boardReviewSmartCard']);
+    const maintenanceCard = findCard(['maintenance'], ['maintenanceActivityCard','maintenanceSmartCard','liveMaintenanceCard']);
+    const annualCard = findCard(['annual'], ['annualApprovalsCard','annualMeetingApprovalsCard','annualMeetingsCard']);
+
+    setCard(boardCard, Number(summary.board || 0), 'Needs review');
+    setCard(maintenanceCard, Number(summary.maintenance || 0), 'Open');
+    setCard(annualCard, Number(summary.annual || 0), 'Pending');
+
+    window.__ManagerHubSmartCardsSummaryV625 = summary;
+    console.info('[Manager Hub v625] smart cards rendered', summary);
+    return true;
+  }
+
+  async function refresh(){
+    if(state.running) return state.lastSummary;
+    state.running = true;
+    try{
+      const summary = await loadSummary();
+      render(summary);
+      return summary;
+    }catch(err){
+      console.warn('[Manager Hub v625] smart card refresh failed', err);
+      render(state.lastSummary);
+      return state.lastSummary;
+    }finally{
+      state.running = false;
+    }
+  }
+
+  window.refreshManagerHubSmartCardsAuthoritative = refresh;
+  window.getManagerHubSmartCardsSummary = function(){ return window.__ManagerHubSmartCardsSummaryV625 || state.lastSummary || null; };
+  window.__ManagerHubSmartCardsImmediateLoaderStatus = function(){
+    return {
+      build: window.ZUMMEE_BUILD,
+      expected: window.__MANAGER_HUB_V625_SMART_CARDS_EXPECTED,
+      helperType: typeof window.refreshManagerHubSmartCardsAuthoritative,
+      summary: window.getManagerHubSmartCardsSummary()
+    };
+  };
+
+  function boot(){
+    refresh();
+    [300, 900, 1800, 3500, 6500, 10000].forEach(function(ms){
+      setTimeout(refresh, ms);
+    });
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', boot, { once:true });
+  }else{
+    setTimeout(boot, 0);
+  }
+
+  window.addEventListener('pageshow', function(){ setTimeout(boot, 150); });
+  window.addEventListener('focus', function(){ setTimeout(refresh, 150); });
+  window.addEventListener('zummee:community-changed', function(){ setTimeout(boot, 150); });
+})();
+</script>
+
+
+<style id="manager-hub-v626-visible-build-diagnostic-css">
+#managerHubV626DiagnosticBadge{
+  position:fixed!important;
+  right:14px!important;
+  bottom:14px!important;
+  z-index:2147483647!important;
+  background:#0f2f4a!important;
+  color:#fff!important;
+  border:2px solid #9ec5ff!important;
+  border-radius:16px!important;
+  padding:10px 14px!important;
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+  font-size:13px!important;
+  font-weight:900!important;
+  letter-spacing:.02em!important;
+  box-shadow:0 14px 30px rgba(15,47,74,.28)!important;
+  pointer-events:none!important;
+}
+#managerHubV626DiagnosticBadge small{
+  display:block!important;
+  margin-top:2px!important;
+  color:#d9eaff!important;
+  font-size:10px!important;
+  font-weight:800!important;
+  text-transform:uppercase!important;
+  letter-spacing:.12em!important;
 }
 </style>
 
@@ -7690,6 +7984,38 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
       stableTitle: document.getElementById('mh2OpsPortalPillTitleStable')?.textContent || '',
       stableBadge: document.getElementById('mh2OpsPortalPillBadgeStable')?.textContent || '',
       summary: (typeof window.getManagerHubOperationsPortalSummary === 'function' ? window.getManagerHubOperationsPortalSummary() : null)
+    };
+  };
+})();
+</script>
+
+
+<script id="manager-hub-v626-visible-build-diagnostic-dom">
+(function(){
+  function addBadge(){
+    try{
+      if(document.getElementById("managerHubV626DiagnosticBadge")) return;
+      var badge = document.createElement("div");
+      badge.id = "managerHubV626DiagnosticBadge";
+      badge.innerHTML = "Manager Hub v626<small>Diagnostic Build</small>";
+      document.body.appendChild(badge);
+    }catch(err){
+      console.warn("[Manager Hub v626] could not add diagnostic badge", err);
+    }
+  }
+
+  if(document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", addBadge, { once:true });
+  }else{
+    addBadge();
+  }
+
+  window.getManagerHubVisibleDiagnosticStatus = function(){
+    return {
+      build: window.ZUMMEE_BUILD || "",
+      marker: !!window.__MANAGER_HUB_V626_VISIBLE_DIAGNOSTIC,
+      badgeExists: !!document.getElementById("managerHubV626DiagnosticBadge"),
+      href: location.href
     };
   };
 })();
