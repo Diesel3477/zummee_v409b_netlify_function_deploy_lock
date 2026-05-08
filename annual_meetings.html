@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-08-v631-annual-settings-save-only";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-08-v632-annual-meetings-self-contained-save";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annual Meetings</title>
@@ -2262,6 +2262,213 @@
     setTimeout(bind, 150);
     setTimeout(refreshScheduleDates, 500);
   });
+})();
+</script>
+
+
+<script id="annual-meetings-self-contained-save-v632">
+/*
+  v632 self-contained Annual Meetings save fallback.
+  Purpose:
+  - Save must work even if shared/community-state.js 404s or returns HTML.
+  - Writes only to public.annual_meeting_settings.
+*/
+(function(){
+  if(window.__AnnualMeetingsSelfContainedSaveV632) return;
+  window.__AnnualMeetingsSelfContainedSaveV632 = true;
+
+  const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
+
+  function s(v){ return String(v == null ? '' : v).trim(); }
+  function el(id){ return document.getElementById(id); }
+
+  async function getSb(){
+    try{ if(window.supabaseClient && window.supabaseClient.from) return window.supabaseClient; }catch(_e){}
+    try{ if(window.sb && window.sb.from) return window.sb; }catch(_e){}
+    try{ if(window.supabase && window.supabase.createClient){
+      if(!window.__annualSelfSbV632) window.__annualSelfSbV632 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      return window.__annualSelfSbV632;
+    }}catch(_e){}
+    return null;
+  }
+
+  function activeCommunity(){
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const active = window.ZummeeCommunityState.getActiveCommunity();
+        if(active && active.id) return { id:s(active.id), name:s(active.name) };
+      }
+    }catch(_e){}
+
+    try{
+      const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+      const obj = raw ? JSON.parse(raw) : null;
+      if(obj && obj.id) return { id:s(obj.id), name:s(obj.name) };
+    }catch(_e2){}
+
+    try{
+      const qs = new URLSearchParams(location.search);
+      return {
+        id: s(qs.get('community_id')) || s(localStorage.getItem('zummee_active_community_id')) || s(localStorage.getItem('activeCommunityId')) || s(localStorage.getItem('currentCommunityId')) || s(localStorage.getItem('zummee_selected_community_id')),
+        name: s(qs.get('community_name')) || s(localStorage.getItem('zummee_active_community_name')) || s(localStorage.getItem('activeCommunityName')) || s(localStorage.getItem('currentCommunityName'))
+      };
+    }catch(_e3){}
+
+    return { id:'', name:'' };
+  }
+
+  function addYears(dateStr, years){
+    if(!dateStr) return '';
+    try{
+      const d = new Date(dateStr + 'T00:00:00');
+      if(Number.isNaN(d.getTime())) return '';
+      d.setFullYear(d.getFullYear() + Number(years || 0));
+      return d.toISOString().slice(0,10);
+    }catch(_e){ return ''; }
+  }
+
+  function addDays(dateStr, days){
+    if(!dateStr) return '';
+    try{
+      const d = new Date(dateStr + 'T00:00:00');
+      if(Number.isNaN(d.getTime())) return '';
+      d.setDate(d.getDate() + Number(days || 0));
+      return d.toISOString().slice(0,10);
+    }catch(_e){ return ''; }
+  }
+
+  function collect(){
+    const lastDate = s(el('lastDate') && el('lastDate').value);
+    const nextDate = s(el('nextDate') && el('nextDate').value);
+    return {
+      lastDate,
+      nextDate,
+      associationLegalName: s(el('associationLegalName') && el('associationLegalName').value),
+      quorumPercent: s(el('quorumPercent') && el('quorumPercent').value),
+      seatsOverride: s(el('seatsOverride') && el('seatsOverride').value),
+      meetingTime: s(el('meetingTime') && el('meetingTime').value) || '7:00 PM',
+      meetingFormat: s(el('meetingFormat') && el('meetingFormat').value) || 'in_person',
+      meetingLocation: s(el('meetingLocation') && el('meetingLocation').value),
+      meetingLink: s(el('meetingLink') && el('meetingLink').value),
+      nominationDeadline: s(el('nominationDeadline') && el('nominationDeadline').value),
+      proxyReturnDeadline: s(el('proxyReturnDeadline') && el('proxyReturnDeadline').value),
+      expectedNextDate: addYears(lastDate, 1),
+      thirtyDaySendDate: addDays(nextDate, -30)
+    };
+  }
+
+  function payload(entry, community){
+    return {
+      community_id: community.id,
+      last_annual_meeting_date: entry.lastDate || null,
+      next_annual_meeting_date: entry.nextDate || null,
+      expected_next_date: entry.expectedNextDate || null,
+      thirty_day_send_date: entry.thirtyDaySendDate || null,
+      association_legal_name: entry.associationLegalName || null,
+      quorum_percent: entry.quorumPercent === '' ? null : Number(entry.quorumPercent),
+      seats_override: entry.seatsOverride === '' ? null : Number(entry.seatsOverride),
+      meeting_time: entry.meetingTime || null,
+      meeting_format: entry.meetingFormat || null,
+      meeting_location: entry.meetingLocation || null,
+      meeting_link: entry.meetingLink || null,
+      nomination_deadline: entry.nominationDeadline || null,
+      proxy_return_deadline: entry.proxyReturnDeadline || null,
+      last_locked: false,
+      data: entry,
+      updated_at: new Date().toISOString()
+    };
+  }
+
+  async function save(){
+    const community = activeCommunity();
+    if(!community.id){
+      alert('No active community found. Please select a community first.');
+      return false;
+    }
+
+    const entry = collect();
+    if(!entry.nextDate){
+      alert('Please choose the actual Next Annual Meeting Date before saving.');
+      return false;
+    }
+
+    const sb = await getSb();
+    if(!sb){
+      alert('Could not connect to Supabase.');
+      return false;
+    }
+
+    const data = payload(entry, community);
+
+    try{
+      const existing = await sb.from('annual_meeting_settings')
+        .select('id')
+        .eq('community_id', community.id)
+        .limit(1)
+        .maybeSingle();
+
+      if(existing && !existing.error && existing.data && existing.data.id){
+        const upd = await sb.from('annual_meeting_settings')
+          .update(data)
+          .eq('id', existing.data.id)
+          .select('id')
+          .maybeSingle();
+
+        if(upd && !upd.error){
+          setSavedStatus();
+          return true;
+        }
+        console.error('[Annual v632] update error', upd && upd.error);
+      }
+
+      const ins = await sb.from('annual_meeting_settings')
+        .insert(data)
+        .select('id')
+        .maybeSingle();
+
+      if(ins && !ins.error){
+        setSavedStatus();
+        return true;
+      }
+
+      console.error('[Annual v632] insert error', ins && ins.error);
+      alert('Could not save Annual Meeting info. See Console for the Supabase error.');
+      return false;
+    }catch(err){
+      console.error('[Annual v632] save exception', err);
+      alert('Could not save Annual Meeting info. See Console for the exact error.');
+      return false;
+    }
+  }
+
+  function setSavedStatus(){
+    const statusText = el('statusText');
+    const pill = el('statusPillText');
+    const dot = el('statusDot');
+    if(statusText) statusText.textContent = 'Annual meeting info saved.';
+    if(pill) pill.textContent = 'Annual meeting ready';
+    if(dot) dot.className = 'dot good';
+  }
+
+  function bind(){
+    const btn = el('saveBtn');
+    if(btn && !btn.__annualSelfSaveV632){
+      btn.__annualSelfSaveV632 = true;
+      btn.addEventListener('click', function(e){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        save();
+      }, true);
+    }
+  }
+
+  window.ZummeeAnnualMeetingsSelfSave = save;
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind, { once:true });
+  else bind();
+
+  window.addEventListener('pageshow', bind);
 })();
 </script>
 
