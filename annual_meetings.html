@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-08-v630-annual-meeting-expected-date-only";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-08-v631-annual-settings-save-only";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annual Meetings</title>
@@ -1545,6 +1545,8 @@
     'annual_meeting_records'
   ];
 
+  const WRITE_TABLE = 'annual_meeting_settings';
+
   const DEFAULT_ENTRY = {
     lastDate:'',
     nextDate:'',
@@ -1792,6 +1794,19 @@
     return null;
   }
 
+
+  async function findAnnualSettingsByCommunity(client, communityId){
+    try{
+      const res = await client.from(WRITE_TABLE)
+        .select('id')
+        .eq('community_id', communityId)
+        .limit(1)
+        .maybeSingle();
+      if(res && !res.error && res.data && res.data.id) return s(res.data.id);
+    }catch(_e){}
+    return '';
+  }
+
   async function upsertRecord(client, table, payload){
     // Try update existing known row first.
     if(currentRecordId){
@@ -1800,6 +1815,15 @@
         if(res && !res.error && res.data) return res.data;
       }catch(_e){}
     }
+
+    // Then update existing settings row by community_id.
+    try{
+      const existingId = await findAnnualSettingsByCommunity(client, payload.community_id);
+      if(existingId){
+        const resByCommunity = await client.from(table).update(payload).eq('id', existingId).select('*').maybeSingle();
+        if(resByCommunity && !resByCommunity.error && resByCommunity.data) return resByCommunity.data;
+      }
+    }catch(_byCommunityErr){}
 
     // Then upsert by community_id.
     try{
@@ -1834,8 +1858,10 @@
     for(const table of TABLES){
       const row = await selectExisting(client, table, c.id);
       if(row){
-        currentTable = table;
-        currentRecordId = s(row.id);
+        // v631: legacy annual_meetings / annual_meeting_records are read-only fallback sources.
+        // New workspace data must always save into annual_meeting_settings.
+        currentTable = WRITE_TABLE;
+        currentRecordId = table === WRITE_TABLE ? s(row.id) : '';
         currentEntry = normalizeRow(row);
         renderEntry();
         return true;
@@ -1843,7 +1869,7 @@
     }
 
     // No row exists yet. Use default but do not treat it as failure.
-    currentTable = TABLES[0];
+    currentTable = WRITE_TABLE;
     currentRecordId = '';
     currentEntry = Object.assign({}, DEFAULT_ENTRY);
     renderEntry();
@@ -1870,7 +1896,7 @@
     }
 
     currentEntry = collectEntry();
-    const table = currentTable || TABLES[0];
+    const table = WRITE_TABLE;
     const payload = buildPayload(currentEntry, c);
 
     try{
@@ -1883,7 +1909,7 @@
       return true;
     }catch(err){
       console.error('[Annual Meetings v627] save failed', err);
-      alert('Could not save Annual Meeting info. The annual_meeting_settings table may need to be created.');
+      alert('Could not save Annual Meeting info. Please check the Supabase annual_meeting_settings policies or request body.');
       setStatus('Could not save annual meeting info.', 'error');
       return false;
     }
