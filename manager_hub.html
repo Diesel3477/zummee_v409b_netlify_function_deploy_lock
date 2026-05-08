@@ -7162,30 +7162,25 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
 
 
 
-<script id="manager-hub-v620-operations-portal-pill-only">
+
+
+<script id="manager-hub-v621-operations-portal-pill-community-ready">
 /*
-  Manager Hub v620 — Operations Portal Pill Only
+  Manager Hub v621 — Operations Portal Pill Community Ready
 
   Base:
-  - v619 recovery baseline.
-  - Smart cards remain untouched.
-  - Community dropdown remains untouched.
-  - v619 community_assignments guard remains untouched.
+  - v620 Operations Portal pill only.
+  - Keeps v619 community_assignments guard.
+  - Keeps v618 v522 cleanup.
+  - Does not touch smart cards.
 
-  Purpose:
-  - Make the Operations Portal pill count the same operational sources the Operations page uses:
-    1) ops_reminders: active, current community, not completed, not archived
-    2) ops_important_dates: active, current community, not completed, not archived, due within 30 days or overdue
-    3) BoardMembers.term_end: active, current community, term ending within 45 days or overdue
-
-  Safety:
-  - No fetch interception.
-  - No smart-card DOM writes.
-  - No dropdown writes.
+  Fix:
+  - v620 could store an early "no-community" summary even though the community appeared moments later.
+  - v621 waits for a usable selected community and never overwrites a good summary with no-community.
 */
 (function(){
-  if(window.__ManagerHubOperationsPortalPillV620) return;
-  window.__ManagerHubOperationsPortalPillV620 = true;
+  if(window.__ManagerHubOperationsPortalPillV621) return;
+  window.__ManagerHubOperationsPortalPillV621 = true;
 
   const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
@@ -7195,7 +7190,12 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
 
   function s(v){ return String(v == null ? '' : v).trim(); }
   function $(id){ return document.getElementById(id); }
-  function uuidish(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s(v)); }
+  function sleep(ms){ return new Promise(resolve => setTimeout(resolve, ms)); }
+
+  function hasUsableId(v){
+    v = s(v);
+    return v.length >= 20 && v.indexOf('undefined') === -1 && v.indexOf('null') === -1;
+  }
 
   function todayDate(){
     const d = new Date();
@@ -7251,16 +7251,16 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     }catch(_e){}
     try{
       if(window.supabase && window.supabase.createClient){
-        if(!window.__ManagerHubOpsSbV620){
-          window.__ManagerHubOpsSbV620 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        if(!window.__ManagerHubOpsSbV621){
+          window.__ManagerHubOpsSbV621 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         }
-        return { client:window.__ManagerHubOpsSbV620, source:'v620-created-client' };
+        return { client:window.__ManagerHubOpsSbV621, source:'v621-created-client' };
       }
     }catch(_e){}
     return { client:null, source:'none' };
   }
 
-  function activeCommunity(){
+  function activeCommunityOnce(){
     let id = '';
     let name = '';
     let source = '';
@@ -7268,7 +7268,7 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     try{
       if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
         const active = window.ZummeeCommunityState.getActiveCommunity();
-        if(active && active.id){
+        if(active && hasUsableId(active.id)){
           id = s(active.id);
           name = s(active.name);
           source = 'ZummeeCommunityState';
@@ -7278,7 +7278,7 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
 
     try{
       const select = $('zummeeCommunitySelect') || $('communitySelect') || document.querySelector('select[data-community-select], select[name="community"]');
-      if(select && uuidish(select.value)){
+      if(select && hasUsableId(select.value)){
         id = s(select.value);
         const opt = select.options && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
         if(opt && s(opt.textContent)) name = s(opt.textContent);
@@ -7286,11 +7286,11 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
       }
     }catch(_e2){}
 
-    if(!id){
+    if(!hasUsableId(id)){
       try{
         const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
         const obj = raw ? JSON.parse(raw) : null;
-        if(obj && obj.id){
+        if(obj && hasUsableId(obj.id)){
           id = s(obj.id);
           name = name || s(obj.name);
           source = 'storage-v601';
@@ -7299,6 +7299,18 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     }
 
     return { id, name, source };
+  }
+
+  async function waitForCommunity(maxMs){
+    const started = Date.now();
+    let ctx = activeCommunityOnce();
+
+    while(!hasUsableId(ctx.id) && Date.now() - started < maxMs){
+      await sleep(150);
+      ctx = activeCommunityOnce();
+    }
+
+    return ctx;
   }
 
   async function queryOpsReminders(sb, ctx){
@@ -7395,12 +7407,12 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
   }
 
   async function fetchSummary(){
-    const ctx = activeCommunity();
+    const ctx = await waitForCommunity(3500);
     const resolved = getClient();
     const sb = resolved.client;
 
     const summary = {
-      version:'v620-operations-portal-pill-only',
+      version:'v621-operations-portal-pill-community-ready',
       community:ctx,
       clientReady:!!sb,
       clientSource:resolved.source,
@@ -7414,8 +7426,11 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
       loadedAt:Date.now()
     };
 
-    if(!sb || !uuidish(ctx.id)){
+    if(!sb || !hasUsableId(ctx.id)){
       summary.error = !sb ? 'no-client' : 'no-community';
+      if(lastSummary && hasUsableId(lastSummary.community && lastSummary.community.id)){
+        return lastSummary;
+      }
       return summary;
     }
 
@@ -7464,12 +7479,12 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
         badge.textContent = overdue ? (overdue + ' OVERDUE') : (count + ' PENDING');
       }
 
-      pill.dataset.opsPillOwner = 'v620';
+      pill.dataset.opsPillOwner = 'v621';
       pill.dataset.opsPillCount = String(count);
       pill.dataset.opsPillOverdue = String(overdue);
+      pill.dataset.opsPillCommunity = s(summary.community && summary.community.id);
     }
 
-    // Update Operations card metrics only; do not touch smart alert cards.
     ['dailyOpsCard','remindersCard'].forEach(function(cardId){
       const card = $(cardId);
       if(!card) return;
@@ -7493,9 +7508,11 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     });
 
     lastSummary = summary;
+    window.__ManagerHubOpsPortalSummaryV621 = summary;
     window.__ManagerHubOpsPortalSummaryV620 = summary;
-    window.__ManagerHubOpsPortalSummaryV616 = summary; // compatibility with audit/current callers
-    console.info('[Manager Hub v620] Operations Portal pill summary', summary);
+    window.__ManagerHubOpsPortalSummaryV616 = summary;
+    console.info('[Manager Hub v621] Operations Portal pill summary', summary);
+    return summary;
   }
 
   async function refresh(){
@@ -7504,12 +7521,11 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     inFlight = (async function(){
       try{
         const summary = await fetchSummary();
-        render(summary);
-        return summary;
+        return render(summary);
       }catch(err){
         const fallback = lastSummary || {
-          version:'v620-operations-portal-pill-only',
-          community:activeCommunity(),
+          version:'v621-operations-portal-pill-community-ready',
+          community:activeCommunityOnce(),
           count:0,
           overdue:0,
           dueSoon:0,
@@ -7517,9 +7533,10 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
           loadedAt:Date.now()
         };
         lastSummary = fallback;
+        window.__ManagerHubOpsPortalSummaryV621 = fallback;
         window.__ManagerHubOpsPortalSummaryV620 = fallback;
         window.__ManagerHubOpsPortalSummaryV616 = fallback;
-        console.warn('[Manager Hub v620] Operations Portal refresh failed', err);
+        console.warn('[Manager Hub v621] Operations Portal refresh failed', err);
         return fallback;
       }finally{
         inFlight = null;
@@ -7531,15 +7548,15 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
 
   function schedule(){
     refresh();
-    [400, 1200, 2600, 5200, 9000, 13000].forEach(ms => setTimeout(refresh, ms));
+    [700, 1600, 3200, 6200, 10000, 14000].forEach(ms => setTimeout(refresh, ms));
   }
 
   window.refreshManagerHubOperationsPortalPill = refresh;
   window.refreshManagerHubOperationsPortalPillAuthoritative = refresh;
-  window.getManagerHubOperationsPortalSummary = function(){ return window.__ManagerHubOpsPortalSummaryV620 || lastSummary || null; };
-  window.getManagerHubV620OperationsPortalStatus = function(){
+  window.getManagerHubOperationsPortalSummary = function(){ return window.__ManagerHubOpsPortalSummaryV621 || lastSummary || null; };
+  window.getManagerHubV621OperationsPortalStatus = function(){
     return {
-      installed:!!window.__ManagerHubOperationsPortalPillV620,
+      installed:!!window.__ManagerHubOperationsPortalPillV621,
       summary:window.getManagerHubOperationsPortalSummary(),
       pillText:$('mh2OperationsPortalPill') ? $('mh2OperationsPortalPill').textContent.trim() : '',
       smartCardsVisible:['mh2AlertBoard','mh2AlertActivity','mh2AlertApprovals'].map(function(id){
@@ -7710,7 +7727,8 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
       supabase: r.supabase,
       experimentalMarkers: r.riskFlags.experimentalMarkers,
       communityAssignmentGuardV619: (typeof window.getManagerHubV619GuardStatus === "function" ? window.getManagerHubV619GuardStatus() : null),
-      operationsPortalV620: (typeof window.getManagerHubV620OperationsPortalStatus === "function" ? window.getManagerHubV620OperationsPortalStatus() : null)
+      operationsPortalV620: (typeof window.getManagerHubV620OperationsPortalStatus === "function" ? window.getManagerHubV620OperationsPortalStatus() : null),
+      operationsPortalV621: (typeof window.getManagerHubV621OperationsPortalStatus === "function" ? window.getManagerHubV621OperationsPortalStatus() : null)
     };
     console.log(compact);
     return compact;
