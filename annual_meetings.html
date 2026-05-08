@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-08-v644-annual-community-names-from-star";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-08-v645-annual-ops-reminder-schema-safe";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annual Meetings</title>
@@ -1746,8 +1746,8 @@
         }, 1200);
       }
 
-      setStatus('Annual meeting info saved.', 'saved');
-      await upsertAnnualReminder(entry.nextDate);
+      const reminderOk = await upsertAnnualReminder(entry.nextDate);
+      setStatus(reminderOk ? 'Annual meeting info saved. Operations reminder scheduled.' : 'Annual meeting info saved. Reminder was not scheduled.', reminderOk ? 'saved' : 'good');
       return true;
     }catch(err){
       console.error('[Annual v642] save failed', err);
@@ -1773,32 +1773,88 @@
     const due = isoAddMonths(nextDate, -3);
     if(!due) return false;
 
-    const payload = {
-      community_id: state.activeCommunity.id,
-      title:'Annual Meeting',
-      notes:'Annual Meeting is scheduled for ' + formatDate(nextDate) + '. Begin 3-month preparation workflow.',
-      due_date:due,
-      reminder_date:due,
-      status:'open',
-      category:'annual_meeting',
-      source:'annual_meetings',
-      source_key:'annual_meeting_3_month_reminder',
-      updated_at:new Date().toISOString()
-    };
-
-    for(const table of ['ops_reminders','reminders','operations_reminders']){
+    async function companyIdForReminder(){
       try{
-        const existing = await client.from(table).select('id').eq('community_id', state.activeCommunity.id).eq('source_key', payload.source_key).limit(1).maybeSingle();
-        if(existing && !existing.error && existing.data && existing.data.id){
-          const upd = await client.from(table).update(payload).eq('id', existing.data.id).select('id').maybeSingle();
-          if(upd && !upd.error) return true;
-        }
+        const res = await client
+          .from('PropertyCommunities')
+          .select('company_id')
+          .eq('id', state.activeCommunity.id)
+          .maybeSingle();
+
+        if(res && !res.error && res.data && res.data.company_id) return s(res.data.company_id);
       }catch(_e){}
 
       try{
-        const inserted = await client.from(table).insert(payload).select('id').maybeSingle();
-        if(inserted && !inserted.error) return true;
+        return s(localStorage.getItem('zummee_company_id')) || s(sessionStorage.getItem('zummee_company_id'));
       }catch(_e2){}
+
+      return '';
+    }
+
+    const companyId = await companyIdForReminder();
+    const title = 'Annual Meeting Preparation';
+
+    // v645 schema-safe ops_reminders payload.
+    // Do not send notes/reminder_date/category/source/source_key because the current ops_reminders table
+    // does not have those columns.
+    const payload = {
+      community_id: state.activeCommunity.id,
+      title: title,
+      due_date: due,
+      status: 'open',
+      updated_at: new Date().toISOString()
+    };
+
+    if(companyId) payload.company_id = companyId;
+
+    try{
+      // Update existing open annual-meeting reminder for this community if present.
+      const existing = await client
+        .from('ops_reminders')
+        .select('id,title,status')
+        .eq('community_id', state.activeCommunity.id)
+        .eq('title', title)
+        .limit(1)
+        .maybeSingle();
+
+      if(existing && !existing.error && existing.data && existing.data.id){
+        const upd = await client
+          .from('ops_reminders')
+          .update(payload)
+          .eq('id', existing.data.id)
+          .select('id')
+          .maybeSingle();
+
+        if(upd && !upd.error){
+          console.info('[Annual v645] updated ops_reminders annual reminder', { due_date: due, id: existing.data.id });
+          return true;
+        }
+
+        if(upd && upd.error){
+          console.warn('[Annual v645] ops_reminders update failed', upd.error);
+        }
+      }
+    }catch(err){
+      console.warn('[Annual v645] ops_reminders existing lookup failed', err);
+    }
+
+    try{
+      const ins = await client
+        .from('ops_reminders')
+        .insert(payload)
+        .select('id')
+        .maybeSingle();
+
+      if(ins && !ins.error){
+        console.info('[Annual v645] inserted ops_reminders annual reminder', { due_date: due, id: ins.data && ins.data.id });
+        return true;
+      }
+
+      if(ins && ins.error){
+        console.warn('[Annual v645] ops_reminders insert failed', ins.error);
+      }
+    }catch(err2){
+      console.warn('[Annual v645] ops_reminders insert exception', err2);
     }
 
     return false;
