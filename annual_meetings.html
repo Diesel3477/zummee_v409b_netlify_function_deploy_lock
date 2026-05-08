@@ -713,6 +713,294 @@
 window.ZUMMEE_ANNUAL_MEETINGS_STABLE_BASELINE = "v648";
 </script>
 
+
+<style id="annual-meetings-v649-packet-preview-style">
+  .packetPreviewOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(7, 22, 38, 0.62);
+    backdrop-filter: blur(10px);
+    display: none;
+    align-items: stretch;
+    justify-content: center;
+    padding: 22px;
+  }
+  .packetPreviewOverlay.is-open {
+    display: flex;
+  }
+  .packetPreviewShell {
+    width: min(1120px, 100%);
+    height: min(92vh, 980px);
+    background: #f6f9fd;
+    border: 2px solid rgba(143, 190, 255, 0.85);
+    border-radius: 28px;
+    box-shadow: 0 28px 80px rgba(8, 31, 56, 0.35);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .packetPreviewTopbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 16px 20px;
+    background: #ffffff;
+    border-bottom: 1px solid #dbe7f4;
+  }
+  .packetPreviewTitle {
+    min-width: 0;
+  }
+  .packetPreviewTitle strong {
+    display: block;
+    color: #102f4f;
+    font-size: 18px;
+    line-height: 1.1;
+  }
+  .packetPreviewTitle span {
+    display: block;
+    color: #65778d;
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+  .packetPreviewActions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .packetPreviewBtn {
+    appearance: none;
+    border: 2px solid #cfe0f3;
+    background: #ffffff;
+    color: #123151;
+    border-radius: 999px;
+    padding: 11px 16px;
+    font-weight: 900;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .packetPreviewBtn.primary {
+    background: #245f9d;
+    border-color: #245f9d;
+    color: #ffffff;
+  }
+  .packetPreviewBtn.danger {
+    border-color: #f1c5c5;
+    color: #9f2f2f;
+  }
+  .packetPreviewBody {
+    overflow: auto;
+    padding: 24px;
+  }
+  .packetPages {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    align-items: center;
+  }
+  .packetPage {
+    width: min(850px, 100%);
+    min-height: 1050px;
+    background: #ffffff;
+    color: #102f4f;
+    border: 1px solid #d7e3f1;
+    box-shadow: 0 16px 38px rgba(16, 47, 79, 0.13);
+    border-radius: 18px;
+    padding: 54px;
+    box-sizing: border-box;
+  }
+  .packetHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 22px;
+    border-bottom: 3px solid #102f4f;
+    padding-bottom: 22px;
+    margin-bottom: 28px;
+  }
+  .packetLogo {
+    max-width: 190px;
+    max-height: 80px;
+    object-fit: contain;
+  }
+  .packetKicker {
+    color: #6d7f92;
+    font-size: 12px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    font-weight: 900;
+  }
+  .packetH1 {
+    font-size: 34px;
+    line-height: 1.05;
+    margin: 8px 0 0;
+    color: #102f4f;
+  }
+  .packetH2 {
+    font-size: 24px;
+    line-height: 1.15;
+    color: #102f4f;
+    margin: 0 0 16px;
+  }
+  .packetH3 {
+    font-size: 16px;
+    margin: 20px 0 8px;
+    color: #102f4f;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+  .packetP, .packetLi {
+    font-size: 15px;
+    line-height: 1.55;
+    color: #223c59;
+  }
+  .packetMetaGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin: 22px 0;
+  }
+  .packetMeta {
+    border: 1px solid #d8e4f0;
+    border-radius: 16px;
+    padding: 14px 16px;
+    background: #f8fbff;
+  }
+  .packetMeta label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    font-weight: 900;
+    color: #6d7f92;
+    margin-bottom: 7px;
+  }
+  .packetMeta div {
+    font-weight: 900;
+    color: #102f4f;
+    font-size: 16px;
+  }
+  .packetNoticeBox {
+    border: 2px solid #dce8f4;
+    border-radius: 18px;
+    padding: 18px 20px;
+    background: #fbfdff;
+    margin: 20px 0;
+  }
+  .packetTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 14px;
+    font-size: 14px;
+  }
+  .packetTable th,
+  .packetTable td {
+    text-align: left;
+    border-bottom: 1px solid #dde7f2;
+    padding: 10px 8px;
+    vertical-align: top;
+  }
+  .packetTable th {
+    color: #667b92;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    font-size: 11px;
+  }
+  .packetSignature {
+    height: 62px;
+    border-bottom: 1px solid #102f4f;
+    margin-top: 28px;
+  }
+  .packetFooter {
+    margin-top: 34px;
+    font-size: 11px;
+    color: #7a8da1;
+    text-align: center;
+  }
+  @media (max-width: 780px) {
+    .packetPreviewOverlay {
+      padding: 10px;
+    }
+    .packetPreviewShell {
+      border-radius: 20px;
+      height: 94vh;
+    }
+    .packetPreviewTopbar {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+    .packetPreviewActions {
+      width: 100%;
+      justify-content: flex-start;
+    }
+    .packetPreviewBody {
+      padding: 12px;
+    }
+    .packetPage {
+      min-height: auto;
+      padding: 30px 22px;
+      border-radius: 14px;
+    }
+    .packetHeader,
+    .packetMetaGrid {
+      grid-template-columns: 1fr;
+      flex-direction: column;
+    }
+  }
+  @media print {
+    body > *:not(.packetPrintRoot) {
+      display: none !important;
+    }
+    .packetPreviewOverlay {
+      position: static;
+      display: block !important;
+      inset: auto;
+      padding: 0;
+      background: #fff;
+      backdrop-filter: none;
+    }
+    .packetPreviewShell {
+      height: auto;
+      width: 100%;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    .packetPreviewTopbar {
+      display: none;
+    }
+    .packetPreviewBody {
+      padding: 0;
+      overflow: visible;
+    }
+    .packetPages {
+      gap: 0;
+      display: block;
+    }
+    .packetPage {
+      width: 100%;
+      min-height: 100vh;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      page-break-after: always;
+      padding: 54px;
+    }
+  }
+</style>
+
+
+<script id="annual-meetings-v649-packet-preview-marker">
+window.ZUMMEE_ANNUAL_MEETINGS_PACKET_PREVIEW = "v649";
+console.info("[Annual Meetings v649] packet preview wiring loaded");
+</script>
+
 </head>
 <body>
   <main class="shell">
@@ -2241,6 +2529,504 @@ window.ZUMMEE_ANNUAL_MEETINGS_STABLE_BASELINE = "v648";
   };
 
   console.info("[Annual Meetings] Stable baseline locked", window.getAnnualMeetingsStableBaseline());
+})();
+</script>
+
+
+<script id="annual-meetings-v649-packet-preview">
+/*
+  Annual Meetings v649 — Packet Preview
+
+  Scope:
+  - Wire Generate / Preview Packet button.
+  - Read selected community's saved annual_meeting_settings first.
+  - Fall back to visible form values if needed.
+  - Generate a professional preview packet in-page.
+  - No changes to save, dropdown, seats, reminders, or Manager Hub.
+*/
+(function(){
+  if(window.__AnnualMeetingsPacketPreviewV649) return;
+  window.__AnnualMeetingsPacketPreviewV649 = true;
+
+  const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
+  const SETTINGS_TABLE = 'annual_meeting_settings';
+
+  function s(v){ return String(v == null ? '' : v).trim(); }
+  function el(id){ return document.getElementById(id); }
+  function esc(v){
+    return s(v)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;')
+      .replace(/'/g,'&#39;');
+  }
+  function uuidish(v){
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s(v));
+  }
+  function parseDate(value){
+    value = s(value).slice(0,10);
+    if(!value) return null;
+    const d = new Date(value + 'T00:00:00');
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  function formatDate(value){
+    const d = parseDate(value);
+    if(!d) return s(value) || '—';
+    return d.toLocaleDateString(undefined, { month:'long', day:'numeric', year:'numeric' });
+  }
+  function addDays(value, days){
+    const d = parseDate(value);
+    if(!d) return '';
+    d.setDate(d.getDate() + Number(days || 0));
+    return d.toISOString().slice(0,10);
+  }
+  function addYears(value, years){
+    const d = parseDate(value);
+    if(!d) return '';
+    d.setFullYear(d.getFullYear() + Number(years || 0));
+    return d.toISOString().slice(0,10);
+  }
+  function yearOf(value){
+    const d = parseDate(value);
+    return d ? String(d.getFullYear()) : '';
+  }
+
+  async function client(){
+    try{ if(window.supabaseClient && window.supabaseClient.from) return window.supabaseClient; }catch(_e){}
+    try{ if(window.sb && window.sb.from) return window.sb; }catch(_e){}
+    try{
+      if(window.getSupabase && typeof window.getSupabase === 'function'){
+        const c = window.getSupabase();
+        if(c && c.from) return c;
+      }
+    }catch(_e2){}
+    try{
+      if(window.supabase && window.supabase.createClient){
+        if(!window.__AnnualPacketSbV649){
+          window.__AnnualPacketSbV649 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
+        return window.__AnnualPacketSbV649;
+      }
+    }catch(_e3){}
+    return null;
+  }
+
+  function activeCommunity(){
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const active = window.ZummeeCommunityState.getActiveCommunity();
+        if(active && active.id) return { id:s(active.id), name:s(active.name) };
+      }
+    }catch(_e){}
+
+    try{
+      const select = el('annualCommunitySelect');
+      if(select && select.value){
+        const opt = select.options && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
+        return { id:s(select.value), name:s(opt && opt.textContent) };
+      }
+    }catch(_e2){}
+
+    try{
+      const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+      const obj = raw ? JSON.parse(raw) : null;
+      if(obj && obj.id) return { id:s(obj.id), name:s(obj.name) };
+    }catch(_e3){}
+
+    return { id:'', name:'' };
+  }
+
+  function normalizeSettings(row){
+    row = row || {};
+    const data = row.data && typeof row.data === 'object' ? row.data : {};
+    return {
+      id:s(row.id),
+      community_id:s(row.community_id || data.community_id),
+      lastDate:s(row.last_annual_meeting_date || data.lastDate || data.last_annual_meeting_date),
+      nextDate:s(row.next_annual_meeting_date || data.nextDate || data.next_annual_meeting_date),
+      associationLegalName:s(row.association_legal_name || data.associationLegalName || data.association_legal_name),
+      quorumPercent:s(row.quorum_percent ?? data.quorumPercent ?? data.quorum_percent),
+      seatsOverride:s(row.seats_override ?? data.seatsOverride ?? data.seats_override),
+      meetingTime:s(row.meeting_time || data.meetingTime || data.meeting_time) || '7:00 PM',
+      meetingFormat:s(row.meeting_format || data.meetingFormat || data.meeting_format) || 'in_person',
+      meetingLocation:s(row.meeting_location || data.meetingLocation || data.meeting_location),
+      meetingLink:s(row.meeting_link || data.meetingLink || data.meeting_link),
+      nominationDeadline:s(row.nomination_deadline || data.nominationDeadline || data.nomination_deadline),
+      proxyReturnDeadline:s(row.proxy_return_deadline || data.proxyReturnDeadline || data.proxy_return_deadline),
+      updatedAt:s(row.updated_at || data.updated_at)
+    };
+  }
+
+  function collectFormSettings(){
+    return {
+      lastDate:s(el('lastDate') && el('lastDate').value),
+      nextDate:s(el('nextDate') && el('nextDate').value),
+      associationLegalName:s(el('associationLegalName') && el('associationLegalName').value),
+      quorumPercent:s(el('quorumPercent') && el('quorumPercent').value),
+      seatsOverride:s(el('seatsOverride') && el('seatsOverride').value),
+      meetingTime:s(el('meetingTime') && el('meetingTime').value) || '7:00 PM',
+      meetingFormat:s(el('meetingFormat') && el('meetingFormat').value) || 'in_person',
+      meetingLocation:s(el('meetingLocation') && el('meetingLocation').value),
+      meetingLink:s(el('meetingLink') && el('meetingLink').value),
+      nominationDeadline:s(el('nominationDeadline') && el('nominationDeadline').value),
+      proxyReturnDeadline:s(el('proxyReturnDeadline') && el('proxyReturnDeadline').value)
+    };
+  }
+
+  async function loadSavedSettings(c, community){
+    if(!c || !community.id) return null;
+    try{
+      const res = await c.from(SETTINGS_TABLE).select('*').eq('community_id', community.id).limit(1).maybeSingle();
+      if(res && res.error){
+        console.warn('[Annual v649] saved settings load failed', res.error);
+        return null;
+      }
+      return res && res.data ? normalizeSettings(res.data) : null;
+    }catch(err){
+      console.warn('[Annual v649] saved settings exception', err);
+      return null;
+    }
+  }
+
+  async function loadBoardRoster(c, community, nextDate){
+    const out = { all:[], seatsUp:[] };
+    if(!c || !community.id) return out;
+    try{
+      const res = await c.from('BoardMembers')
+        .select('id,name,email,phone,position,term_start,term_end,is_active,community_id')
+        .eq('community_id', community.id);
+
+      if(res && res.error){
+        console.warn('[Annual v649] board roster load failed', res.error);
+        return out;
+      }
+
+      const rows = (Array.isArray(res && res.data) ? res.data : [])
+        .filter(function(row){ return row && row.is_active !== false; })
+        .sort(function(a,b){ return s(a.position).localeCompare(s(b.position)) || s(a.name).localeCompare(s(b.name)); });
+
+      out.all = rows;
+      const y = yearOf(nextDate);
+      out.seatsUp = rows.filter(function(row){ return y && yearOf(row.term_end) === y; });
+      return out;
+    }catch(err){
+      console.warn('[Annual v649] board roster exception', err);
+      return out;
+    }
+  }
+
+  function logoUrl(){
+    const img = el('annualHeaderCompanyLogo');
+    if(img && img.src && !img.hidden) return img.src;
+    const boxImg = document.querySelector('#logoBox img');
+    if(boxImg && boxImg.src) return boxImg.src;
+    return '';
+  }
+
+  function meetingFormatLabel(value){
+    const map = {
+      in_person:'In-Person Meeting',
+      virtual:'Virtual Meeting',
+      hybrid:'Hybrid Meeting',
+      mail_only:'Mail / Proxy Only'
+    };
+    return map[s(value)] || s(value) || 'Annual Meeting';
+  }
+
+  function packetData(saved, roster, community){
+    const form = collectFormSettings();
+    const entry = Object.assign({}, form, saved || {});
+    const expectedNextDate = addYears(entry.lastDate, 1);
+    const sendDate = addDays(entry.nextDate, -30);
+    const seats = s(entry.seatsOverride) || String((roster && roster.seatsUp && roster.seatsUp.length) || '') || '—';
+
+    return {
+      community,
+      entry,
+      roster: roster || { all:[], seatsUp:[] },
+      logo: logoUrl(),
+      associationName: s(entry.associationLegalName) || s(community.name) || 'Association',
+      meetingFormat: meetingFormatLabel(entry.meetingFormat),
+      expectedNextDate,
+      sendDate,
+      seats,
+      generatedAt: new Date()
+    };
+  }
+
+  function meta(label, value){
+    return '<div class="packetMeta"><label>' + esc(label) + '</label><div>' + esc(value || '—') + '</div></div>';
+  }
+
+  function boardRows(rows){
+    rows = rows || [];
+    if(!rows.length){
+      return '<tr><td colspan="4">No active board members found for this community.</td></tr>';
+    }
+    return rows.map(function(row){
+      return '<tr>' +
+        '<td>' + esc(row.name || '—') + '</td>' +
+        '<td>' + esc(row.position || '—') + '</td>' +
+        '<td>' + esc(formatDate(row.term_end)) + '</td>' +
+        '<td>' + esc(row.email || '') + '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function seatsRows(rows){
+    rows = rows || [];
+    if(!rows.length){
+      return '<tr><td colspan="3">No board seats were automatically detected for the annual meeting year.</td></tr>';
+    }
+    return rows.map(function(row){
+      return '<tr>' +
+        '<td>' + esc(row.name || '—') + '</td>' +
+        '<td>' + esc(row.position || '—') + '</td>' +
+        '<td>' + esc(formatDate(row.term_end)) + '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function buildPacketHtml(data){
+    const e = data.entry;
+    const logo = data.logo ? '<img class="packetLogo" src="' + esc(data.logo) + '" alt="Company logo">' : '';
+    const meetingLinkBlock = e.meetingLink ? '<p class="packetP"><strong>Virtual Meeting Link:</strong> ' + esc(e.meetingLink) + '</p>' : '';
+
+    return '' +
+    '<div class="packetPages">' +
+
+      '<section class="packetPage">' +
+        '<div class="packetHeader"><div><div class="packetKicker">Annual Meeting Packet</div><h1 class="packetH1">' + esc(data.associationName) + '</h1></div>' + logo + '</div>' +
+        '<div class="packetMetaGrid">' +
+          meta('Community', data.community.name || data.community.id) +
+          meta('Annual Meeting Date', formatDate(e.nextDate)) +
+          meta('Meeting Time', e.meetingTime) +
+          meta('Meeting Format', data.meetingFormat) +
+          meta('Meeting Location', e.meetingLocation || 'To be announced') +
+          meta('Quorum Requirement', e.quorumPercent ? e.quorumPercent + '%' : '—') +
+          meta('Seats Up for Election', data.seats) +
+          meta('30-Day Notice Send Date', formatDate(data.sendDate)) +
+        '</div>' +
+        '<div class="packetNoticeBox">' +
+          '<h2 class="packetH2">Packet Checklist</h2>' +
+          '<ul>' +
+            '<li class="packetLi">Annual meeting notice</li>' +
+            '<li class="packetLi">Agenda</li>' +
+            '<li class="packetLi">Proxy instructions</li>' +
+            '<li class="packetLi">Nomination information</li>' +
+            '<li class="packetLi">Board roster and seats up for election</li>' +
+          '</ul>' +
+        '</div>' +
+        '<p class="packetFooter">Generated by Zummee on ' + esc(data.generatedAt.toLocaleString()) + '</p>' +
+      '</section>' +
+
+      '<section class="packetPage">' +
+        '<div class="packetHeader"><div><div class="packetKicker">Official Notice</div><h1 class="packetH1">Notice of Annual Meeting</h1></div>' + logo + '</div>' +
+        '<p class="packetP">Dear Homeowner,</p>' +
+        '<p class="packetP">Please accept this notice of the Annual Meeting of the Members of <strong>' + esc(data.associationName) + '</strong>.</p>' +
+        '<div class="packetMetaGrid">' +
+          meta('Meeting Date', formatDate(e.nextDate)) +
+          meta('Meeting Time', e.meetingTime) +
+          meta('Meeting Format', data.meetingFormat) +
+          meta('Location', e.meetingLocation || 'To be announced') +
+          meta('Proxy Return Deadline', formatDate(e.proxyReturnDeadline)) +
+          meta('Nomination Deadline', formatDate(e.nominationDeadline)) +
+        '</div>' +
+        meetingLinkBlock +
+        '<p class="packetP">The purpose of the meeting is to conduct association business, confirm quorum, review annual matters, and hold elections for any seats up for election as applicable.</p>' +
+        '<p class="packetP">Please review all enclosed materials carefully. If you are unable to attend, please follow the proxy return instructions so your participation may be counted toward quorum.</p>' +
+        '<p class="packetP">Sincerely,<br>Association Management</p>' +
+      '</section>' +
+
+      '<section class="packetPage">' +
+        '<div class="packetHeader"><div><div class="packetKicker">Agenda</div><h1 class="packetH1">Annual Meeting Agenda</h1></div>' + logo + '</div>' +
+        '<ol>' +
+          '<li class="packetLi">Call to order</li>' +
+          '<li class="packetLi">Proof of notice</li>' +
+          '<li class="packetLi">Establishment of quorum</li>' +
+          '<li class="packetLi">Approval of prior annual meeting minutes, if applicable</li>' +
+          '<li class="packetLi">Management report</li>' +
+          '<li class="packetLi">Financial update</li>' +
+          '<li class="packetLi">Election of board members / announcement of results</li>' +
+          '<li class="packetLi">Homeowner questions or open forum, as permitted</li>' +
+          '<li class="packetLi">Adjournment</li>' +
+        '</ol>' +
+        '<h2 class="packetH2" style="margin-top:30px;">Seats Up for Election</h2>' +
+        '<table class="packetTable"><thead><tr><th>Name</th><th>Position</th><th>Term End</th></tr></thead><tbody>' + seatsRows(data.roster.seatsUp) + '</tbody></table>' +
+      '</section>' +
+
+      '<section class="packetPage">' +
+        '<div class="packetHeader"><div><div class="packetKicker">Proxy</div><h1 class="packetH1">Limited Proxy / Quorum Form</h1></div>' + logo + '</div>' +
+        '<p class="packetP">I, the undersigned homeowner, appoint the proxy holder designated below to represent my interests for quorum and meeting purposes at the Annual Meeting of <strong>' + esc(data.associationName) + '</strong>.</p>' +
+        '<div class="packetNoticeBox">' +
+          '<p class="packetP"><strong>Meeting Date:</strong> ' + esc(formatDate(e.nextDate)) + '</p>' +
+          '<p class="packetP"><strong>Proxy Return Deadline:</strong> ' + esc(formatDate(e.proxyReturnDeadline)) + '</p>' +
+        '</div>' +
+        '<h3 class="packetH3">Homeowner Name</h3><div class="packetSignature"></div>' +
+        '<h3 class="packetH3">Property Address</h3><div class="packetSignature"></div>' +
+        '<h3 class="packetH3">Signature</h3><div class="packetSignature"></div>' +
+        '<h3 class="packetH3">Date</h3><div class="packetSignature"></div>' +
+      '</section>' +
+
+      '<section class="packetPage">' +
+        '<div class="packetHeader"><div><div class="packetKicker">Board Information</div><h1 class="packetH1">Board Roster</h1></div>' + logo + '</div>' +
+        '<table class="packetTable"><thead><tr><th>Name</th><th>Position</th><th>Term End</th><th>Email</th></tr></thead><tbody>' + boardRows(data.roster.all) + '</tbody></table>' +
+        '<div class="packetNoticeBox">' +
+          '<h2 class="packetH2">Nomination Information</h2>' +
+          '<p class="packetP"><strong>Nomination Deadline:</strong> ' + esc(formatDate(e.nominationDeadline)) + '</p>' +
+          '<p class="packetP">Homeowners interested in serving on the Board should follow the association nomination instructions before the deadline shown above.</p>' +
+        '</div>' +
+      '</section>' +
+
+    '</div>';
+  }
+
+  function ensureOverlay(){
+    let overlay = el('packetPreviewOverlay');
+    if(overlay) return overlay;
+
+    overlay = document.createElement('div');
+    overlay.id = 'packetPreviewOverlay';
+    overlay.className = 'packetPreviewOverlay';
+    overlay.innerHTML = '' +
+      '<div class="packetPreviewShell">' +
+        '<div class="packetPreviewTopbar">' +
+          '<div class="packetPreviewTitle"><strong id="packetPreviewTitle">Annual Meeting Packet Preview</strong><span id="packetPreviewSub">Ready to generate</span></div>' +
+          '<div class="packetPreviewActions">' +
+            '<button class="packetPreviewBtn" id="packetOpenWindowBtn" type="button">Open Preview</button>' +
+            '<button class="packetPreviewBtn primary" id="packetPrintBtn" type="button">Print / Save PDF</button>' +
+            '<button class="packetPreviewBtn danger" id="packetCloseBtn" type="button">Close</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="packetPreviewBody"><div id="packetPreviewContent"></div></div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    el('packetCloseBtn').addEventListener('click', closePreview);
+    el('packetPrintBtn').addEventListener('click', function(){ window.print(); });
+    el('packetOpenWindowBtn').addEventListener('click', openPreviewWindow);
+    overlay.addEventListener('click', function(e){ if(e.target === overlay) closePreview(); });
+
+    return overlay;
+  }
+
+  function closePreview(){
+    const overlay = el('packetPreviewOverlay');
+    if(overlay) overlay.classList.remove('is-open');
+    document.body.classList.remove('packetPrintRoot');
+  }
+
+  function openPreviewWindow(){
+    const content = el('packetPreviewContent');
+    const title = el('packetPreviewTitle');
+    if(!content) return;
+
+    const w = window.open('', '_blank');
+    if(!w) return;
+
+    const css = document.getElementById('annual-meetings-v649-packet-preview-style');
+    w.document.open();
+    w.document.write('<!doctype html><html><head><title>' + esc(title ? title.textContent : 'Annual Meeting Packet') + '</title>' + (css ? css.outerHTML : '') + '</head><body><div class="packetPreviewBody"><div class="packetPages">' + content.innerHTML.replace(/^<div class="packetPages">|<\/div>$/g,'') + '</div></div></body></html>');
+    w.document.close();
+  }
+
+  async function generatePreview(){
+    const button = el('packetBtn');
+    const originalText = button ? button.textContent : '';
+    try{
+      if(button){
+        button.disabled = true;
+        button.textContent = 'Generating Preview...';
+      }
+
+      const community = activeCommunity();
+      if(!community.id){
+        alert('Select a community before generating the annual meeting packet.');
+        return null;
+      }
+
+      const c = await client();
+      const saved = await loadSavedSettings(c, community);
+      const entry = Object.assign({}, collectFormSettings(), saved || {});
+
+      if(!entry.nextDate){
+        alert('Add and save the next annual meeting date before generating the packet.');
+        return null;
+      }
+
+      const roster = await loadBoardRoster(c, community, entry.nextDate);
+      const data = packetData(saved || entry, roster, community);
+      data.entry = entry;
+
+      const overlay = ensureOverlay();
+      const title = el('packetPreviewTitle');
+      const sub = el('packetPreviewSub');
+      const content = el('packetPreviewContent');
+
+      if(title) title.textContent = (data.associationName || community.name) + ' Packet Preview';
+      if(sub) sub.textContent = 'Meeting date: ' + formatDate(data.entry.nextDate) + ' • Seats: ' + data.seats;
+      if(content) content.innerHTML = buildPacketHtml(data);
+
+      document.body.classList.add('packetPrintRoot');
+      overlay.classList.add('is-open');
+
+      window.__AnnualMeetingsPacketPreviewV649Last = {
+        community,
+        settings:data.entry,
+        roster,
+        generatedAt:Date.now()
+      };
+
+      console.info('[Annual v649] packet preview generated', window.__AnnualMeetingsPacketPreviewV649Last);
+      return window.__AnnualMeetingsPacketPreviewV649Last;
+    }catch(err){
+      console.error('[Annual v649] packet preview failed', err);
+      alert('Packet preview failed. Check the console for details.');
+      return null;
+    }finally{
+      if(button){
+        button.disabled = false;
+        button.textContent = originalText || 'Generate / Preview Packet';
+      }
+    }
+  }
+
+  function bindPacketButton(){
+    const btn = el('packetBtn');
+    if(!btn || btn.__annualPacketPreviewV649) return;
+    const clone = btn.cloneNode(true);
+    clone.__annualPacketPreviewV649 = true;
+    clone.type = 'button';
+    clone.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      generatePreview();
+      return false;
+    }, true);
+    btn.parentNode.replaceChild(clone, btn);
+  }
+
+  window.ZummeeAnnualMeetingsPacketPreview = {
+    generate: generatePreview,
+    close: closePreview,
+    openWindow: openPreviewWindow,
+    last: function(){ return window.__AnnualMeetingsPacketPreviewV649Last || null; }
+  };
+  window.generateAnnualMeetingPacketPreview = generatePreview;
+
+  function boot(){
+    bindPacketButton();
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', boot, { once:true });
+  }else{
+    boot();
+  }
+  window.addEventListener('pageshow', function(){ setTimeout(boot, 150); });
 })();
 </script>
 
