@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-08-v628-annual-meetings-field-alignment-fix";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-08-v629-annual-meeting-auto-date-reminder";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annual Meetings</title>
@@ -1961,6 +1961,268 @@
   }
 
   window.addEventListener('pageshow', function(){ setTimeout(loadDirect, 250); });
+})();
+</script>
+
+
+<script id="annual-meetings-auto-date-reminder-v629">
+(function(){
+  if(window.__AnnualMeetingsAutoDateReminderV629) return;
+  window.__AnnualMeetingsAutoDateReminderV629 = true;
+
+  const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
+
+  function s(v){ return String(v == null ? '' : v).trim(); }
+  function el(id){ return document.getElementById(id); }
+
+  async function client(){
+    try{ if(window.supabaseClient && window.supabaseClient.from) return window.supabaseClient; }catch(_e){}
+    try{ if(window.sb && window.sb.from) return window.sb; }catch(_e){}
+    try{ if(typeof ensureSupabase === 'function'){ const c = await ensureSupabase(); if(c && c.from) return c; } }catch(_e){}
+    try{
+      if(window.supabase && window.supabase.createClient){
+        if(!window.__annualReminderSbV629) window.__annualReminderSbV629 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        return window.__annualReminderSbV629;
+      }
+    }catch(_e){}
+    return null;
+  }
+
+  function activeCommunity(){
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const a = window.ZummeeCommunityState.getActiveCommunity();
+        if(a && a.id) return { id:s(a.id), name:s(a.name) };
+      }
+    }catch(_e){}
+    try{
+      const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+      const obj = raw ? JSON.parse(raw) : null;
+      if(obj && obj.id) return { id:s(obj.id), name:s(obj.name) };
+    }catch(_e2){}
+    try{
+      return {
+        id: s(new URLSearchParams(location.search).get('community_id')) || s(localStorage.getItem('activeCommunityId')) || s(localStorage.getItem('currentCommunityId')) || s(localStorage.getItem('zummee_selected_community_id')),
+        name: s(new URLSearchParams(location.search).get('community_name')) || s(localStorage.getItem('activeCommunityName')) || s(localStorage.getItem('currentCommunityName'))
+      };
+    }catch(_e3){}
+    return { id:'', name:'' };
+  }
+
+  function isoAddYears(dateStr, years){
+    if(!dateStr) return '';
+    try{
+      const d = new Date(dateStr + 'T00:00:00');
+      if(Number.isNaN(d.getTime())) return '';
+      d.setFullYear(d.getFullYear() + Number(years || 0));
+      return d.toISOString().slice(0,10);
+    }catch(_e){ return ''; }
+  }
+
+  function isoAddMonths(dateStr, months){
+    if(!dateStr) return '';
+    try{
+      const d = new Date(dateStr + 'T00:00:00');
+      if(Number.isNaN(d.getTime())) return '';
+      d.setMonth(d.getMonth() + Number(months || 0));
+      return d.toISOString().slice(0,10);
+    }catch(_e){ return ''; }
+  }
+
+  function formatDate(dateStr){
+    if(!dateStr) return '—';
+    try{
+      return new Date(dateStr + 'T00:00:00').toLocaleDateString(undefined, { month:'long', day:'numeric', year:'numeric' });
+    }catch(_e){ return String(dateStr); }
+  }
+
+  function setStatus(text, kind){
+    const statusText = el('statusText');
+    const dot = el('statusDot');
+    const pillText = el('statusPillText');
+    if(statusText) statusText.textContent = text || '';
+    if(pillText && kind === 'reminder') pillText.textContent = 'Reminder scheduled';
+    if(dot && (kind === 'good' || kind === 'reminder')) dot.className = 'dot good';
+  }
+
+  function refreshScheduleDates(options){
+    options = options || {};
+    const last = el('lastDate');
+    const next = el('nextDate');
+    const expected = el('expectedDate');
+    const sendDate = el('sendDate');
+
+    const lastVal = s(last && last.value);
+    const computedNext = isoAddYears(lastVal, 1);
+
+    if(next && computedNext){
+      const shouldWrite = options.force || !s(next.value) || next.dataset.autoAnnualNext === '1';
+      if(shouldWrite){
+        next.value = computedNext;
+        next.dataset.autoAnnualNext = '1';
+      }
+    }
+
+    const finalNext = s(next && next.value) || computedNext;
+    if(expected) expected.textContent = formatDate(finalNext);
+
+    // Keep the existing Packet Setup 30-day send date accurate.
+    if(sendDate) sendDate.textContent = formatDate(isoAddMonths(finalNext, -1));
+
+    return finalNext;
+  }
+
+  function markManualNextDate(){
+    const next = el('nextDate');
+    if(next) next.dataset.autoAnnualNext = '0';
+    refreshScheduleDates({ force:false });
+  }
+
+  function reminderDueDate(nextDate){
+    return isoAddMonths(nextDate, -3);
+  }
+
+  async function upsertAnnualReminder(nextDate){
+    const community = activeCommunity();
+    if(!community.id || !nextDate) return false;
+
+    const due = reminderDueDate(nextDate);
+    if(!due) return false;
+
+    const sb = await client();
+    if(!sb) return false;
+
+    const title = 'Annual Meeting';
+    const note = 'Annual Meeting is scheduled for ' + formatDate(nextDate) + '. Begin 3-month preparation workflow.';
+
+    const basePayload = {
+      community_id: community.id,
+      title: title,
+      notes: note,
+      due_date: due,
+      reminder_date: due,
+      status: 'open',
+      category: 'annual_meeting',
+      source: 'annual_meetings',
+      source_key: 'annual_meeting_3_month_reminder',
+      updated_at: new Date().toISOString()
+    };
+
+    const attempts = ['ops_reminders','reminders','operations_reminders'];
+
+    for(const table of attempts){
+      // Update by source_key when the column exists.
+      try{
+        const existing = await sb.from(table)
+          .select('id')
+          .eq('community_id', community.id)
+          .eq('source_key', 'annual_meeting_3_month_reminder')
+          .limit(1)
+          .maybeSingle();
+
+        if(existing && !existing.error && existing.data && existing.data.id){
+          const res = await sb.from(table).update(basePayload).eq('id', existing.data.id).select('id').maybeSingle();
+          if(res && !res.error) return true;
+        }
+      }catch(_e){}
+
+      // Update by title fallback for schemas without source_key.
+      try{
+        const existing2 = await sb.from(table)
+          .select('id')
+          .eq('community_id', community.id)
+          .eq('title', title)
+          .limit(1)
+          .maybeSingle();
+
+        if(existing2 && !existing2.error && existing2.data && existing2.data.id){
+          const res2 = await sb.from(table).update(basePayload).eq('id', existing2.data.id).select('id').maybeSingle();
+          if(res2 && !res2.error) return true;
+        }
+      }catch(_e2){}
+
+      try{
+        const res3 = await sb.from(table).insert(basePayload).select('id').maybeSingle();
+        if(res3 && !res3.error) return true;
+      }catch(_e3){}
+    }
+
+    return false;
+  }
+
+  async function saveThenReminder(){
+    refreshScheduleDates({ force:false });
+    let saved = true;
+
+    try{
+      if(window.ZummeeAnnualMeetingsDirect && typeof window.ZummeeAnnualMeetingsDirect.save === 'function'){
+        saved = await window.ZummeeAnnualMeetingsDirect.save();
+      }
+    }catch(err){
+      console.error('[Annual Meetings v629] base save failed', err);
+      saved = false;
+    }
+
+    if(saved){
+      const nextDate = s(el('nextDate') && el('nextDate').value) || refreshScheduleDates({ force:false });
+      const ok = await upsertAnnualReminder(nextDate);
+      if(ok){
+        setStatus('Annual meeting info saved. 3-month reminder scheduled.', 'reminder');
+      }else{
+        setStatus('Annual meeting info saved. Reminder table may need setup.', 'good');
+      }
+    }
+
+    return saved;
+  }
+
+  function bind(){
+    const last = el('lastDate');
+    const next = el('nextDate');
+    const saveBtn = el('saveBtn');
+
+    if(last && !last.__annualAutoNextV629){
+      last.__annualAutoNextV629 = true;
+      last.addEventListener('input', function(){ refreshScheduleDates({ force:true }); });
+      last.addEventListener('change', function(){ refreshScheduleDates({ force:true }); });
+    }
+
+    if(next && !next.__annualManualNextV629){
+      next.__annualManualNextV629 = true;
+      next.addEventListener('input', markManualNextDate);
+      next.addEventListener('change', markManualNextDate);
+    }
+
+    if(saveBtn && !saveBtn.__annualSaveReminderV629){
+      saveBtn.__annualSaveReminderV629 = true;
+      saveBtn.addEventListener('click', function(e){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        saveThenReminder();
+      }, true);
+    }
+
+    setTimeout(function(){ refreshScheduleDates({ force:false }); }, 250);
+    setTimeout(function(){ refreshScheduleDates({ force:false }); }, 1200);
+  }
+
+  window.ZummeeAnnualMeetingScheduleAutomation = {
+    refresh: refreshScheduleDates,
+    saveThenReminder: saveThenReminder,
+    upsertReminder: upsertAnnualReminder
+  };
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', bind, { once:true });
+  }else{
+    bind();
+  }
+
+  window.addEventListener('pageshow', function(){
+    setTimeout(bind, 150);
+    setTimeout(function(){ refreshScheduleDates({ force:false }); }, 500);
+  });
 })();
 </script>
 
