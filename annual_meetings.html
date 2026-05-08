@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-08-v645-annual-ops-reminder-schema-safe";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-08-v646-annual-ops-reminder-active-sync";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annual Meetings</title>
@@ -1764,8 +1764,40 @@
     }
   }
 
-  async function upsertAnnualReminder(nextDate){
-    if(!nextDate || !state.activeCommunity.id) return false;
+  async function authUserIdForReminder(client){
+    try{
+      const userRes = await client.auth.getUser();
+      return s(userRes && userRes.data && userRes.data.user && userRes.data.user.id);
+    }catch(_e){}
+    return '';
+  }
+
+  async function companyIdForCommunity(client, communityId){
+    communityId = s(communityId);
+    if(!client || !communityId) return '';
+
+    try{
+      const res = await client
+        .from('PropertyCommunities')
+        .select('company_id')
+        .eq('id', communityId)
+        .maybeSingle();
+
+      if(res && !res.error && res.data && res.data.company_id) return s(res.data.company_id);
+    }catch(_e){}
+
+    try{
+      return s(localStorage.getItem('zummee_company_id')) || s(sessionStorage.getItem('zummee_company_id'));
+    }catch(_e2){}
+
+    return '';
+  }
+
+  async function upsertAnnualReminderForCommunity(communityId, nextDate){
+    communityId = s(communityId);
+    nextDate = s(nextDate);
+
+    if(!communityId || !nextDate) return false;
 
     const client = await supabaseClient();
     if(!client) return false;
@@ -1773,47 +1805,30 @@
     const due = isoAddMonths(nextDate, -3);
     if(!due) return false;
 
-    async function companyIdForReminder(){
-      try{
-        const res = await client
-          .from('PropertyCommunities')
-          .select('company_id')
-          .eq('id', state.activeCommunity.id)
-          .maybeSingle();
-
-        if(res && !res.error && res.data && res.data.company_id) return s(res.data.company_id);
-      }catch(_e){}
-
-      try{
-        return s(localStorage.getItem('zummee_company_id')) || s(sessionStorage.getItem('zummee_company_id'));
-      }catch(_e2){}
-
-      return '';
-    }
-
-    const companyId = await companyIdForReminder();
+    const companyId = await companyIdForCommunity(client, communityId);
+    const userId = await authUserIdForReminder(client);
     const title = 'Annual Meeting Preparation';
 
-    // v645 schema-safe ops_reminders payload.
-    // Do not send notes/reminder_date/category/source/source_key because the current ops_reminders table
-    // does not have those columns.
+    // v646: Match the real Operations Reminder format.
+    // Existing ops_reminders rows use status='active'.
     const payload = {
-      community_id: state.activeCommunity.id,
+      community_id: communityId,
       title: title,
       due_date: due,
-      status: 'open',
+      status: 'active',
       updated_at: new Date().toISOString()
     };
 
     if(companyId) payload.company_id = companyId;
+    if(userId) payload.created_by = userId;
 
     try{
-      // Update existing open annual-meeting reminder for this community if present.
       const existing = await client
         .from('ops_reminders')
         .select('id,title,status')
-        .eq('community_id', state.activeCommunity.id)
+        .eq('community_id', communityId)
         .eq('title', title)
+        .is('archived_at', null)
         .limit(1)
         .maybeSingle();
 
@@ -1826,16 +1841,20 @@
           .maybeSingle();
 
         if(upd && !upd.error){
-          console.info('[Annual v645] updated ops_reminders annual reminder', { due_date: due, id: existing.data.id });
+          console.info('[Annual v646] updated ops_reminders annual reminder', {
+            community_id: communityId,
+            due_date: due,
+            id: existing.data.id
+          });
           return true;
         }
 
         if(upd && upd.error){
-          console.warn('[Annual v645] ops_reminders update failed', upd.error);
+          console.warn('[Annual v646] ops_reminders update failed', upd.error);
         }
       }
     }catch(err){
-      console.warn('[Annual v645] ops_reminders existing lookup failed', err);
+      console.warn('[Annual v646] ops_reminders existing lookup failed', err);
     }
 
     try{
@@ -1846,18 +1865,57 @@
         .maybeSingle();
 
       if(ins && !ins.error){
-        console.info('[Annual v645] inserted ops_reminders annual reminder', { due_date: due, id: ins.data && ins.data.id });
+        console.info('[Annual v646] inserted ops_reminders annual reminder', {
+          community_id: communityId,
+          due_date: due,
+          id: ins.data && ins.data.id
+        });
         return true;
       }
 
       if(ins && ins.error){
-        console.warn('[Annual v645] ops_reminders insert failed', ins.error);
+        console.warn('[Annual v646] ops_reminders insert failed', ins.error, payload);
       }
     }catch(err2){
-      console.warn('[Annual v645] ops_reminders insert exception', err2);
+      console.warn('[Annual v646] ops_reminders insert exception', err2, payload);
     }
 
     return false;
+  }
+
+  async function upsertAnnualReminder(nextDate){
+    return upsertAnnualReminderForCommunity(state.activeCommunity.id, nextDate);
+  }
+
+  async function syncAnnualRemindersFromSettings(){
+    const client = await supabaseClient();
+    if(!client) return false;
+
+    try{
+      const res = await client
+        .from(SETTINGS_TABLE)
+        .select('community_id,next_annual_meeting_date')
+        .not('next_annual_meeting_date', 'is', null);
+
+      if(res && res.error){
+        console.warn('[Annual v646] settings reminder sync query failed', res.error);
+        return false;
+      }
+
+      const rows = Array.isArray(res && res.data) ? res.data : [];
+      let count = 0;
+
+      for(const row of rows){
+        const ok = await upsertAnnualReminderForCommunity(row.community_id, row.next_annual_meeting_date);
+        if(ok) count++;
+      }
+
+      console.info('[Annual v646] synced annual reminders from settings', { attempted: rows.length, synced: count });
+      return true;
+    }catch(err){
+      console.warn('[Annual v646] settings reminder sync exception', err);
+      return false;
+    }
   }
 
   async function toggleLock(){
@@ -2118,6 +2176,7 @@
     await loadSettings();
     await loadLogo();
     await refreshSeats({ force:false });
+    await syncAnnualRemindersFromSettings();
   }
 
   window.ZummeeAnnualMeetingsStableApp = {
@@ -2125,6 +2184,8 @@
     loadCommunities,
     loadSettings,
     save:saveSettings,
+    syncAnnualReminders:syncAnnualRemindersFromSettings,
+    upsertAnnualReminder:upsertAnnualReminder,
     refreshSeats,
     countSeats,
     rows:function(){ return state.seatsRows.slice(); },
