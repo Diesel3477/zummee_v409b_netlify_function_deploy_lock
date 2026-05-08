@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
 
-<script id="manager-hub-v631-smart-alerts-client-ready-marker">
-window.ZUMMEE_BUILD = "2026-05-08-v631-manager-hub-smart-alerts-client-ready";
-window.__MANAGER_HUB_V631_SMART_ALERTS_CLIENT_READY = true;
-console.info("[Manager Hub v631] smart alerts client-ready build loaded", window.ZUMMEE_BUILD);
+<script id="manager-hub-v632-deterministic-smart-alerts-marker">
+window.ZUMMEE_BUILD = "2026-05-08-v632-manager-hub-deterministic-smart-alerts";
+window.__MANAGER_HUB_V632_DETERMINISTIC_SMART_ALERTS = true;
+console.info("[Manager Hub v632] deterministic smart alerts loaded", window.ZUMMEE_BUILD);
 </script>
 
-<script id="manager-hub-v631-smart-alerts-client-ready">
+<script id="manager-hub-v632-deterministic-smart-alerts">
 (function(){
-  if(window.__ManagerHubSmartAlertsClientReadyV631) return;
-  window.__ManagerHubSmartAlertsClientReadyV631 = true;
+  if(window.__ManagerHubDeterministicSmartAlertsV632) return;
+  window.__ManagerHubDeterministicSmartAlertsV632 = true;
 
   const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
@@ -20,16 +20,38 @@ console.info("[Manager Hub v631] smart alerts client-ready build loaded", window
   const state = {
     inFlight:null,
     latest:null,
-    lastGood:{ board:0, maintenance:0, annual:0 },
-    clientReady:false,
-    clientError:''
+    lastGood:{ board:0, maintenance:0, annual:0 }
   };
 
   function s(v){ return String(v == null ? '' : v).trim(); }
   function uuidish(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s(v)); }
   function sleep(ms){ return new Promise(resolve => setTimeout(resolve, ms)); }
 
-  function getExistingClient(){
+  async function ensureSupabaseSdk(){
+    if(window.supabase && typeof window.supabase.createClient === 'function') return true;
+
+    const existing = document.querySelector('script[src*="supabase-js"]');
+    if(existing){
+      for(let i=0;i<40;i++){
+        if(window.supabase && typeof window.supabase.createClient === 'function') return true;
+        await sleep(100);
+      }
+    }
+
+    return new Promise(function(resolve){
+      try{
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+        script.onload = function(){ resolve(!!(window.supabase && window.supabase.createClient)); };
+        script.onerror = function(){ resolve(false); };
+        document.head.appendChild(script);
+      }catch(_e){
+        resolve(false);
+      }
+    });
+  }
+
+  function findExistingClient(){
     const names = [
       'supabaseClient',
       'sb',
@@ -43,77 +65,51 @@ console.info("[Manager Hub v631] smart alerts client-ready build loaded", window
     for(const name of names){
       try{
         const c = window[name];
-        if(c && typeof c.from === 'function') return c;
+        if(c && typeof c.from === 'function') return { client:c, source:'window.' + name };
       }catch(_e){}
     }
 
-    try{
-      if(window.getSupabase && typeof window.getSupabase === 'function'){
-        const c = window.getSupabase();
-        if(c && typeof c.from === 'function') return c;
-      }
-    }catch(_e){}
+    const fns = ['getSupabase','ensureSupabaseSync','requireSb'];
+    for(const name of fns){
+      try{
+        const fn = window[name];
+        if(typeof fn === 'function'){
+          const c = fn();
+          if(c && typeof c.from === 'function') return { client:c, source:name + '()' };
+        }
+      }catch(_e){}
+    }
 
-    try{
-      if(window.ensureSupabaseSync && typeof window.ensureSupabaseSync === 'function'){
-        const c = window.ensureSupabaseSync();
-        if(c && typeof c.from === 'function') return c;
-      }
-    }catch(_e){}
+    return { client:null, source:'' };
+  }
 
-    try{
-      if(window.requireSb && typeof window.requireSb === 'function'){
-        const c = window.requireSb();
-        if(c && typeof c.from === 'function') return c;
-      }
-    }catch(_e){}
+  async function resolveClient(){
+    const existing = findExistingClient();
+    if(existing.client) return existing;
+
+    await ensureSupabaseSdk();
 
     try{
       if(window.supabase && typeof window.supabase.createClient === 'function'){
-        if(!window.__ManagerHubSmartAlertsSbV631){
-          window.__ManagerHubSmartAlertsSbV631 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        if(!window.__ManagerHubSmartAlertsSbV632){
+          window.__ManagerHubSmartAlertsSbV632 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         }
-        if(window.__ManagerHubSmartAlertsSbV631 && typeof window.__ManagerHubSmartAlertsSbV631.from === 'function'){
-          return window.__ManagerHubSmartAlertsSbV631;
+        if(window.__ManagerHubSmartAlertsSbV632 && typeof window.__ManagerHubSmartAlertsSbV632.from === 'function'){
+          return { client:window.__ManagerHubSmartAlertsSbV632, source:'v632-created-client' };
         }
       }
-    }catch(e){
-      state.clientError = e && e.message ? e.message : String(e);
+    }catch(err){
+      return { client:null, source:'createClient failed: ' + (err && err.message ? err.message : String(err)) };
     }
 
-    return null;
-  }
-
-  async function waitForClient(maxMs){
-    const started = Date.now();
-
-    while(Date.now() - started < maxMs){
-      const c = getExistingClient();
-      if(c){
-        state.clientReady = true;
-        state.clientError = '';
-        return c;
-      }
-      await sleep(150);
-    }
-
-    const c = getExistingClient();
-    if(c){
-      state.clientReady = true;
-      state.clientError = '';
-      return c;
-    }
-
-    state.clientReady = false;
-    state.clientError = 'Supabase client unavailable after wait';
-    return null;
+    return { client:null, source:'no-client' };
   }
 
   function activeCommunity(){
     try{
       if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
         const a = window.ZummeeCommunityState.getActiveCommunity();
-        if(a && a.id) return { id:s(a.id), name:s(a.name) };
+        if(a && a.id) return { id:s(a.id), name:s(a.name), source:'ZummeeCommunityState' };
       }
     }catch(_e){}
 
@@ -123,17 +119,17 @@ console.info("[Manager Hub v631] smart alerts client-ready build loaded", window
                   document.querySelector('select[data-community-select], select[name="community"]');
       if(sel && uuidish(sel.value)){
         const opt = sel.options && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
-        return { id:s(sel.value), name:s(opt && opt.textContent) };
+        return { id:s(sel.value), name:s(opt && opt.textContent), source:'dropdown' };
       }
     }catch(_e2){}
 
     try{
       const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
       const obj = raw ? JSON.parse(raw) : null;
-      if(obj && obj.id) return { id:s(obj.id), name:s(obj.name) };
+      if(obj && obj.id) return { id:s(obj.id), name:s(obj.name), source:'storage-v601' };
     }catch(_e3){}
 
-    return { id:'', name:'' };
+    return { id:'', name:'', source:'none' };
   }
 
   function withTimeout(promise, label){
@@ -142,7 +138,7 @@ console.info("[Manager Hub v631] smart alerts client-ready build loaded", window
       const timer = setTimeout(function(){
         if(done) return;
         done = true;
-        resolve({ ok:false, timeout:true, label, error:'Timed out after ' + TIMEOUT_MS + 'ms', count:null, rows:[] });
+        resolve({ ok:false, label, timeout:true, error:'Timed out after ' + TIMEOUT_MS + 'ms', count:0, rows:[], totalRows:0 });
       }, TIMEOUT_MS);
 
       Promise.resolve(promise).then(function(value){
@@ -154,7 +150,7 @@ console.info("[Manager Hub v631] smart alerts client-ready build loaded", window
         if(done) return;
         done = true;
         clearTimeout(timer);
-        resolve({ ok:false, label, error:err && err.message ? err.message : String(err), count:null, rows:[] });
+        resolve({ ok:false, label, error:err && err.message ? err.message : String(err), count:0, rows:[], totalRows:0 });
       });
     });
   }
@@ -198,7 +194,7 @@ console.info("[Manager Hub v631] smart alerts client-ready build loaded", window
     return dt.getTime() < today.getTime();
   }
 
-  function normalizeResult(label, source, rows, filter){
+  function normalize(label, source, clientSource, community, rows, filter){
     rows = Array.isArray(rows) ? rows : [];
     filter = filter || function(row){ return !isClosed(row); };
     const open = rows.filter(filter);
@@ -206,6 +202,9 @@ console.info("[Manager Hub v631] smart alerts client-ready build loaded", window
       ok:true,
       label,
       source,
+      clientSource,
+      communityId:community.id,
+      communityName:community.name,
       count:open.length,
       overdue:open.filter(isOverdue).length,
       rows:open,
@@ -213,39 +212,47 @@ console.info("[Manager Hub v631] smart alerts client-ready build loaded", window
     };
   }
 
-  async function loadBoard(sb, community){
-    if(!sb || !uuidish(community.id)) return { ok:false, label:'board', source:'none', error:'No client or community', count:null, rows:[] };
+  async function loadBoard(client, clientSource, community){
+    if(!client || !uuidish(community.id)){
+      return { ok:false, label:'board', source:'none', clientSource, communityId:community.id, error:'Missing client or valid community', count:0, rows:[], totalRows:0 };
+    }
 
-    const res = await sb.from('notification_events')
+    const res = await client.from('notification_events')
       .select('*')
       .eq('community_id', community.id)
       .eq('event_type','board_item_submitted')
       .limit(200);
 
-    if(res && res.error) return { ok:false, label:'board', source:'notification_events.board_item_submitted', error:res.error.message || JSON.stringify(res.error), count:null, rows:[] };
-    return normalizeResult('board', 'notification_events.board_item_submitted', res && res.data);
+    if(res && res.error){
+      return { ok:false, label:'board', source:'notification_events.board_item_submitted', clientSource, communityId:community.id, error:res.error.message || JSON.stringify(res.error), count:0, rows:[], totalRows:0 };
+    }
+
+    return normalize('board', 'notification_events.board_item_submitted', clientSource, community, res && res.data);
   }
 
   function isOpenMaintenance(row){
     if(isClosed(row)) return false;
     const st = statusOf(row);
-    if(['draft','deleted','void'].includes(st)) return false;
-    return true;
+    return !['draft','deleted','void'].includes(st);
   }
 
-  async function loadMaintenance(sb, community){
-    if(!sb || !uuidish(community.id)) return { ok:false, label:'maintenance', source:'none', error:'No client or community', count:null, rows:[] };
+  async function loadMaintenance(client, clientSource, community){
+    if(!client || !uuidish(community.id)){
+      return { ok:false, label:'maintenance', source:'none', clientSource, communityId:community.id, error:'Missing client or valid community', count:0, rows:[], totalRows:0 };
+    }
 
-    const res = await sb.from('resident_work_orders')
+    const res = await client.from('resident_work_orders')
       .select('*')
       .eq('community_id', community.id)
       .limit(200);
 
-    if(res && res.error) return { ok:false, label:'maintenance', source:'resident_work_orders', error:res.error.message || JSON.stringify(res.error), count:null, rows:[] };
+    if(res && res.error){
+      return { ok:false, label:'maintenance', source:'resident_work_orders', clientSource, communityId:community.id, error:res.error.message || JSON.stringify(res.error), count:0, rows:[], totalRows:0 };
+    }
 
-    const normalized = normalizeResult('maintenance', 'resident_work_orders', res && res.data, isOpenMaintenance);
-    normalized.urgent = normalized.rows.filter(row => /urgent|emergency|high/i.test(s(row.priority || row.severity || row.level))).length;
-    return normalized;
+    const result = normalize('maintenance', 'resident_work_orders', clientSource, community, res && res.data, isOpenMaintenance);
+    result.urgent = result.rows.filter(row => /urgent|emergency|high/i.test(s(row.priority || row.severity || row.level))).length;
+    return result;
   }
 
   function annualMatchesCommunity(row, community){
@@ -261,16 +268,20 @@ console.info("[Manager Hub v631] smart alerts client-ready build loaded", window
     return vals.some(v => v === name || v.indexOf(name) !== -1 || name.indexOf(v) !== -1);
   }
 
-  async function loadAnnual(sb, community){
-    if(!sb || !uuidish(community.id)) return { ok:false, label:'annual', source:'none', error:'No client or community', count:null, rows:[] };
+  async function loadAnnual(client, clientSource, community){
+    if(!client || !uuidish(community.id)){
+      return { ok:false, label:'annual', source:'none', clientSource, communityId:community.id, error:'Missing client or valid community', count:0, rows:[], totalRows:0 };
+    }
 
-    const res = await sb.from('annual_meeting_packet_requests')
+    const res = await client.from('annual_meeting_packet_requests')
       .select('*')
       .limit(200);
 
-    if(res && res.error) return { ok:false, label:'annual', source:'annual_meeting_packet_requests', error:res.error.message || JSON.stringify(res.error), count:null, rows:[] };
+    if(res && res.error){
+      return { ok:false, label:'annual', source:'annual_meeting_packet_requests', clientSource, communityId:community.id, error:res.error.message || JSON.stringify(res.error), count:0, rows:[], totalRows:0 };
+    }
 
-    return normalizeResult('annual', 'annual_meeting_packet_requests', res && res.data, function(row){
+    return normalize('annual', 'annual_meeting_packet_requests', clientSource, community, res && res.data, function(row){
       return annualMatchesCommunity(row, community) && !isClosed(row);
     });
   }
@@ -284,12 +295,14 @@ console.info("[Manager Hub v631] smart alerts client-ready build loaded", window
 
   async function loadSummary(){
     const community = activeCommunity();
-    const sb = await waitForClient(8000);
+    const resolved = await resolveClient();
+    const client = resolved.client;
+    const clientSource = resolved.source;
 
     const results = await Promise.all([
-      withTimeout(loadBoard(sb, community), 'board'),
-      withTimeout(loadMaintenance(sb, community), 'maintenance'),
-      withTimeout(loadAnnual(sb, community), 'annual')
+      withTimeout(loadBoard(client, clientSource, community), 'board'),
+      withTimeout(loadMaintenance(client, clientSource, community), 'maintenance'),
+      withTimeout(loadAnnual(client, clientSource, community), 'annual')
     ]);
 
     const board = results[0] || {};
@@ -298,8 +311,8 @@ console.info("[Manager Hub v631] smart alerts client-ready build loaded", window
 
     const summary = {
       community,
-      clientReady:!!sb,
-      clientError:state.clientError || '',
+      clientReady:!!client,
+      clientSource,
       board:useCount('board', board),
       boardOverdue:Number(board.overdue || 0),
       maintenance:useCount('maintenance', maintenance),
@@ -311,7 +324,7 @@ console.info("[Manager Hub v631] smart alerts client-ready build loaded", window
     };
 
     state.latest = summary;
-    window.__ManagerHubSmartAlertsSummaryV631 = summary;
+    window.__ManagerHubSmartAlertsSummaryV632 = summary;
     return summary;
   }
 
@@ -322,7 +335,7 @@ console.info("[Manager Hub v631] smart alerts client-ready build loaded", window
     opts = opts || {};
     const tone = opts.tone || 'good';
 
-    card.dataset.smartAlertsV631 = 'true';
+    card.dataset.smartAlertsV632 = 'true';
     card.style.display = '';
     card.style.visibility = 'visible';
     card.style.opacity = '1';
@@ -375,11 +388,9 @@ console.info("[Manager Hub v631] smart alerts client-ready build loaded", window
       href:'annual_meeting_status.html'
     });
 
-    try{
-      document.documentElement.setAttribute('data-zummee-smart-alerts-v426-ready', '1');
-    }catch(_e){}
+    try{ document.documentElement.setAttribute('data-zummee-smart-alerts-v426-ready', '1'); }catch(_e){}
 
-    console.info('[Manager Hub v631] client-ready smart alerts rendered', summary);
+    console.info('[Manager Hub v632] deterministic smart alerts rendered', summary);
     return true;
   }
 
@@ -395,7 +406,7 @@ console.info("[Manager Hub v631] smart alerts client-ready build loaded", window
         const fallback = state.latest || {
           community:activeCommunity(),
           clientReady:false,
-          clientError:err && err.message ? err.message : String(err),
+          clientSource:'fatal',
           board:Number(state.lastGood.board || 0),
           boardOverdue:0,
           maintenance:Number(state.lastGood.maintenance || 0),
@@ -406,7 +417,7 @@ console.info("[Manager Hub v631] smart alerts client-ready build loaded", window
           loadedAt:Date.now()
         };
         state.latest = fallback;
-        window.__ManagerHubSmartAlertsSummaryV631 = fallback;
+        window.__ManagerHubSmartAlertsSummaryV632 = fallback;
         render(fallback);
         return fallback;
       }finally{
@@ -419,21 +430,19 @@ console.info("[Manager Hub v631] smart alerts client-ready build loaded", window
 
   window.refreshManagerHubCanonicalSmartAlerts = refresh;
   window.refreshManagerHubSmartCardsAuthoritative = refresh;
-  window.getManagerHubSmartCardsSummary = function(){ return window.__ManagerHubSmartAlertsSummaryV631 || state.latest || null; };
+  window.getManagerHubSmartCardsSummary = function(){ return window.__ManagerHubSmartAlertsSummaryV632 || state.latest || null; };
   window.getManagerHubSmartCardsDeploymentStatus = function(){
     return {
       build: window.ZUMMEE_BUILD || '',
-      clientReadyMarker: !!window.__MANAGER_HUB_V631_SMART_ALERTS_CLIENT_READY,
+      deterministicMarker: !!window.__MANAGER_HUB_V632_DETERMINISTIC_SMART_ALERTS,
       helperType: typeof window.refreshManagerHubCanonicalSmartAlerts,
       summary: window.getManagerHubSmartCardsSummary()
     };
   };
 
   function boot(){
-    setTimeout(refresh, 250);
-    [900, 1800, 3500, 6500, 10000, 14000].forEach(function(ms){
-      setTimeout(refresh, ms);
-    });
+    setTimeout(refresh, 300);
+    [1000, 2200, 4200, 7200, 11000].forEach(function(ms){ setTimeout(refresh, ms); });
   }
 
   if(document.readyState === 'loading'){
@@ -447,6 +456,9 @@ console.info("[Manager Hub v631] smart alerts client-ready build loaded", window
   window.addEventListener('zummee:community-changed', function(){ setTimeout(boot, 150); });
 })();
 </script>
+
+
+
 
 
 
@@ -504,7 +516,7 @@ console.info("[Manager Hub v631] smart alerts client-ready build loaded", window
 
 
 
-<script>window.ZUMMEE_BUILD = "2026-05-08-v631-manager-hub-smart-alerts-client-ready";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD = "2026-05-08-v632-manager-hub-deterministic-smart-alerts";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <script id="zummee-manager-canonical-preboot-v608">
 /*
