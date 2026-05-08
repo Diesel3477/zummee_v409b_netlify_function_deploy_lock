@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-08-v622-annual-meetings-community-inspections-header";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-08-v623-annual-meetings-real-logo-one-row-header";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annual Meetings</title>
@@ -553,6 +553,132 @@ body.dark-mode .mh2-stat-box {
   }
 </style>
 
+
+<style id="annual-meetings-v623-real-logo-one-row">
+  /* v623 — fix real logo display and keep dropdown/buttons on one row for iPad */
+  .annual-ci-header{
+    padding:26px 28px !important;
+  }
+
+  .annual-ci-header-top{
+    grid-template-columns:minmax(0,1fr) 210px !important;
+    gap:22px !important;
+    align-items:start !important;
+  }
+
+  .annual-ci-logo-card{
+    width:210px !important;
+    min-height:82px !important;
+    padding:8px 10px !important;
+    border:0 !important;
+    box-shadow:none !important;
+    background:transparent !important;
+  }
+
+  .annual-ci-logo-img{
+    max-width:200px !important;
+    max-height:74px !important;
+    width:auto !important;
+    height:auto !important;
+    object-fit:contain !important;
+    display:block !important;
+  }
+
+  .annual-ci-logo-img[hidden]{
+    display:none !important;
+  }
+
+  .annual-ci-logo-loading{
+    color:#8aa0b5 !important;
+    font-size:12px !important;
+    font-weight:800 !important;
+    letter-spacing:.06em !important;
+    text-transform:uppercase !important;
+  }
+
+  .annual-ci-header-controls{
+    grid-template-columns:minmax(0,1fr) 170px 170px !important;
+    gap:12px !important;
+    align-items:center !important;
+  }
+
+  .annual-ci-actions{
+    display:contents !important;
+  }
+
+  .annual-ci-btn{
+    min-width:0 !important;
+    width:100% !important;
+    min-height:58px !important;
+    padding:0 18px !important;
+  }
+
+  .annual-ci-community-picker{
+    width:100% !important;
+    min-width:0 !important;
+  }
+
+  .annual-ci-community-picker select{
+    font-size:17px !important;
+  }
+
+  @media (max-width: 860px){
+    .annual-ci-header-top{
+      grid-template-columns:minmax(0,1fr) 190px !important;
+      gap:18px !important;
+    }
+
+    .annual-ci-logo-card{
+      width:190px !important;
+    }
+
+    .annual-ci-logo-img{
+      max-width:185px !important;
+      max-height:68px !important;
+    }
+
+    .annual-ci-header-controls{
+      grid-template-columns:minmax(0,1fr) 160px 160px !important;
+      gap:10px !important;
+    }
+
+    .annual-ci-btn{
+      font-size:15px !important;
+      padding:0 14px !important;
+    }
+
+    .annual-ci-title{
+      font-size:38px !important;
+    }
+  }
+
+  @media (max-width: 700px){
+    .annual-ci-header-controls{
+      grid-template-columns:1fr !important;
+    }
+
+    .annual-ci-actions{
+      display:flex !important;
+      flex-direction:row !important;
+      gap:10px !important;
+    }
+
+    .annual-ci-btn{
+      flex:1 1 0 !important;
+    }
+  }
+
+  @media (max-width: 560px){
+    .annual-ci-header-top{
+      grid-template-columns:1fr !important;
+    }
+
+    .annual-ci-logo-wrap{
+      justify-content:flex-start !important;
+    }
+  }
+</style>
+
 </head>
 <body>
   <main class="shell">
@@ -566,10 +692,8 @@ body.dark-mode .mh2-stat-box {
 
         <div class="annual-ci-logo-wrap" aria-label="Management company logo">
           <div class="annual-ci-logo-card" id="headerLogoBox">
-            <div class="headerLogoFallback">
-              <span class="headerLogoWord">SIXES</span>
-              <span class="headerLogoSub">Management Group</span>
-            </div>
+            <img id="annualHeaderCompanyLogo" class="annual-ci-logo-img" alt="Management company logo" hidden>
+            <span id="annualHeaderLogoFallback" class="annual-ci-logo-loading">Company logo</span>
           </div>
         </div>
       </div>
@@ -906,17 +1030,40 @@ body.dark-mode .mh2-stat-box {
   }
   function setAnnualHeaderLogo(url, alt, fallbackName){
     const finalUrl = String(url || '').trim();
-    const finalAlt = String(alt || fallbackName || 'Company Logo').trim() || 'Company Logo';
-    const headerLogoBox = document.getElementById('headerLogoBox');
-    if(finalUrl){
-      const markup = `<img src="${finalUrl}" alt="${finalAlt}">`;
-      if(headerLogoBox) headerLogoBox.innerHTML = markup;
-      if(els.logoBox) els.logoBox.innerHTML = markup;
-      return true;
+    const finalAlt = String(alt || fallbackName || 'Management company logo').trim() || 'Management company logo';
+    const logoImg = document.getElementById('annualHeaderCompanyLogo');
+    const fallback = document.getElementById('annualHeaderLogoFallback');
+
+    function clearLogo(){
+      if(logoImg){
+        logoImg.hidden = true;
+        logoImg.removeAttribute('src');
+        logoImg.classList.remove('is-ready');
+      }
+      if(fallback){
+        fallback.hidden = false;
+        fallback.textContent = finalAlt || 'Company logo';
+      }
+      return false;
     }
-    if(els.logoBox) els.logoBox.textContent = String(fallbackName || 'No company logo uploaded yet');
-    if(headerLogoBox) headerLogoBox.innerHTML = `<div class="headerLogoFallback"><span class="headerLogoWord">SIXES</span><span class="headerLogoSub">Management Group</span></div>`;
-    return false;
+
+    if(!finalUrl) return clearLogo();
+
+    if(logoImg){
+      logoImg.onload = function(){
+        logoImg.hidden = false;
+        logoImg.classList.add('is-ready');
+        if(fallback) fallback.hidden = true;
+      };
+      logoImg.onerror = clearLogo;
+      logoImg.alt = finalAlt;
+      logoImg.src = finalUrl;
+    }
+
+    if(els.logoBox){
+      els.logoBox.innerHTML = `<img src="${finalUrl}" alt="${finalAlt}">`;
+    }
+    return true;
   }
   async function deriveAnnualCompanyId(){
     const communityId = getActiveCommunityId();
@@ -960,8 +1107,46 @@ body.dark-mode .mh2-stat-box {
     }
     return null;
   }
+
+  function loadAnnualBrandLogoFromManagerHubCache(){
+    const candidates = [];
+    try{
+      for(let i=0;i<sessionStorage.length;i++){
+        const key = sessionStorage.key(i) || '';
+        if(key.indexOf('mh2_brand_logo_v1_') === 0){
+          const obj = JSON.parse(sessionStorage.getItem(key) || 'null');
+          if(obj && obj.url) candidates.push({ url:obj.url, alt:obj.alt || obj.name || 'Management company logo' });
+        }
+      }
+    }catch(_e){}
+    try{
+      for(let i=0;i<localStorage.length;i++){
+        const key = localStorage.key(i) || '';
+        const lower = key.toLowerCase();
+        if(lower.indexOf('logo') !== -1 || lower.indexOf('brand') !== -1){
+          const raw = localStorage.getItem(key) || '';
+          if(/^https?:\/\//i.test(raw) || /^data:image\//i.test(raw)) candidates.push({ url:raw, alt:'Management company logo' });
+          else {
+            try{
+              const obj = JSON.parse(raw);
+              if(obj && obj.url) candidates.push({ url:obj.url, alt:obj.alt || obj.name || 'Management company logo' });
+              if(obj && obj.logo_url) candidates.push({ url:obj.logo_url, alt:obj.alt || obj.name || 'Management company logo' });
+              if(obj && obj.logoUrl) candidates.push({ url:obj.logoUrl, alt:obj.alt || obj.name || 'Management company logo' });
+            }catch(_jsonErr){}
+          }
+        }
+      }
+    }catch(_e2){}
+
+    for(const c of candidates){
+      if(c && c.url && setAnnualHeaderLogo(c.url, c.alt || 'Management company logo', c.alt || 'Management company logo')) return true;
+    }
+    return false;
+  }
+
   async function loadAnnualBrandLogo(){
     try{
+      loadAnnualBrandLogoFromManagerHubCache();
       const companyId = await deriveAnnualCompanyId();
       if(!companyId) return false;
       const cacheKey = 'mh2_brand_logo_v1_' + companyId;
