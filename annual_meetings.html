@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-08-v643-annual-strict-community-dropdown";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-08-v644-annual-community-names-from-star";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annual Meetings</title>
@@ -1280,23 +1280,76 @@
     return '';
   }
 
+  function bestCommunityDisplayName(row){
+    row = row || {};
+
+    // v644: detect the actual community name column from PropertyCommunities.
+    // Do not assume lowercase columns only.
+    const keys = [
+      'name',
+      'Name',
+      'community_name',
+      'CommunityName',
+      'communityName',
+      'Community_Name',
+      'label',
+      'Label',
+      'title',
+      'Title',
+      'property_name',
+      'PropertyName',
+      'association_name',
+      'AssociationName'
+    ];
+
+    for(const k of keys){
+      const value = s(row[k]);
+      if(value && !uuidish(value)) return value;
+    }
+
+    // Last resort: any non-UUID string field that looks like a display name.
+    for(const k in row){
+      if(!Object.prototype.hasOwnProperty.call(row, k)) continue;
+      const value = s(row[k]);
+      if(!value || uuidish(value)) continue;
+      if(['id','company_id','created_at','updated_at'].includes(String(k).toLowerCase())) continue;
+      if(value.length > 1 && value.length < 80) return value;
+    }
+
+    return '';
+  }
+
   async function namesForCommunityIds(client, ids){
     ids = Array.from(new Set((ids || []).map(s).filter(Boolean)));
     if(!ids.length || !client) return [];
 
-    try{
-      const res = await client.from('PropertyCommunities').select('id,name,community_name,label').in('id', ids);
-      if(res && !res.error && Array.isArray(res.data)){
-        return dedupeCommunities(res.data.map(function(r){
-          return {
-            id:r.id,
-            name:r.name || r.community_name || r.label || r.id
-          };
-        }));
-      }
-    }catch(_e){}
+    const tableAttempts = ['PropertyCommunities', 'property_communities'];
 
-    return ids.map(function(id){ return { id, name:id }; });
+    for(const table of tableAttempts){
+      try{
+        // v644: select('*') avoids regression when the community display column is renamed/cased differently.
+        const res = await client.from(table).select('*').in('id', ids);
+
+        if(res && !res.error && Array.isArray(res.data) && res.data.length){
+          const rows = res.data.map(function(r){
+            return {
+              id:s(r.id),
+              name:bestCommunityDisplayName(r) || s(r.id)
+            };
+          }).filter(function(r){ return r.id; });
+
+          if(rows.length){
+            console.info('[Annual v644] community names resolved from ' + table, rows);
+            return dedupeCommunities(rows);
+          }
+        }
+      }catch(err){
+        console.warn('[Annual v644] community name lookup failed for ' + table, err);
+      }
+    }
+
+    // If name lookup fails, preserve the IDs rather than breaking the dropdown.
+    return ids.map(function(id){ return { id:id, name:id }; });
   }
 
   async function communitiesFromVendors(client){
