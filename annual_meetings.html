@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-08-v638-annual-meetings-safe-console-cleanup";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-08-v639-annual-meetings-frame-guard";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annual Meetings</title>
@@ -773,6 +773,33 @@
 })();
 </script>
 
+
+<script id="annual-meetings-v639-frame-guard">
+(function(){
+  if(window.__AnnualMeetingsFrameGuardV639) return;
+  window.__AnnualMeetingsFrameGuardV639 = true;
+
+  // If older Annual Meetings code asks for opsFrame after we removed the iframe,
+  // return a harmless detached event target instead of null.
+  var originalGetElementById = document.getElementById.bind(document);
+  var harmlessFrame = {
+    addEventListener:function(){},
+    removeEventListener:function(){},
+    contentWindow:window,
+    style:{},
+    setAttribute:function(){},
+    getAttribute:function(){ return null; }
+  };
+
+  document.getElementById = function(id){
+    var found = originalGetElementById(id);
+    if(found) return found;
+    if(id === 'opsFrame') return harmlessFrame;
+    return found;
+  };
+})();
+</script>
+
 </head>
 <body>
   <main class="shell">
@@ -1369,7 +1396,7 @@
     document.getElementById(id).addEventListener('change', function(){ if(id === 'lastDate'){ const data = readState(); const win = data && data.win; const exp = (win && typeof win.addOneYear === 'function') ? win.addOneYear(els.lastDate.value) : ''; els.expectedDate.textContent = formatDate(exp); } });
   });
 
-  frame.addEventListener('load', init);
+  frame && frame && frame.addEventListener('load', init);
   init();
 })();
 </script>
