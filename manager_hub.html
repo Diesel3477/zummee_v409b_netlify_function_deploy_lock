@@ -43,7 +43,7 @@
 
 
 
-<script>window.ZUMMEE_BUILD="2026-05-07-v615-manager-hub-stronger-undo-guard";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-08-v616-manager-hub-ops-reminders-pill";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <script id="zummee-manager-canonical-preboot-v608">
 /*
@@ -7249,6 +7249,342 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     sync("already-loaded");
     hideShield();
   }
+})();
+</script>
+
+
+<script id="manager-hub-v616-ops-reminders-pill">
+/*
+  Zummee Manager Hub v616
+  Long-term Operations Portal count source:
+  - ops_reminders, filtered by selected community, active, not completed, not archived
+  - ops_important_dates, filtered by selected community, active, not completed, not archived, due within 30 days/overdue
+  - BoardMembers.term_end, filtered by selected community, active, term ends within 45 days/overdue
+  This fixes Manager Hub not counting Annual Meeting Preparation reminders created by Annual Meetings.
+*/
+(function(){
+  if(window.__ManagerHubOpsRemindersPillV616) return;
+  window.__ManagerHubOpsRemindersPillV616 = true;
+
+  const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
+
+  function s(v){ return String(v == null ? '' : v).trim(); }
+  function $(id){ return document.getElementById(id); }
+  function uuidish(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s(v)); }
+
+  async function getClient(){
+    try{ if(window.supabaseClient && window.supabaseClient.from) return window.supabaseClient; }catch(_e){}
+    try{ if(window.sb && window.sb.from) return window.sb; }catch(_e){}
+    try{ if(window.getSupabase){ const c = window.getSupabase(); if(c && c.from) return c; } }catch(_e){}
+    try{ if(window.ensureSupabaseSync){ const c2 = window.ensureSupabaseSync(); if(c2 && c2.from) return c2; } }catch(_e){}
+    try{
+      if(window.supabase && window.supabase.createClient){
+        if(!window.__ManagerHubOpsSbV616){
+          window.__ManagerHubOpsSbV616 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
+        return window.__ManagerHubOpsSbV616;
+      }
+    }catch(_e){}
+    return null;
+  }
+
+  function readActiveCommunity(){
+    let id = '';
+    let name = '';
+
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const active = window.ZummeeCommunityState.getActiveCommunity();
+        if(active && active.id){
+          id = s(active.id);
+          name = s(active.name);
+        }
+      }
+    }catch(_e){}
+
+    try{
+      const select = $('zummeeCommunitySelect') || $('communitySelect') || document.querySelector('select[data-community-select], select[name="community"]');
+      if(select){
+        if(uuidish(select.value)) id = s(select.value);
+        const opt = select.options && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
+        if(opt && s(opt.textContent)) name = s(opt.textContent);
+      }
+    }catch(_e2){}
+
+    if(!id){
+      try{
+        const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+        const obj = raw ? JSON.parse(raw) : null;
+        if(obj && obj.id){
+          id = s(obj.id);
+          name = name || s(obj.name);
+        }
+      }catch(_e3){}
+    }
+
+    if(!id){
+      const keys = [
+        'zummee_active_community_id',
+        'zummee_selected_community_id',
+        'zummeeActiveCommunityId',
+        'activeCommunityId',
+        'currentCommunityId'
+      ];
+      for(const key of keys){
+        try{
+          const v = s(localStorage.getItem(key) || sessionStorage.getItem(key));
+          if(uuidish(v)){ id = v; break; }
+        }catch(_e4){}
+      }
+    }
+
+    if(!name){
+      const nameKeys = [
+        'zummee_active_community_name',
+        'zummee_selected_community_name',
+        'activeCommunityName',
+        'currentCommunityName',
+        'zummeeCurrentCommunityName'
+      ];
+      for(const key of nameKeys){
+        try{
+          const v = s(localStorage.getItem(key) || sessionStorage.getItem(key));
+          if(v){ name = v; break; }
+        }catch(_e5){}
+      }
+    }
+
+    return { id, name };
+  }
+
+  function todayDate(){
+    const d = new Date();
+    d.setHours(0,0,0,0);
+    return d;
+  }
+
+  function parseDate(v){
+    v = s(v).slice(0,10);
+    if(!v) return null;
+    const d = new Date(v + 'T00:00:00');
+    if(Number.isNaN(d.getTime())) return null;
+    d.setHours(0,0,0,0);
+    return d;
+  }
+
+  function daysFromToday(v){
+    const d = parseDate(v);
+    if(!d) return null;
+    return Math.round((d.getTime() - todayDate().getTime()) / 86400000);
+  }
+
+  function isActiveRow(row){
+    row = row || {};
+    const status = s(row.status || row.state || '').toLowerCase();
+    if(row.archived_at || row.completed_at || row.deleted_at) return false;
+    if(['completed','complete','done','closed','archived','deleted','inactive','cancelled','canceled'].includes(status)) return false;
+    return true;
+  }
+
+  function rowDueInfo(row, windowDays){
+    const due = s(row && (row.due_date || row.date || row.term_end || row.deadline));
+    const diff = daysFromToday(due);
+    const hasDate = diff !== null;
+    const overdue = hasDate && diff < 0;
+    const dueSoon = hasDate && diff >= 0 && diff <= Number(windowDays || 0);
+    return { due, diff, overdue, dueSoon, shouldCount: overdue || dueSoon || (!hasDate && windowDays === 'all') };
+  }
+
+  async function fetchOpsSummary(){
+    const sb = await getClient();
+    const ctx = readActiveCommunity();
+
+    const summary = {
+      community: ctx,
+      reminderRows: [],
+      importantDateRows: [],
+      boardTermRows: [],
+      count: 0,
+      overdue: 0,
+      dueSoon: 0,
+      error: ''
+    };
+
+    if(!sb || !uuidish(ctx.id)){
+      summary.error = !sb ? 'no-client' : 'no-community';
+      return summary;
+    }
+
+    try{
+      const reminders = await sb
+        .from('ops_reminders')
+        .select('id,title,due_date,status,completed_at,archived_at,community_id,updated_at')
+        .eq('community_id', ctx.id)
+        .is('archived_at', null)
+        .is('completed_at', null)
+        .order('due_date', { ascending:true });
+
+      if(!reminders.error && Array.isArray(reminders.data)){
+        summary.reminderRows = reminders.data.filter(isActiveRow).filter(function(row){
+          // Match Operations Reminders: active rows count, including overdue and future reminders.
+          // This ensures the Manager Hub pill matches the Reminders module count.
+          return true;
+        });
+      }else if(reminders.error){
+        console.warn('[Manager Hub v616] ops_reminders count failed', reminders.error);
+      }
+    }catch(err){
+      console.warn('[Manager Hub v616] ops_reminders exception', err);
+    }
+
+    try{
+      const important = await sb
+        .from('ops_important_dates')
+        .select('id,type,description,due_date,status,completed_at,archived_at,community_id,updated_at')
+        .eq('community_id', ctx.id)
+        .is('archived_at', null)
+        .is('completed_at', null)
+        .order('due_date', { ascending:true });
+
+      if(!important.error && Array.isArray(important.data)){
+        summary.importantDateRows = important.data.filter(isActiveRow).filter(function(row){
+          return rowDueInfo(row, 30).shouldCount;
+        });
+      }else if(important.error){
+        console.warn('[Manager Hub v616] ops_important_dates count failed', important.error);
+      }
+    }catch(err2){
+      console.warn('[Manager Hub v616] ops_important_dates exception', err2);
+    }
+
+    try{
+      const board = await sb
+        .from('BoardMembers')
+        .select('id,name,position,term_end,is_active,community_id')
+        .eq('community_id', ctx.id);
+
+      if(!board.error && Array.isArray(board.data)){
+        summary.boardTermRows = board.data.filter(function(row){
+          return row && row.is_active !== false && rowDueInfo({ due_date:row.term_end }, 45).shouldCount;
+        });
+      }else if(board.error){
+        console.warn('[Manager Hub v616] BoardMembers term count failed', board.error);
+      }
+    }catch(err3){
+      console.warn('[Manager Hub v616] BoardMembers term exception', err3);
+    }
+
+    const allRows = []
+      .concat(summary.reminderRows.map(function(row){ return { type:'reminder', row }; }))
+      .concat(summary.importantDateRows.map(function(row){ return { type:'important_date', row }; }))
+      .concat(summary.boardTermRows.map(function(row){ return { type:'board_term', row }; }));
+
+    summary.count = allRows.length;
+    summary.overdue = allRows.filter(function(item){
+      const row = item.row || {};
+      const due = item.type === 'board_term' ? row.term_end : row.due_date;
+      return rowDueInfo({ due_date:due }, 0).overdue;
+    }).length;
+    summary.dueSoon = allRows.filter(function(item){
+      const row = item.row || {};
+      const due = item.type === 'board_term' ? row.term_end : row.due_date;
+      return rowDueInfo({ due_date:due }, item.type === 'important_date' ? 30 : item.type === 'board_term' ? 45 : 15).dueSoon;
+    }).length;
+
+    return summary;
+  }
+
+  function setToolCard(cardId, summary){
+    const card = $(cardId);
+    if(!card) return;
+
+    const count = Number(summary.count || 0);
+    const overdue = Number(summary.overdue || 0);
+
+    const tone = card.querySelector('[data-role="tone"]');
+    const metric1 = card.querySelector('[data-role="metric1"]');
+    const metric2 = card.querySelector('[data-role="metric2"]');
+
+    card.classList.remove('mh2-tool-card--gold','mh2-tool-card--urgent');
+    if(overdue) card.classList.add('mh2-tool-card--urgent');
+    else if(count) card.classList.add('mh2-tool-card--gold');
+
+    if(tone){
+      tone.textContent = overdue ? 'Overdue' : (count ? 'Pending' : 'Clear');
+      tone.className = 'mh2-tool-pill' + (overdue ? ' is-urgent' : (count ? ' is-gold' : ' is-good'));
+    }
+    if(metric1) metric1.textContent = String(count);
+    if(metric2) metric2.textContent = overdue ? (String(overdue) + ' overdue') : (count ? 'Pending' : 'Clear');
+  }
+
+  function renderOpsPill(summary){
+    const pill = $('mh2OperationsPortalPill');
+    const title = $('mh2OperationsPortalPillTitle');
+    const badge = $('mh2OperationsPortalPillBadge');
+
+    if(!pill || !title || !badge) return;
+
+    const count = Number(summary.count || 0);
+    const overdue = Number(summary.overdue || 0);
+    const dueSoon = Number(summary.dueSoon || 0);
+
+    pill.classList.remove('is-loading','is-clear','is-due');
+
+    if(!count){
+      pill.classList.add('is-clear');
+      title.textContent = 'Operations Portal clear';
+      badge.textContent = 'Clear';
+    }else{
+      pill.classList.add(overdue ? 'is-due' : 'is-due');
+      title.textContent = count + ' operations item' + (count === 1 ? '' : 's') + ' pending';
+      badge.textContent = overdue ? (count + ' pending') : (count + ' pending');
+    }
+
+    setToolCard('dailyOpsCard', summary);
+    setToolCard('remindersCard', summary);
+
+    window.__ManagerHubOpsPortalSummaryV616 = summary;
+    console.info('[Manager Hub v616] Operations Portal summary', summary);
+  }
+
+  async function refreshOpsPill(){
+    try{
+      const summary = await fetchOpsSummary();
+      renderOpsPill(summary);
+      return summary;
+    }catch(err){
+      console.warn('[Manager Hub v616] Operations Portal refresh failed', err);
+      return null;
+    }
+  }
+
+  function scheduleRefreshes(){
+    refreshOpsPill();
+    [400, 1200, 2500, 5000, 9000].forEach(function(ms){
+      setTimeout(refreshOpsPill, ms);
+    });
+  }
+
+  window.refreshManagerHubOperationsPortalPill = refreshOpsPill;
+  window.getManagerHubOperationsPortalSummary = function(){ return window.__ManagerHubOpsPortalSummaryV616 || null; };
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', scheduleRefreshes, { once:true });
+  }else{
+    scheduleRefreshes();
+  }
+
+  window.addEventListener('pageshow', function(){ setTimeout(scheduleRefreshes, 150); });
+  window.addEventListener('focus', function(){ setTimeout(refreshOpsPill, 150); });
+  window.addEventListener('zummee:community-changed', function(){ setTimeout(scheduleRefreshes, 150); });
+
+  document.addEventListener('change', function(e){
+    const target = e && e.target;
+    if(target && target.matches && target.matches('#zummeeCommunitySelect, #communitySelect, select[data-community-select], select[name="community"]')){
+      setTimeout(scheduleRefreshes, 150);
+    }
+  }, true);
 })();
 </script>
 
