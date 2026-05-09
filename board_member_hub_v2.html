@@ -2367,16 +2367,16 @@
 
 
 
-<style id="board-hub-v646-safe-no-flash-style">
-  /* v646: safe no-flash. Never hides the modal/popup; only soft-hides raw packet content briefly. */
+<style id="board-hub-v647-calm-phone-preview-reveal-style">
+  /* v647: calm reveal. Prevents flash without re-running layout while visible. */
   @media(max-width:760px){
-    body.bh-v646-soft-prep #annualPacketPreviewShade.open .annualPacketPreviewFullHtml:not(:has(.bh-v644-scale-outer)),
-    body.bh-v646-soft-prep .annualPacketPreviewShade.open .annualPacketPreviewFullHtml:not(:has(.bh-v644-scale-outer)) {
+    body.bh-v647-preparing #annualPacketPreviewShade.open .annualPacketPreviewFullHtml:not(:has(.bh-v644-scale-outer)),
+    body.bh-v647-preparing .annualPacketPreviewShade.open .annualPacketPreviewFullHtml:not(:has(.bh-v644-scale-outer)) {
       opacity:0 !important;
     }
 
-    body.bh-v646-soft-prep #annualPacketPreviewShade.open .annualPacketPreviewBody::before,
-    body.bh-v646-soft-prep .annualPacketPreviewShade.open .annualPacketPreviewBody::before {
+    body.bh-v647-preparing #annualPacketPreviewShade.open .annualPacketPreviewBody::before,
+    body.bh-v647-preparing .annualPacketPreviewShade.open .annualPacketPreviewBody::before {
       content:"Preparing packet preview...";
       display:flex;
       align-items:center;
@@ -2392,28 +2392,30 @@
       box-shadow:0 12px 30px rgba(16,47,79,.08);
     }
 
-    body.bh-v646-ready #annualPacketPreviewShade.open .annualPacketPreviewFullHtml,
-    body.bh-v646-ready .annualPacketPreviewShade.open .annualPacketPreviewFullHtml {
-      opacity:1 !important;
-      transition:opacity .12s ease !important;
-    }
-
-    body.bh-v646-ready #annualPacketPreviewShade.open .annualPacketPreviewBody::before,
-    body.bh-v646-ready .annualPacketPreviewShade.open .annualPacketPreviewBody::before {
+    body.bh-v647-ready #annualPacketPreviewShade.open .annualPacketPreviewBody::before,
+    body.bh-v647-ready .annualPacketPreviewShade.open .annualPacketPreviewBody::before {
       content:none !important;
       display:none !important;
+    }
+
+    body.bh-v647-ready #annualPacketPreviewShade.open .annualPacketPreviewFullHtml,
+    body.bh-v647-ready .annualPacketPreviewShade.open .annualPacketPreviewFullHtml {
+      opacity:1 !important;
+      transition:opacity .16s ease !important;
     }
   }
 </style>
 
 
-<script id="board-hub-v646-safe-no-flash-script">
+<script id="board-hub-v647-calm-phone-preview-reveal-script">
 (function(){
   'use strict';
-  if(window.__BoardHubV646SafeNoFlash) return;
-  window.__BoardHubV646SafeNoFlash = true;
+  if(window.__BoardHubV647CalmPhonePreviewReveal) return;
+  window.__BoardHubV647CalmPhonePreviewReveal = true;
 
-  const BUILD = '2026-05-09-v646-safe-no-flash';
+  const BUILD = '2026-05-09-v647-calm-phone-preview-reveal';
+  let revealTimer = null;
+  let fallbackTimer = null;
 
   function isPhone(){
     return window.matchMedia && window.matchMedia('(max-width: 760px)').matches;
@@ -2431,58 +2433,87 @@
     const outer = document.querySelector('.bh-v644-scale-outer');
     const inner = document.querySelector('.bh-v644-scale-inner');
     const pages = inner ? inner.querySelectorAll('.am-v652-page').length : 0;
-    return !!(outer && inner && pages > 0 && document.body.classList.contains('bh-v644-clean-packet-viewer'));
+    return !!(
+      outer &&
+      inner &&
+      pages > 0 &&
+      document.body.classList.contains('bh-v644-clean-packet-viewer') &&
+      window.__BoardHubV644CleanPhonePacketViewerLast &&
+      window.__BoardHubV644CleanPhonePacketViewerLast.ok
+    );
   }
 
-  function apply(reason){
-    if(!isPhone()) return null;
+  function begin(reason){
+    if(!isPhone()) return;
+    document.body.classList.add('bh-v647-preparing');
+    document.body.classList.remove('bh-v647-ready');
 
-    if(!modalOpen()){
-      document.body.classList.remove('bh-v646-soft-prep','bh-v646-ready');
-      window.__BoardHubV646SafeNoFlashLast = {
-        build:BUILD,
-        state:'no-modal',
-        reason:reason || 'manual',
-        at:new Date().toISOString()
-      };
-      return window.__BoardHubV646SafeNoFlashLast;
-    }
+    clearTimeout(fallbackTimer);
+    fallbackTimer = setTimeout(function(){
+      // Never block the user forever. If v644 is delayed, reveal whatever exists.
+      reveal('fallback');
+    }, 1800);
 
-    if(viewerReady()){
-      document.body.classList.remove('bh-v646-soft-prep');
-      document.body.classList.add('bh-v646-ready');
-    }else{
-      document.body.classList.add('bh-v646-soft-prep');
-      document.body.classList.remove('bh-v646-ready');
-      if(typeof window.forceBoardHubPhoneExactScale === 'function'){
-        try { window.forceBoardHubPhoneExactScale(); } catch(e) {}
-      }
-      setTimeout(function(){ apply((reason || 'manual') + ':retry'); }, 180);
-    }
-
-    window.__BoardHubV646SafeNoFlashLast = {
+    window.__BoardHubV647CalmPhonePreviewRevealLast = {
       build:BUILD,
-      state:viewerReady() ? 'ready' : 'preparing',
+      state:'preparing',
       reason:reason || 'manual',
       modalOpen:modalOpen(),
       viewerReady:viewerReady(),
-      outerFound:!!document.querySelector('.bh-v644-scale-outer'),
-      innerFound:!!document.querySelector('.bh-v644-scale-inner'),
-      pageCount:document.querySelectorAll('.bh-v644-scale-inner .am-v652-page').length,
-      v644Present:!!document.getElementById('board-hub-v644-clean-phone-packet-viewer-script'),
-      v645Present:!!document.getElementById('board-hub-v645-no-phone-preview-flash-script'),
       at:new Date().toISOString()
     };
+  }
 
-    return window.__BoardHubV646SafeNoFlashLast;
+  function reveal(reason){
+    if(!isPhone()) return;
+    clearTimeout(revealTimer);
+    clearTimeout(fallbackTimer);
+
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
+        document.body.classList.remove('bh-v647-preparing');
+        document.body.classList.add('bh-v647-ready');
+
+        window.__BoardHubV647CalmPhonePreviewRevealLast = {
+          build:BUILD,
+          state:'ready',
+          reason:reason || 'manual',
+          modalOpen:modalOpen(),
+          viewerReady:viewerReady(),
+          outerFound:!!document.querySelector('.bh-v644-scale-outer'),
+          innerFound:!!document.querySelector('.bh-v644-scale-inner'),
+          pageCount:document.querySelectorAll('.bh-v644-scale-inner .am-v652-page').length,
+          v644Present:!!document.getElementById('board-hub-v644-clean-phone-packet-viewer-script'),
+          v645ScriptPresent:!!document.getElementById('board-hub-v645-no-phone-preview-flash-script'),
+          v646ScriptPresent:!!document.getElementById('board-hub-v646-safe-no-flash-script'),
+          at:new Date().toISOString()
+        };
+      });
+    });
+  }
+
+  function checkReady(reason){
+    if(!isPhone()) return;
+    if(!modalOpen()){
+      document.body.classList.remove('bh-v647-preparing','bh-v647-ready');
+      return;
+    }
+
+    if(viewerReady()){
+      reveal(reason || 'ready-check');
+      return;
+    }
+
+    clearTimeout(revealTimer);
+    revealTimer = setTimeout(function(){ checkReady((reason || 'ready-check') + ':retry'); }, 120);
   }
 
   const oldPreview = window.previewBoardHubAnnualMeetingPacket;
   if(typeof oldPreview === 'function'){
     window.previewBoardHubAnnualMeetingPacket = async function(id){
+      if(isPhone()) begin('before-preview');
       const result = await oldPreview(id);
-      setTimeout(function(){ apply('after-preview'); }, 120);
-      setTimeout(function(){ apply('after-preview-late'); }, 600);
+      checkReady('after-preview');
       return result;
     };
   }
@@ -2490,47 +2521,48 @@
   const oldOpen = window.openBoardHubApprovalPacketFromLink;
   if(typeof oldOpen === 'function'){
     window.openBoardHubApprovalPacketFromLink = async function(){
+      if(isPhone()) begin('before-deeplink');
       const result = await oldOpen();
-      setTimeout(function(){ apply('after-deeplink'); }, 120);
-      setTimeout(function(){ apply('after-deeplink-late'); }, 600);
+      checkReady('after-deeplink');
       return result;
     };
   }
 
   const observer = new MutationObserver(function(){
     if(!isPhone()) return;
-    if(document.querySelector('.annualPacketPreviewFullHtml') || modalOpen()){
-      setTimeout(function(){ apply('observer'); }, 100);
+    if(modalOpen() && viewerReady()){
+      checkReady('observer-ready');
     }
   });
 
   if(document.documentElement){
-    observer.observe(document.documentElement, { childList:true, subtree:true, attributes:true, attributeFilter:['class','style'] });
+    observer.observe(document.documentElement, { childList:true, subtree:true });
   }
 
-  window.addEventListener('pageshow', function(){ setTimeout(function(){ apply('pageshow'); }, 400); });
-  window.addEventListener('resize', function(){ setTimeout(function(){ apply('resize'); }, 180); });
+  window.addEventListener('pageshow', function(){ setTimeout(function(){ checkReady('pageshow'); }, 350); });
+  window.addEventListener('resize', function(){ setTimeout(function(){ checkReady('resize'); }, 180); });
 
-  window.getBoardHubSafeNoFlashStatus = function(){
+  window.getBoardHubCalmRevealStatus = function(){
     return {
       build:BUILD,
       installed:true,
       isPhone:isPhone(),
       modalOpen:modalOpen(),
       viewerReady:viewerReady(),
-      softPrep:document.body.classList.contains('bh-v646-soft-prep'),
-      readyClass:document.body.classList.contains('bh-v646-ready'),
+      preparing:document.body.classList.contains('bh-v647-preparing'),
+      readyClass:document.body.classList.contains('bh-v647-ready'),
       v644Present:!!document.getElementById('board-hub-v644-clean-phone-packet-viewer-script'),
       v645ScriptPresent:!!document.getElementById('board-hub-v645-no-phone-preview-flash-script'),
+      v646ScriptPresent:!!document.getElementById('board-hub-v646-safe-no-flash-script'),
       outerFound:!!document.querySelector('.bh-v644-scale-outer'),
       innerFound:!!document.querySelector('.bh-v644-scale-inner'),
       pageCount:document.querySelectorAll('.bh-v644-scale-inner .am-v652-page').length,
-      last:window.__BoardHubV646SafeNoFlashLast || null,
+      last:window.__BoardHubV647CalmPhonePreviewRevealLast || null,
       v644Last:window.__BoardHubV644CleanPhonePacketViewerLast || null
     };
   };
 
-  setTimeout(function(){ apply('initial'); }, 900);
+  setTimeout(function(){ checkReady('initial'); }, 900);
 })();
 </script>
 
