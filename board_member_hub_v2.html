@@ -2634,6 +2634,214 @@
 })();
 </script>
 
+
+
+<style id="board-hub-v641-remove-nested-preview-scroll-style">
+  /* v641: keep v640 look, but remove the old nested max-height preview trap */
+  @media(max-width:760px){
+    body.bh-v641-remove-nested-scroll #annualPacketPreviewShade.open,
+    body.bh-v641-remove-nested-scroll .annualPacketPreviewShade.open {
+      overflow:hidden !important;
+    }
+
+    body.bh-v641-remove-nested-scroll .annualPacketPreviewModal.is-full-packet {
+      overflow:hidden !important;
+      display:flex !important;
+      flex-direction:column !important;
+      max-height:calc(100svh - 18px) !important;
+    }
+
+    body.bh-v641-remove-nested-scroll #annualPacketPreviewBody.is-full-packet,
+    body.bh-v641-remove-nested-scroll .annualPacketPreviewBody.is-full-packet {
+      flex:1 1 auto !important;
+      min-height:0 !important;
+      overflow-y:auto !important;
+      overflow-x:hidden !important;
+      -webkit-overflow-scrolling:touch !important;
+      overscroll-behavior:contain !important;
+      display:block !important;
+      max-height:none !important;
+    }
+
+    body.bh-v641-remove-nested-scroll #annualPacketPreviewBody .annualPacketPreviewFullHtml,
+    body.bh-v641-remove-nested-scroll .annualPacketPreviewBody .annualPacketPreviewFullHtml,
+    body.bh-v641-remove-nested-scroll .annualPacketPreviewFullHtml {
+      max-height:none !important;
+      height:auto !important;
+      min-height:0 !important;
+      overflow:visible !important;
+      display:block !important;
+      box-sizing:border-box !important;
+    }
+
+    body.bh-v641-remove-nested-scroll .bh-v638-scale-outer {
+      height:auto;
+      overflow:visible !important;
+      display:block !important;
+      position:relative !important;
+    }
+
+    body.bh-v641-remove-nested-scroll .bh-v638-scale-inner,
+    body.bh-v641-remove-nested-scroll .bh-v638-scale-inner .am-v652-pages,
+    body.bh-v641-remove-nested-scroll .bh-v638-scale-inner .am-v652-page {
+      overflow:visible !important;
+      contain:none !important;
+    }
+  }
+</style>
+
+
+<script id="board-hub-v641-remove-nested-preview-scroll-script">
+(function(){
+  'use strict';
+  if(window.__BoardHubV641RemoveNestedPreviewScroll) return;
+  window.__BoardHubV641RemoveNestedPreviewScroll = true;
+
+  const BUILD = '2026-05-09-v641-remove-nested-preview-scroll';
+
+  function isPhone(){
+    return window.matchMedia && window.matchMedia('(max-width: 760px)').matches;
+  }
+
+  function apply(reason){
+    if(!isPhone()) return null;
+
+    document.body.classList.add('bh-v641-remove-nested-scroll');
+
+    const body = Array.from(document.querySelectorAll('#annualPacketPreviewBody, .annualPacketPreviewBody')).find(function(node){
+      const r = node.getBoundingClientRect();
+      return r.width > 20 && r.height > 20;
+    }) || document.querySelector('#annualPacketPreviewBody, .annualPacketPreviewBody');
+
+    const full = body ? body.querySelector('.annualPacketPreviewFullHtml') : document.querySelector('.annualPacketPreviewFullHtml');
+    const outer = document.querySelector('.bh-v638-scale-outer');
+    const inner = document.querySelector('.bh-v638-scale-inner');
+
+    if(full){
+      full.style.maxHeight = 'none';
+      full.style.height = 'auto';
+      full.style.overflow = 'visible';
+      full.style.display = 'block';
+    }
+
+    if(body){
+      body.style.maxHeight = 'none';
+      body.style.overflowY = 'auto';
+      body.style.overflowX = 'hidden';
+      body.style.minHeight = '0';
+      body.style.display = 'block';
+    }
+
+    if(outer){
+      outer.style.overflow = 'visible';
+      outer.style.display = 'block';
+      // keep existing v640 height if present; only add room if missing
+      if(!outer.style.height && inner){
+        const scale = (inner.style.transform.match(/scale\(([^)]+)\)/) || [])[1];
+        const s = parseFloat(scale) || 1;
+        outer.style.height = Math.ceil((inner.scrollHeight || 5300) * s + 120) + 'px';
+      }
+    }
+
+    if(typeof window.forceBoardHubPhoneExactScale === 'function'){
+      setTimeout(function(){ window.forceBoardHubPhoneExactScale(); }, 120);
+      setTimeout(function(){ window.forceBoardHubPhoneExactScale(); apply('post-force'); }, 650);
+    }
+
+    const result = {
+      build: BUILD,
+      ok: true,
+      reason: reason || 'manual',
+      bodyFound: !!body,
+      fullFound: !!full,
+      outerFound: !!outer,
+      innerFound: !!inner,
+      bodyClientHeight: body ? body.clientHeight : null,
+      bodyScrollHeight: body ? body.scrollHeight : null,
+      fullScrollHeight: full ? full.scrollHeight : null,
+      fullMaxHeight: full ? getComputedStyle(full).maxHeight : null,
+      fullOverflow: full ? getComputedStyle(full).overflow : null,
+      outerHeightStyle: outer ? outer.style.height : null,
+      at: new Date().toISOString()
+    };
+
+    window.__BoardHubV641RemoveNestedPreviewScrollLast = result;
+    return result;
+  }
+
+  const oldForce = window.forceBoardHubPhoneExactScale;
+  window.forceBoardHubPhoneExactScale = function(){
+    let result = null;
+    if(typeof oldForce === 'function') result = oldForce();
+    setTimeout(function(){ apply('force-after'); }, 150);
+    return result || apply('force-direct');
+  };
+
+  const oldPreview = window.previewBoardHubAnnualMeetingPacket;
+  if(typeof oldPreview === 'function'){
+    window.previewBoardHubAnnualMeetingPacket = async function(id){
+      const result = await oldPreview(id);
+      setTimeout(function(){ apply('preview'); }, 250);
+      setTimeout(function(){ apply('preview-late'); }, 1000);
+      return result;
+    };
+  }
+
+  const oldOpen = window.openBoardHubApprovalPacketFromLink;
+  if(typeof oldOpen === 'function'){
+    window.openBoardHubApprovalPacketFromLink = async function(){
+      const result = await oldOpen();
+      setTimeout(function(){ apply('deeplink'); }, 250);
+      setTimeout(function(){ apply('deeplink-late'); }, 1000);
+      return result;
+    };
+  }
+
+  const observer = new MutationObserver(function(){
+    if(isPhone() && document.querySelector('.annualPacketPreviewFullHtml')) {
+      setTimeout(function(){ apply('observer'); }, 220);
+    }
+  });
+
+  if(document.documentElement){
+    observer.observe(document.documentElement, { childList:true, subtree:true, attributes:true, attributeFilter:['class','style'] });
+  }
+
+  window.addEventListener('pageshow', function(){ setTimeout(function(){ apply('pageshow'); }, 450); });
+  window.addEventListener('resize', function(){ setTimeout(function(){ apply('resize'); }, 220); });
+
+  window.getBoardHubNestedScrollStatus = function(){
+    const body = Array.from(document.querySelectorAll('#annualPacketPreviewBody, .annualPacketPreviewBody')).find(function(node){
+      const r = node.getBoundingClientRect();
+      return r.width > 20 && r.height > 20;
+    }) || document.querySelector('#annualPacketPreviewBody, .annualPacketPreviewBody');
+
+    const full = body ? body.querySelector('.annualPacketPreviewFullHtml') : document.querySelector('.annualPacketPreviewFullHtml');
+    const outer = document.querySelector('.bh-v638-scale-outer');
+
+    return {
+      build: BUILD,
+      installed: true,
+      isPhone: isPhone(),
+      bodyClass: document.body.classList.contains('bh-v641-remove-nested-scroll'),
+      bodyFound: !!body,
+      fullFound: !!full,
+      outerFound: !!outer,
+      bodyClientHeight: body ? body.clientHeight : null,
+      bodyScrollHeight: body ? body.scrollHeight : null,
+      fullClientHeight: full ? full.clientHeight : null,
+      fullScrollHeight: full ? full.scrollHeight : null,
+      fullMaxHeight: full ? getComputedStyle(full).maxHeight : null,
+      fullOverflow: full ? getComputedStyle(full).overflow : null,
+      outerHeightStyle: outer ? outer.style.height : null,
+      last: window.__BoardHubV641RemoveNestedPreviewScrollLast || null
+    };
+  };
+
+  setTimeout(function(){ apply('initial'); }, 900);
+})();
+</script>
+
 </head>
 <body>
   <div class="wrap">
