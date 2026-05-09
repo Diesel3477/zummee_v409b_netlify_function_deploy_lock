@@ -3070,6 +3070,264 @@
 })();
 </script>
 
+
+
+<style id="board-hub-v643-deep-footer-safe-area-style">
+  /* v643: larger real spacer for phone/webview footer overlap */
+  @media(max-width:760px){
+    body.bh-v643-deep-footer-safe #annualPacketPreviewBody.is-full-packet,
+    body.bh-v643-deep-footer-safe .annualPacketPreviewBody.is-full-packet {
+      overflow-y:auto !important;
+      overflow-x:hidden !important;
+      -webkit-overflow-scrolling:touch !important;
+      overscroll-behavior:contain !important;
+      padding-bottom:320px !important;
+      scroll-padding-bottom:320px !important;
+      box-sizing:border-box !important;
+    }
+
+    body.bh-v643-deep-footer-safe .annualPacketPreviewFullHtml {
+      max-height:none !important;
+      height:auto !important;
+      overflow:visible !important;
+      padding-bottom:260px !important;
+      box-sizing:border-box !important;
+    }
+
+    body.bh-v643-deep-footer-safe .bh-v638-scale-outer {
+      overflow:visible !important;
+      display:block !important;
+      position:relative !important;
+      padding-bottom:280px !important;
+      box-sizing:content-box !important;
+      margin-bottom:0 !important;
+    }
+
+    body.bh-v643-deep-footer-safe .bh-v643-footer-spacer {
+      display:block !important;
+      height:260px !important;
+      min-height:260px !important;
+      width:100% !important;
+      flex:0 0 260px !important;
+      pointer-events:none !important;
+    }
+
+    body.bh-v643-deep-footer-safe .annualPacketPreviewActions {
+      flex:0 0 auto !important;
+      position:relative !important;
+      z-index:30 !important;
+      background:rgba(246,249,253,.99) !important;
+      border-top:1px solid #d8e5f6 !important;
+    }
+  }
+</style>
+
+
+<script id="board-hub-v643-deep-footer-safe-area-script">
+(function(){
+  'use strict';
+  if(window.__BoardHubV643DeepFooterSafeArea) return;
+  window.__BoardHubV643DeepFooterSafeArea = true;
+
+  const BUILD = '2026-05-09-v643-deep-footer-safe-area';
+
+  function isPhone(){
+    return window.matchMedia && window.matchMedia('(max-width: 760px)').matches;
+  }
+
+  function visibleBody(){
+    return Array.from(document.querySelectorAll('#annualPacketPreviewBody, .annualPacketPreviewBody')).find(function(node){
+      const r = node.getBoundingClientRect();
+      const cs = getComputedStyle(node);
+      return r.width > 20 && r.height > 20 && cs.display !== 'none' && cs.visibility !== 'hidden';
+    }) || document.querySelector('#annualPacketPreviewBody, .annualPacketPreviewBody');
+  }
+
+  function getScale(inner){
+    if(!inner) return 1;
+    const m = (inner.style.transform || '').match(/scale\(([^)]+)\)/);
+    return m ? (parseFloat(m[1]) || 1) : 1;
+  }
+
+  function ensureSpacer(full){
+    if(!full) return null;
+    let spacer = full.querySelector('.bh-v643-footer-spacer');
+    if(!spacer){
+      spacer = document.createElement('div');
+      spacer.className = 'bh-v643-footer-spacer';
+      full.appendChild(spacer);
+    }
+    return spacer;
+  }
+
+  function apply(reason){
+    if(!isPhone()) return null;
+
+    document.body.classList.add('bh-v643-deep-footer-safe');
+    document.body.classList.add('bh-v642-footer-safe-scroll');
+
+    const body = visibleBody();
+    const full = body ? body.querySelector('.annualPacketPreviewFullHtml') : document.querySelector('.annualPacketPreviewFullHtml');
+    const outer = document.querySelector('.bh-v638-scale-outer');
+    const inner = document.querySelector('.bh-v638-scale-inner');
+    const actions = document.querySelector('.annualPacketPreviewActions');
+
+    if(!body || !full || !outer || !inner){
+      window.__BoardHubV643DeepFooterSafeAreaLast = {
+        build:BUILD,
+        ok:false,
+        reason,
+        error:'missing body/full/outer/inner',
+        at:new Date().toISOString()
+      };
+      return window.__BoardHubV643DeepFooterSafeAreaLast;
+    }
+
+    const actionsHeight = actions ? Math.ceil(actions.getBoundingClientRect().height) : 70;
+    const visualViewportGap = window.visualViewport ? Math.max(0, window.innerHeight - window.visualViewport.height) : 0;
+    const safePad = Math.max(320, actionsHeight + 220 + visualViewportGap);
+
+    body.style.paddingBottom = safePad + 'px';
+    body.style.scrollPaddingBottom = safePad + 'px';
+    body.style.overflowY = 'auto';
+    body.style.overflowX = 'hidden';
+    body.style.maxHeight = 'none';
+
+    full.style.maxHeight = 'none';
+    full.style.height = 'auto';
+    full.style.overflow = 'visible';
+    full.style.paddingBottom = Math.max(260, safePad - 60) + 'px';
+
+    const spacer = ensureSpacer(full);
+    if(spacer){
+      spacer.style.height = Math.max(260, safePad - 60) + 'px';
+      spacer.style.minHeight = Math.max(260, safePad - 60) + 'px';
+    }
+
+    outer.style.overflow = 'visible';
+    outer.style.paddingBottom = Math.max(280, safePad - 40) + 'px';
+
+    const scale = getScale(inner);
+    const minHeight = Math.ceil((inner.scrollHeight || 0) * scale + safePad);
+    const currentHeight = parseFloat(outer.style.height || '0') || 0;
+
+    if(currentHeight < minHeight){
+      outer.style.height = minHeight + 'px';
+      outer.style.minHeight = minHeight + 'px';
+    }
+
+    window.__BoardHubV643DeepFooterSafeAreaLast = {
+      build:BUILD,
+      ok:true,
+      reason:reason || 'manual',
+      actionsHeight,
+      visualViewportGap,
+      safePad,
+      scale,
+      innerScrollHeight:inner.scrollHeight,
+      minOuterHeight:minHeight,
+      outerHeightStyle:outer.style.height,
+      outerPaddingBottom:outer.style.paddingBottom,
+      bodyClientHeight:body.clientHeight,
+      bodyScrollHeight:body.scrollHeight,
+      bodyPaddingBottom:body.style.paddingBottom,
+      fullScrollHeight:full.scrollHeight,
+      fullPaddingBottom:full.style.paddingBottom,
+      spacerHeight:spacer ? spacer.style.height : null,
+      at:new Date().toISOString()
+    };
+
+    return window.__BoardHubV643DeepFooterSafeAreaLast;
+  }
+
+  function schedule(reason, delay){
+    setTimeout(function(){
+      apply(reason);
+      setTimeout(function(){ apply(reason + ':settled'); }, 450);
+      setTimeout(function(){ apply(reason + ':late'); }, 1200);
+    }, delay == null ? 150 : delay);
+  }
+
+  const oldForce = window.forceBoardHubPhoneExactScale;
+  window.forceBoardHubPhoneExactScale = function(){
+    let result = null;
+    if(typeof oldForce === 'function') result = oldForce();
+    schedule('manual-force-v643', 180);
+    return result || apply('manual-force-v643-direct');
+  };
+
+  const oldPreview = window.previewBoardHubAnnualMeetingPacket;
+  if(typeof oldPreview === 'function'){
+    window.previewBoardHubAnnualMeetingPacket = async function(id){
+      const result = await oldPreview(id);
+      schedule('preview-v643', 280);
+      return result;
+    };
+  }
+
+  const oldOpen = window.openBoardHubApprovalPacketFromLink;
+  if(typeof oldOpen === 'function'){
+    window.openBoardHubApprovalPacketFromLink = async function(){
+      const result = await oldOpen();
+      schedule('deeplink-v643', 280);
+      return result;
+    };
+  }
+
+  const observer = new MutationObserver(function(){
+    if(isPhone() && document.querySelector('.bh-v638-scale-inner')) {
+      schedule('observer-v643', 260);
+    }
+  });
+
+  if(document.documentElement){
+    observer.observe(document.documentElement, { childList:true, subtree:true, attributes:true, attributeFilter:['class','style'] });
+  }
+
+  window.addEventListener('pageshow', function(){ schedule('pageshow-v643', 550); });
+  window.addEventListener('resize', function(){ schedule('resize-v643', 250); });
+  window.addEventListener('orientationchange', function(){ setTimeout(function(){ schedule('orientation-v643', 350); }, 500); });
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', function(){ schedule('visualViewport-v643', 250); });
+    window.visualViewport.addEventListener('scroll', function(){ schedule('visualViewportScroll-v643', 250); });
+  }
+
+  window.getBoardHubDeepFooterSafeStatus = function(){
+    const body = visibleBody();
+    const full = body ? body.querySelector('.annualPacketPreviewFullHtml') : document.querySelector('.annualPacketPreviewFullHtml');
+    const outer = document.querySelector('.bh-v638-scale-outer');
+    const spacer = document.querySelector('.bh-v643-footer-spacer');
+    const actions = document.querySelector('.annualPacketPreviewActions');
+
+    return {
+      build:BUILD,
+      installed:true,
+      isPhone:isPhone(),
+      bodyClass:document.body.classList.contains('bh-v643-deep-footer-safe'),
+      bodyFound:!!body,
+      fullFound:!!full,
+      outerFound:!!outer,
+      spacerFound:!!spacer,
+      actionsFound:!!actions,
+      bodyClientHeight:body ? body.clientHeight : null,
+      bodyScrollHeight:body ? body.scrollHeight : null,
+      bodyPaddingBottom:body ? getComputedStyle(body).paddingBottom : null,
+      fullScrollHeight:full ? full.scrollHeight : null,
+      fullPaddingBottom:full ? getComputedStyle(full).paddingBottom : null,
+      outerHeightStyle:outer ? outer.style.height : null,
+      outerPaddingBottom:outer ? getComputedStyle(outer).paddingBottom : null,
+      spacerHeight:spacer ? getComputedStyle(spacer).height : null,
+      actionsHeight:actions ? actions.getBoundingClientRect().height : null,
+      visualViewportHeight:window.visualViewport ? window.visualViewport.height : null,
+      innerHeight:window.innerHeight,
+      last:window.__BoardHubV643DeepFooterSafeAreaLast || null
+    };
+  };
+
+  setTimeout(function(){ apply('initial-v643'); }, 1200);
+})();
+</script>
+
 </head>
 <body>
   <div class="wrap">
