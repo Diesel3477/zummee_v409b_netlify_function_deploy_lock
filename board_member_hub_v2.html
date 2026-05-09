@@ -3595,6 +3595,225 @@
 })();
 </script>
 
+
+
+<script id="board-hub-annual-approval-preview-v620-approve-id-fallback">
+(function(){
+  'use strict';
+  if(window.__BoardHubAnnualPreviewApproveV620Fallback) return;
+  window.__BoardHubAnnualPreviewApproveV620Fallback = true;
+
+  const BUILD = '2026-05-09-v620-board-hub-preview-approve-id-fallback';
+  let lastPreviewId = '';
+
+  function clean(v){ return String(v == null ? '' : v).trim(); }
+  function el(id){ return document.getElementById(id); }
+
+  function rows(){
+    try{
+      const status = window.getBoardHubAnnualApprovalRequestsStatus && window.getBoardHubAnnualApprovalRequestsStatus();
+      if(status && Array.isArray(status.rows)) return status.rows;
+    }catch(e){}
+    try{
+      const s = window.__BoardHubAnnualApprovalRequestsV615Status;
+      if(s && Array.isArray(s.rows)) return s.rows;
+    }catch(e2){}
+    return [];
+  }
+
+  function pendingRows(){
+    return rows().filter(function(row){
+      return clean(row.current_step) === 'pending_board' || clean(row.approval_status) === 'pending_board';
+    });
+  }
+
+  function resolveApprovalId(){
+    if(clean(lastPreviewId)) return clean(lastPreviewId);
+
+    // Try v619 status first.
+    try{
+      const s = window.getBoardHubAnnualPreviewApproveStatus && window.getBoardHubAnnualPreviewApproveStatus();
+      if(s && clean(s.activePreviewApprovalId)) return clean(s.activePreviewApprovalId);
+    }catch(e){}
+
+    // The current use case: one pending packet in the approval queue.
+    const pending = pendingRows();
+    if(pending.length === 1 && clean(pending[0].id)) return clean(pending[0].id);
+
+    const all = rows();
+    if(all.length === 1 && clean(all[0].id)) return clean(all[0].id);
+
+    // Last fallback: first pending_board row if there are multiple.
+    if(pending.length && clean(pending[0].id)) return clean(pending[0].id);
+
+    return '';
+  }
+
+  async function getClient(){
+    const start = Date.now();
+    while(Date.now() - start < 5000){
+      try{
+        const c = window.supabaseClient || (window.getSupabase && window.getSupabase()) || null;
+        if(c && typeof c.from === 'function') return c;
+      }catch(e){}
+      await new Promise(resolve => setTimeout(resolve, 80));
+    }
+    throw new Error('Supabase client unavailable on Board Member Hub.');
+  }
+
+  async function currentUserId(client){
+    try{
+      if(client && client.auth && typeof client.auth.getSession === 'function'){
+        const res = await client.auth.getSession();
+        const id = res && res.data && res.data.session && res.data.session.user && res.data.session.user.id;
+        if(id) return clean(id);
+      }
+    }catch(e){}
+    try{
+      return clean(localStorage.getItem('zummee_user_id_v1') || sessionStorage.getItem('zummee_user_id_v1') || '');
+    }catch(e2){}
+    return '';
+  }
+
+  function rowById(id){
+    return rows().find(function(row){ return clean(row.id) === clean(id); }) || null;
+  }
+
+  function nextAfterBoard(row){
+    const route = clean(row && row.approval_route);
+    if(route === 'board_then_supervisor'){
+      return { approval_status:'pending_supervisor', current_step:'pending_supervisor' };
+    }
+    if(route === 'board_only' || route === 'supervisor_then_board'){
+      return {
+        approval_status:'pending_admin_mailing',
+        current_step:'pending_admin_mailing',
+        admin_ready_at:new Date().toISOString()
+      };
+    }
+    return { approval_status:'board_approved', current_step:'board_approved' };
+  }
+
+  function showStatus(message, type){
+    const node = el('bhV619PreviewApproveStatus');
+    if(!node) return;
+    node.textContent = message || '';
+    node.classList.toggle('ok', type === 'ok');
+    node.classList.toggle('err', type === 'err');
+  }
+
+  async function approveResolvedPreview(){
+    const button = el('bhV619PreviewApproveBtn');
+    const id = resolveApprovalId();
+
+    try{
+      if(!id) throw new Error('No pending board approval request was found. Refresh the Board Hub and try again.');
+      const row = rowById(id);
+      if(!row) throw new Error('Could not find the approval request. Refresh the Board Hub and try again.');
+
+      if(button){ button.disabled = true; button.textContent = 'Approving…'; }
+      showStatus('Approving packet…', '');
+
+      const client = await getClient();
+      const user = await currentUserId(client);
+      const patch = Object.assign({}, nextAfterBoard(row), {
+        board_approved_at:new Date().toISOString(),
+        board_approved_by:user || null,
+        board_response_note:null,
+        updated_at:new Date().toISOString()
+      });
+
+      const result = await client
+        .from('annual_meeting_approval_requests')
+        .update(patch)
+        .eq('id', id)
+        .select('*')
+        .maybeSingle();
+
+      if(result.error) throw result.error;
+
+      window.__BoardHubAnnualPreviewApproveV620Last = {
+        build:BUILD,
+        ok:true,
+        id,
+        usedFallback:!clean(lastPreviewId),
+        patch,
+        result:result.data || null,
+        approvedAt:new Date().toISOString()
+      };
+
+      showStatus('Packet approved and moved to the next approval step.', 'ok');
+
+      try{
+        if(typeof window.refreshBoardHubAnnualApprovalRequests === 'function'){
+          await window.refreshBoardHubAnnualApprovalRequests();
+        }
+      }catch(refreshErr){
+        console.warn('[Board Hub v620] approval refresh warning', refreshErr);
+      }
+
+      setTimeout(function(){
+        const shade = el('annualPacketPreviewShade');
+        if(shade){
+          shade.classList.remove('open');
+          shade.setAttribute('aria-hidden', 'true');
+        }
+      }, 650);
+
+      return window.__BoardHubAnnualPreviewApproveV620Last;
+    }catch(error){
+      const message = error && error.message ? error.message : String(error);
+      window.__BoardHubAnnualPreviewApproveV620Last = {
+        build:BUILD,
+        ok:false,
+        id,
+        error:message,
+        failedAt:new Date().toISOString()
+      };
+      showStatus(message, 'err');
+      alert(message);
+      return window.__BoardHubAnnualPreviewApproveV620Last;
+    }finally{
+      if(button){ button.disabled = false; button.textContent = 'Approve Packet'; }
+    }
+  }
+
+  // Track preview button IDs even if another listener handles/blocks the modal.
+  document.addEventListener('click', function(event){
+    const previewBtn = event.target && event.target.closest
+      ? event.target.closest('[data-annual-approval-action="preview"][data-id]')
+      : null;
+    if(previewBtn){
+      lastPreviewId = clean(previewBtn.getAttribute('data-id'));
+    }
+
+    const approveBtn = event.target && event.target.closest
+      ? event.target.closest('#bhV619PreviewApproveBtn')
+      : null;
+    if(approveBtn){
+      event.preventDefault();
+      event.stopPropagation();
+      if(event.stopImmediatePropagation) event.stopImmediatePropagation();
+      approveResolvedPreview();
+    }
+  }, true);
+
+  window.approveBoardHubAnnualPacketFromPreview = approveResolvedPreview;
+  window.getBoardHubAnnualPreviewApproveFallbackStatus = function(){
+    return {
+      build:BUILD,
+      installed:true,
+      lastPreviewId,
+      resolvedApprovalId:resolveApprovalId(),
+      rowCount:rows().length,
+      pendingRowCount:pendingRows().length,
+      hasApproveButton:!!el('bhV619PreviewApproveBtn'),
+      last:window.__BoardHubAnnualPreviewApproveV620Last || null
+    };
+  };
+})();
+</script>
+
 </body>
 </html>
 
