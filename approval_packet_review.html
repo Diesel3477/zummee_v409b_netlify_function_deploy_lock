@@ -415,7 +415,7 @@
     (function(){
       'use strict';
 
-      const BUILD = '2026-05-09-v713-phone-full-page-fit';
+      const BUILD = '2026-05-09-v714-phone-compact-print-page';
       const SUPABASE_URL = window.SUPABASE_URL || window.ZUMMEE_SUPABASE_URL || 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
       const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || window.SUPABASE_KEY || window.ZUMMEE_SUPABASE_ANON_KEY || window.supabaseAnonKey || 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
 
@@ -554,16 +554,16 @@
 
       function injectPacketPrintLayoutLock(inner){
         if(!inner) return;
-        const old = inner.querySelector('#approval-review-v711-packet-print-layout-lock, #approval-review-v712-ipad-look-layout-lock, #approval-review-v713-full-page-fit-lock');
+        const old = inner.querySelector('#approval-review-v711-packet-print-layout-lock, #approval-review-v712-ipad-look-layout-lock, #approval-review-v713-full-page-fit-lock, #approval-review-v714-compact-print-page-lock');
         if(old) old.remove();
 
         const style = document.createElement('style');
-        style.id = 'approval-review-v713-full-page-fit-lock';
+        style.id = 'approval-review-v714-compact-print-page-lock';
         style.textContent = `
           /*
-            v713: phone full-page fit.
-            Goal: every packet page renders as a normal print/iPad page,
-            then the whole page is scaled down to the phone viewer.
+            v714: compact print-page phone preview.
+            Keeps the real packet page shape, but caps snapshot/mobile typography
+            so the page looks like a scaled printed page instead of a mobile card.
           */
 
           .packet-scale-inner,
@@ -607,7 +607,7 @@
             transform: none !important;
             background: #fff !important;
             border-radius: 18px !important;
-            padding: 54px !important;
+            padding: 50px !important;
           }
 
           .packet-scale-inner .am-v652-page-header {
@@ -617,104 +617,135 @@
             align-items: flex-start !important;
             gap: 22px !important;
             border-bottom: 3px solid #102f4f !important;
-            padding-bottom: 22px !important;
-            margin-bottom: 26px !important;
+            padding-bottom: 18px !important;
+            margin-bottom: 22px !important;
           }
 
           .packet-scale-inner .am-v652-logo,
           .packet-scale-inner img.am-v652-logo,
-          .packet-scale-inner .am-v652-page-header img {
+          .packet-scale-inner .am-v652-page-header img,
+          .packet-scale-inner img {
             width: auto !important;
             height: auto !important;
-            max-width: 180px !important;
-            max-height: 74px !important;
+            max-width: 170px !important;
+            max-height: 68px !important;
             object-fit: contain !important;
-          }
-
-          .packet-scale-inner img {
-            object-fit: contain !important;
-          }
-
-          .packet-scale-inner .am-v652-meta-grid {
-            display: grid !important;
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-            gap: 14px !important;
-          }
-
-          .packet-scale-inner .am-v652-meta {
-            min-height: 74px !important;
-          }
-
-          /*
-            Target the old mobile-inflated packet text without flattening
-            the entire design. These are print-proportional values.
-          */
-          .packet-scale-inner .am-v652-page h1,
-          .packet-scale-inner .am-v652-h1 {
-            font-size: 42px !important;
-            line-height: 1.05 !important;
-            letter-spacing: -0.025em !important;
-          }
-
-          .packet-scale-inner .am-v652-page h2,
-          .packet-scale-inner .am-v652-h2 {
-            font-size: 28px !important;
-            line-height: 1.12 !important;
-          }
-
-          .packet-scale-inner .am-v652-page h3 {
-            font-size: 20px !important;
-            line-height: 1.18 !important;
           }
 
           .packet-scale-inner .am-v652-kicker,
-          .packet-scale-inner [class*="kicker"] {
-            font-size: 12px !important;
+          .packet-scale-inner [class*="kicker"],
+          .packet-scale-inner label {
+            font-size: 11px !important;
             line-height: 1.2 !important;
-            letter-spacing: .16em !important;
+            letter-spacing: .15em !important;
+            text-transform: uppercase !important;
+            font-weight: 900 !important;
+          }
+
+          .packet-scale-inner .am-v652-page h1,
+          .packet-scale-inner .am-v652-h1,
+          .packet-scale-inner h1 {
+            font-size: 31px !important;
+            line-height: 1.08 !important;
+            letter-spacing: -0.02em !important;
+            margin-top: 6px !important;
+            margin-bottom: 12px !important;
+          }
+
+          .packet-scale-inner .am-v652-page h2,
+          .packet-scale-inner .am-v652-h2,
+          .packet-scale-inner h2 {
+            font-size: 23px !important;
+            line-height: 1.14 !important;
+            margin-top: 0 !important;
+            margin-bottom: 14px !important;
+          }
+
+          .packet-scale-inner .am-v652-page h3,
+          .packet-scale-inner h3 {
+            font-size: 18px !important;
+            line-height: 1.16 !important;
+            margin-top: 10px !important;
+            margin-bottom: 8px !important;
           }
 
           .packet-scale-inner .am-v652-page p,
           .packet-scale-inner .am-v652-page li,
           .packet-scale-inner .am-v652-page td,
-          .packet-scale-inner .am-v652-page th {
-            font-size: 16px !important;
-            line-height: 1.42 !important;
+          .packet-scale-inner .am-v652-page th,
+          .packet-scale-inner .am-v652-page div,
+          .packet-scale-inner .am-v652-page span {
+            font-size: 14px !important;
+            line-height: 1.38 !important;
+          }
+
+          .packet-scale-inner .am-v652-page strong,
+          .packet-scale-inner .am-v652-page b {
+            font-size: inherit !important;
+            line-height: inherit !important;
           }
 
           .packet-scale-inner .am-v652-page ul,
           .packet-scale-inner .am-v652-page ol {
-            margin-top: 10px !important;
-            margin-bottom: 10px !important;
-            padding-left: 24px !important;
+            margin-top: 8px !important;
+            margin-bottom: 8px !important;
+            padding-left: 22px !important;
           }
 
           .packet-scale-inner .am-v652-page li {
-            margin-bottom: 4px !important;
+            margin-bottom: 3px !important;
           }
 
-          .packet-scale-inner .am-v652-meta,
-          .packet-scale-inner .am-v652-box {
-            border-radius: 16px !important;
+          .packet-scale-inner .am-v652-meta-grid {
+            display: grid !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 12px !important;
+            margin: 18px 0 !important;
+          }
+
+          .packet-scale-inner .am-v652-meta {
+            min-height: 72px !important;
+            padding: 12px 14px !important;
+            border-radius: 15px !important;
           }
 
           .packet-scale-inner .am-v652-meta label,
           .packet-scale-inner .am-v652-meta .label,
           .packet-scale-inner .am-v652-meta [class*="label"] {
-            font-size: 11px !important;
-            line-height: 1.2 !important;
+            font-size: 10px !important;
+            line-height: 1.18 !important;
             letter-spacing: .12em !important;
+            margin-bottom: 6px !important;
           }
 
           .packet-scale-inner .am-v652-meta div,
           .packet-scale-inner .am-v652-meta span,
           .packet-scale-inner .am-v652-meta strong {
-            font-size: 17px !important;
-            line-height: 1.22 !important;
+            font-size: 15px !important;
+            line-height: 1.2 !important;
+          }
+
+          .packet-scale-inner .am-v652-box {
+            padding: 16px 18px !important;
+            border-radius: 16px !important;
+            margin: 16px 0 !important;
           }
 
           .packet-scale-inner table {
             border-collapse: collapse !important;
+          }
+
+          .packet-scale-inner th {
+            font-size: 10px !important;
+            line-height: 1.15 !important;
+            letter-spacing: .08em !important;
+            padding: 4px 7px !important;
+          }
+
+          .packet-scale-inner td {
+            font-size: 13px !important;
+            line-height: 1.28 !important;
+            padding: 4px 7px !important;
           }
         `;
         inner.appendChild(style);
@@ -752,8 +783,8 @@
         if(!body || !outer || !inner) return null;
 
         const available = Math.max(280, body.clientWidth - 20);
-        const visibleHeight = Math.max(420, window.innerHeight - 310);
-        const scale = Math.min(1, available / 850, visibleHeight / 1100);
+        const visibleHeight = Math.max(420, window.innerHeight - 300);
+        const scale = Math.min(1, available / 850, visibleHeight / 1100) * 0.92;
 
         document.documentElement.style.setProperty('--scale', String(scale));
         outer.style.width = Math.ceil(850 * scale) + 'px';
@@ -961,7 +992,7 @@
           outerFound: !!outer,
           innerFound: !!inner,
           pageCount: inner ? inner.querySelectorAll('.am-v652-page').length : 0,
-          hasV713FullPageFit: !!document.getElementById('approval-review-v713-full-page-fit-lock'),
+          hasV714CompactPrintPage: !!document.getElementById('approval-review-v714-compact-print-page-lock'),
           bodyClientHeight: els.body ? els.body.clientHeight : null,
           bodyScrollHeight: els.body ? els.body.scrollHeight : null,
           outerClientHeight: outer ? outer.clientHeight : null,
