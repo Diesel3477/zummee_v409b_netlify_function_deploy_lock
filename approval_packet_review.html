@@ -487,12 +487,13 @@
     (function(){
       'use strict';
 
-      const BUILD = '2026-05-09-v719-premium-print-page-format';
+      const BUILD = '2026-05-09-v722-expected-step-frontend-guard';
       const SUPABASE_URL = window.SUPABASE_URL || window.ZUMMEE_SUPABASE_URL || 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
       const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || window.SUPABASE_KEY || window.ZUMMEE_SUPABASE_ANON_KEY || window.supabaseAnonKey || 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
 
       let supabaseClient = null;
       let currentRequest = null;
+      let loadedApprovalStep = '';
 
       const els = {
         title: document.getElementById('pageTitle'),
@@ -1135,6 +1136,7 @@
 
       function render(row){
         currentRequest = row;
+        loadedApprovalStep = clean(row.current_step || row.approval_status);
         setBackLinks(row);
 
         const name = associationName(row);
@@ -1173,7 +1175,17 @@
         }
 
         const step = clean(row.current_step || row.approval_status);
-        setApproveVisible(step === 'pending_board' || step === 'pending_supervisor');
+        const canApprove = step === 'pending_board' || step === 'pending_supervisor';
+        setApproveVisible(canApprove);
+        [els.approveTop, els.approveBottom].forEach(btn => {
+          if(canApprove){
+            btn.disabled = false;
+            btn.textContent = 'Approve Packet';
+          }else{
+            btn.disabled = true;
+            btn.textContent = 'Approval Complete';
+          }
+        });
       }
 
       async function getSupabase(){
@@ -1262,23 +1274,30 @@
             },
             body: JSON.stringify({
               request_id: currentRequest.id,
-              token: reviewToken()
+              token: reviewToken(),
+              expected_step: loadedApprovalStep
             })
           });
 
           const payload = await response.json().catch(() => ({}));
           if(!response.ok || !payload.ok){
+            if(payload && payload.already_advanced){
+              throw new Error(payload.error || 'This approval step has already been completed.');
+            }
             throw new Error(payload.error || 'Approval failed.');
           }
 
           currentRequest = payload.request;
-          showStatus('Packet approved successfully.');
-          render(payload.request);
+          loadedApprovalStep = '';
+          showStatus('Packet approved successfully. This approval step is complete and has been sent to the next step.');
 
           buttons.forEach(btn => {
-            btn.disabled = false;
-            btn.textContent = 'Approve Packet';
+            btn.disabled = true;
+            btn.textContent = 'Approved';
+            btn.style.display = 'none';
           });
+
+          render(payload.request);
         }catch(error){
           showStatus(error && error.message ? error.message : String(error), 'error');
           buttons.forEach(btn => {
@@ -1318,6 +1337,7 @@
           requestId: requestId(),
           hasToken: !!reviewToken(),
           hasRequest: !!currentRequest,
+          loadedApprovalStep,
           hasV719PremiumPrintPage: !!frame,
           frameStatus: window.__approvalPacketFrameStatus || null,
           shellClientHeight: shell ? shell.clientHeight : null,
