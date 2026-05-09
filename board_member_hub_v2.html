@@ -1,489 +1,2733 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Board Member Hub</title>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Board Member Hub V2</title>
+  <!-- v520: Annual meeting approval archive workflow lock. -->
+  <!-- v518: board_member_hub.html retired; v2 is canonical. -->
+  <!-- v523: Annual approval archive action removes cards in place without scroll jump. -->
+  <!-- v517: Calendar moved above annual meeting documents and made collapsible. -->
+  <!-- v521: Annual meeting approvals archive/restore workflow UI lock. -->
+  <!-- v508: Board Hub shared loader cache-bust + UUID/context lock for notification_events Needs Attention. -->
+  <!-- v440: Back to Hub route locked to /manager_hub.html. -->
+  <!-- v396: context-first Board Hub V2. Manager Hub passes community_id + user_id. No legacy engine/session watchdog. -->
+  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="shared/supabase-client.js?v=2026-04-29-v327"></script>
+  <script src="shared/data-layer-v409.js?v=2026-04-30-v409-server-board-photo-upload"></script>
+  <script src="shared/zummee-board-data.js?v=2026-05-05-v517-calendar-collapsible-order-lock"></script>
+  <script src="shared/community-state.js?v=2026-05-07-v614"></script>
+  <script src="shared/input-undo-guard.js?v=2026-05-07-v614"></script>
+  <script src="company_logo_sync.js"></script>
+  <style>
+    :root{--navy:#17365f;--line:#a9c8ff;--soft:#f7fbff;--gold1:#fff8d8;--gold2:#f6d66c;--muted:#64748b;--ink:#143052;--green:#16a34a;--red:#dc2626;}
+    *{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:linear-gradient(180deg,#f6fbff,#eef6ff);color:var(--ink);} .wrap{max-width:1180px;margin:28px auto;padding:0 28px 60px}.card{background:rgba(255,255,255,.92);border:3px solid var(--line);border-radius:34px;box-shadow:0 18px 44px rgba(30,75,140,.08);padding:30px;margin-bottom:28px}.hero{display:grid;grid-template-columns:1fr auto;gap:22px;align-items:start}.title{font-size:42px;line-height:1.05;margin:0;color:#17365f;font-weight:900;letter-spacing:-.04em}.logo{width:210px;max-height:92px;object-fit:contain;justify-self:end}.controls{grid-column:1 / -1;display:grid;grid-template-columns:minmax(240px,560px) 1fr;gap:22px;align-items:center}.headerActions{display:flex;align-items:center;justify-content:flex-end;gap:14px;min-width:0}.select{height:58px;border:1.5px solid #dce7f4;border-radius:24px;background:white;color:#17365f;font-size:18px;padding:0 22px;min-width:0;width:100%;max-width:560px}.btn{height:58px;border:0;border-radius:24px;background:#17365f;color:white;font-weight:900;font-size:17px;padding:0 28px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}.btn.secondary{background:#fff;color:#17365f;border:2px solid var(--line);box-shadow:0 10px 22px rgba(23,54,95,.045)}.btn.secondary:hover{background:#f7fbff}.pills{grid-column:1 / -1;display:flex;justify-content:center;align-items:center;gap:16px;flex-wrap:wrap;margin-top:10px;width:100%}.pill{border:1px solid #d8e5f6;background:white;border-radius:999px;padding:11px 18px;font-weight:900;color:#17365f}.pill.gold{background:linear-gradient(135deg,#fff9d8,#fff1a8);border-color:#efcf5b}.section-title{font-size:28px;margin:0 0 4px;font-weight:900}.sub{margin:0;color:var(--muted);font-weight:800;font-size:17px}.attention-head{display:flex;justify-content:space-between;gap:18px;align-items:center;margin-bottom:18px}.bubble{min-width:44px;height:44px;border-radius:999px;display:grid;place-items:center;background:#fff9d8;border:1px solid #efcf5b;font-weight:900}.list{display:grid;gap:14px}.item{border:1.5px solid #bad3ff;background:#f7fbff;border-radius:24px;padding:18px 20px;display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:center}.item .n{width:46px;height:46px;border-radius:13px;background:#fff9d8;border:1px solid #efcf5b;display:grid;place-items:center;font-weight:900}.item h3{margin:0 0 4px;font-size:20px}.item p{margin:0;color:#64748b;font-weight:800}.chev{font-size:32px;color:#94a3b8}.quick{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:18px 0 26px}.quick button,.quick a{height:62px;border:2px solid var(--line);border-radius:20px;background:white;color:#17365f;font-weight:900;text-decoration:none;display:flex;align-items:center;justify-content:center}.snapshot{display:grid;gap:12px}.snap{height:58px;border:1px solid #d8e5f6;border-radius:20px;background:white;display:flex;align-items:center;justify-content:space-between;padding:0 18px;font-size:20px;font-weight:900}.formcard{background:linear-gradient(135deg,#fff8d8,#f6d66c);border:2px solid #f1d675}.grid2{display:grid;grid-template-columns:2fr 1fr;gap:22px}.field label{display:block;font-size:15px;margin:0 0 10px}.input,.textarea{width:100%;border:1px solid #d8e5f6;background:white;border-radius:26px;min-height:64px;padding:0 22px;font-size:18px}.textarea{min-height:130px;padding-top:18px;resize:vertical}.empty{border:1.5px dashed #bdd4f6;border-radius:22px;background:#fbfdff;padding:22px;color:#64748b;font-weight:800}.status{margin-top:12px;color:#64748b;font-size:14px;font-weight:700}.status.ok{color:var(--green)}.status.err{color:var(--red)}.hidden{display:none!important}.archiveToggle{height:46px;border:2px solid var(--line);border-radius:18px;background:white;color:#17365f;font-weight:900;padding:0 18px}.archiveList.is-collapsed{display:none}.archiveMeta{color:#64748b;font-size:13px;font-weight:800;margin-top:4px}.item.archived{background:#fbfdff;opacity:.82}.item.archived .n{background:#f8fafc;border-color:#d8e5f6;color:#64748b}.modalShade{position:fixed;inset:0;background:rgba(15,35,65,.42);display:none;align-items:center;justify-content:center;padding:20px;z-index:9999}.modalShade.open{display:flex}.modal{width:min(720px,96vw);max-height:88vh;overflow:auto;background:white;border:3px solid var(--line);border-radius:30px;box-shadow:0 28px 90px rgba(16,46,90,.24);padding:26px}.modalTop{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}.modal h2{margin:0 0 8px;color:#17365f;font-size:28px}.modalMeta{color:#64748b;font-weight:800;margin:0 0 18px}.modalBody{border:1.5px solid #d8e5f6;background:#f7fbff;border-radius:22px;padding:18px;white-space:pre-wrap;line-height:1.45;font-weight:700;color:#334155}.modalActions{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}.modalActions button{border:2px solid var(--line);border-radius:18px;background:white;color:#17365f;font-weight:900;padding:14px 18px}.modalActions .primary{background:#17365f;color:white;border-color:#17365f}.xBtn{border:0;background:#f1f5f9;border-radius:16px;width:42px;height:42px;font-size:24px;color:#17365f;font-weight:900}.photoGrid{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.photoGrid a{display:block}.photoGrid img{width:132px;height:132px;object-fit:cover;border-radius:18px;border:1.5px solid #d8e5f6;background:#f8fafc;box-shadow:0 8px 18px rgba(23,54,95,.08)}.uploadRow{margin-top:16px;border:1.5px dashed #bad3ff;background:#f7fbff;border-radius:20px;padding:14px}.uploadRow label{display:block;font-size:14px;font-weight:900;color:#17365f;margin-bottom:8px}.uploadRow input{width:100%;font-weight:800;color:#17365f}.photoBadge{display:inline-flex;align-items:center;gap:6px;border:1px solid #d8e5f6;border-radius:999px;padding:6px 10px;background:white;color:#17365f;font-size:13px;font-weight:900;margin-top:8px}.item{cursor:pointer}.item:focus{outline:3px solid #7fb0ff;outline-offset:3px}
+.calendarShell{display:grid;grid-template-columns:minmax(280px,1fr) minmax(280px,.9fr);gap:18px;margin-top:20px}.calendarMini{border:1.5px solid #d8e5f6;background:#fbfdff;border-radius:24px;padding:16px}.calendarToolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.calendarToolbar h3{margin:0;color:#17365f;font-size:20px;font-weight:900}.calNav{width:42px;height:42px;border:1.5px solid #d8e5f6;border-radius:14px;background:white;color:#17365f;font-weight:900;font-size:20px}.calendarGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}.calDow{text-align:center;color:#64748b;font-size:12px;font-weight:900;padding:4px 0}.calDay{min-height:46px;border:1px solid #d8e5f6;border-radius:14px;background:white;color:#17365f;font-weight:900;display:flex;align-items:center;justify-content:center;position:relative}.calDay.muted{opacity:.36}.calDay.today{border-color:#17365f;box-shadow:0 0 0 2px rgba(23,54,95,.08)}.calDay.hasEvent:after{content:'';position:absolute;bottom:6px;width:6px;height:6px;border-radius:999px;background:#f2c94c}.calDay.selected{background:#17365f;color:white;border-color:#17365f}.calendarEvents{border:1.5px solid #d8e5f6;background:#fbfdff;border-radius:24px;padding:16px;min-height:260px}.calendarEvents h3{margin:0 0 12px;color:#17365f;font-size:20px;font-weight:900}
+/* v517: Board Hub calendar collapsible section */
+.calendarBody.is-collapsed{display:none!important;}
+#calendarSection .attention-head{margin-bottom:0;}
+#calendarSection .calendarBody{margin-top:20px;}
+#calendarToggleBtn{min-width:138px;}
+#calendarToggleBtn[aria-expanded="true"]{background:#17365f;color:#fff;border-color:#17365f;}
+.eventList{display:grid;gap:10px}.eventRow{border:1px solid #d8e5f6;background:white;border-radius:18px;padding:12px 14px}.eventRow strong{display:block;color:#17365f;font-size:16px;margin-bottom:3px}.eventRow span{display:block;color:#64748b;font-size:13px;font-weight:800}.eventActions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.eventActions .btn{height:54px;border-radius:20px}.modal .grid2.eventGrid{grid-template-columns:1fr 1fr}.secondaryBtn{height:54px;border:2px solid var(--line);border-radius:20px;background:white;color:#17365f;font-weight:900;padding:0 22px}
+@media(max-width:760px){.wrap{padding:18px 16px}.hero,.controls,.grid2,.quick,.calendarShell,.modal .grid2.eventGrid{grid-template-columns:1fr}.headerActions{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%}.logo{justify-self:start;width:150px}.title{font-size:34px}.select{max-width:none;height:58px}.btn{width:100%;height:58px;padding:0 16px}.card{padding:22px;border-radius:26px}.item{grid-template-columns:auto 1fr}.chev{display:none}}
+  
+
+/* v422: premium Board Hub attention/archive record polish */
+.card{overflow:hidden;}
+#attentionList,#archiveList,.list{width:100%;min-width:0;}
+#attentionList .item,#archiveList .item{
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  grid-template-columns:50px minmax(0,1fr) 28px;
+  gap:16px;
+  align-items:center;
+  padding:18px 20px;
+  border-radius:24px;
+  background:linear-gradient(180deg,#fbfdff,#f4f9ff);
+  box-shadow:0 8px 22px rgba(30,75,140,.055), inset 0 1px 0 rgba(255,255,255,.88);
+}
+#attentionList .item:hover,#archiveList .item:hover{
+  transform:translateY(-1px);
+  box-shadow:0 12px 28px rgba(30,75,140,.09), inset 0 1px 0 rgba(255,255,255,.92);
+}
+#attentionList .item .n,#archiveList .item .n{
+  width:44px;
+  height:44px;
+  border-radius:14px;
+  font-size:16px;
+  flex:0 0 auto;
+}
+.boardItemMain{min-width:0;display:grid;gap:7px;}
+.boardItemTop{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;}
+.boardItemTop h3{
+  min-width:0;
+  margin:0;
+  font-size:20px;
+  line-height:1.12;
+  letter-spacing:-.015em;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.boardStatusPill{
+  flex:0 0 auto;
+  min-height:28px;
+  padding:0 10px;
+  border-radius:999px;
+  border:1px solid #d8e5f6;
+  background:white;
+  color:#17365f;
+  font-size:11px;
+  line-height:28px;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.boardItemCopy{
+  min-width:0;
+  margin:0 !important;
+  color:#64748b;
+  font-size:15px;
+  line-height:1.35;
+  font-weight:800;
+  overflow:hidden;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow-wrap:anywhere;
+}
+.boardItemMetaRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:1px;}
+.boardDatePill{
+  display:inline-flex;
+  align-items:center;
+  min-height:28px;
+  padding:0 10px;
+  border-radius:999px;
+  border:1px solid #d8e5f6;
+  background:rgba(255,255,255,.78);
+  color:#64748b;
+  font-size:12px;
+  font-weight:900;
+}
+#attentionList .photoBadge,#archiveList .photoBadge{margin-top:0;}
+#attentionList .chev,#archiveList .chev{align-self:center;justify-self:end;font-size:28px;color:#8da2bd;}
+#archiveList .item.archived{background:linear-gradient(180deg,#fbfdff,#f8fafc);opacity:1;}
+#archiveList .item.archived .boardStatusPill{color:#64748b;background:#f8fafc;}
+@media(max-width:760px){
+  #attentionList .item,#archiveList .item{grid-template-columns:46px minmax(0,1fr) 20px;padding:16px 16px;gap:13px;}
+  #attentionList .chev,#archiveList .chev{display:block;font-size:24px;}
+  .boardItemTop{align-items:flex-start;}
+  .boardStatusPill{display:none;}
+  .boardItemTop h3{font-size:19px;}
+  .boardItemCopy{font-size:14px;-webkit-line-clamp:2;}
+}
+
+  
+
+/* v423: tighter premium attention record layout + internal marker cleanup */
+#attentionList .item{
+  grid-template-columns:52px minmax(0,1fr) 28px;
+  align-items:center;
+  padding:20px 22px;
+  border-radius:24px;
+  background:linear-gradient(180deg,#fbfdff 0%,#f5f9ff 100%);
+  border:1.75px solid #b8d1ff;
+  box-shadow:0 10px 26px rgba(30,75,140,.055), inset 0 1px 0 rgba(255,255,255,.92);
+}
+#attentionList .item .n{
+  width:48px;
+  height:48px;
+  border-radius:14px;
+  align-self:center;
+}
+#attentionList .boardItemMain{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  grid-template-areas:
+    "title status"
+    "copy status"
+    "meta meta";
+  column-gap:14px;
+  row-gap:7px;
+  align-items:start;
+}
+#attentionList .boardItemTop{display:contents;}
+#attentionList .boardItemTop h3{
+  grid-area:title;
+  font-size:21px;
+  line-height:1.08;
+  white-space:normal;
+  overflow:visible;
+}
+#attentionList .boardStatusPill{
+  grid-area:status;
+  align-self:start;
+  min-width:68px;
+  text-align:center;
+  background:#ffffff;
+  border-color:#cfe0f7;
+  box-shadow:0 4px 12px rgba(23,54,95,.045);
+}
+#attentionList .boardItemCopy{
+  grid-area:copy;
+  font-size:15px;
+  line-height:1.32;
+  color:#64748b;
+  max-width:100%;
+  word-break:normal;
+  overflow-wrap:break-word;
+}
+#attentionList .boardItemCopy:empty{display:none;}
+#attentionList .boardItemMetaRow{grid-area:meta;margin-top:2px;}
+#attentionList .chev{align-self:center;color:#8ea6c3;font-size:30px;}
+@media(max-width:760px){
+  #attentionList .item{grid-template-columns:48px minmax(0,1fr) 22px;padding:17px 16px;gap:13px;}
+  #attentionList .boardItemMain{grid-template-columns:minmax(0,1fr);grid-template-areas:"title" "copy" "meta";row-gap:7px;}
+  #attentionList .boardStatusPill{display:none;}
+  #attentionList .boardItemTop h3{font-size:20px;}
+  #attentionList .boardItemCopy{font-size:14px;-webkit-line-clamp:2;}
+}
+
+
+/* v441 annual meeting document approvals restored */
+.annualDocList{display:grid;gap:14px;margin-top:18px}
+.annualDocItem{border:1.5px solid #bad3ff;background:linear-gradient(180deg,#fbfdff,#f4f9ff);border-radius:24px;padding:18px 20px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center;box-shadow:0 8px 22px rgba(30,75,140,.055), inset 0 1px 0 rgba(255,255,255,.88)}
+.annualDocTitle{margin:0;color:#17365f;font-size:20px;font-weight:900;letter-spacing:-.015em}
+.annualDocMeta{margin:6px 0 0;color:#64748b;font-size:14px;line-height:1.35;font-weight:800}
+.annualDocActions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.annualDocActions a,.annualDocActions button{min-height:48px;border:2px solid var(--line);border-radius:18px;background:white;color:#17365f;font-weight:900;padding:0 18px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.annualDocActions .approve{background:#17365f;color:white;border-color:#17365f}
+.annualDocActions .archiveAction{background:#fff9d8;color:#735c0f;border-color:#efcf5b}
+.annualDocActions .archiveAction:hover{background:#fff4b8;border-color:#d9b83f}
+.annualDocActions .restore{background:#eefcf3;color:#166534;border-color:#bbf7d0}
+.annualDocActions .restore:hover{background:#dcfce7;border-color:#86efac}
+.annualDocStatus{margin-top:12px;color:#64748b;font-size:14px;font-weight:800}
+.annualDocStatus.ok{color:var(--green)}
+.annualDocStatus.err{color:var(--red)}
+.annualDocItem.is-pending{background:linear-gradient(180deg,#fffdf2,#fff8dc);border-color:#efcf5b}
+.annualDocItem.is-approved{opacity:.86}
+.annualDocItem.is-rejected{opacity:.78}
+@media(max-width:760px){.annualDocItem{grid-template-columns:1fr}.annualDocActions{justify-content:flex-start}.annualDocActions a,.annualDocActions button{width:100%}}
+/* v523: archive approval no-jump transition */
+.annualDocItem.is-archiving{
+  opacity:.25;
+  transform:translateY(-8px) scale(.99);
+  max-height:0;
+  margin:0;
+  padding-top:0;
+  padding-bottom:0;
+  border-width:0;
+  overflow:hidden;
+  transition:opacity .22s ease, transform .22s ease, max-height .28s ease, margin .28s ease, padding .28s ease, border-width .28s ease;
+}
+
+
+/* v520 annual approval workflow archive */
+.annualApprovalArchive{margin-top:18px}
+.annualApprovalArchive .archiveGroup{margin-top:12px;border:1.5px solid #d8e5f6;background:#fbfdff;border-radius:22px;overflow:hidden}
+.annualApprovalArchive .archiveMonthBtn{width:100%;min-height:58px;border:0;background:linear-gradient(180deg,#ffffff,#f5f9ff);color:#17365f;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:0 18px;font-size:17px;font-weight:950;cursor:pointer}
+.annualApprovalArchive .archiveMonthBtn:hover{background:#eef6ff}
+.annualApprovalArchive .archiveMonthCount{display:inline-flex;min-width:34px;height:34px;border-radius:999px;align-items:center;justify-content:center;background:#fff9d8;border:1px solid #efcf5b;color:#17365f;font-size:14px;font-weight:950}
+.annualApprovalArchive .archiveMonthItems{display:none;padding:12px;gap:12px}
+.annualApprovalArchive .archiveGroup.open .archiveMonthItems{display:grid}
+.annualApprovalArchive .annualDocItem{margin:0}
+.annualDocActions .archive{background:#f8fafc;color:#475569;border-color:#cbd5e1}
+.annualDocWorkflow{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+.annualDocStep{display:inline-flex;align-items:center;min-height:24px;padding:0 8px;border-radius:999px;border:1px solid #d8e5f6;background:#fff;color:#64748b;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}
+.annualDocStep.done{background:#dcfce7;border-color:#bbf7d0;color:#166534}
+.annualDocStep.current{background:#fff9d8;border-color:#efcf5b;color:#735c0f}
+
+  
+
+/* v504: Premium Needs Attention cards + modal/action upgrade (UI only, data source untouched) */
+#attentionList{
+  gap:16px !important;
+}
+#attentionList .premium-board-item{
+  position:relative !important;
+  isolation:isolate !important;
+  grid-template-columns:52px minmax(0,1fr) 34px !important;
+  gap:18px !important;
+  align-items:center !important;
+  padding:20px 22px !important;
+  border-radius:28px !important;
+  border:1.5px solid rgba(174,203,255,.92) !important;
+  background:
+    linear-gradient(135deg, rgba(255,249,221,.28), rgba(255,255,255,0) 42%),
+    linear-gradient(180deg, rgba(255,255,255,.98), rgba(247,251,255,.96)) !important;
+  box-shadow:
+    0 16px 34px rgba(23,54,95,.075),
+    inset 0 1px 0 rgba(255,255,255,.95) !important;
+  overflow:hidden !important;
+  transform:translateZ(0) !important;
+  transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease !important;
+}
+#attentionList .premium-board-item::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:14px;
+  bottom:14px;
+  width:5px;
+  border-radius:999px;
+  background:linear-gradient(180deg,#f8d56b,#d7a928);
+  box-shadow:0 0 0 1px rgba(255,255,255,.65), 0 8px 18px rgba(215,169,40,.18);
+  z-index:0;
+}
+#attentionList .premium-board-item::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  border-radius:inherit;
+  background:radial-gradient(circle at 15% 0%, rgba(255,236,160,.20), transparent 34%);
+  z-index:0;
+}
+#attentionList .premium-board-item > *{
+  position:relative;
+  z-index:1;
+}
+@media (hover:hover){
+  #attentionList .premium-board-item:hover{
+    transform:translateY(-2px) !important;
+    border-color:rgba(102,151,235,.86) !important;
+    box-shadow:
+      0 22px 46px rgba(23,54,95,.115),
+      inset 0 1px 0 rgba(255,255,255,1) !important;
+  }
+}
+#attentionList .premium-board-item:active{
+  transform:scale(.992) !important;
+}
+#attentionList .premium-board-item .n{
+  width:50px !important;
+  height:50px !important;
+  border-radius:16px !important;
+  background:linear-gradient(135deg,#fff9d8 0%,#f7d96c 100%) !important;
+  border:1px solid rgba(216,170,42,.62) !important;
+  color:#17365f !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.78), 0 8px 18px rgba(216,170,42,.12) !important;
+  font-size:17px !important;
+  font-weight:950 !important;
+}
+#attentionList .premium-board-item .boardItemMain{
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) auto !important;
+  grid-template-areas:"title status" "copy status" "meta meta" !important;
+  column-gap:14px !important;
+  row-gap:7px !important;
+  min-width:0 !important;
+}
+#attentionList .premium-board-item .boardItemTop{display:contents !important;}
+#attentionList .premium-board-item h3{
+  grid-area:title !important;
+  margin:0 !important;
+  color:#17365f !important;
+  font-size:21px !important;
+  line-height:1.08 !important;
+  letter-spacing:-.025em !important;
+  font-weight:950 !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+  white-space:nowrap !important;
+}
+#attentionList .premium-board-item .boardItemCopy{
+  grid-area:copy !important;
+  margin:0 !important;
+  color:#5f7188 !important;
+  font-size:15px !important;
+  font-weight:750 !important;
+  line-height:1.36 !important;
+  overflow:hidden !important;
+  display:-webkit-box !important;
+  -webkit-line-clamp:2 !important;
+  -webkit-box-orient:vertical !important;
+  overflow-wrap:anywhere !important;
+}
+#attentionList .premium-board-item .boardStatusPill{
+  grid-area:status !important;
+  align-self:start !important;
+  min-height:30px !important;
+  min-width:74px !important;
+  padding:0 12px !important;
+  border-radius:999px !important;
+  background:rgba(255,255,255,.92) !important;
+  border:1px solid rgba(188,211,247,.95) !important;
+  color:#17365f !important;
+  box-shadow:0 6px 14px rgba(23,54,95,.055), inset 0 1px 0 rgba(255,255,255,.9) !important;
+  font-size:11px !important;
+  line-height:30px !important;
+  font-weight:950 !important;
+  letter-spacing:.08em !important;
+}
+#attentionList .premium-board-item .boardItemMetaRow{
+  grid-area:meta !important;
+  display:flex !important;
+  align-items:center !important;
+  flex-wrap:wrap !important;
+  gap:8px !important;
+  margin-top:2px !important;
+}
+#attentionList .premium-board-item .boardDatePill,
+#attentionList .premium-board-item .photoBadge{
+  display:inline-flex !important;
+  align-items:center !important;
+  min-height:28px !important;
+  padding:0 11px !important;
+  border-radius:999px !important;
+  background:rgba(255,255,255,.84) !important;
+  border:1px solid rgba(216,229,246,.98) !important;
+  color:#64748b !important;
+  font-size:12px !important;
+  font-weight:900 !important;
+  box-shadow:0 4px 10px rgba(23,54,95,.035) !important;
+}
+#attentionList .premium-board-item .photoBadge{
+  color:#17365f !important;
+}
+#attentionList .premium-board-item .chev{
+  justify-self:end !important;
+  align-self:center !important;
+  width:34px !important;
+  height:34px !important;
+  border-radius:999px !important;
+  display:grid !important;
+  place-items:center !important;
+  color:#8aa3c0 !important;
+  background:rgba(255,255,255,.55) !important;
+  border:1px solid rgba(216,229,246,.75) !important;
+  font-size:28px !important;
+  line-height:1 !important;
+  transition:transform .18s ease, background .18s ease, color .18s ease !important;
+}
+@media (hover:hover){
+  #attentionList .premium-board-item:hover .chev{
+    transform:translateX(2px);
+    color:#17365f !important;
+    background:#fff !important;
+  }
+}
+#archiveList .premium-archived-item{
+  border-color:rgba(216,229,246,.9) !important;
+  background:linear-gradient(180deg,#ffffff,#f8fafc) !important;
+  opacity:.88 !important;
+}
+#archiveList .premium-archived-item::before{background:#cbd5e1 !important;}
+
+/* v504: Premium modal + actions polish */
+.modalShade{
+  backdrop-filter:blur(10px) saturate(1.05) !important;
+  -webkit-backdrop-filter:blur(10px) saturate(1.05) !important;
+  background:rgba(15,35,65,.38) !important;
+}
+.modal{
+  border:1.5px solid rgba(174,203,255,.96) !important;
+  border-radius:34px !important;
+  background:
+    linear-gradient(135deg, rgba(255,249,221,.28), rgba(255,255,255,0) 44%),
+    linear-gradient(180deg,#ffffff,#f7fbff) !important;
+  box-shadow:0 32px 90px rgba(16,46,90,.28), inset 0 1px 0 rgba(255,255,255,.95) !important;
+  padding:28px !important;
+}
+.modalTop{
+  align-items:flex-start !important;
+  padding-bottom:14px !important;
+  border-bottom:1px solid rgba(216,229,246,.76) !important;
+}
+.modal h2{
+  color:#17365f !important;
+  font-size:30px !important;
+  line-height:1.05 !important;
+  letter-spacing:-.035em !important;
+  font-weight:950 !important;
+}
+.modalMeta{
+  color:#64748b !important;
+  font-size:14px !important;
+  line-height:1.35 !important;
+  font-weight:850 !important;
+}
+.modalBody{
+  margin-top:18px !important;
+  border:1px solid rgba(188,211,247,.9) !important;
+  background:rgba(255,255,255,.74) !important;
+  border-radius:24px !important;
+  color:#334155 !important;
+  font-size:16px !important;
+  line-height:1.5 !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.78) !important;
+}
+.xBtn{
+  width:46px !important;
+  height:46px !important;
+  border-radius:17px !important;
+  background:#f8fbff !important;
+  border:1px solid rgba(216,229,246,.96) !important;
+  color:#17365f !important;
+  box-shadow:0 8px 18px rgba(23,54,95,.055) !important;
+}
+.modalActions{
+  gap:10px !important;
+  padding-top:2px !important;
+}
+.modalActions button{
+  min-height:50px !important;
+  border-radius:18px !important;
+  border:1.5px solid rgba(174,203,255,.96) !important;
+  background:#fff !important;
+  color:#17365f !important;
+  font-weight:950 !important;
+  box-shadow:0 8px 18px rgba(23,54,95,.055) !important;
+  transition:transform .16s ease, box-shadow .16s ease, background .16s ease !important;
+}
+.modalActions button.primary,
+#boardItemWorkOrderBtn.primary{
+  background:#17365f !important;
+  color:#fff !important;
+  border-color:#17365f !important;
+  box-shadow:0 12px 24px rgba(23,54,95,.20) !important;
+}
+@media (hover:hover){
+  .modalActions button:hover{
+    transform:translateY(-1px);
+    box-shadow:0 12px 24px rgba(23,54,95,.10) !important;
+  }
+}
+.uploadRow{
+  margin-top:18px !important;
+  border:1.5px dashed rgba(174,203,255,.98) !important;
+  background:rgba(247,251,255,.84) !important;
+  border-radius:22px !important;
+}
+.photoGrid img{
+  border-radius:20px !important;
+  border:1px solid rgba(216,229,246,.98) !important;
+  box-shadow:0 10px 22px rgba(23,54,95,.09) !important;
+}
+@media(max-width:760px){
+  #attentionList .premium-board-item{
+    grid-template-columns:48px minmax(0,1fr) 28px !important;
+    gap:13px !important;
+    padding:17px 16px !important;
+    border-radius:24px !important;
+  }
+  #attentionList .premium-board-item .n{width:46px !important;height:46px !important;}
+  #attentionList .premium-board-item .boardItemMain{
+    grid-template-columns:minmax(0,1fr) !important;
+    grid-template-areas:"title" "copy" "meta" !important;
+  }
+  #attentionList .premium-board-item h3{font-size:19px !important;white-space:normal !important;}
+  #attentionList .premium-board-item .boardStatusPill{display:none !important;}
+  #attentionList .premium-board-item .boardItemCopy{font-size:14px !important;}
+  .modal{padding:22px !important;border-radius:28px !important;}
+  .modalActions button{width:100% !important;}
+}
+
+
+/* v514: Archive is month/year index by default; records appear only after employee opens a month */
+#archiveList.archiveList{
+  display:grid !important;
+  gap:12px !important;
+}
+#archiveList.archiveList.is-collapsed{
+  display:none !important;
+}
+.archiveMonthGroup{
+  border:1.5px solid rgba(186,211,255,.92) !important;
+  border-radius:22px !important;
+  background:linear-gradient(180deg,#ffffff,#f8fbff) !important;
+  box-shadow:0 8px 20px rgba(23,54,95,.055) !important;
+  overflow:hidden !important;
+}
+.archiveMonthBtn{
+  width:100% !important;
+  min-height:58px !important;
+  border:0 !important;
+  background:transparent !important;
+  color:#17365f !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  gap:14px !important;
+  padding:0 18px !important;
+  font-size:18px !important;
+  font-weight:950 !important;
+  cursor:pointer !important;
+}
+.archiveMonthMeta{
+  display:inline-flex !important;
+  align-items:center !important;
+  gap:10px !important;
+  color:#64748b !important;
+}
+.archiveMonthCount{
+  min-width:34px !important;
+  height:34px !important;
+  padding:0 10px !important;
+  border-radius:999px !important;
+  background:#fff9d8 !important;
+  border:1px solid #efcf5b !important;
+  color:#17365f !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  font-size:14px !important;
+  font-weight:950 !important;
+}
+.archiveMonthChevron{
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:30px !important;
+  height:30px !important;
+  border-radius:999px !important;
+  color:#94a3b8 !important;
+  transition:transform .16s ease !important;
+}
+.archiveMonthRecords{
+  display:none !important;
+  padding:0 14px 14px !important;
+  gap:12px !important;
+}
+.archiveMonthGroup.is-open .archiveMonthRecords{
+  display:grid !important;
+}
+.archiveMonthGroup.is-open .archiveMonthChevron{
+  transform:rotate(90deg) !important;
+  color:#17365f !important;
+}
+#archiveList .archiveMonthRecords .item{
+  margin-top:0 !important;
+}
 
 
 
+/* v515 HARD LOCK: native month/year archive groups. Only summaries are visible until expanded. */
+#archiveList.archiveList{
+  display:grid !important;
+  gap:12px !important;
+}
+#archiveList.archiveList.is-collapsed{
+  display:none !important;
+}
+.archiveMonthDetails{
+  border:1.5px solid rgba(186,211,255,.95) !important;
+  border-radius:22px !important;
+  background:linear-gradient(180deg,#ffffff,#f8fbff) !important;
+  box-shadow:0 8px 20px rgba(23,54,95,.055) !important;
+  overflow:hidden !important;
+}
+.archiveMonthDetails > summary{
+  list-style:none !important;
+}
+.archiveMonthDetails > summary::-webkit-details-marker{
+  display:none !important;
+}
+.archiveMonthSummary{
+  min-height:62px !important;
+  padding:0 18px !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  gap:14px !important;
+  cursor:pointer !important;
+  color:#17365f !important;
+  font-size:18px !important;
+  font-weight:950 !important;
+}
+.archiveMonthTitle{
+  min-width:0 !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+  white-space:nowrap !important;
+}
+.archiveMonthRight{
+  display:inline-flex !important;
+  align-items:center !important;
+  gap:10px !important;
+  flex:0 0 auto !important;
+}
+.archiveMonthDetails .archiveMonthCount{
+  min-width:36px !important;
+  height:34px !important;
+  padding:0 10px !important;
+  border-radius:999px !important;
+  background:#fff9d8 !important;
+  border:1px solid #efcf5b !important;
+  color:#17365f !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  font-size:14px !important;
+  font-weight:950 !important;
+}
+.archiveMonthDetails .archiveMonthChevron{
+  width:30px !important;
+  height:30px !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  border-radius:999px !important;
+  color:#94a3b8 !important;
+  transition:transform .16s ease !important;
+}
+.archiveMonthDetails[open] .archiveMonthChevron{
+  transform:rotate(90deg) !important;
+  color:#17365f !important;
+}
+.archiveMonthDetails .archiveMonthRecords{
+  padding:0 14px 14px !important;
+  display:grid !important;
+  gap:12px !important;
+}
+.archiveMonthDetails:not([open]) .archiveMonthRecords{
+  display:none !important;
+}
+.archiveMonthDetails .archiveMonthRecords .item{
+  margin-top:0 !important;
+}
 
 
 
-<style id="board-hub-annual-approval-requests-v704-style">
-  .bhAnnualApprovalWrap {
-    margin: 22px auto;
-    width: min(1120px, calc(100% - 36px));
-    border: 2px solid rgba(141, 188, 247, 0.7);
-    border-radius: 28px;
-    background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(247,251,255,.96));
-    box-shadow: 0 18px 44px rgba(16, 47, 79, 0.12);
-    padding: 22px;
+/* v525: Board Hub header control cleanup — compact select + separated buttons */
+.controls{
+  grid-column:1 / -1 !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  gap:16px !important;
+  width:100% !important;
+}
+.controls .select{
+  flex:1 1 390px !important;
+  width:auto !important;
+  max-width:430px !important;
+  min-width:260px !important;
+  height:58px !important;
+  border-radius:24px !important;
+}
+.headerActions{
+  flex:0 0 auto !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:flex-end !important;
+  gap:14px !important;
+  min-width:0 !important;
+}
+.headerActions .btn{
+  flex:0 0 auto !important;
+  min-width:190px !important;
+  height:58px !important;
+  border-radius:24px !important;
+  padding:0 24px !important;
+}
+.headerActions .btn.secondary{
+  min-width:205px !important;
+}
+@media(max-width:980px){
+  .controls{
+    display:grid !important;
+    grid-template-columns:minmax(220px,1fr) auto auto !important;
+    gap:12px !important;
   }
-  .bhAnnualApprovalHead { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:16px; }
-  .bhAnnualApprovalKicker { color:#2f5b8f; font-size:11px; font-weight:900; letter-spacing:.14em; text-transform:uppercase; margin-bottom:7px; }
-  .bhAnnualApprovalTitle { margin:0; color:#143453; font-size:24px; line-height:1.08; letter-spacing:-.02em; }
-  .bhAnnualApprovalSub { margin:8px 0 0; color:#63788d; font-size:14px; line-height:1.45; max-width:760px; }
-  .bhAnnualApprovalBadge {
-    min-height:38px; border-radius:999px; padding:0 14px; display:inline-flex; align-items:center; justify-content:center;
-    font-size:12px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:#2f5b8f;
-    background:#f5f9ff; border:1px solid #cfe0f3; white-space:nowrap;
+  .controls .select{
+    max-width:none !important;
+    min-width:0 !important;
   }
-  .bhAnnualApprovalList { display:grid; gap:14px; }
-  .bhAnnualApprovalCard {
-    border:1px solid rgba(123,164,211,.38); border-radius:22px; background:#fff; padding:18px;
-    box-shadow:0 12px 28px rgba(16,47,79,.08);
+  .headerActions{
+    display:contents !important;
   }
-  .bhAnnualApprovalCardTop { display:flex; justify-content:space-between; gap:14px; align-items:flex-start; margin-bottom:14px; }
-  .bhAnnualApprovalCardTitle { color:#143453; font-size:20px; line-height:1.15; margin:0; font-weight:900; }
-  .bhAnnualApprovalMeta { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
-  .bhAnnualApprovalPill {
-    border:1px solid #d8e6f4; background:#f8fbff; color:#24415f; border-radius:999px; padding:8px 11px;
-    font-size:12px; font-weight:900;
+  .headerActions .btn{
+    min-width:0 !important;
+    width:auto !important;
+    padding:0 20px !important;
   }
-  .bhAnnualApprovalPill.pending { border-color:#ead38f; background:#fff9eb; color:#9a6700; }
-  .bhAnnualApprovalNote { color:#5f748a; line-height:1.45; font-size:14px; margin:10px 0 0; }
-  .bhAnnualApprovalActions { display:flex; flex-wrap:wrap; gap:10px; justify-content:flex-end; align-items:center; margin-top:16px; }
-  .bhAnnualApprovalBtn {
-    appearance:none; border:2px solid #cfe0f3; background:#fff; color:#143453; border-radius:999px;
-    min-height:44px; padding:0 16px; font-weight:900; cursor:pointer; font-size:13px;
+}
+@media(max-width:760px){
+  .controls{
+    grid-template-columns:1fr !important;
   }
-  .bhAnnualApprovalBtn.primary { background:#2f5b8f; border-color:#2f5b8f; color:#fff; box-shadow:0 12px 24px rgba(47,91,143,.20); }
-  .bhAnnualApprovalBtn.danger { border-color:#f0c2c2; color:#9f2f2f; }
-  .bhAnnualApprovalBtn:disabled { opacity:.65; cursor:wait; }
-  .bhAnnualApprovalEmpty, .bhAnnualApprovalError {
-    border:1px dashed #cbdced; background:#f8fbff; color:#5f748a; border-radius:18px; padding:16px; font-weight:800;
+  .headerActions{
+    display:grid !important;
+    grid-template-columns:1fr 1fr !important;
+    gap:12px !important;
+    width:100% !important;
   }
-  .bhAnnualApprovalError { background:#fff5f5; border-color:#f0c2c2; color:#9f2f2f; }
-  .bhAnnualApprovalRejectBox { margin-top:12px; display:none; }
-  .bhAnnualApprovalRejectBox.is-open { display:block; }
-  .bhAnnualApprovalTextarea {
-    width:100%; min-height:78px; box-sizing:border-box; border-radius:16px; border:1px solid rgba(46,91,143,.24);
-    background:#fff; color:#143453; padding:12px 14px; font-weight:800; font-size:14px; outline:none; resize:vertical;
+  .headerActions .btn{
+    width:100% !important;
+    padding:0 14px !important;
   }
-  @media (max-width:760px) {
-    .bhAnnualApprovalWrap { width:calc(100% - 24px); padding:18px; border-radius:24px; }
-    .bhAnnualApprovalHead, .bhAnnualApprovalCardTop { flex-direction:column; }
-    .bhAnnualApprovalActions { justify-content:flex-start; }
-  }
+}
+
+  </style>
+
+
+<style id="board-hub-annual-approval-requests-v615-clean-style">
+  #annualApprovalRequestsSection .annualRequestList{display:grid;gap:14px;margin-top:18px}
+  .annualRequestCard{border:1.5px solid #bad3ff;background:linear-gradient(180deg,#fbfdff,#f4f9ff);border-radius:24px;padding:18px 20px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center;box-shadow:0 8px 22px rgba(30,75,140,.055), inset 0 1px 0 rgba(255,255,255,.88)}
+  .annualRequestCard.is-pending{background:linear-gradient(180deg,#fffdf2,#fff8dc);border-color:#efcf5b}
+  .annualRequestTitle{margin:0;color:#17365f;font-size:20px;font-weight:950;letter-spacing:-.015em}
+  .annualRequestMeta{margin:8px 0 0;color:#64748b;font-size:14px;line-height:1.35;font-weight:800}
+  .annualRequestWorkflow{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
+  .annualRequestStep{display:inline-flex;align-items:center;min-height:26px;padding:0 9px;border-radius:999px;border:1px solid #d8e5f6;background:#fff;color:#64748b;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.04em}
+  .annualRequestStep.current{background:#fff9d8;border-color:#efcf5b;color:#735c0f}
+  .annualRequestActions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+  .annualRequestActions button{min-height:48px;border:2px solid var(--line);border-radius:18px;background:white;color:#17365f;font-weight:950;padding:0 18px;cursor:pointer}
+  .annualRequestActions .approve{background:#17365f;color:white;border-color:#17365f}
+  .annualRequestActions .reject{border-color:#f0c2c2;color:#9f2f2f}
+  .annualRequestActions button:disabled{opacity:.62;cursor:wait}
+  .annualRequestRejectBox{grid-column:1 / -1;display:none;margin-top:2px}
+  .annualRequestRejectBox.open{display:block}
+  .annualRequestRejectBox textarea{width:100%;min-height:86px;border:1px solid #d8e5f6;background:white;border-radius:20px;padding:14px 16px;color:#17365f;font-size:15px;font-weight:800;resize:vertical}
+  .annualRequestStatus{margin-top:12px;color:#64748b;font-size:14px;font-weight:800}
+  .annualRequestStatus.ok{color:var(--green)}
+  .annualRequestStatus.err{color:var(--red)}
+  @media(max-width:760px){.annualRequestCard{grid-template-columns:1fr}.annualRequestActions{justify-content:flex-start}.annualRequestActions button{width:100%}}
 </style>
 
 </head>
 <body>
+  <div class="wrap">
+    <section class="card hero">
+      <div><h1 class="title">Board Member Hub</h1></div>
+      <img id="companyLogo" class="logo" alt="Company logo" />
+      <div class="controls">
+        <select id="communitySelect" class="select" aria-label="Community"><option value="">Loading communities…</option></select>
+        <div class="headerActions">
+          <a id="boardMeetingsBtn" class="btn secondary" href="board_meetings.html">Board Meetings</a>
+          <a id="backToHub" class="btn" href="/manager_hub.html">Back to Hub</a>
+        </div>
+      </div>
+      <div class="pills">
+        <span class="pill gold">Submitted: <span id="submittedCount">…</span></span>
+        <span class="pill">Maintenance: <span id="maintenanceCount">0</span></span>
+        <span class="pill">Agenda: <span id="agendaCount">0</span></span>
+        <span class="pill">Minutes: <span id="minutesCount">0</span></span>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="attention-head"><div><h2 class="section-title">Needs Your Attention</h2><p class="sub">Board items, approvals, and updates that need action.</p></div><div id="attentionCount" class="bubble">…</div></div>
+      <div id="attentionList" class="list"><div class="empty">Loading board items…</div></div>
+    </section>
+
+    <section class="card calendarCard" id="calendarSection">
+      <div class="attention-head">
+        <div>
+          <h2 class="section-title">Calendar</h2>
+          <p class="sub">Board meetings, reminders, and important dates for this community.</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end"><div id="calendarCount" class="bubble">0</div><button id="calendarToggleBtn" class="archiveToggle" type="button" aria-expanded="false">Show Calendar</button></div>
+      </div>
+      <div id="calendarBody" class="calendarBody is-collapsed"><div class="calendarShell">
+        <div class="calendarMini">
+          <div class="calendarToolbar">
+            <button id="calendarPrevBtn" class="calNav" type="button" aria-label="Previous month">‹</button>
+            <h3 id="calendarMonthLabel">Calendar</h3>
+            <button id="calendarNextBtn" class="calNav" type="button" aria-label="Next month">›</button>
+          </div>
+          <div id="calendarGrid" class="calendarGrid"></div>
+        </div>
+        <div class="calendarEvents">
+          <h3 id="calendarSelectedLabel">Upcoming Events</h3>
+          <div id="calendarEventList" class="eventList"><div class="empty">Loading calendar…</div></div>
+          <div class="eventActions">
+            <button id="addCalendarEventBtn" class="btn" type="button">+ Add Calendar Item</button>
+          </div>
+        </div>
+      </div></div>
+    </section>
+
+
+
+    <section class="card" id="annualDocsSection">
+      <div class="attention-head">
+        <div>
+          <h2 class="section-title">Annual Meeting Document Approvals</h2>
+          <p class="sub">Review and approve annual meeting packets for this community.</p>
+        </div>
+        <div id="annualDocsCount" class="bubble">0</div>
+      </div>
+      <div id="annualDocsList" class="annualDocList"><div class="empty">Loading annual meeting documents…</div></div>
+      <div id="annualDocsStatus" class="annualDocStatus"></div>
+    </section>
+
+
+    <section class="card" id="annualApprovalRequestsSection">
+      <div class="attention-head">
+        <div>
+          <h2 class="section-title">Annual Meeting Packet Approvals</h2>
+          <p class="sub">Packets routed to the Board for review before moving to the next approval step.</p>
+        </div>
+        <div id="annualApprovalRequestsCount" class="bubble">0</div>
+      </div>
+      <div id="annualApprovalRequestsList" class="annualRequestList"><div class="empty">Loading annual meeting approval requests…</div></div>
+      <div id="annualApprovalRequestsStatus" class="annualRequestStatus"></div>
+    </section>
+
+    <section class="card annualApprovalArchive" id="annualDocsArchiveSection">
+      <div class="attention-head">
+        <div>
+          <h2 class="section-title">Annual Meeting Approval Archive</h2>
+          <p class="sub">Completed approval workflows grouped by month and year.</p>
+        </div>
+        <div id="annualDocsArchiveCount" class="bubble">0</div>
+      </div>
+      <div id="annualDocsArchiveList" class="annualDocList"><div class="empty">Loading annual meeting approval archive…</div></div>
+    </section>
+
+
+    <section class="card" id="archiveSection">
+      <div class="attention-head">
+        <div>
+          <h2 class="section-title">Archived Board Items</h2>
+          <p class="sub">Completed, reviewed, or older board records kept for history.</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end">
+          <div id="archiveCount" class="bubble">0</div>
+          <button id="archiveToggleBtn" class="archiveToggle" type="button" aria-expanded="true">Hide Archive</button>
+        </div>
+      </div>
+      <div id="archiveList" class="list archiveList"><div class="empty">Loading archived board items…</div></div>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">Quick Actions</h2><p class="sub">Jump directly to the most common board tasks.</p>
+      <div class="quick"><button type="button" onclick="document.getElementById('newItemTitle').focus()">+ New Item</button><button type="button" id="eventBtn">+ Event</button><button type="button" onclick="document.getElementById('attentionList').scrollIntoView({behavior:'smooth'})">Review Items</button><a href="board_gallery_approvals.html">Gallery</a></div>
+      <h2 class="section-title" style="font-size:25px">Today Snapshot</h2>
+      <div class="snapshot"><div class="snap"><span>Submitted Items</span><span id="snapshotSubmitted">…</span></div><div class="snap"><span>Maintenance Updates</span><span id="snapshotMaintenance">0</span></div><div class="snap"><span>Agenda Topics</span><span id="snapshotAgenda">0</span></div></div>
+    </section>
+
+    <section class="card formcard">
+      <h2 class="section-title">New Item</h2>
+      <div class="grid2"><div class="field"><label>Title</label><input id="newItemTitle" class="input" placeholder="e.g., Replace lobby lighting"></div><div class="field"><label>Due date</label><input id="newItemDue" type="date" class="input"></div></div>
+      <div class="field" style="margin-top:18px"><label>Details</label><textarea id="newItemDetails" class="textarea" placeholder="Add any notes or context…"></textarea></div>
+      <div class="field uploadRow"><label>Attach photo</label><input id="newItemPhoto" type="file" accept="image/*"></div>
+      <button id="createItemBtn" class="btn" type="button" style="margin-top:18px">Create Board Item</button>
+    </section>
+  </div>
+
+  <div id="calendarModalShade" class="modalShade" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="calendarModalTitle">
+      <div class="modalTop"><div><h2 id="calendarModalTitle">Add Calendar Item</h2><p class="modalMeta">Create a board reminder, meeting, or important date.</p></div><button id="calendarModalClose" class="xBtn" type="button" aria-label="Close">×</button></div>
+      <div class="grid2 eventGrid">
+        <div class="field"><label>Title</label><input id="calendarEventTitle" class="input" placeholder="e.g., Board Meeting"></div>
+        <div class="field"><label>Date & time</label><input id="calendarEventDate" type="datetime-local" class="input"></div>
+      </div>
+      <div class="field" style="margin-top:18px"><label>Details</label><textarea id="calendarEventDetails" class="textarea" placeholder="Location, agenda notes, reminder details…"></textarea></div>
+      <div class="modalActions"><button id="saveCalendarEventBtn" class="primary" type="button">Save Calendar Item</button><button id="calendarModalCancel" type="button">Cancel</button></div>
+      <div id="calendarModalStatus" class="status"></div>
+    </div>
+  </div>
+
+  <div id="boardItemModalShade" class="modalShade" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="boardItemModalTitle">
+      <div class="modalTop"><div><h2 id="boardItemModalTitle">Board Item</h2><p id="boardItemModalMeta" class="modalMeta"></p></div><button id="boardItemModalClose" class="xBtn" type="button" aria-label="Close">×</button></div>
+      <div id="boardItemModalBody" class="modalBody"></div>
+      <div id="boardItemPhotoGrid" class="photoGrid"></div>
+      <div class="uploadRow"><label>Add photo to this record</label><input id="boardItemPhotoInput" type="file" accept="image/*"></div>
+      <div class="modalActions"><button id="boardItemAgendaBtn" type="button">Add to Agenda</button><button id="boardItemWorkOrderBtn" class="primary" type="button">Create Work Order</button><button id="boardItemReviewedBtn" type="button">Mark Reviewed</button><button id="boardItemCloseBtn" type="button">Close</button></div>
+      <div id="boardItemModalStatus" class="status"></div>
+    </div>
+  </div>
 <script>
-  (function(){
-    var target = 'board_member_hub_v2.html' + (window.location.search || '');
-    window.location.replace(target);
-  })();
+(function(){
+  'use strict';
+  window.ZUMMEE_BOARD_HUB_BUILD='2026-05-07-v614-board-hub-native-community-state';
+  const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const $=(id)=>document.getElementById(id);
+  let sb=null, userId='', selectedCommunityId='', selectedCommunityName='', currentUserRole='', communities=[], submittedRows=[], archivedRows=[], annualDocsRows=[], activeModalItem=null;
+  let calendarEvents=[], calendarCursor=new Date(), calendarSelectedDate=null;
+  function isUuid(v){ return UUID_RE.test(String(v||'').trim()); }
+  function qp(name){ return String(new URLSearchParams(location.search).get(name)||'').trim(); }
+  function esc(str=''){ return String(str||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;'); }
+  function getStore(keys){ for(const k of keys){ try{ const v=String(localStorage.getItem(k)||sessionStorage.getItem(k)||'').trim(); if(v) return v; }catch(e){} } return ''; }
+  function readAssignedCommunitiesStore(){
+    const out=[]; const seen=new Set(); const sources=[];
+    try{ if(window.__zummeeAssignedCommunities) sources.push(window.__zummeeAssignedCommunities); }catch(e){}
+    try{ sources.push(JSON.parse(sessionStorage.getItem('zummee_assigned_communities_v1')||'[]')); }catch(e){}
+    try{ sources.push(JSON.parse(localStorage.getItem('zummee_assigned_communities_v1')||'[]')); }catch(e){}
+    try{ sources.push(JSON.parse(sessionStorage.getItem('zummee_assigned_communities')||'[]')); }catch(e){}
+    try{ sources.push(JSON.parse(localStorage.getItem('zummee_assigned_communities')||'[]')); }catch(e){}
+    sources.forEach(arr=>{ (Array.isArray(arr)?arr:[]).forEach(r=>{ const id=String(r.id||r.community_id||'').trim(); const name=String(r.name||r.community_name||r.community||'').trim(); if(isUuid(id)&&!seen.has(id)){ seen.add(id); out.push({id,name:name||id}); } }); });
+    return out;
+  }
+  function writeAssignedCommunitiesStore(list){ try{ const clean=(Array.isArray(list)?list:[]).filter(c=>isUuid(c.id)); localStorage.setItem('zummee_assigned_communities_v1',JSON.stringify(clean)); sessionStorage.setItem('zummee_assigned_communities_v1',JSON.stringify(clean)); }catch(e){} }
+  function putStore(key,val){ try{ if(val) { localStorage.setItem(key,val); sessionStorage.setItem(key,val); } }catch(e){} }
+  function setText(id,val){ const el=$(id); if(el) el.textContent=String(val); }
+  function setStatus(msg,type){ const el=$('statusLine'); if(!el) return; el.textContent=msg||''; el.classList.toggle('ok',type==='ok'); el.classList.toggle('err',type==='err'); }
+  function boardItemStatus(row){
+    if(!row) return 'legacy_archived';
+    let meta=row.metadata;
+    if(typeof meta==='string'){
+      try{ meta=JSON.parse(meta); }catch(e){ meta={}; }
+    }
+    // v514: Manager Hub canonical rule: notification_events metadata.status is the live source.
+    // Row-level status is only fallback. Missing status rows are archive/history, not live work.
+    const s=String((meta && (meta.status || meta.workflow_status || meta.board_status)) || row.status || '').toLowerCase().trim().replace(/[\s-]+/g,'_');
+    return s || 'legacy_archived';
+  }
+  function activeStatus(row){
+    if(!row) return false;
+    if(row.deleted_at) return false;
+    if(row.__boardLiveOpen === true) return true;
+    return boardItemStatus(row) === 'open';
+  }
+  function archivedStatus(row){
+    if(!row) return false;
+    if(row.deleted_at) return true;
+    if(row.__boardLiveOpen === true) return false;
+    return boardItemStatus(row) !== 'open';
+  }
+  function boardRawDetails(row){
+    return String((row && (row.details || row.message)) || '').trim();
+  }
+  function extractBoardPhotoMarkers(row){
+    const photos=[];
+    const pushPhoto=(photo)=>{
+      if(!photo || typeof photo!=='object') return;
+      const path=String(photo.path||'').trim();
+      const url=String(photo.url||photo.publicUrl||'').trim();
+      if(!path && !url) return;
+      photos.push(Object.assign({bucket:'board_member_uploads'}, photo));
+    };
+    if(Array.isArray(row&&row.photos)) row.photos.forEach(pushPhoto);
+    if(row&&row.metadata&&Array.isArray(row.metadata.photos)) row.metadata.photos.forEach(pushPhoto);
+
+    const raw=boardRawDetails(row);
+    const re=/__ZUMMEE_BM_PHOTO__:\s*(\{[^}]*\})/gi;
+    let match;
+    while((match=re.exec(raw))){
+      try{ pushPhoto(JSON.parse(match[1])); }
+      catch(e){ console.warn('[BoardHub V2] could not parse board photo marker', e, match[1]); }
+    }
+
+    const seen=new Set();
+    return photos.filter(photo=>{
+      const key=String(photo.bucket||'board_member_uploads')+'|'+String(photo.path||photo.url||photo.publicUrl||'');
+      if(seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+  function hasBoardPhotoMarker(row){
+    return extractBoardPhotoMarkers(row).length > 0;
+  }
+  function cleanBoardDetails(row, fallback){
+    const raw=boardRawDetails(row);
+    const cleaned=raw
+      // v424: Treat Zummee board markers as storage/workflow data, never visible copy.
+      .replace(/__ZUMMEE_BM_PHOTO__:\s*\{[^}]*\}/gi,' ')
+      .replace(/__ZUMMEE_BM_PHOTO__:\s*[^\s]+/gi,' ')
+      .replace(/__ZUMMEE_BM_STATUS__:\s*[^\s]+/gi,' ')
+      .replace(/\|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,' ')
+      .replace(/\s+/g,' ')
+      .trim();
+    return cleaned || fallback || 'A new board item was submitted and needs review.';
+  }
+  function boardPhotoCount(row){
+    return extractBoardPhotoMarkers(row).length;
+  }
+  function shortBoardDate(value){
+    try{ if(!value) return ''; return new Date(value).toLocaleDateString(undefined,{month:'short',day:'numeric'}); }catch(e){ return ''; }
+  }
+  function renderBoardRecord(row,index,kind){
+    const archived=kind==='archived';
+    const title=esc(row.title||(archived?'Archived board item':'Review submitted item'));
+    const copy=esc(cleanBoardDetails(row, archived?'Archived board item':'A new board item was submitted and needs review.')).slice(0,260);
+    const status=esc(String(row.status || (row.metadata&&row.metadata.status) || (archived?'archived':'open')).replace(/_/g,' '));
+    const date=shortBoardDate(row.created_at);
+    const photos=boardPhotoCount(row);
+    const idxAttr=archived?'data-archive-item-idx':'data-board-item-idx';
+    const label=archived?'Open archived board item ':'Open board item ';
+    const cls=archived?'item archived premium-board-item premium-archived-item':'item premium-board-item';
+    return '<article class="'+cls+'" role="button" tabindex="0" '+idxAttr+'="'+index+'" aria-label="'+esc(label+(row.title||''))+'"><div class="n">'+(index+1)+'</div><div class="boardItemMain"><div class="boardItemTop"><h3>'+title+'</h3><span class="boardStatusPill">'+status+'</span></div><p class="boardItemCopy">'+copy+'</p><div class="boardItemMetaRow">'+(date?'<span class="boardDatePill">'+esc(date)+'</span>':'')+(photos?'<span class="photoBadge">📷 '+photos+' photo'+(photos===1?'':'s')+'</span>':'')+'</div></div><div class="chev">›</div></article>';
+  }
+  function directContext(){
+    // v614: canonical shared community-state is the source of truth.
+    // URL params are fallback only so stale route params cannot override the app-wide active community.
+    let canonicalId='', canonicalName='';
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const active = window.ZummeeCommunityState.getActiveCommunity();
+        if(active && isUuid(active.id)){
+          canonicalId=String(active.id||'').trim();
+          canonicalName=String(active.name||'').trim();
+        }
+      }
+    }catch(e){}
+    if(!canonicalId){
+      try{
+        const raw=localStorage.getItem('zummee_active_community_v601')||sessionStorage.getItem('zummee_active_community_v601')||'';
+        const parsed=raw?JSON.parse(raw):null;
+        if(parsed && isUuid(parsed.id)){ canonicalId=String(parsed.id||'').trim(); canonicalName=String(parsed.name||'').trim(); }
+      }catch(e){}
+    }
+    const cid=canonicalId || qp('community_id') || qp('cid');
+    const uid=qp('user_id')||qp('uid')||getStore(['zummee_user_id_v1','zummeeUserId','activeUserId','currentUserId']);
+    const name=canonicalName || decodeURIComponent(qp('community_name')||qp('name')||'');
+    return {cid:isUuid(cid)?cid:'', uid:isUuid(uid)?uid:'', name};
+  }
+  function rememberContext(){
+    if(isUuid(userId)){ ['zummee_user_id_v1','zummeeUserId','activeUserId','currentUserId'].forEach(k=>putStore(k,userId)); }
+    if(isUuid(selectedCommunityId)){
+      window.selectedCommunityId=selectedCommunityId;
+      window.activeCommunityId=selectedCommunityId;
+      window.__zummeeActiveCommunityId=selectedCommunityId;
+      window.selectedCommunityName=selectedCommunityName||'';
+      try{
+        if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.setActiveCommunity === 'function'){
+          window.ZummeeCommunityState.setActiveCommunity(selectedCommunityId, selectedCommunityName || '', { source:'board-hub-v614', silent:true });
+        }
+      }catch(e){}
+      if(window.ZummeeDataLayer && typeof window.ZummeeDataLayer.syncCommunityContext==='function') window.ZummeeDataLayer.syncCommunityContext(selectedCommunityId, selectedCommunityName, 'replace');
+      else {
+        ['zummee_active_community_id','zummeeActiveCommunityId','activeCommunityId','currentCommunityId','zummee_selected_community_id','zummee_community_id'].forEach(k=>putStore(k,selectedCommunityId));
+        if(selectedCommunityName){ ['zummee_active_community_name','zummeeCurrentCommunityName','currentCommunityName','activeCommunityName','zummee_community'].forEach(k=>putStore(k,selectedCommunityName)); }
+      }
+    }
+  }
+  function boardHubQueryString(){
+    const parts=[];
+    if(isUuid(selectedCommunityId)) parts.push('community_id='+encodeURIComponent(selectedCommunityId));
+    if(selectedCommunityName) parts.push('community_name='+encodeURIComponent(selectedCommunityName));
+    if(isUuid(userId)) parts.push('user_id='+encodeURIComponent(userId));
+    return parts.length ? ('?'+parts.join('&')) : '';
+  }
+  function updateBackLink(){
+    const qs=boardHubQueryString();
+    const a=$('backToHub'); if(a) a.href='/manager_hub.html'+qs;
+    const meetings=$('boardMeetingsBtn'); if(meetings) meetings.href='board_meetings.html'+qs;
+  }
+  async function waitForClient(){
+    const start=Date.now();
+    while(Date.now()-start<6000){
+      let c=window.supabaseClient || (window.getSupabase&&window.getSupabase()) || null;
+      if(!c && window.ensureSupabaseSync) c=window.ensureSupabaseSync();
+      if(c&&typeof c.rpc==='function'&&typeof c.from==='function') return c;
+      await new Promise(r=>setTimeout(r,80));
+    }
+    throw new Error('Supabase client unavailable');
+  }
+  async function trySessionUser(){
+    const localId=getStore(['zummee_user_id_v1','zummeeUserId','activeUserId','currentUserId']);
+    if(isUuid(localId)) return localId;
+    try{ if(window.zummeeRestoreSupabaseSession) await window.zummeeRestoreSupabaseSession(); }catch(e){}
+    try{
+      const res=await sb.auth.getSession();
+      const id=res&&res.data&&res.data.session&&res.data.session.user&&res.data.session.user.id;
+      if(isUuid(id)){
+        ['zummee_user_id_v1','zummeeUserId','activeUserId','currentUserId'].forEach(k=>putStore(k,id));
+        return id;
+      }
+    }catch(e){}
+    return '';
+  }
+
+  async function validateZummeeSession(){
+    let hasSession=false;
+    try{
+      if(sb&&sb.auth&&typeof sb.auth.getSession==='function'){
+        const res=await sb.auth.getSession();
+        hasSession=!!(res&&res.data&&res.data.session);
+      }
+    }catch(e){}
+    const localUserId=getStore(['zummee_user_id_v1','zummeeUserId','activeUserId','currentUserId']);
+    if(!hasSession && !isUuid(localUserId)){
+      window.location.href='login.html';
+      return false;
+    }
+    if(isUuid(localUserId)){
+      userId=localUserId;
+      ['zummee_user_id_v1','zummeeUserId','activeUserId','currentUserId'].forEach(k=>putStore(k,localUserId));
+    }
+    return true;
+  }
+  async function loadCommunities(){
+    const rows=[];
+    const add=(arr)=>{ (arr||[]).forEach(r=>{ const id=String(r.community_id||r.id||'').trim(); const name=String(r.name||r.community_name||r.community||'').trim(); if(isUuid(id)&&!rows.some(x=>x.id===id)) rows.push({id,name:name||id}); }); };
+
+    // v614: primary source of truth is the app-wide shared community-state loader.
+    if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.loadAssignedCommunities==='function'){
+      try{
+        const sharedStateCommunities=await window.ZummeeCommunityState.loadAssignedCommunities({force:false});
+        add(sharedStateCommunities);
+      }catch(e){ console.warn('[BoardHub V2 v614] shared community-state loader failed; falling back safely', e); }
+    }
+
+    // Legacy fallback only if community-state returns nothing.
+    if(!rows.length && window.ZummeeDataLayer && typeof window.ZummeeDataLayer.getAssignedCommunities==='function'){
+      try{
+        const shared=await window.ZummeeDataLayer.getAssignedCommunities({userId:userId});
+        add(shared);
+      }catch(e){ console.warn('[BoardHub V2 v408] shared assigned-community loader failed; falling back safely', e); }
+    }
+
+    // Fallback only if the shared layer returns nothing. Keep page usable, but do not mix in all company communities.
+    if(!rows.length){
+      add(readAssignedCommunitiesStore());
+      if(isUuid(userId)){
+        try{ const r=await sb.rpc('get_user_communities_with_names',{p_user_id:userId}); if(!r.error) add(r.data); else console.warn('[BoardHub V2] get_user_communities_with_names failed',r.error); }catch(e){ console.warn('[BoardHub V2] communities RPC failed',e); }
+        if(!rows.length){ try{ const r2=await sb.rpc('get_user_communities',{p_user_id:userId}); if(!r2.error) add(r2.data); }catch(e){} }
+      }
+    }
+
+    // Hydrate names only for ids we already know are assigned. This does not add extra communities.
+    if(rows.length){
+      const needsNames=rows.some(r=>r.name===r.id);
+      if(needsNames){
+        const ids=rows.map(r=>r.id);
+        try{ const nr=await sb.from('PropertyCommunities').select('*').in('id',ids); if(!nr.error&&Array.isArray(nr.data)){ nr.data.forEach(row=>{ const id=String(row.id||'').trim(); const nm=String(row.name||row.community_name||row.property_name||row.title||'').trim(); const hit=rows.find(x=>x.id===id); if(hit&&nm) hit.name=nm; }); } }catch(e){}
+      }
+    }
+
+    // Only add route context if no assigned list exists, otherwise never add unassigned communities.
+    if(isUuid(selectedCommunityId)&&!rows.some(r=>r.id===selectedCommunityId)&&!rows.length) rows.unshift({id:selectedCommunityId,name:selectedCommunityName||selectedCommunityId});
+    if(isUuid(selectedCommunityId)) rows.sort((a,b)=>a.id===selectedCommunityId?-1:b.id===selectedCommunityId?1:String(a.name||'').localeCompare(String(b.name||'')));
+    communities=rows;
+    writeAssignedCommunitiesStore(communities);
+    console.info('[BoardHub V2 v408] assigned dropdown communities=', communities.length, communities);
+    renderCommunitySelect();
+  }
+  function syncWindowCommunityContext(){
+    if(isUuid(selectedCommunityId)){
+      window.selectedCommunityId=selectedCommunityId;
+      window.activeCommunityId=selectedCommunityId;
+      window.__zummeeActiveCommunityId=selectedCommunityId;
+      putStore('zummeeActiveCommunityId', selectedCommunityId);
+      putStore('activeCommunityId', selectedCommunityId);
+    }
+    if(selectedCommunityName){ window.selectedCommunityName=selectedCommunityName; }
+  }
+  function resolveBoardCommunityContext(){
+    const sel=$('communitySelect');
+    let canonicalId='';
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const active = window.ZummeeCommunityState.getActiveCommunity();
+        if(active && isUuid(active.id)) canonicalId=String(active.id||'').trim();
+      }
+    }catch(e){}
+    const values=[
+      canonicalId,
+      selectedCommunityId,
+      sel && sel.value,
+      window.selectedCommunityId,
+      window.activeCommunityId,
+      window.__zummeeActiveCommunityId,
+      localStorage.getItem('zummee_active_community_id'),
+      sessionStorage.getItem('zummee_active_community_id'),
+      localStorage.getItem('zummeeActiveCommunityId'),
+      sessionStorage.getItem('zummeeActiveCommunityId'),
+      localStorage.getItem('activeCommunityId'),
+      sessionStorage.getItem('activeCommunityId'),
+      localStorage.getItem('currentCommunityId'),
+      sessionStorage.getItem('currentCommunityId')
+    ].map(v=>String(v||'').trim());
+    const cid=values.find(isUuid)||'';
+    if(cid){
+      selectedCommunityId=cid;
+      if(sel && sel.querySelector('option[value="'+cid+'"]')) sel.value=cid;
+      const opt=sel && sel.options[sel.selectedIndex];
+      if(opt) selectedCommunityName=opt.textContent.trim();
+      syncWindowCommunityContext();
+      rememberContext();
+      updateBackLink();
+    }
+    return cid;
+  }
+  async function waitForCommunityAndLoad(reason){
+    let cid='';
+    for(let attempts=0; attempts<30; attempts++){
+      cid=resolveBoardCommunityContext();
+      if(isUuid(cid)) break;
+      await new Promise(r=>setTimeout(r,100));
+    }
+    console.info('[BoardHub V2 v514] context-first board load', {reason:reason||'init', communityId:cid, selectValue:($('communitySelect')&&$('communitySelect').value)||'', selectedCommunityId});
+    if(!isUuid(cid)){
+      setStatus('Open Board Hub from Manager Hub so the community context is included.','err');
+      return;
+    }
+    return loadBoardData(cid);
+  }
+  function renderCommunitySelect(){
+    const sel=$('communitySelect'); if(!sel) return;
+    if(!communities.length){
+      sel.innerHTML='<option value="">No assigned communities</option>';
+      return;
+    }
+
+    let active=null;
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        active=window.ZummeeCommunityState.getActiveCommunity();
+      }
+    }catch(e){}
+
+    const activeId = isUuid(active && active.id) ? String(active.id).trim() : selectedCommunityId;
+    const match = communities.find(c=>c.id===activeId) || communities.find(c=>c.id===selectedCommunityId) || communities[0];
+
+    selectedCommunityId=match.id;
+    selectedCommunityName=match.name||match.id;
+
+    sel.innerHTML=communities.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name||c.id)+'</option>').join('');
+    sel.value=selectedCommunityId;
+
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.setActiveCommunity === 'function'){
+        window.ZummeeCommunityState.setActiveCommunity(selectedCommunityId, selectedCommunityName || '', { source:'board-hub-render-v614', silent:true });
+      }
+    }catch(e){}
+
+    rememberContext();
+    updateBackLink();
+  }
+  function fmtDate(v){ try{ if(!v) return ''; return new Date(v).toLocaleString(); }catch(e){ return String(v||''); } }
+  const boardPhotoSignedUrlCache = new Map();
+  function boardPhotoCacheKey(photo){
+    return String((photo && (photo.bucket || 'board-item-photos')) || 'board-item-photos') + '|' + String((photo && photo.path) || (photo && photo.url) || '');
+  }
+  async function getBoardPhotoDisplayUrl(photo){
+    if(!photo) return '';
+    const path=String(photo.path||'').trim();
+    if(!path) return String(photo.url||photo.publicUrl||'').trim();
+    const bucket=String(photo.bucket||'board-item-photos').trim()||'board-item-photos';
+    const key=boardPhotoCacheKey(photo);
+    if(boardPhotoSignedUrlCache.has(key)) return boardPhotoSignedUrlCache.get(key);
+    try{
+      const client=window.supabaseClient || sb;
+      if(!client || !client.storage) throw new Error('Supabase storage client unavailable');
+      const signed=await client.storage.from(bucket).createSignedUrl(path, 60*60);
+      if(signed && signed.error) throw signed.error;
+      const url=signed && signed.data && signed.data.signedUrl ? signed.data.signedUrl : (photo.url||photo.publicUrl||'');
+      boardPhotoSignedUrlCache.set(key,url||'');
+      return url||'';
+    }catch(error){
+      console.warn('[BoardHub V2] signed photo URL failed', error, photo);
+      const fallback=String(photo.url||photo.publicUrl||'').trim();
+      boardPhotoSignedUrlCache.set(key,fallback);
+      return fallback;
+    }
+  }
+  function renderBoardItemPhotos(row){
+    const grid=$('boardItemPhotoGrid'); if(!grid) return;
+    const photos=extractBoardPhotoMarkers(row);
+    if(!photos.length){ grid.innerHTML=''; return; }
+    grid.innerHTML=photos.map((p,idx)=>{
+      const name=esc(p.name||('Photo '+(idx+1)));
+      return '<a class="boardPhotoLink" data-photo-idx="'+idx+'" href="#" target="_blank" rel="noopener"><img data-photo-idx="'+idx+'" src="" alt="'+name+'"></a>';
+    }).join('');
+    photos.forEach(async (photo,idx)=>{
+      const url=await getBoardPhotoDisplayUrl(photo);
+      const img=grid.querySelector('img[data-photo-idx="'+idx+'"]');
+      const link=grid.querySelector('a[data-photo-idx="'+idx+'"]');
+      if(img) img.src=url||'';
+      if(link) link.href=url||'#';
+    });
+  }
+
+  function openBoardItem(row){
+    activeModalItem=row||null;
+    const shade=$('boardItemModalShade'); if(!shade||!activeModalItem) return;
+    setText('boardItemModalTitle', activeModalItem.title||'Board Item');
+    const meta=[]; if(selectedCommunityName) meta.push(selectedCommunityName); if(activeModalItem.created_at) meta.push('Submitted '+fmtDate(activeModalItem.created_at));
+    setText('boardItemModalMeta', meta.join(' • '));
+    const body=$('boardItemModalBody'); if(body) body.textContent=cleanBoardDetails(activeModalItem,'No additional details were provided.');
+    renderBoardItemPhotos(activeModalItem);
+    const photoInput=$('boardItemPhotoInput'); if(photoInput) photoInput.value='';
+    setText('boardItemModalStatus','');
+    const woBtn=$('boardItemWorkOrderBtn'); if(woBtn){ const existing=(activeModalItem.work_order_id||(activeModalItem.metadata&&activeModalItem.metadata.work_order_id)||''); woBtn.textContent=existing?'Open Work Order':'Create Work Order'; woBtn.disabled=false; woBtn.removeAttribute('aria-busy'); }
+    shade.classList.add('open'); shade.setAttribute('aria-hidden','false');
+  }
+  function closeBoardItem(){ const shade=$('boardItemModalShade'); if(shade){ shade.classList.remove('open'); shade.setAttribute('aria-hidden','true'); } activeModalItem=null; }
+  async function updateBoardNotificationStatus(status, extra){
+    if(!activeModalItem) return;
+    const notificationId=String(activeModalItem.id||activeModalItem.notification_id||'').trim();
+    if(!notificationId){ setText('boardItemModalStatus','This board item is missing an id and could not be updated.'); return; }
+    const statusKey=String(status||'').toLowerCase().trim().replace(/[\s-]+/g,'_');
+    try{
+      setText('boardItemModalStatus','Updating board item…');
+      let current=(activeModalItem.metadata&&typeof activeModalItem.metadata==='object')?activeModalItem.metadata:{};
+      if(typeof activeModalItem.metadata==='string'){
+        try{ current=JSON.parse(activeModalItem.metadata)||{}; }catch(_e){ current={}; }
+      }
+      const next=Object.assign({}, current, extra||{}, {
+        status:statusKey || 'reviewed',
+        workflow_status:statusKey || 'reviewed',
+        updated_at:new Date().toISOString(),
+        updated_by:isUuid(userId)?userId:null
+      });
+      const r=await sb.from('notification_events')
+        .update({metadata:next})
+        .eq('id',notificationId)
+        .select('id,metadata')
+        .maybeSingle();
+      if(r.error) throw r.error;
+      closeBoardItem();
+      await loadBoardData();
+    }catch(err){
+      console.error('[BoardHub V2 v514] board notification workflow update failed', err);
+      setText('boardItemModalStatus','Could not update this board item: '+(err&&(err.message||err.details||err.hint||err.code)||'Unknown error'));
+    }
+  }
+  function boardWorkOrderId(row){
+    if(!row) return '';
+    const direct=String(row.work_order_id||(row.metadata&&row.metadata.work_order_id)||'').trim();
+    if(direct) return direct;
+    const raw=boardRawDetails(row);
+    const match=raw.match(/__ZUMMEE_BM_STATUS__:\s*WORK_ORDER_CREATED\|[^|\s]+\|([0-9a-f-]{24,})/i);
+    return match ? String(match[1]||'').trim() : '';
+  }
+
+  async function insertResidentWorkOrderForBoardItem(payload){
+    // v427: resident_work_orders schemas have changed over time.  Do not send legacy
+    // source_id; if another optional column is missing, strip only that column and retry.
+    const clean=Object.assign({}, payload);
+    for(let attempt=0; attempt<12; attempt++){
+      const r=await sb.from('resident_work_orders').insert(clean).select('*').single();
+      if(!r.error) return r;
+      const msg=String(r.error.message||r.error.details||r.error.hint||'');
+      const missing=msg.match(/Could not find the '([^']+)' column/i) || msg.match(/column "([^"]+)" does not exist/i);
+      if(missing && Object.prototype.hasOwnProperty.call(clean, missing[1])){
+        console.warn('[BoardHub V2 v427] resident_work_orders column not present; retrying without', missing[1]);
+        delete clean[missing[1]];
+        continue;
+      }
+      return r;
+    }
+    return {data:null,error:new Error('Could not create work order after schema-safe retries.')};
+  }
+
+  async function createWorkOrderFromActiveBoardItem(btn){
+    if(!activeModalItem) return;
+    const existing=boardWorkOrderId(activeModalItem);
+    if(existing){ window.location.href='resident_work_orders.html?open_work_order_id='+encodeURIComponent(existing); return; }
+    const ok=window.confirm('Create a maintenance work order from this submitted board item?');
+    if(!ok) return;
+    const original=btn ? btn.textContent : '';
+    if(btn){ btn.disabled=true; btn.setAttribute('aria-busy','true'); btn.textContent='Creating…'; }
+    setText('boardItemModalStatus','Creating work order…');
+    try{
+      const title=String(activeModalItem.title||'Board submitted maintenance item').trim()||'Board submitted maintenance item';
+      const details=cleanBoardDetails(activeModalItem,'Board item submitted for maintenance.');
+      const nowIso=new Date().toISOString();
+      const boardId=String(activeModalItem.id||'').trim();
+
+      const payload={
+        community_id:selectedCommunityId,
+        community_name:selectedCommunityName||null,
+        title:title,
+        request_title:title,
+        subject:title,
+        description:details,
+        request_description:details,
+        details:details,
+        notes:'Created from Board Member Hub item'+(boardId?(' '+boardId):''),
+        status:'submitted',
+        priority:'normal',
+        category:'Board Submitted Item',
+        issue_type:'Board Submitted Item',
+        source_table:'notification_events',
+        source_type:'board_member_item',
+        board_item_id:boardId||null,
+        created_by:isUuid(userId)?userId:null,
+        submitted_by:isUuid(userId)?userId:null,
+        requested_by:isUuid(userId)?userId:null,
+        created_at:nowIso
+      };
+
+      const result=await insertResidentWorkOrderForBoardItem(payload);
+      if(result.error) throw result.error;
+      const created=result.data||{};
+      const workOrderId=String(created.id||created.work_order_id||'').trim();
+      if(!workOrderId) throw new Error('Work order was created without an id.');
+
+      if(boardId){
+        const meta=(activeModalItem.metadata&&typeof activeModalItem.metadata==='object')?activeModalItem.metadata:{};
+        const nextMeta=Object.assign({}, meta, {
+          status:'converted',
+          workflow_status:'work_order_created',
+          work_order_id:workOrderId,
+          updated_at:nowIso,
+          updated_by:isUuid(userId)?userId:null
+        });
+        const upd=await sb.from('notification_events')
+          .update({metadata:nextMeta})
+          .eq('id',boardId)
+          .select('id,metadata')
+          .maybeSingle();
+        if(upd.error) throw upd.error;
+      }
+
+      setText('boardItemModalStatus','Work order created.');
+      activeModalItem.work_order_id=workOrderId;
+      activeModalItem.status='archived';
+      if(btn){ btn.textContent='Open Work Order'; btn.disabled=false; btn.removeAttribute('aria-busy'); }
+      await loadBoardData();
+      setTimeout(()=>{ closeBoardItem(); }, 450);
+    }catch(err){
+      console.error('[BoardHub V2 v427] create work order failed', err);
+      setText('boardItemModalStatus','Could not create work order: '+(err&&(err.message||err.details||err.hint||err.code)||'Unknown error'));
+      if(btn){ btn.disabled=false; btn.removeAttribute('aria-busy'); btn.textContent=original||'Create Work Order'; }
+    }
+  }
+  function normalizeCalendarEvent(row){
+    const meta=(row&&row.metadata&&typeof row.metadata==='object')?row.metadata:{};
+    const date=row.event_date||row.start_at||row.starts_at||row.date||meta.event_date||meta.start_at||meta.date||row.created_at;
+    return {
+      id:String(row.id||row.notification_id||''),
+      title:String(row.title||meta.title||'Calendar Item'),
+      details:String(row.details||row.description||row.message||meta.details||meta.description||''),
+      event_date:date,
+      source:String(row.__source||row.source_table||'notification_events'),
+      raw:row
+    };
+  }
+  function sameDay(a,b){ const da=new Date(a), db=new Date(b); return da.getFullYear()===db.getFullYear()&&da.getMonth()===db.getMonth()&&da.getDate()===db.getDate(); }
+  function eventIsUpcoming(e){ const d=new Date(e.event_date); return !Number.isNaN(d.getTime()) && d >= new Date(Date.now()-24*60*60*1000); }
+
+  // v441: Restored Board Hub annual meeting document approvals.
+  // Source of truth: annual_meeting_packet_requests. Board members see packets for the selected community
+  // and can mark an active packet as board approved without relying on Manager Hub-only UI.
+  function normalizeAnnualApprovalStatus(value){
+    return String(value||'').toLowerCase().trim().replace(/[\s-]+/g,'_');
+  }
+  function normalizeAnnualCommunityName(value){
+    return String(value||'').toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
+  }
+  function normalizeRole(value){
+    return String(value||'').toLowerCase().trim().replace(/[\s-]+/g,'_');
+  }
+  function storedUserRole(){
+    const keys=['zummee_user_role','zummeeRole','user_role','role','currentUserRole','zummee_department','department'];
+    for(const k of keys){
+      try{ const v=normalizeRole(localStorage.getItem(k)||sessionStorage.getItem(k)||''); if(v) return v; }catch(_e){}
+    }
+    return '';
+  }
+  function canManageAnnualDocs(){
+    const role=normalizeRole(currentUserRole || storedUserRole());
+    const allowed=new Set([
+      'employee','staff','manager','management','property_manager','community_manager','operations',
+      'supervisor','admin','administrator','super_admin','company_admin','owner'
+    ]);
+    if(allowed.has(role)) return true;
+
+    // v522 safety: Manager/employee sessions can arrive here before a role record is hydrated.
+    // If the user has the Manager Hub assignment cache, they are treated as staff for archive workflow.
+    // Board-only visitors should not normally have this assignment cache.
+    try{
+      const assignmentCache=localStorage.getItem('zummee_assigned_communities_v1') || sessionStorage.getItem('zummee_assigned_communities_v1') || '';
+      if(isUuid(userId) && assignmentCache && assignmentCache !== '[]') return true;
+    }catch(_e){}
+    return false;
+  }
+  async function loadCurrentUserRole(){
+    currentUserRole=storedUserRole();
+    if(currentUserRole) return currentUserRole;
+    if(!sb || !isUuid(userId)) return '';
+    const tables=['userdirectory','UserDirectory','profiles','Profiles'];
+    for(const table of tables){
+      try{
+        const q=await sb.from(table).select('role,department').or('auth_user_id.eq.'+userId+',id.eq.'+userId).limit(1).maybeSingle();
+        if(q && !q.error && q.data){
+          const role=normalizeRole(q.data.role || q.data.department || '');
+          if(role){
+            currentUserRole=role;
+            try{ localStorage.setItem('zummee_user_role', role); sessionStorage.setItem('zummee_user_role', role); }catch(_e){}
+            return role;
+          }
+        }
+      }catch(_e){}
+    }
+    return currentUserRole;
+  }
+
+  function annualDocMatchesCurrentCommunity(row){
+    if(!row) return false;
+    const rid=String(row.community_id||row.communityId||'').trim();
+    if(isUuid(selectedCommunityId) && rid && rid===selectedCommunityId) return true;
+    const target=normalizeAnnualCommunityName(selectedCommunityName);
+    const rowName=normalizeAnnualCommunityName(row.community_name||row.community||row.property_name||row.association_name||row.name);
+    return !!(target && rowName && target===rowName);
+  }
+  function annualDocStatusKey(row){
+    return normalizeAnnualApprovalStatus(row && row.status);
+  }
+  function annualDocIsArchived(row){
+    if(!row) return false;
+    const s=annualDocStatusKey(row);
+    // Workflow archive only after the full approval/mailing flow is complete.
+    return !!(row.archived_at || row.mailed_at || row.mailing_completed_at || /^(archived|mailed|completed|complete|deleted)$/i.test(s));
+  }
+  function annualDocIsVisible(row){
+    if(!row) return false;
+    return !annualDocIsArchived(row);
+  }
+  function annualDocIsApproved(row){
+    const s=annualDocStatusKey(row);
+    return /approved|board_approved/.test(s) || !!(row&&row.board_approved_at);
+  }
+  function annualDocIsPending(row){
+    if(!row) return false;
+    if(annualDocIsArchived(row)) return false;
+    if(annualDocIsApproved(row)) return false;
+    const s=annualDocStatusKey(row);
+    return !s || /pending|awaiting|board|approval|draft|submitted|review|sent_to_board/.test(s);
+  }
+  function annualDocArchiveDate(row){
+    const raw=row&&(row.archived_at || row.mailed_at || row.mailing_completed_at || row.updated_at || row.created_at);
+    const t=Date.parse(String(raw||''));
+    return Number.isFinite(t)?new Date(t):new Date();
+  }
+  function annualDocArchiveKey(row){
+    const d=annualDocArchiveDate(row);
+    return d.toLocaleString(undefined,{month:'long',year:'numeric'});
+  }
+  function annualDocWorkflowSteps(row){
+    const s=annualDocStatusKey(row);
+    const steps=[
+      ['sent_to_board','Board sent', !!(row.sent_to_board_at || row.board_sent_at || /sent_to_board|board_approved|sent_to_supervisor|supervisor_approved|sent_to_admin|sent_to_admin_mailing|mailed|archived|completed/.test(s))],
+      ['board_approved','Board approved', !!(row.board_approved_at || /board_approved|sent_to_supervisor|supervisor_approved|sent_to_admin|sent_to_admin_mailing|mailed|archived|completed/.test(s))],
+      ['sent_to_supervisor','Supervisor sent', !!(row.sent_to_supervisor_at || /sent_to_supervisor|supervisor_approved|sent_to_admin|sent_to_admin_mailing|mailed|archived|completed/.test(s))],
+      ['supervisor_approved','Supervisor approved', !!(row.supervisor_approved_at || /supervisor_approved|sent_to_admin|sent_to_admin_mailing|mailed|archived|completed/.test(s))],
+      ['sent_to_admin_mailing','Admin mailing', !!(row.sent_to_admin_at || row.sent_to_admin_mailing_at || /sent_to_admin|sent_to_admin_mailing|mailed|archived|completed/.test(s))],
+      ['archived','Archived', annualDocIsArchived(row)]
+    ];
+    const currentIndex=steps.findIndex(step=>!step[2]);
+    return '<div class="annualDocWorkflow">'+steps.map((step,idx)=>'<span class="annualDocStep '+(step[2]?'done':(idx===currentIndex?'current':''))+'">'+esc(step[1])+'</span>').join('')+'</div>';
+  }
+  function annualDocSortRank(row){
+    const s=normalizeAnnualApprovalStatus(row&&row.status);
+    if(annualDocIsPending(row)) return 0;
+    if(annualDocIsApproved(row)) return 2;
+    if(/reject|denied|declined/.test(s)) return 3;
+    return 1;
+  }
+  function annualDocSortDate(row){
+    const raw=row&&(
+      row.submitted_at || row.created_at || row.updated_at || row.requested_at || row.board_approved_at || row.approved_at
+    );
+    const t=Date.parse(String(raw||''));
+    return Number.isFinite(t)?t:0;
+  }
+  function sortAnnualDocs(a,b){
+    const rank=annualDocSortRank(a)-annualDocSortRank(b);
+    if(rank) return rank;
+    return annualDocSortDate(b)-annualDocSortDate(a);
+  }
+  function annualDocTitle(row){
+    return String(row.title||row.packet_title||row.document_title||row.notice_title||row.community_name||selectedCommunityName||'Annual meeting documents').trim();
+  }
+  function annualDocStatusLabel(row){
+    const s=String((row&&row.status)||'Awaiting approval').replace(/_/g,' ').trim();
+    return s ? s.charAt(0).toUpperCase()+s.slice(1) : 'Awaiting approval';
+  }
+  function annualDocUrlLooksUsable(value){
+    const v=String(value||'').trim();
+    if(!v) return false;
+    if(/annual_meeting_approvals\.html|annual_meeting_status\.html|annual_meeting_notice\.html/i.test(v)) return false;
+    return /^https?:\/\//i.test(v) || /\.pdf(\?|#|$)/i.test(v) || /^[^\s]+\/(?!\/)[^\s]+/i.test(v);
+  }
+  function annualDocCandidateFromValue(value){
+    const v=String(value||'').trim();
+    return annualDocUrlLooksUsable(v) ? v : '';
+  }
+  function firstAnnualDocUrlFromObject(obj,depth){
+    depth=depth||0;
+    if(!obj || typeof obj!=='object' || depth>5) return '';
+
+    // Prefer notice-specific files before generic status/packet links.
+    const preferredKeys=[
+      'annual_notice_url','annual_notice_pdf_url','annual_meeting_notice_url','annual_meeting_notice_pdf_url',
+      'meeting_notice_url','meeting_notice_pdf_url','notice_url','notice_pdf_url','notice_file_url','notice_storage_path',
+      'annual_notice_path','annual_meeting_notice_path','meeting_notice_path','generated_notice_url','generated_notice_pdf_url',
+      'notice_public_url','notice_signed_url','notice_download_url'
+    ];
+    const genericKeys=[
+      'document_url','documents_url','packet_url','packet_pdf_url','pdf_url','file_url','preview_url','download_url',
+      'generated_pdf_url','storage_url','storage_path','file_path','path','public_url','publicUrl','signed_url','signedUrl','attachment_url'
+    ];
+    for(const key of preferredKeys.concat(genericKeys)){
+      const hit=annualDocCandidateFromValue(obj[key]);
+      if(hit) return hit;
+    }
+
+    for(const key of ['annual_notice','meeting_notice','notice','document','packet','pdf','file','attachment','generated_packet']){
+      const value=obj[key];
+      if(typeof value==='string'){
+        const hit=annualDocCandidateFromValue(value);
+        if(hit) return hit;
+      }else if(value && typeof value==='object'){
+        const nested=firstAnnualDocUrlFromObject(value,depth+1);
+        if(nested) return nested;
+      }
+    }
+    for(const key of ['documents','files','attachments','pdfs','notices','packets']){
+      const arr=Array.isArray(obj[key])?obj[key]:[];
+      for(const item of arr){
+        if(typeof item==='string'){
+          const hit=annualDocCandidateFromValue(item);
+          if(hit) return hit;
+        }else{
+          const nested=firstAnnualDocUrlFromObject(item,depth+1);
+          if(nested) return nested;
+        }
+      }
+    }
+    return '';
+  }
+  function annualDocHref(row){
+    // LOCKED: Open Documents must open the actual annual meeting notice/PDF, not a supervisor-only page.
+    return firstAnnualDocUrlFromObject(row)||firstAnnualDocUrlFromObject(row&&row.metadata)||firstAnnualDocUrlFromObject(row&&row.packet)||firstAnnualDocUrlFromObject(row&&row.documents)||'';
+  }
+  function annualDocStorageParts(value){
+    const raw=String(value||'').trim();
+    if(!raw || /^https?:\/\//i.test(raw)) return null;
+    let clean=raw.replace(/^\/+/, '');
+    clean=clean.replace(/^storage\/v1\/object\/(?:public|sign)\//i,'');
+    const parts=clean.split('/').filter(Boolean);
+    if(parts.length<2) return null;
+    return {bucket:parts.shift(), path:parts.join('/')};
+  }
+  async function annualDocSignedOrPublicUrl(value){
+    const raw=String(value||'').trim();
+    if(!raw) return '';
+    if(/^https?:\/\//i.test(raw)) return raw;
+    const direct=annualDocStorageParts(raw);
+    const bucketGuesses=[];
+    if(direct) bucketGuesses.push(direct);
+    ['annual-meeting-packets','annual_meeting_packets','annual-meeting-notices','annual_meeting_notices','annual-meetings','annual_meetings','community-documents','community_documents','documents','public'].forEach(bucket=>{
+      bucketGuesses.push({bucket,path:raw.replace(/^\/+/, '')});
+    });
+    for(const guess of bucketGuesses){
+      try{
+        if(!sb || !sb.storage || !guess.bucket || !guess.path) continue;
+        const signed=await sb.storage.from(guess.bucket).createSignedUrl(guess.path,60*60);
+        if(signed && !signed.error && signed.data && signed.data.signedUrl) return signed.data.signedUrl;
+        const pub=sb.storage.from(guess.bucket).getPublicUrl(guess.path);
+        if(pub && pub.data && pub.data.publicUrl) return pub.data.publicUrl;
+      }catch(_e){}
+    }
+    return raw;
+  }
+  async function findAnnualNoticeUrlFromRelatedTables(row){
+    const id=String((row&&row.id)||'').trim();
+    if(!id || !sb || typeof sb.from!=='function') return '';
+    const tables=['annual_meeting_documents','annual_meeting_packet_documents','annual_meeting_notice_documents','annual_meeting_packets','community_documents'];
+    const filters=['packet_request_id','packet_id','request_id','annual_meeting_packet_request_id','annual_meeting_request_id','source_id'];
+    for(const table of tables){
+      for(const filter of filters){
+        try{
+          const q=await sb.from(table).select('*').eq(filter,id).limit(10);
+          if(q.error || !Array.isArray(q.data) || !q.data.length) continue;
+          const noticeFirst=q.data.slice().sort((a,b)=>{
+            const ax=/notice/i.test(JSON.stringify(a||{}))?0:1;
+            const bx=/notice/i.test(JSON.stringify(b||{}))?0:1;
+            return ax-bx;
+          });
+          for(const doc of noticeFirst){
+            const hit=firstAnnualDocUrlFromObject(doc)||firstAnnualDocUrlFromObject(doc&&doc.metadata);
+            if(hit) return hit;
+          }
+        }catch(_e){}
+      }
+    }
+    return '';
+  }
+  async function annualDocSafeTarget(row){
+    const direct=annualDocHref(row);
+    if(direct) return await annualDocSignedOrPublicUrl(direct);
+    const related=await findAnnualNoticeUrlFromRelatedTables(row);
+    if(related) return await annualDocSignedOrPublicUrl(related);
+    return '';
+  }
+  async function openAnnualDoc(row,btn){
+    if(!row) return;
+    const original=btn?btn.textContent:'';
+    const popup=window.open('about:blank','_blank','noopener');
+    if(btn){ btn.disabled=true; btn.textContent='Opening…'; }
+    try{
+      const target=await annualDocSafeTarget(row);
+      if(!target){
+        if(popup) popup.close();
+        setText('annualDocsStatus','No annual meeting notice PDF is attached to this approval record yet. Generate/attach the notice first, then board members can open it here.');
+        const st=$('annualDocsStatus'); if(st){ st.classList.add('err'); st.classList.remove('ok'); }
+        return;
+      }
+      if(popup) popup.location.href=target;
+      else window.location.href=target;
+    }catch(err){
+      if(popup) popup.close();
+      console.error('[BoardHub V2] open annual notice PDF failed',err);
+      setText('annualDocsStatus','Could not open the annual meeting notice PDF.');
+      const st=$('annualDocsStatus'); if(st){ st.classList.add('err'); st.classList.remove('ok'); }
+    }finally{
+      if(btn){ btn.disabled=false; btn.textContent=original||'Open Documents'; }
+    }
+  }
+  function renderAnnualDocCard(row,idx,mode){
+    const approved=annualDocIsApproved(row);
+    const created=row.created_at?('Created '+fmtDate(row.created_at)):'';
+    const archived=annualDocIsArchived(row);
+    const status=annualDocStatusLabel(row);
+    const rowClass='annualDocItem '+(annualDocIsPending(row)?'is-pending':(approved?'is-approved':(/reject|denied|declined/.test(normalizeAnnualApprovalStatus(row.status))?'is-rejected':'')));
+    const archiveMeta=archived ? (' • Archived '+fmtDate((row.archived_at||row.mailed_at||row.mailing_completed_at||row.updated_at||row.created_at))) : '';
+    const canManage=canManageAnnualDocs();
+    return '<article class="'+rowClass+'" data-annual-doc-idx="'+idx+'">'
+      + '<div><h3 class="annualDocTitle">'+esc(annualDocTitle(row))+'</h3>'
+      + '<p class="annualDocMeta">Status: '+esc(status)+(created?' • '+esc(created):'')+archiveMeta+'</p>'
+      + annualDocWorkflowSteps(row)+'</div>'
+      + '<div class="annualDocActions"><button type="button" data-annual-open-idx="'+idx+'" data-annual-mode="'+esc(mode||'active')+'">Open Documents</button>'
+      + (mode==='archive' ? '<button class="archive" type="button" disabled>Archived</button>' : (approved?'<button type="button" disabled>Approved</button>':'<button class="approve" type="button" data-annual-approve-idx="'+idx+'">Approve</button>'))
+      + (mode!=='archive' && canManage ? '<button class="archiveAction" type="button" data-annual-archive-idx="'+idx+'">Archive</button>' : '')
+      + (mode==='archive' && canManage ? '<button class="restore" type="button" data-annual-restore-idx="'+idx+'" data-annual-mode="archive">Restore</button>' : '')
+      + '</div></article>';
+  }
+  function renderAnnualDocs(){
+    const list=$('annualDocsList');
+    const count=$('annualDocsCount');
+    const archiveList=$('annualDocsArchiveList');
+    const archiveCount=$('annualDocsArchiveCount');
+    const active=(annualDocsRows||[]).filter(annualDocIsVisible).sort(sortAnnualDocs);
+    const archived=(annualDocsRows||[]).filter(annualDocIsArchived).sort((a,b)=>annualDocArchiveDate(b)-annualDocArchiveDate(a));
+    window.__annualDocsActiveRows=active;
+    window.__annualDocsArchiveRows=archived;
+
+    if(count) count.textContent=String(active.length);
+    if(list){
+      if(!active.length){
+        list.innerHTML='<div class="empty">No active annual meeting document approvals for this community.</div>';
+      }else{
+        list.innerHTML=active.map((row,idx)=>renderAnnualDocCard(row,idx,'active')).join('');
+      }
+    }
+
+    if(archiveCount) archiveCount.textContent=String(archived.length);
+    if(archiveList){
+      if(!archived.length){
+        archiveList.innerHTML='<div class="empty">No archived annual meeting approvals yet.</div>';
+      }else{
+        const groups={};
+        archived.forEach(row=>{ const key=annualDocArchiveKey(row); (groups[key]||(groups[key]=[])).push(row); });
+        archiveList.innerHTML=Object.entries(groups).map(([key,items],groupIdx)=>{
+          const groupId='annual-doc-archive-group-'+groupIdx;
+          return '<div class="archiveGroup" data-annual-archive-group="'+groupId+'">'
+            + '<button class="archiveMonthBtn" type="button" data-annual-archive-toggle="'+groupId+'"><span>'+esc(key)+'</span><span class="archiveMonthCount">'+items.length+'</span></button>'
+            + '<div id="'+groupId+'" class="archiveMonthItems">'+items.map((row,idx)=>renderAnnualDocCard(row, archived.indexOf(row),'archive')).join('')+'</div>'
+            + '</div>';
+        }).join('');
+      }
+    }
+  }
+  async function loadAnnualDocs(){
+    const list=$('annualDocsList');
+    if(!isUuid(selectedCommunityId)){ if(list) list.innerHTML='<div class="empty">Select a community to view annual meeting documents.</div>'; return; }
+    try{
+      if(list) list.innerHTML='<div class="empty">Loading annual meeting documents…</div>';
+      const r=await sb.from('annual_meeting_packet_requests').select('*').limit(200);
+      if(r.error) throw r.error;
+      annualDocsRows=(Array.isArray(r.data)?r.data:[]).filter(annualDocMatchesCurrentCommunity);
+      renderAnnualDocs();
+    }catch(err){
+      console.error('[BoardHub V2 v441] annual meeting documents load failed',err);
+      annualDocsRows=[];
+      if($('annualDocsCount')) $('annualDocsCount').textContent='0';
+      if(list) list.innerHTML='<div class="empty">Annual meeting documents could not load.</div>';
+      setText('annualDocsStatus','Could not load annual meeting documents: '+(err&&(err.message||err.details||err.hint||err.code)||'Unknown error'));
+    }
+  }
+  async function updateAnnualDocSchemaSafe(id,payload){
+    const clean=Object.assign({},payload);
+    for(let attempt=0; attempt<10; attempt++){
+      const r=await sb.from('annual_meeting_packet_requests').update(clean).eq('id',id).select('*').maybeSingle();
+      if(!r.error) return r;
+      const msg=String(r.error.message||r.error.details||r.error.hint||'');
+      const missing=msg.match(/Could not find the '([^']+)' column/i) || msg.match(/column "([^"]+)" does not exist/i);
+      if(missing && Object.prototype.hasOwnProperty.call(clean, missing[1])){
+        console.warn('[BoardHub V2 v441] annual approval column not present; retrying without', missing[1]);
+        delete clean[missing[1]];
+        continue;
+      }
+      return r;
+    }
+    return {data:null,error:new Error('Annual meeting approval update could not be completed.')};
+  }
+  async function approveAnnualDoc(row,btn){
+    if(!row) return;
+    const id=String(row.id||'').trim();
+    if(!id){ setText('annualDocsStatus','This annual meeting record is missing an id.'); return; }
+    const ok=window.confirm('Approve these annual meeting documents for '+(selectedCommunityName||'this community')+'?');
+    if(!ok) return;
+    const original=btn?btn.textContent:'';
+    if(btn){ btn.disabled=true; btn.textContent='Approving…'; }
+    setText('annualDocsStatus','Approving annual meeting documents…');
+    try{
+      const now=new Date().toISOString();
+      const r=await updateAnnualDocSchemaSafe(id,{status:'board_approved', board_approved_at:now, approved_at:now, board_approved_by:isUuid(userId)?userId:null, approved_by:isUuid(userId)?userId:null});
+      if(r.error) throw r.error;
+      setText('annualDocsStatus','Annual meeting documents approved.');
+      const st=$('annualDocsStatus'); if(st){ st.classList.add('ok'); st.classList.remove('err'); }
+      await loadAnnualDocs();
+    }catch(err){
+      console.error('[BoardHub V2 v441] annual approval failed',err);
+      setText('annualDocsStatus','Could not approve documents: '+(err&&(err.message||err.details||err.hint||err.code)||'Unknown error'));
+      const st=$('annualDocsStatus'); if(st){ st.classList.add('err'); st.classList.remove('ok'); }
+      if(btn){ btn.disabled=false; btn.textContent=original||'Approve'; }
+    }
+  }
+  function inferAnnualRestoreStatus(row){
+    if(!row) return 'sent_to_board';
+    if(row.supervisor_approved_at) return 'supervisor_approved';
+    if(row.sent_to_supervisor_at) return 'sent_to_supervisor';
+    if(row.board_approved_at || row.approved_at) return 'board_approved';
+    if(row.sent_to_board_at) return 'sent_to_board';
+    return 'sent_to_board';
+  }
+  async function archiveAnnualDoc(row,btn){
+    if(!row) return;
+    const id=String(row.id||'').trim();
+    if(!id){ setText('annualDocsStatus','This annual meeting record is missing an id.'); return; }
+    if(!canManageAnnualDocs()){ setText('annualDocsStatus','Only employees, supervisors, or admins can archive annual meeting approvals.'); return; }
+    const title=annualDocTitle(row)||'this annual meeting approval';
+    const ok=window.confirm('Archive "'+title+'" from active Annual Meeting Document Approvals? It will remain available in the monthly archive.');
+    if(!ok) return;
+    const original=btn?btn.textContent:'';
+    if(btn){ btn.disabled=true; btn.textContent='Archiving…'; }
+    setText('annualDocsStatus','Archiving annual meeting approval…');
+    try{
+      const scrollY=window.scrollY || window.pageYOffset || 0;
+      const activeRows=(window.__annualDocsActiveRows||[]);
+      const activeIdx=activeRows.findIndex(x=>String(x&&x.id)===id);
+      const card=activeIdx>=0 ? document.querySelector('[data-annual-doc-idx="'+activeIdx+'"]') : null;
+      if(card) card.classList.add('is-archiving');
+
+      const now=new Date().toISOString();
+      const r=await updateAnnualDocSchemaSafe(id,{status:'archived', archived_at:now, updated_at:now});
+      if(r.error) throw r.error;
+
+      const updated=(r.data&&typeof r.data==='object')?r.data:{status:'archived', archived_at:now, updated_at:now};
+      annualDocsRows=(annualDocsRows||[]).map(item=>String(item&&item.id)===id ? Object.assign({}, item, updated, {status:updated.status||'archived', archived_at:updated.archived_at||now, updated_at:updated.updated_at||now}) : item);
+
+      setText('annualDocsStatus','Annual meeting approval moved to archive.');
+      const st=$('annualDocsStatus'); if(st){ st.classList.add('ok'); st.classList.remove('err'); }
+
+      // v523: Do not call full reload after archive. Render from local state and restore scroll.
+      window.scrollTo(0, scrollY);
+      await new Promise(resolve=>setTimeout(resolve, card?230:0));
+      renderAnnualDocs();
+      requestAnimationFrame(()=>window.scrollTo(0, scrollY));
+    }catch(err){
+      console.error('[BoardHub V2] annual approval archive failed',err);
+      setText('annualDocsStatus','Could not archive annual meeting approval: '+(err&&(err.message||err.details||err.hint||err.code)||'Unknown error'));
+      const st=$('annualDocsStatus'); if(st){ st.classList.add('err'); st.classList.remove('ok'); }
+    }finally{
+      if(btn){ btn.disabled=false; btn.textContent=original||'Archive'; }
+    }
+  }
+  async function restoreAnnualDoc(row,btn){
+    if(!row) return;
+    const id=String(row.id||'').trim();
+    if(!id){ setText('annualDocsStatus','This annual meeting record is missing an id.'); return; }
+    if(!canManageAnnualDocs()){ setText('annualDocsStatus','Only employees, supervisors, or admins can restore annual meeting approvals.'); return; }
+    const title=annualDocTitle(row)||'this annual meeting approval';
+    const ok=window.confirm('Restore "'+title+'" to active Annual Meeting Document Approvals?');
+    if(!ok) return;
+    const original=btn?btn.textContent:'';
+    if(btn){ btn.disabled=true; btn.textContent='Restoring…'; }
+    setText('annualDocsStatus','Restoring annual meeting approval…');
+    try{
+      const now=new Date().toISOString();
+      const r=await updateAnnualDocSchemaSafe(id,{status:inferAnnualRestoreStatus(row), archived_at:null, deleted_at:null, updated_at:now});
+      if(r.error) throw r.error;
+      setText('annualDocsStatus','Annual meeting approval restored to active list.');
+      const st=$('annualDocsStatus'); if(st){ st.classList.add('ok'); st.classList.remove('err'); }
+      await loadAnnualDocs();
+    }catch(err){
+      console.error('[BoardHub V2] annual approval restore failed',err);
+      setText('annualDocsStatus','Could not restore annual meeting approval: '+(err&&(err.message||err.details||err.hint||err.code)||'Unknown error'));
+      const st=$('annualDocsStatus'); if(st){ st.classList.add('err'); st.classList.remove('ok'); }
+    }finally{
+      if(btn){ btn.disabled=false; btn.textContent=original||'Restore'; }
+    }
+  }
+
+  async function loadCalendarEvents(){
+    if(!isUuid(selectedCommunityId)) return;
+    const all=[];
+    try{
+      const r=await sb.from('notification_events').select('id,title,message,community_id,event_type,source_table,metadata,created_at').eq('community_id',selectedCommunityId).in('event_type',['board_calendar_event','calendar_event','board_reminder']).order('created_at',{ascending:false}).limit(100);
+      if(!r.error && Array.isArray(r.data)) r.data.forEach(x=>all.push(normalizeCalendarEvent(Object.assign({__source:'notification_events'},x))));
+    }catch(e){ console.warn('[BoardHub Calendar] notification_events load failed', e); }
+    try{
+      const r2=await sb.from('calendar_events').select('*').eq('community_id',selectedCommunityId).order('event_date',{ascending:true}).limit(100);
+      if(!r2.error && Array.isArray(r2.data)) r2.data.forEach(x=>all.push(normalizeCalendarEvent(Object.assign({__source:'calendar_events'},x))));
+    }catch(e){ /* optional legacy table may not exist */ }
+    const seen=new Set();
+    calendarEvents=all.filter(e=>{
+      const key=(e.id||'')+'|'+(e.event_date||'')+'|'+(e.title||'');
+      if(seen.has(key)) return false; seen.add(key); return e.event_date;
+    }).sort((a,b)=>new Date(a.event_date)-new Date(b.event_date));
+    setText('calendarCount', calendarEvents.filter(eventIsUpcoming).length);
+    renderCalendar();
+  }
+  function renderCalendar(){
+    const grid=$('calendarGrid'), label=$('calendarMonthLabel');
+    if(!grid||!label) return;
+    const y=calendarCursor.getFullYear(), m=calendarCursor.getMonth();
+    label.textContent=calendarCursor.toLocaleDateString(undefined,{month:'long',year:'numeric'});
+    const first=new Date(y,m,1), start=new Date(y,m,1-first.getDay());
+    const dows=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    let html=dows.map(d=>'<div class="calDow">'+d+'</div>').join('');
+    const today=new Date();
+    for(let i=0;i<42;i++){
+      const day=new Date(start); day.setDate(start.getDate()+i);
+      const dayEvents=calendarEvents.filter(e=>sameDay(e.event_date, day));
+      const classes=['calDay'];
+      if(day.getMonth()!==m) classes.push('muted');
+      if(sameDay(day,today)) classes.push('today');
+      if(calendarSelectedDate&&sameDay(day,calendarSelectedDate)) classes.push('selected');
+      if(dayEvents.length) classes.push('hasEvent');
+      html+='<button class="'+classes.join(' ')+'" type="button" data-cal-date="'+day.toISOString().slice(0,10)+'">'+day.getDate()+'</button>';
+    }
+    grid.innerHTML=html;
+    renderCalendarEventList();
+  }
+  function renderCalendarEventList(){
+    const list=$('calendarEventList'), label=$('calendarSelectedLabel');
+    if(!list||!label) return;
+    let rows=[];
+    if(calendarSelectedDate){
+      rows=calendarEvents.filter(e=>sameDay(e.event_date, calendarSelectedDate));
+      label.textContent='Events for '+calendarSelectedDate.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+    }else{
+      rows=calendarEvents.filter(eventIsUpcoming).slice(0,8);
+      label.textContent='Upcoming Events';
+    }
+    if(!rows.length){ list.innerHTML='<div class="empty">No calendar items for this view.</div>'; return; }
+    list.innerHTML=rows.map(e=>{
+      const date=new Date(e.event_date);
+      return '<div class="eventRow"><strong>'+esc(e.title)+'</strong><span>'+esc(Number.isNaN(date.getTime())?String(e.event_date||''):date.toLocaleString())+'</span>'+((e.details)?'<span>'+esc(e.details).slice(0,160)+'</span>':'')+'</div>';
+    }).join('');
+  }
+  function openCalendarModal(defaultDate){
+    const shade=$('calendarModalShade'); if(!shade) return;
+    const title=$('calendarEventTitle'), date=$('calendarEventDate'), details=$('calendarEventDetails');
+    if(title) title.value=''; if(details) details.value='';
+    const d=defaultDate||calendarSelectedDate||new Date();
+    if(date){ const local=new Date(d.getTime()-d.getTimezoneOffset()*60000); date.value=local.toISOString().slice(0,16); }
+    setText('calendarModalStatus','');
+    shade.classList.add('open'); shade.setAttribute('aria-hidden','false');
+    setTimeout(()=>{ if(title) title.focus(); },40);
+  }
+  function closeCalendarModal(){ const shade=$('calendarModalShade'); if(shade){ shade.classList.remove('open'); shade.setAttribute('aria-hidden','true'); } }
+  async function saveCalendarEvent(){
+    const title=($('calendarEventTitle')&&$('calendarEventTitle').value||'').trim();
+    const dateValue=($('calendarEventDate')&&$('calendarEventDate').value||'').trim();
+    const details=($('calendarEventDetails')&&$('calendarEventDetails').value||'').trim();
+    if(!title){ setText('calendarModalStatus','Please enter an event title.'); return; }
+    if(!dateValue){ setText('calendarModalStatus','Please choose a date and time.'); return; }
+    const eventDate=new Date(dateValue);
+    if(Number.isNaN(eventDate.getTime())){ setText('calendarModalStatus','Please choose a valid date and time.'); return; }
+    const ok=window.confirm('Add this calendar item?\n\nThis will save the event for the selected community.');
+    if(!ok) return;
+    setText('calendarModalStatus','Saving calendar item…');
+    const metadata={title,details,event_date:eventDate.toISOString(),created_by:isUuid(userId)?userId:null,community_name:selectedCommunityName||''};
+    try{
+      const r=await sb.from('notification_events').insert({
+        community_id:selectedCommunityId,
+        event_type:'board_calendar_event',
+        title:title,
+        message:details||'Board calendar item added.',
+        source_table:'BoardCalendarEvents',
+        metadata
+      }).select('*').single();
+      if(r.error) throw r.error;
+      closeCalendarModal();
+      await loadCalendarEvents();
+    }catch(err){
+      console.error('[BoardHub Calendar] save failed', err);
+      setText('calendarModalStatus','Could not save calendar item: '+(err&&(err.message||err.details||err.hint||err.code)||'Unknown error'));
+    }
+  }
+
+  function renderSubmitted(rows, source){
+    // v514: rows passed from shared loader are already the canonical open queue.
+    // Do not reclassify them again or metadata/status differences can push open items into Archive.
+    const active=(rows||[]).filter(Boolean);
+    const n=active.length;
+    setText('submittedCount',n); setText('snapshotSubmitted',n); setText('attentionCount',n);
+    const list=$('attentionList');
+    if(!list) return;
+    if(!active.length){ submittedRows=[]; list.innerHTML='<div class="empty">No submitted board items for this community.</div>'; return; }
+    submittedRows=active;
+    list.innerHTML=active.map((r,i)=>renderBoardRecord(r,i,'active')).join('');
+  }
+  function archiveGroupDate(row){
+    const raw=row && (row.updated_at || row.created_at || row.completed_at || row.archived_at || (row.metadata&&row.metadata.updated_at));
+    const d=new Date(raw||0);
+    return Number.isNaN(d.getTime()) ? new Date(0) : d;
+  }
+  function archiveMonthKey(row){
+    const d=archiveGroupDate(row);
+    const y=d.getFullYear();
+    const m=String(d.getMonth()+1).padStart(2,'0');
+    return y+'-'+m;
+  }
+  function archiveMonthLabel(key){
+    const parts=String(key||'').split('-');
+    const y=Number(parts[0]||0);
+    const m=Number(parts[1]||1)-1;
+    const d=new Date(y,m,1);
+    if(!Number.isFinite(d.getTime())) return key||'Older Records';
+    return d.toLocaleDateString(undefined,{month:'long',year:'numeric'});
+  }
+  function archiveDateSafe(row){
+    const raw = row && (row.archived_at || row.completed_at || row.updated_at || row.created_at || (row.metadata && row.metadata.updated_at));
+    const d = new Date(raw || 0);
+    return Number.isNaN(d.getTime()) ? new Date(0) : d;
+  }
+  function archiveMonthKeyFromDate(d){
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    return y + '-' + m;
+  }
+  function archiveMonthLabelFromKey(key){
+    const parts = String(key || '').split('-');
+    const y = Number(parts[0] || 0);
+    const m = Number(parts[1] || 1) - 1;
+    const d = new Date(y, m, 1);
+    if (Number.isNaN(d.getTime())) return 'Older Records';
+    return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  }
+  function renderArchived(rows){
+    // v515: Archive is intentionally rendered as month/year buckets only.
+    // Records stay hidden until the employee expands a month.
+    const openIds = new Set((submittedRows || []).map(r => String(r.id || r.notification_id || '')));
+    const archived = (rows || [])
+      .filter(r => !openIds.has(String(r.id || r.notification_id || '')))
+      .filter(archivedStatus)
+      .sort((a,b) => archiveDateSafe(b) - archiveDateSafe(a));
+
+    archivedRows = archived;
+    setText('archiveCount', archived.length);
+
+    const list = $('archiveList');
+    if (!list) return;
+    list.classList.add('archiveList');
+
+    if (!archived.length) {
+      list.innerHTML = '<div class="empty">No archived board items for this community.</div>';
+      return;
+    }
+
+    const groups = new Map();
+    archived.forEach((row, idx) => {
+      const d = archiveDateSafe(row);
+      const key = archiveMonthKeyFromDate(d);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push({ row, idx });
+    });
+
+    list.innerHTML = Array.from(groups.entries()).map(([key, items]) => {
+      const label = archiveMonthLabelFromKey(key);
+      return '<details class="archiveMonthDetails" data-archive-month="' + esc(key) + '">'
+        + '<summary class="archiveMonthSummary">'
+        + '<span class="archiveMonthTitle">' + esc(label) + '</span>'
+        + '<span class="archiveMonthRight"><span class="archiveMonthCount">' + items.length + '</span><span class="archiveMonthChevron">›</span></span>'
+        + '</summary>'
+        + '<div class="archiveMonthRecords">'
+        + items.map(({row, idx}) => renderBoardRecord(row, idx, 'archived')).join('')
+        + '</div>'
+        + '</details>';
+    }).join('');
+  }
+  async function loadBoardData(communityId){
+    const sel=$('communitySelect');
+    const cid=isUuid(String(communityId||'').trim()) ? String(communityId).trim() : resolveBoardCommunityContext();
+    if(!isUuid(cid)){ setStatus('Open Board Hub from Manager Hub so the community context is included.','err'); console.warn('[BoardHub V2 v514] missing community context for board queue',{selectedCommunityId, selectValue:sel&&sel.value, communityId}); return; }
+    selectedCommunityId=cid;
+    if(sel && sel.querySelector('option[value="'+cid+'"]') && sel.value!==cid) sel.value=cid;
+    const opt=sel&&sel.options[sel.selectedIndex];
+    if(opt) selectedCommunityName=opt.textContent.trim();
+    syncWindowCommunityContext();
+    rememberContext();
+    setStatus('Loading board items…');
+
+    // v514 LOCK: Board Hub and Manager Hub share one canonical board-review loader.
+    // Source of truth: notification_events where event_type = board_item_submitted.
+    // This page must not directly query BoardMemberActionItems or any fallback board table for Needs Attention.
+    try{
+      if(!window.ZummeeBoardData || typeof window.ZummeeBoardData.getBoardReviewItems !== 'function'){
+        throw new Error('Shared ZummeeBoardData.getBoardReviewItems loader unavailable');
+      }
+      const result=await window.ZummeeBoardData.getBoardReviewItems(cid,{client:sb,userId:userId,communityId:cid});
+      if(result && result.error) throw result.error;
+      const raw=Array.isArray(result && result.raw) ? result.raw : (Array.isArray(result && result.rows) ? result.rows : []);
+      const rows=Array.isArray(result && result.rows) ? result.rows : raw.filter(activeStatus);
+      console.info('[BoardHub V2 v514] shared notification_events submitted loaded', rows.length, cid, 'raw=', raw.length, 'user=', userId, result);
+      renderSubmitted(rows, (result && result.source) || 'notification_events.board_item_submitted.shared');
+      renderArchived(raw);
+      setStatus('Loaded '+(selectedCommunityName||'selected community'),'ok');
+    }catch(err){
+      console.error('[BoardHub V2 v514] shared notification_events board queue unavailable', err);
+      setText('submittedCount',0); setText('snapshotSubmitted',0); setText('attentionCount',0);
+      const list=$('attentionList'); if(list) list.innerHTML='<div class="empty">Board items could not load from the shared notification_events loader.</div>';
+      setText('archiveCount',0); const al=$('archiveList'); if(al) al.innerHTML='<div class="empty">Archive could not load from the shared notification_events loader.</div>'; archivedRows=[];
+      setStatus('Board items unavailable from the shared notification_events loader.','err');
+    }
+  }
+  async function createItem(){
+    const confirmed = window.confirm('Create this board item?\n\nThis will submit the item to the manager for review.');
+    if(!confirmed) return;
+
+    const title=($('newItemTitle')&&$('newItemTitle').value||'').trim();
+    if(!title){ alert('Please enter a title.'); return; }
+    if(!isUuid(selectedCommunityId)){ alert('Please select a community.'); return; }
+    if(!sb || typeof sb.from!=='function'){
+      alert('Board item could not be saved because Supabase is not connected.');
+      console.error('[BoardHub V2 v417] create failed: Supabase client unavailable', sb);
+      return;
+    }
+
+    const btn=$('createItemBtn');
+    const originalText=btn ? btn.textContent : '';
+    if(btn){ btn.disabled=true; btn.setAttribute('aria-busy','true'); btn.textContent='Creating…'; }
+
+    const payload={
+      community_id:selectedCommunityId,
+      title:title,
+      details:($('newItemDetails')&&$('newItemDetails').value||'').trim(),
+      due_date:($('newItemDue')&&$('newItemDue').value)||null,
+      status:'open',
+      created_by:isUuid(userId)?userId:null
+    };
+
+    try{
+      // v508: New board submissions must enter the same canonical live queue Manager Hub reads.
+      const eventPayload={
+        community_id:selectedCommunityId,
+        event_type:'board_item_submitted',
+        title:title,
+        message:payload.details || 'A new board item was submitted and needs review.',
+        metadata:{
+          status:'open',
+          title:title,
+          details:payload.details || '',
+          due_date:payload.due_date || null,
+          created_by:isUuid(userId)?userId:null,
+          source:'board_member_hub'
+        }
+      };
+      const insertResult=await sb
+        .from('notification_events')
+        .insert(eventPayload)
+        .select('id,title,message,metadata,community_id,event_type,created_at')
+        .single();
+
+      if(insertResult.error) throw insertResult.error;
+      const created=insertResult.data||{};
+      console.info('[BoardHub V2 v514] notification_events insert confirmed', created);
+
+      const photoInput=$('newItemPhoto');
+      const file=photoInput&&photoInput.files&&photoInput.files[0];
+      if(file && window.ZummeeDataLayer && typeof window.ZummeeDataLayer.uploadBoardItemPhoto==='function'){
+        const photoResult=await window.ZummeeDataLayer.uploadBoardItemPhoto(
+          Object.assign({}, created, {community_id:selectedCommunityId}),
+          file,
+          {userId:userId,communityId:selectedCommunityId}
+        );
+        if(photoResult && photoResult.error) throw photoResult.error;
+      }
+
+      $('newItemTitle').value='';
+      $('newItemDetails').value='';
+      $('newItemDue').value='';
+      if(photoInput) photoInput.value='';
+
+      await loadBoardData();
+      alert(file?'Board item created with photo.':'Board item created.');
+    }catch(err){
+      console.error('[BoardHub V2 v417] create failed',err,payload);
+      alert('Could not create board item. The item was not saved. Check Supabase permissions/table columns.');
+    }finally{
+      if(btn){ btn.disabled=false; btn.removeAttribute('aria-busy'); btn.textContent=originalText||'Create Board Item'; }
+    }
+  }
+
+  async function uploadPhotoToActiveBoardItem(input){
+    if(!activeModalItem||!input||!input.files||!input.files[0]) return;
+    const file=input.files[0];
+    setText('boardItemModalStatus','Uploading photo…');
+    try{
+      if(!window.ZummeeDataLayer || typeof window.ZummeeDataLayer.uploadBoardItemPhoto!=='function') throw new Error('Shared photo uploader is unavailable.');
+      const result=await window.ZummeeDataLayer.uploadBoardItemPhoto(activeModalItem,file,{userId:userId,communityId:selectedCommunityId});
+      if(result.error) throw result.error;
+      activeModalItem.photos=result.data.photos||[];
+      activeModalItem.metadata=Object.assign({},activeModalItem.metadata||{},{photos:activeModalItem.photos});
+      renderBoardItemPhotos(activeModalItem);
+      setText('boardItemModalStatus','Photo uploaded.');
+      input.value='';
+      await loadBoardData();
+    }catch(err){
+      console.error('[BoardHub V2 v408] photo upload failed',err);
+      setText('boardItemModalStatus','Could not upload photo: '+(err&&(err.message||err.details||err.hint||err.code)||'Unknown error'));
+    }
+  }
+
+  async function init(){
+    try{
+      setStatus('Connecting…');
+      sb=await waitForClient();
+      const ctx=directContext();
+      userId=ctx.uid; selectedCommunityId=ctx.cid; selectedCommunityName=ctx.name;
+      if(isUuid(selectedCommunityId)){ window.selectedCommunityId=selectedCommunityId; window.activeCommunityId=selectedCommunityId; window.__zummeeActiveCommunityId=selectedCommunityId; window.selectedCommunityName=selectedCommunityName||''; }
+      if(!userId){ const sessionUid=await trySessionUser(); if(sessionUid) userId=sessionUid; }
+      const sessionOk=await validateZummeeSession();
+      if(!sessionOk) return;
+      rememberContext(); updateBackLink();
+      await loadCommunities();
+      if(!communities.length && !isUuid(userId)) setStatus('Open from Manager Hub to pass user/community context.','err');
+      await waitForCommunityAndLoad('init-after-communities');
+      await loadCurrentUserRole();
+      await loadAnnualDocs();
+      await loadCalendarEvents();
+    }catch(err){ console.error('[BoardHub V2] init failed',err); setStatus('Board Hub could not initialize.','err'); }
+  }
+  document.addEventListener('DOMContentLoaded',()=>{
+    const btn=$('createItemBtn'); if(btn) btn.addEventListener('click',createItem);
+    function annualDocRowForButton(btn){
+      const idx=Number(btn.dataset.annualOpenIdx || btn.dataset.annualArchiveIdx || btn.dataset.annualRestoreIdx || btn.dataset.annualApproveIdx);
+      const mode=String(btn.dataset.annualMode||'active');
+      return mode==='archive' ? (window.__annualDocsArchiveRows||[])[idx] : (window.__annualDocsActiveRows||[])[idx];
+    }
+    function wireAnnualDocsClicks(root){
+      if(!root || root.__annualDocsWired) return;
+      root.__annualDocsWired=true;
+      root.addEventListener('click',e=>{
+        const toggle=e.target.closest('[data-annual-archive-toggle]');
+        if(toggle){
+          e.preventDefault();
+          const gid=toggle.dataset.annualArchiveToggle;
+          const group=root.querySelector('[data-annual-archive-group="'+gid+'"]') || document.querySelector('[data-annual-archive-group="'+gid+'"]');
+          if(group) group.classList.toggle('open');
+          return;
+        }
+        const openBtn=e.target.closest('[data-annual-open-idx]');
+        if(openBtn){
+          e.preventDefault();
+          openAnnualDoc(annualDocRowForButton(openBtn),openBtn);
+          return;
+        }
+        const archiveBtn=e.target.closest('[data-annual-archive-idx]');
+        if(archiveBtn){
+          e.preventDefault();
+          archiveAnnualDoc(annualDocRowForButton(archiveBtn),archiveBtn);
+          return;
+        }
+        const restoreBtn=e.target.closest('[data-annual-restore-idx]');
+        if(restoreBtn){
+          e.preventDefault();
+          restoreAnnualDoc(annualDocRowForButton(restoreBtn),restoreBtn);
+          return;
+        }
+        const btn=e.target.closest('[data-annual-approve-idx]');
+        if(!btn) return;
+        e.preventDefault();
+        approveAnnualDoc(annualDocRowForButton(btn),btn);
+      });
+    }
+    wireAnnualDocsClicks($('annualDocsList'));
+    wireAnnualDocsClicks($('annualDocsArchiveList'));
+
+    const list=$('attentionList');
+    if(list){
+      list.addEventListener('click',e=>{ const item=e.target.closest('[data-board-item-idx]'); if(item) openBoardItem(submittedRows[Number(item.dataset.boardItemIdx)]); });
+      list.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ const item=e.target.closest('[data-board-item-idx]'); if(item){ e.preventDefault(); openBoardItem(submittedRows[Number(item.dataset.boardItemIdx)]); } } });
+    }
+    const archiveToggle=$('archiveToggleBtn'), archiveList=$('archiveList');
+    if(archiveToggle&&archiveList){
+      archiveToggle.addEventListener('click',()=>{
+        const collapsed=archiveList.classList.toggle('is-collapsed');
+        archiveToggle.textContent=collapsed?'Show Archive':'Hide Archive';
+        archiveToggle.setAttribute('aria-expanded', String(!collapsed));
+      });
+      archiveList.addEventListener('click',e=>{
+        const toggle=e.target.closest('[data-archive-month-toggle]');
+        if(toggle){
+          const group=toggle.closest('.archiveMonthGroup');
+          const open=group ? group.classList.toggle('is-open') : false;
+          toggle.setAttribute('aria-expanded', String(open));
+          return;
+        }
+        const item=e.target.closest('[data-archive-item-idx]');
+        if(item) openBoardItem(archivedRows[Number(item.dataset.archiveItemIdx)]);
+      });
+      archiveList.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ const item=e.target.closest('[data-archive-item-idx]'); if(item){ e.preventDefault(); openBoardItem(archivedRows[Number(item.dataset.archiveItemIdx)]); } } });
+    }
+    const close1=$('boardItemModalClose'), close2=$('boardItemCloseBtn'); if(close1) close1.addEventListener('click',closeBoardItem); if(close2) close2.addEventListener('click',closeBoardItem);
+    const shade=$('boardItemModalShade'); if(shade) shade.addEventListener('click',e=>{ if(e.target===shade) closeBoardItem(); });
+    const rev=$('boardItemReviewedBtn'); if(rev) rev.addEventListener('click',()=>updateBoardNotificationStatus('reviewed',{reviewed_at:new Date().toISOString()}));
+    const ag=$('boardItemAgendaBtn'); if(ag) ag.addEventListener('click',()=>updateBoardNotificationStatus('agenda_added',{add_to_agenda:true,agenda_added_at:new Date().toISOString()}));
+    const wo=$('boardItemWorkOrderBtn'); if(wo) wo.addEventListener('click',()=>createWorkOrderFromActiveBoardItem(wo));
+    const photoInput=$('boardItemPhotoInput'); if(photoInput) photoInput.addEventListener('change',()=>uploadPhotoToActiveBoardItem(photoInput));
+    const eventBtn=$('eventBtn'); if(eventBtn) eventBtn.addEventListener('click',()=>openCalendarModal());
+    const addCal=$('addCalendarEventBtn'); if(addCal) addCal.addEventListener('click',()=>openCalendarModal());
+    const calToggle=$('calendarToggleBtn');
+    if(calToggle) calToggle.addEventListener('click',()=>{
+      const body=$('calendarBody');
+      if(!body) return;
+      const isCollapsed=body.classList.toggle('is-collapsed');
+      calToggle.setAttribute('aria-expanded', String(!isCollapsed));
+      calToggle.textContent=isCollapsed ? 'Show Calendar' : 'Hide Calendar';
+      if(!isCollapsed && typeof renderCalendar==='function') renderCalendar();
+    });
+    const calClose=$('calendarModalClose'), calCancel=$('calendarModalCancel'); if(calClose) calClose.addEventListener('click',closeCalendarModal); if(calCancel) calCancel.addEventListener('click',closeCalendarModal);
+    const calSave=$('saveCalendarEventBtn'); if(calSave) calSave.addEventListener('click',saveCalendarEvent);
+    const calShade=$('calendarModalShade'); if(calShade) calShade.addEventListener('click',e=>{ if(e.target===calShade) closeCalendarModal(); });
+    const calPrev=$('calendarPrevBtn'); if(calPrev) calPrev.addEventListener('click',()=>{ calendarCursor=new Date(calendarCursor.getFullYear(),calendarCursor.getMonth()-1,1); renderCalendar(); });
+    const calNext=$('calendarNextBtn'); if(calNext) calNext.addEventListener('click',()=>{ calendarCursor=new Date(calendarCursor.getFullYear(),calendarCursor.getMonth()+1,1); renderCalendar(); });
+    const calGrid=$('calendarGrid'); if(calGrid) calGrid.addEventListener('click',e=>{ const btn=e.target.closest('[data-cal-date]'); if(!btn) return; calendarSelectedDate=new Date(btn.dataset.calDate+'T12:00:00'); renderCalendar(); });
+    init();
+  });
+})();
+</script>
+
+<script id="zummee-board-hub-native-community-state-v614">
+/*
+  Board Member Hub V2 native community-state integration
+  Build: 2026-05-07-v614
+
+  Purpose:
+  - Board Hub participates in the same app-wide community persistence as Manager Hub,
+    Operations, Community Inspections, Work Orders, and Live Maintenance.
+  - Canonical community-state wins over stale URL params.
+  - Existing Board Hub loaders, submitted items, calendar, archive, and annual approvals remain intact.
+*/
+(function(){
+  if(window.__BoardHubNativeCommunityStateV614) return;
+  window.__BoardHubNativeCommunityStateV614 = true;
+
+  function syncFromCanonical(){
+    try{
+      if(!window.ZummeeCommunityState || typeof window.ZummeeCommunityState.getActiveCommunity !== 'function') return;
+      const active = window.ZummeeCommunityState.getActiveCommunity();
+      if(!active || !active.id) return;
+      if(window.selectedCommunityId === active.id) return;
+
+      window.selectedCommunityId = active.id;
+      window.activeCommunityId = active.id;
+      window.__zummeeActiveCommunityId = active.id;
+      if(active.name) window.selectedCommunityName = active.name;
+
+      const sel = document.getElementById('communitySelect');
+      if(sel && Array.from(sel.options || []).some(o => String(o.value) === String(active.id))){
+        sel.value = active.id;
+      }
+
+      if(typeof window.loadAll === 'function') window.loadAll();
+    }catch(e){
+      console.warn('[BoardHub v614] canonical sync failed', e);
+    }
+  }
+
+  window.addEventListener('pageshow', () => setTimeout(syncFromCanonical, 120));
+  window.addEventListener('focus', syncFromCanonical);
+  document.addEventListener('visibilitychange', () => { if(!document.hidden) syncFromCanonical(); });
+})();
 </script>
 
 
 
-
-
-
-
-<script id="board-hub-annual-approval-requests-v704">
-/*
-  Board Member Hub v704 — Annual Meeting Approval Requests
-  Direct REST only. No Supabase client loading. No retry loop.
-*/
+<script id="board-hub-annual-approval-requests-v615-clean">
 (function(){
-  if(window.__BoardHubAnnualApprovalsV704) return;
-  window.__BoardHubAnnualApprovalsV704 = true;
+  'use strict';
+  if(window.__BoardHubAnnualApprovalRequestsV615Clean) return;
+  window.__BoardHubAnnualApprovalRequestsV615Clean = true;
 
-  const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
+  const BUILD = '2026-05-09-v615-board-hub-annual-approval-requests-clean';
+  let approvalRows = [];
+  let loadingApprovals = false;
+  let approvalBound = false;
 
-  let lastRows = [];
-  let bound = false;
-  let lastSummary = null;
-
-  function s(v){ return String(v == null ? '' : v).trim(); }
-  function el(id){ return document.getElementById(id); }
-  function esc(v){ return s(v).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
-
-  function formatDate(v){
-    v = s(v).slice(0,10);
-    if(!v) return '—';
+  function byId(id){ return document.getElementById(id); }
+  function clean(v){ return String(v == null ? '' : v).trim(); }
+  function escapeHtml(v){ return clean(v).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch])); }
+  function isUuid(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean(v)); }
+  function setText(id, value){ const node = byId(id); if(node) node.textContent = String(value); }
+  function setApprovalStatus(message, type){
+    const node = byId('annualApprovalRequestsStatus');
+    if(!node) return;
+    node.textContent = message || '';
+    node.classList.toggle('ok', type === 'ok');
+    node.classList.toggle('err', type === 'err');
+  }
+  function formatDate(value){
+    const v = clean(value).slice(0,10);
+    if(!v) return 'Not set';
     const d = new Date(v + 'T00:00:00');
     if(Number.isNaN(d.getTime())) return v;
     return d.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
   }
-
   function activeCommunity(){
     try{
       if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
         const active = window.ZummeeCommunityState.getActiveCommunity();
-        if(active && active.id) return { id:s(active.id), name:s(active.name), source:'ZummeeCommunityState' };
+        if(active && isUuid(active.id)) return { id:clean(active.id), name:clean(active.name), source:'ZummeeCommunityState' };
       }
-    }catch(_e){}
-
-    const selectors = ['#boardCommunitySelect','#communitySelect','#zummeeCommunitySelect','select[data-community-select]','select[name="community"]'];
-    for(const sel of selectors){
-      const node = document.querySelector(sel);
-      if(node && node.value){
-        const opt = node.options && node.selectedIndex >= 0 ? node.options[node.selectedIndex] : null;
-        return { id:s(node.value), name:s(opt && opt.textContent), source:sel };
-      }
+    }catch(e){}
+    const select = byId('communitySelect');
+    if(select && isUuid(select.value)){
+      const opt = select.options && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
+      return { id:clean(select.value), name:clean(opt && opt.textContent), source:'communitySelect' };
     }
-
     try{
-      const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
-      const obj = raw ? JSON.parse(raw) : null;
-      if(obj && obj.id) return { id:s(obj.id), name:s(obj.name), source:'storage-v601' };
-    }catch(_e2){}
-
+      if(isUuid(window.selectedCommunityId)){
+        return { id:clean(window.selectedCommunityId), name:clean(window.selectedCommunityName), source:'window.selectedCommunityId' };
+      }
+    }catch(e){}
     return { id:'', name:'', source:'none' };
   }
-
-  function getAuthSession(){
-    const stores = [];
-    try{ stores.push(localStorage); }catch(_e){}
-    try{ stores.push(sessionStorage); }catch(_e){}
-    for(const store of stores){
-      for(let i=0;i<store.length;i++){
-        const key = store.key(i);
-        if(!key) continue;
-        const val = store.getItem(key);
-        if(!val || val.indexOf('access_token') === -1) continue;
-        try{
-          const obj = JSON.parse(val);
-          if(obj && obj.access_token) return { token:obj.access_token, key };
-          if(obj && obj.currentSession && obj.currentSession.access_token) return { token:obj.currentSession.access_token, key };
-          if(obj && obj.session && obj.session.access_token) return { token:obj.session.access_token, key };
-        }catch(_e){}
-      }
-    }
-    return { token:'', key:'' };
-  }
-
-  function currentUser(){
-    const session = getAuthSession();
-    const token = session.token;
-    if(token){
+  async function getClient(){
+    const start = Date.now();
+    while(Date.now() - start < 5000){
       try{
-        const raw = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-        const payload = JSON.parse(atob(raw));
-        if(payload && payload.sub) return String(payload.sub);
-      }catch(_e){}
+        const c = window.supabaseClient || (window.getSupabase && window.getSupabase()) || null;
+        if(c && typeof c.from === 'function') return c;
+      }catch(e){}
+      await new Promise(resolve => setTimeout(resolve, 80));
     }
-    return '';
+    throw new Error('Supabase client unavailable on Board Member Hub.');
   }
-
-  function currentEmail(){
-    const session = getAuthSession();
-    const token = session.token;
-    if(token){
-      try{
-        const raw = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-        const payload = JSON.parse(atob(raw));
-        if(payload && payload.email) return String(payload.email);
-      }catch(_e){}
-    }
-    return '';
-  }
-
-  function headers(){
-    const session = getAuthSession();
-    return {
-      apikey: SUPABASE_KEY,
-      Authorization: 'Bearer ' + (session.token || SUPABASE_KEY),
-      'Content-Type': 'application/json',
-      Prefer: 'return=representation'
-    };
-  }
-
-  function query(params){
-    return Object.keys(params).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(params[k])).join('&');
-  }
-
-  async function fetchWithTimeout(url, opts, timeoutMs){
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs || 6500);
+  async function currentUserId(client){
     try{
-      return await fetch(url, Object.assign({}, opts || {}, { signal:controller.signal }));
-    }finally{
-      clearTimeout(timeout);
-    }
+      if(client && client.auth && typeof client.auth.getSession === 'function'){
+        const res = await client.auth.getSession();
+        const id = res && res.data && res.data.session && res.data.session.user && res.data.session.user.id;
+        if(id) return clean(id);
+      }
+    }catch(e){}
+    try{ return clean(localStorage.getItem('zummee_user_id_v1') || sessionStorage.getItem('zummee_user_id_v1') || ''); }catch(e2){}
+    return '';
   }
-
-  async function restSelectPendingBoard(communityId){
-    const url = SUPABASE_URL + '/rest/v1/annual_meeting_approval_requests?' + query({
-      select:'*',
-      current_step:'eq.pending_board',
-      community_id:'eq.' + communityId,
-      archived_at:'is.null',
-      order:'updated_at.desc'
-    });
-    const res = await fetchWithTimeout(url, { headers:headers() }, 6500);
-    const text = await res.text();
-    if(!res.ok){
-      throw new Error('REST select failed ' + res.status + ': ' + text);
-    }
-    return text ? JSON.parse(text) : [];
-  }
-
-  async function restUpdate(id, patch){
-    const url = SUPABASE_URL + '/rest/v1/annual_meeting_approval_requests?' + query({ id:'eq.' + id });
-    const res = await fetchWithTimeout(url, {
-      method:'PATCH',
-      headers:headers(),
-      body:JSON.stringify(patch)
-    }, 6500);
-    const text = await res.text();
-    if(!res.ok){
-      throw new Error('REST update failed ' + res.status + ': ' + text);
-    }
-    const data = text ? JSON.parse(text) : [];
-    return Array.isArray(data) ? data[0] : data;
-  }
-
-  function ensureContainer(){
-    let wrap = el('bhAnnualApprovalRequestsV704');
-    if(wrap) return wrap;
-
-    // Remove older injected containers if they exist.
-    ['bhAnnualApprovalRequestsV700','bhAnnualApprovalRequestsV701','bhAnnualApprovalRequestsV702','bhAnnualApprovalRequestsV703'].forEach(id => {
-      const old = el(id);
-      if(old) old.remove();
-    });
-
-    wrap = document.createElement('section');
-    wrap.id = 'bhAnnualApprovalRequestsV704';
-    wrap.className = 'bhAnnualApprovalWrap';
-    wrap.innerHTML =
-      '<div class="bhAnnualApprovalHead">' +
-        '<div>' +
-          '<div class="bhAnnualApprovalKicker">Annual Meeting Approvals</div>' +
-          '<h2 class="bhAnnualApprovalTitle">Packets awaiting Board approval</h2>' +
-          '<p class="bhAnnualApprovalSub">Review annual meeting packets routed to the Board. Approved packets automatically move to the next required step.</p>' +
-        '</div>' +
-        '<div id="bhAnnualApprovalBadgeV704" class="bhAnnualApprovalBadge">Loading</div>' +
-      '</div>' +
-      '<div id="bhAnnualApprovalListV704" class="bhAnnualApprovalList">' +
-        '<div class="bhAnnualApprovalEmpty">Loading annual meeting approvals…</div>' +
-      '</div>';
-
-    const anchor = document.querySelector('#needsAttentionSection') ||
-      document.querySelector('#boardNeedsAttention') ||
-      document.querySelector('[data-section="needs-attention"]') ||
-      document.querySelector('.needs-attention') ||
-      document.querySelector('main') ||
-      document.body;
-
-    if(anchor === document.body || anchor.tagName === 'MAIN'){
-      anchor.insertBefore(wrap, anchor.firstChild || null);
-    }else{
-      anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
-    }
-    return wrap;
-  }
-
-  function render(result){
-    ensureContainer();
-    const list = el('bhAnnualApprovalListV704');
-    const badge = el('bhAnnualApprovalBadgeV704');
-    if(!list || !badge) return;
-
-    if(!result.ok){
-      badge.textContent = 'Needs Setup';
-      list.innerHTML =
-        '<div class="bhAnnualApprovalError">' +
-          '<strong>Approval requests could not load.</strong><br>' +
-          esc(result.error || 'Unknown error') +
-          '<br><br>Community: ' + esc(result.community && result.community.name || result.community && result.community.id || 'none') +
-          '<br>Signed in email: ' + esc(result.email || 'not found') +
-        '</div>';
-      return;
-    }
-
-    lastRows = result.rows || [];
-    badge.textContent = String(lastRows.length) + ' Pending';
-
-    if(!lastRows.length){
-      list.innerHTML = '<div class="bhAnnualApprovalEmpty">No annual meeting packets are waiting for Board approval for this community.</div>';
-      return;
-    }
-
-    list.innerHTML = lastRows.map(cardHtml).join('');
-  }
-
-  function cardHtml(row){
-    const id = esc(row.id);
-    const routeLabel = esc(row.approval_route_label || row.approval_route || 'Approval Route');
-    const association = esc(row.association_legal_name || 'Annual Meeting Packet');
-    const meetingDate = esc(formatDate(row.next_annual_meeting_date));
-    const note = s(row.approval_note);
-    const snapshot = row.packet_preview_snapshot && typeof row.packet_preview_snapshot === 'object' ? row.packet_preview_snapshot : {};
-    const communityName = esc((snapshot.community && snapshot.community.name) || activeCommunity().name || row.community_id);
-
-    return '' +
-      '<article class="bhAnnualApprovalCard" data-approval-id="' + id + '">' +
-        '<div class="bhAnnualApprovalCardTop"><div>' +
-          '<h3 class="bhAnnualApprovalCardTitle">' + association + '</h3>' +
-          '<div class="bhAnnualApprovalMeta">' +
-            '<span class="bhAnnualApprovalPill pending">Pending Board</span>' +
-            '<span class="bhAnnualApprovalPill">' + routeLabel + '</span>' +
-            '<span class="bhAnnualApprovalPill">Meeting: ' + meetingDate + '</span>' +
-            '<span class="bhAnnualApprovalPill">' + communityName + '</span>' +
-          '</div>' +
-          (note ? '<p class="bhAnnualApprovalNote"><strong>Approval note:</strong> ' + esc(note) + '</p>' : '') +
-        '</div></div>' +
-        '<div class="bhAnnualApprovalRejectBox" id="bhAnnualRejectBox_' + id + '">' +
-          '<textarea class="bhAnnualApprovalTextarea" id="bhAnnualRejectNote_' + id + '" placeholder="Add rejection notes for the employee or manager."></textarea>' +
-        '</div>' +
-        '<div class="bhAnnualApprovalActions">' +
-          '<button type="button" class="bhAnnualApprovalBtn danger" data-action="toggle-reject" data-id="' + id + '">Reject</button>' +
-          '<button type="button" class="bhAnnualApprovalBtn danger" data-action="confirm-reject" data-id="' + id + '">Submit Rejection</button>' +
-          '<button type="button" class="bhAnnualApprovalBtn primary" data-action="approve" data-id="' + id + '">Approve Packet</button>' +
-        '</div>' +
-      '</article>';
-  }
-
   function nextAfterBoard(row){
-    const route = s(row && row.approval_route);
+    const route = clean(row && row.approval_route);
     if(route === 'board_then_supervisor') return { approval_status:'pending_supervisor', current_step:'pending_supervisor' };
     if(route === 'board_only' || route === 'supervisor_then_board') return { approval_status:'pending_admin_mailing', current_step:'pending_admin_mailing', admin_ready_at:new Date().toISOString() };
     return { approval_status:'board_approved', current_step:'board_approved' };
   }
+  function requestCard(row){
+    const id = escapeHtml(row.id);
+    const title = escapeHtml(row.association_legal_name || 'Annual Meeting Packet');
+    const route = escapeHtml(row.approval_route_label || row.approval_route || 'Approval route');
+    const meetingDate = escapeHtml(formatDate(row.next_annual_meeting_date));
+    const note = clean(row.approval_note);
+    const initiated = row.initiated_at ? ('Initiated ' + formatDate(row.initiated_at)) : 'Pending Board review';
 
-  async function refresh(){
-    const community = activeCommunity();
-    const summary = {
-      ok:false,
-      rows:[],
-      community,
-      email:currentEmail(),
-      tokenFound:!!getAuthSession().token,
-      transport:'direct-rest-v704',
-      error:'',
-      loadedAt:Date.now()
-    };
-    try{
-      if(!community.id) throw new Error('No selected community.');
-      summary.rows = await restSelectPendingBoard(community.id);
-      summary.ok = true;
-      lastRows = summary.rows;
-    }catch(err){
-      summary.error = err && err.message ? err.message : String(err);
+    return '' +
+      '<article class="annualRequestCard is-pending" data-annual-approval-id="' + id + '">' +
+        '<div>' +
+          '<h3 class="annualRequestTitle">' + title + '</h3>' +
+          '<p class="annualRequestMeta">Route: ' + route + ' · Meeting date: ' + meetingDate + ' · ' + escapeHtml(initiated) + '</p>' +
+          (note ? '<p class="annualRequestMeta"><strong>Approval note:</strong> ' + escapeHtml(note) + '</p>' : '') +
+          '<div class="annualRequestWorkflow">' +
+            '<span class="annualRequestStep current">Board Review</span>' +
+            '<span class="annualRequestStep">Supervisor</span>' +
+            '<span class="annualRequestStep">Admin / Mailing</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="annualRequestActions">' +
+          '<button type="button" class="reject" data-annual-approval-action="toggle-reject" data-id="' + id + '">Reject</button>' +
+          '<button type="button" class="approve" data-annual-approval-action="approve" data-id="' + id + '">Approve Packet</button>' +
+        '</div>' +
+        '<div class="annualRequestRejectBox" id="annualRejectBox_' + id + '">' +
+          '<textarea id="annualRejectNote_' + id + '" placeholder="Add the reason this packet needs changes before approval."></textarea>' +
+          '<div class="annualRequestActions" style="margin-top:10px;justify-content:flex-start">' +
+            '<button type="button" class="reject" data-annual-approval-action="confirm-reject" data-id="' + id + '">Submit Rejection</button>' +
+          '</div>' +
+        '</div>' +
+      '</article>';
+  }
+  function renderApprovalRequests(rows){
+    const list = byId('annualApprovalRequestsList');
+    if(!list) return;
+    approvalRows = Array.isArray(rows) ? rows : [];
+    setText('annualApprovalRequestsCount', approvalRows.length);
+
+    if(!approvalRows.length){
+      list.innerHTML = '<div class="empty">No annual meeting packets are waiting for Board approval for this community.</div>';
+      setApprovalStatus('', '');
+      return;
     }
-    lastSummary = summary;
-    window.__BoardHubAnnualApprovalsV704Summary = summary;
-    render(summary);
-    return summary;
-  }
 
-  function findRow(id){ return (lastRows || []).find(r => s(r.id) === s(id)) || null; }
-  function setCardBusy(id, busy){
-    const card = document.querySelector('[data-approval-id="' + CSS.escape(id) + '"]');
-    if(!card) return;
-    card.querySelectorAll('button').forEach(btn => btn.disabled = !!busy);
+    list.innerHTML = approvalRows.map(requestCard).join('');
+    setApprovalStatus(approvalRows.length + ' packet' + (approvalRows.length === 1 ? '' : 's') + ' waiting for Board review.', 'ok');
   }
+  async function loadAnnualApprovalRequests(){
+    if(loadingApprovals) return window.__BoardHubAnnualApprovalRequestsV615Status || null;
+    loadingApprovals = true;
 
-  async function approve(id){
-    const row = findRow(id);
-    if(!row) return;
-    setCardBusy(id, true);
+    const status = { build:BUILD, ok:false, community:activeCommunity(), rows:[], error:'', loadedAt:Date.now() };
+
     try{
+      const list = byId('annualApprovalRequestsList');
+      if(list && !approvalRows.length) list.innerHTML = '<div class="empty">Loading annual meeting approval requests…</div>';
+      if(!status.community.id) throw new Error('No selected community.');
+
+      const client = await getClient();
+      const result = await client
+        .from('annual_meeting_approval_requests')
+        .select('*')
+        .eq('community_id', status.community.id)
+        .eq('current_step', 'pending_board')
+        .is('archived_at', null)
+        .order('updated_at', { ascending:false });
+
+      if(result.error) throw result.error;
+
+      status.ok = true;
+      status.rows = Array.isArray(result.data) ? result.data : [];
+      renderApprovalRequests(status.rows);
+    }catch(error){
+      status.error = error && error.message ? error.message : String(error);
+      const list = byId('annualApprovalRequestsList');
+      if(list) list.innerHTML = '<div class="empty">Annual meeting approval requests could not load. ' + escapeHtml(status.error) + '</div>';
+      setText('annualApprovalRequestsCount', 0);
+      setApprovalStatus(status.error, 'err');
+    }finally{
+      loadingApprovals = false;
+      window.__BoardHubAnnualApprovalRequestsV615Status = status;
+    }
+
+    return status;
+  }
+  function rowById(id){ return approvalRows.find(row => clean(row.id) === clean(id)) || null; }
+  function setBusy(id, busy){
+    const card = document.querySelector('[data-annual-approval-id="' + CSS.escape(id) + '"]');
+    if(!card) return;
+    card.querySelectorAll('button').forEach(button => button.disabled = !!busy);
+  }
+  async function approveRequest(id){
+    const row = rowById(id);
+    if(!row) return;
+    setBusy(id, true);
+    setApprovalStatus('Approving packet…', '');
+    try{
+      const client = await getClient();
+      const user = await currentUserId(client);
       const patch = Object.assign({}, nextAfterBoard(row), {
         board_approved_at:new Date().toISOString(),
-        board_approved_by:currentUser() || null,
+        board_approved_by:user || null,
         board_response_note:null,
         updated_at:new Date().toISOString()
       });
-      await restUpdate(id, patch);
-      await refresh();
-    }catch(err){
-      alert('Could not approve packet: ' + (err && err.message ? err.message : String(err)));
+      const result = await client.from('annual_meeting_approval_requests').update(patch).eq('id', id).select('*').maybeSingle();
+      if(result.error) throw result.error;
+      setApprovalStatus('Packet approved and moved to the next approval step.', 'ok');
+      await loadAnnualApprovalRequests();
+    }catch(error){
+      setApprovalStatus(error && error.message ? error.message : String(error), 'err');
     }finally{
-      setCardBusy(id, false);
+      setBusy(id, false);
     }
   }
-
-  async function reject(id){
-    const row = findRow(id);
+  async function rejectRequest(id){
+    const row = rowById(id);
     if(!row) return;
-    const noteNode = el('bhAnnualRejectNote_' + id);
-    const note = s(noteNode && noteNode.value);
+    const noteEl = byId('annualRejectNote_' + id);
+    const note = clean(noteEl && noteEl.value);
     if(!note){
       alert('Add a rejection note before submitting.');
       return;
     }
-    setCardBusy(id, true);
+    setBusy(id, true);
+    setApprovalStatus('Submitting rejection…', '');
     try{
-      await restUpdate(id, {
-        approval_status:'board_rejected',
-        current_step:'board_rejected',
-        board_rejected_at:new Date().toISOString(),
-        board_rejected_by:currentUser() || null,
-        board_response_note:note,
-        updated_at:new Date().toISOString()
-      });
-      await refresh();
-    }catch(err){
-      alert('Could not reject packet: ' + (err && err.message ? err.message : String(err)));
+      const client = await getClient();
+      const user = await currentUserId(client);
+      const result = await client
+        .from('annual_meeting_approval_requests')
+        .update({
+          approval_status:'board_rejected',
+          current_step:'board_rejected',
+          board_rejected_at:new Date().toISOString(),
+          board_rejected_by:user || null,
+          board_response_note:note,
+          updated_at:new Date().toISOString()
+        })
+        .eq('id', id)
+        .select('*')
+        .maybeSingle();
+
+      if(result.error) throw result.error;
+      setApprovalStatus('Packet rejected and returned for changes.', 'ok');
+      await loadAnnualApprovalRequests();
+    }catch(error){
+      setApprovalStatus(error && error.message ? error.message : String(error), 'err');
     }finally{
-      setCardBusy(id, false);
+      setBusy(id, false);
     }
   }
+  function bindApprovalRequestActions(){
+    if(approvalBound) return;
+    approvalBound = true;
 
-  function bindActions(){
-    if(bound) return;
-    bound = true;
-    document.addEventListener('click', function(e){
-      const btn = e.target && e.target.closest ? e.target.closest('[data-action][data-id]') : null;
-      if(!btn) return;
-      const action = btn.dataset.action;
-      const id = btn.dataset.id;
+    document.addEventListener('click', function(event){
+      const button = event.target && event.target.closest ? event.target.closest('[data-annual-approval-action][data-id]') : null;
+      if(!button) return;
+
+      const action = button.getAttribute('data-annual-approval-action');
+      const id = button.getAttribute('data-id');
+      if(!id) return;
 
       if(action === 'toggle-reject'){
-        e.preventDefault();
-        const box = el('bhAnnualRejectBox_' + id);
-        if(box) box.classList.toggle('is-open');
+        event.preventDefault();
+        const box = byId('annualRejectBox_' + id);
+        if(box) box.classList.toggle('open');
         return;
       }
       if(action === 'approve'){
-        e.preventDefault();
-        approve(id);
+        event.preventDefault();
+        approveRequest(id);
         return;
       }
       if(action === 'confirm-reject'){
-        e.preventDefault();
-        reject(id);
+        event.preventDefault();
+        rejectRequest(id);
       }
     }, true);
+
+    const select = byId('communitySelect');
+    if(select) select.addEventListener('change', function(){ setTimeout(loadAnnualApprovalRequests, 250); });
   }
-
-  window.refreshBoardHubAnnualApprovalRequests = refresh;
-  window.getBoardHubAnnualApprovalRequestsStatus = function(){
-    return {
-      installed:!!window.__BoardHubAnnualApprovalsV704,
-      summary:lastSummary || window.__BoardHubAnnualApprovalsV704Summary || null,
-      cardCount:document.querySelectorAll('[data-approval-id]').length,
-      containerExists:!!el('bhAnnualApprovalRequestsV704'),
-      community:activeCommunity(),
-      email:currentEmail(),
-      tokenFound:!!getAuthSession().token,
-      authStorageKey:getAuthSession().key || '',
-      transport:'direct-rest-v704'
-    };
-  };
-
   function boot(){
-    ensureContainer();
-    bindActions();
-    refresh();
+    bindApprovalRequestActions();
+    loadAnnualApprovalRequests();
   }
+
+  window.refreshBoardHubAnnualApprovalRequests = loadAnnualApprovalRequests;
+  window.getBoardHubAnnualApprovalRequestsStatus = function(){
+    return Object.assign({
+      build:BUILD,
+      installed:true,
+      cardCount:document.querySelectorAll('[data-annual-approval-id]').length,
+      community:activeCommunity()
+    }, window.__BoardHubAnnualApprovalRequestsV615Status || {});
+  };
 
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once:true });
   else boot();
-
-  document.addEventListener('change', function(e){
-    const target = e && e.target;
-    if(target && target.matches && target.matches('#boardCommunitySelect, #communitySelect, #zummeeCommunitySelect, select[data-community-select], select[name="community"]')){
-      setTimeout(refresh, 250);
-    }
-  }, true);
 })();
 </script>
 
 </body>
 </html>
+
+<!-- v508: Board workflow buttons update notification_events metadata; notification_events is the live queue source. -->
+
+<!-- v510: Board Hub context-first load lock. Needs Attention waits for resolved community before shared notification_events loader. -->
+
+<!-- v427: Board item to work order uses schema-safe resident_work_orders insert; no legacy source_id column. -->
