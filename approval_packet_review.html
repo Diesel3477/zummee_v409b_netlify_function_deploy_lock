@@ -404,13 +404,20 @@
     </footer>
   </main>
 
+
+  <script id="approval-review-v701-supabase-config">
+    window.SUPABASE_URL = window.SUPABASE_URL || 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+    window.SUPABASE_KEY = window.SUPABASE_KEY || 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
+    window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || window.SUPABASE_KEY;
+  </script>
+
   <script>
     (function(){
       'use strict';
 
-      const BUILD = '2026-05-09-v700-dedicated-approval-packet-review';
-      const SUPABASE_URL = window.SUPABASE_URL || window.ZUMMEE_SUPABASE_URL || 'https://slcwuwuyrgnmlmxpcaim.supabase.co';
-      const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || window.ZUMMEE_SUPABASE_ANON_KEY || window.supabaseAnonKey || '';
+      const BUILD = '2026-05-09-v701-review-page-supabase-config';
+      const SUPABASE_URL = window.SUPABASE_URL || window.ZUMMEE_SUPABASE_URL || 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+      const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || window.SUPABASE_KEY || window.ZUMMEE_SUPABASE_ANON_KEY || window.supabaseAnonKey || 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
 
       let supabaseClient = null;
       let currentRequest = null;
@@ -644,19 +651,38 @@
           return supabaseClient;
         }
 
+        if(window.sb && typeof window.sb.from === 'function'){
+          supabaseClient = window.sb;
+          window.supabaseClient = supabaseClient;
+          return supabaseClient;
+        }
+
         if(window.getSupabase && typeof window.getSupabase === 'function'){
           const c = window.getSupabase();
           if(c && typeof c.from === 'function'){
             supabaseClient = c;
+            window.supabaseClient = supabaseClient;
             return supabaseClient;
           }
         }
 
         if(!SUPABASE_ANON_KEY){
-          throw new Error('Supabase anon key is missing on this review page. Add the same Supabase client setup used by the app, or define SUPABASE_ANON_KEY before this script.');
+          throw new Error('Supabase publishable key is missing on this review page.');
         }
 
-        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        if(!window.supabase || typeof window.supabase.createClient !== 'function'){
+          throw new Error('Supabase client library did not load.');
+        }
+
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true
+          }
+        });
+        window.supabaseClient = supabaseClient;
+        window.sb = supabaseClient;
         return supabaseClient;
       }
 
