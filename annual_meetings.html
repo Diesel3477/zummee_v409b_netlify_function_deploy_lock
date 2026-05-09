@@ -2868,8 +2868,8 @@ window.ZUMMEE_ANNUAL_MEETINGS_STABLE_BASELINE = "v648";
       css ? css.outerHTML : '',
       '
 
-<style id="annual-meetings-v655-preview-send-safe-style">
-  #amV655PreviewSendApproval {
+<style id="annual-meetings-v656-preview-send-inline-style">
+  #amV656PreviewSendApproval {
     border: 2px solid #17365f;
     background: #17365f;
     color: #fff;
@@ -2880,21 +2880,21 @@ window.ZUMMEE_ANNUAL_MEETINGS_STABLE_BASELINE = "v648";
     cursor: pointer;
     box-shadow: 0 10px 20px rgba(23,54,95,.18);
   }
-  #amV655PreviewSendApproval:disabled {
+  #amV656PreviewSendApproval:disabled {
     opacity: .62;
     cursor: wait;
   }
-  #amV655PreviewSendStatus {
-    width: 100%;
-    margin: 10px 0 0;
+  #amV656PreviewSendStatus {
+    flex-basis: 100%;
+    margin: 4px 0 0;
     color: #64748b;
     font-size: 14px;
     font-weight: 850;
     text-align: right;
   }
-  #amV655PreviewSendStatus.ok { color: #15803d; }
-  #amV655PreviewSendStatus.err { color: #b91c1c; }
-  .amV655RouteLockNote {
+  #amV656PreviewSendStatus.ok { color: #15803d; }
+  #amV656PreviewSendStatus.err { color: #b91c1c; }
+  .amV656RouteLockNote {
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -2908,8 +2908,8 @@ window.ZUMMEE_ANNUAL_MEETINGS_STABLE_BASELINE = "v648";
     font-weight: 900;
   }
   @media(max-width:760px){
-    #amV655PreviewSendApproval { width: 100%; }
-    #amV655PreviewSendStatus { text-align:left; }
+    #amV656PreviewSendApproval { width: 100%; }
+    #amV656PreviewSendStatus { text-align:left; }
   }
 </style>
 
@@ -3351,20 +3351,20 @@ console.info("[Annual Meetings v652] packet preview + approval routing loaded sa
 
 
 
-<script id="annual-meetings-v655-preview-send-safe">
+<script id="annual-meetings-v656-preview-send-inline">
 (function(){
   'use strict';
-  if(window.__AnnualMeetingsV655PreviewSendSafe) return;
-  window.__AnnualMeetingsV655PreviewSendSafe = true;
+  if(window.__AnnualMeetingsV656PreviewSendInline) return;
+  window.__AnnualMeetingsV656PreviewSendInline = true;
 
-  const BUILD = '2026-05-09-v655-preview-send-safe';
-  const ROUTE_STORAGE_KEY = 'zummee_annual_meeting_saved_approval_route_v655';
+  const BUILD = '2026-05-09-v656-preview-send-inline';
+  const ROUTE_STORAGE_KEY = 'zummee_annual_meeting_saved_approval_route_v656';
   const PRIMARY_APPROVAL_TABLE = 'annual_meeting_approval_requests';
 
   function el(id){ return document.getElementById(id); }
   function clean(v){ return String(v == null ? '' : v).trim(); }
   function now(){ return new Date().toISOString(); }
-  function uuidish(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean(v)); }
+  function uuidish(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean(v)); }
 
   function activeCommunity(){
     try{
@@ -3465,6 +3465,18 @@ console.info("[Annual Meetings v652] packet preview + approval routing loaded sa
       document.querySelector('textarea[data-approval-note]');
   }
 
+  function selectedRouteKey(){
+    const select = getRouteSelect();
+    const saved = savedRoute();
+    return clean(select && select.value) || saved.routeKey || 'board_then_supervisor';
+  }
+
+  function selectedNote(){
+    const note = getRouteNote();
+    const saved = savedRoute();
+    return clean(note && note.value) || saved.note || '';
+  }
+
   function savedRoute(){
     try{
       const c = activeCommunity();
@@ -3474,38 +3486,13 @@ console.info("[Annual Meetings v652] packet preview + approval routing loaded sa
     return {};
   }
 
-  function selectedRouteKey(){
-    const select = getRouteSelect();
-    return clean(select && select.value) || savedRoute().routeKey || 'board_then_supervisor';
-  }
-
-  function selectedNote(){
-    const note = getRouteNote();
-    return clean(note && note.value) || savedRoute().note || '';
-  }
-
-  function updateRouteLockNote(pref){
-    let holder = el('amV655RouteLockNote');
-    const select = getRouteSelect();
-    if(!select) return;
-
-    if(!holder){
-      holder = document.createElement('div');
-      holder.id = 'amV655RouteLockNote';
-      holder.className = 'amV655RouteLockNote';
-      select.parentNode.insertBefore(holder, select.nextSibling);
-    }
-
-    const routeLabel = pref && pref.routeLabel ? pref.routeLabel : (routeOptions()[selectedRouteKey()] || routeOptions().board_then_supervisor).label;
-    holder.textContent = 'Approval route saved: ' + routeLabel + '. Preview packet, then send for approval.';
-  }
-
   function saveRoutePreference(){
     const community = activeCommunity();
     if(!community.id) return null;
 
     const routeKey = selectedRouteKey();
     const route = routeOptions()[routeKey] || routeOptions().board_then_supervisor;
+
     const payload = {
       community,
       routeKey,
@@ -3539,22 +3526,20 @@ console.info("[Annual Meetings v652] packet preview + approval routing loaded sa
     updateRouteLockNote(pref);
   }
 
-  function bindRoutingPreference(){
+  function updateRouteLockNote(pref){
     const select = getRouteSelect();
-    const note = getRouteNote();
+    if(!select) return;
 
-    if(select && !select.__v655RouteBound){
-      select.__v655RouteBound = true;
-      select.addEventListener('change', saveRoutePreference);
-    }
-    if(note && !note.__v655RouteBound){
-      note.__v655RouteBound = true;
-      note.addEventListener('change', saveRoutePreference);
-      note.addEventListener('blur', saveRoutePreference);
+    let holder = el('amV656RouteLockNote');
+    if(!holder){
+      holder = document.createElement('div');
+      holder.id = 'amV656RouteLockNote';
+      holder.className = 'amV656RouteLockNote';
+      select.parentNode.insertBefore(holder, select.nextSibling);
     }
 
-    applySavedRoutePreference();
-    saveRoutePreference();
+    const routeLabel = pref && pref.routeLabel ? pref.routeLabel : (routeOptions()[selectedRouteKey()] || routeOptions().board_then_supervisor).label;
+    holder.textContent = 'Approval route saved: ' + routeLabel + '. Preview packet, then send for approval.';
   }
 
   function packetLast(){
@@ -3582,7 +3567,7 @@ console.info("[Annual Meetings v652] packet preview + approval routing loaded sa
     const html = last && (last.html || last.packetHtml) ? (last.html || last.packetHtml) : currentHtml;
 
     return {
-      version:'v655-preview-send-safe',
+      version:'v656-preview-send-inline',
       community,
       settings,
       routeKey,
@@ -3661,20 +3646,20 @@ console.info("[Annual Meetings v652] packet preview + approval routing loaded sa
     return { mode:'inserted', data:ins.data };
   }
 
-  async function sendCurrentPreviewForApproval(){
-    const button = el('amV655PreviewSendApproval');
-    const status = el('amV655PreviewSendStatus');
+  function showSendStatus(message, type){
+    const node = el('amV656PreviewSendStatus');
+    if(!node) return;
+    node.textContent = message || '';
+    node.classList.toggle('ok', type === 'ok');
+    node.classList.toggle('err', type === 'err');
+  }
 
-    function show(message, type){
-      if(!status) return;
-      status.textContent = message || '';
-      status.classList.toggle('ok', type === 'ok');
-      status.classList.toggle('err', type === 'err');
-    }
+  async function sendCurrentPreviewForApproval(){
+    const button = el('amV656PreviewSendApproval');
 
     try{
       if(button){ button.disabled = true; button.textContent = 'Sending…'; }
-      show('Sending packet for approval…', '');
+      showSendStatus('Sending packet for approval…', '');
 
       const community = activeCommunity();
       if(!community.id) throw new Error('Select a community before sending for approval.');
@@ -3695,7 +3680,7 @@ console.info("[Annual Meetings v652] packet preview + approval routing loaded sa
       const data = buildPayload(community, settings, routeKey, route, note, userId);
       const result = await writeApprovalRequest(data);
 
-      window.__AnnualMeetingsV655LastApprovalSend = {
+      window.__AnnualMeetingsV656LastApprovalSend = {
         build:BUILD,
         ok:true,
         mode:result.mode,
@@ -3704,49 +3689,59 @@ console.info("[Annual Meetings v652] packet preview + approval routing loaded sa
         sentAt:now()
       };
 
-      show('Packet sent for approval using saved route: ' + route.label + '.', 'ok');
-      return window.__AnnualMeetingsV655LastApprovalSend;
+      showSendStatus('Packet sent for approval using saved route: ' + route.label + '.', 'ok');
+      return window.__AnnualMeetingsV656LastApprovalSend;
     }catch(error){
       const message = error && error.message ? error.message : String(error);
-      window.__AnnualMeetingsV655LastApprovalSend = { build:BUILD, ok:false, error:message, sentAt:now() };
-      show(message, 'err');
+      window.__AnnualMeetingsV656LastApprovalSend = { build:BUILD, ok:false, error:message, sentAt:now() };
+      showSendStatus(message, 'err');
       alert(message);
-      return window.__AnnualMeetingsV655LastApprovalSend;
+      return window.__AnnualMeetingsV656LastApprovalSend;
     }finally{
       if(button){ button.disabled = false; button.textContent = 'Send for Approval'; }
     }
   }
 
-  function findPreviewOverlay(){
+  function previewOverlay(){
     return el('amV652PacketOverlay') ||
       el('packetPreviewOverlay') ||
       document.querySelector('.packet-preview-overlay') ||
       document.querySelector('[id*="Packet"][id*="Overlay"]');
   }
 
-  function installPreviewButton(){
-    const overlay = findPreviewOverlay();
+  function previewContent(){
+    return el('amV652PacketContent') ||
+      document.querySelector('#packetPreviewContent') ||
+      document.querySelector('.packet-preview-content');
+  }
+
+  function installPreviewSendButton(){
+    const overlay = previewOverlay();
     if(!overlay) return false;
+    if(el('amV656PreviewSendApproval')) return true;
 
-    if(el('amV655PreviewSendApproval')) return true;
-
-    let footer =
-      overlay.querySelector('.annualPacketPreviewActions') ||
-      overlay.querySelector('.modal-actions') ||
+    // Attach to the same visual area as the existing preview modal controls.
+    let target =
       overlay.querySelector('.preview-actions') ||
+      overlay.querySelector('.modal-actions') ||
       overlay.querySelector('.actions') ||
       overlay.querySelector('footer');
 
-    if(!footer){
-      footer = document.createElement('div');
-      footer.className = 'annualPacketPreviewActions';
-      footer.style.cssText = 'display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:18px;';
-      const inner = overlay.querySelector('.modal, .preview-modal, .packet-modal, .card') || overlay.firstElementChild || overlay;
-      inner.appendChild(footer);
+    if(!target){
+      target = document.createElement('div');
+      target.className = 'preview-actions';
+      target.style.cssText = 'display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin:18px 0 0;';
+      const content = previewContent();
+      if(content && content.parentNode){
+        content.parentNode.appendChild(target);
+      }else{
+        const inner = overlay.firstElementChild || overlay;
+        inner.appendChild(target);
+      }
     }
 
     const btn = document.createElement('button');
-    btn.id = 'amV655PreviewSendApproval';
+    btn.id = 'amV656PreviewSendApproval';
     btn.type = 'button';
     btn.textContent = 'Send for Approval';
     btn.addEventListener('click', function(e){
@@ -3756,66 +3751,64 @@ console.info("[Annual Meetings v652] packet preview + approval routing loaded sa
     });
 
     const status = document.createElement('div');
-    status.id = 'amV655PreviewSendStatus';
+    status.id = 'amV656PreviewSendStatus';
 
-    footer.appendChild(btn);
-    footer.parentNode.insertBefore(status, footer.nextSibling);
+    target.appendChild(btn);
+    target.appendChild(status);
     return true;
   }
 
-  function watchPreviewOverlay(){
-    const overlay = findPreviewOverlay();
-    if(!overlay || overlay.__v655PreviewWatched) return;
-    overlay.__v655PreviewWatched = true;
+  function bindRoutePreference(){
+    const select = getRouteSelect();
+    const note = getRouteNote();
 
-    const observer = new MutationObserver(function(){
-      if(overlay.classList.contains('is-open') || overlay.getAttribute('aria-hidden') === 'false' || getComputedStyle(overlay).display !== 'none'){
-        installPreviewButton();
-      }
-    });
-    observer.observe(overlay, { attributes:true, attributeFilter:['class','style','aria-hidden'] });
+    if(select && !select.__v656RouteBound){
+      select.__v656RouteBound = true;
+      select.addEventListener('change', saveRoutePreference);
+    }
+    if(note && !note.__v656RouteBound){
+      note.__v656RouteBound = true;
+      note.addEventListener('change', saveRoutePreference);
+      note.addEventListener('blur', saveRoutePreference);
+    }
+
+    applySavedRoutePreference();
+    saveRoutePreference();
   }
 
-  // Capture clicks without blocking the existing Generate / Preview handler.
-  document.addEventListener('click', function(event){
-    const target = event.target && event.target.closest ? event.target.closest('button, a') : null;
-    if(!target) return;
+  // This is intentionally not wrapping or replacing the preview function.
+  // It only adds the button to the existing overlay DOM.
+  function boot(){
+    bindRoutePreference();
+    installPreviewSendButton();
+    setTimeout(installPreviewSendButton, 400);
+    setTimeout(installPreviewSendButton, 1200);
+  }
 
-    const label = clean(target.textContent).toLowerCase();
-    const id = clean(target.id).toLowerCase();
-
-    if(id.indexOf('packet') !== -1 || label.indexOf('generate / preview packet') !== -1 || label.indexOf('generate preview packet') !== -1){
-      setTimeout(function(){
-        bindRoutingPreference();
-        installPreviewButton();
-        watchPreviewOverlay();
-      }, 250);
-      setTimeout(installPreviewButton, 900);
+  document.addEventListener('click', function(e){
+    const t = e.target && e.target.closest ? e.target.closest('button, a') : null;
+    if(!t) return;
+    const label = clean(t.textContent).toLowerCase();
+    if(label.indexOf('generate') !== -1 && label.indexOf('preview') !== -1 && label.indexOf('packet') !== -1){
+      setTimeout(installPreviewSendButton, 250);
+      setTimeout(installPreviewSendButton, 900);
     }
   }, false);
 
   window.sendAnnualMeetingPacketForApprovalFromPreview = sendCurrentPreviewForApproval;
   window.getAnnualMeetingPreviewSendStatus = function(){
+    const last = packetLast();
     return {
       build:BUILD,
       installed:true,
-      hasPreviewButton:!!el('amV655PreviewSendApproval'),
-      savedRoute:savedRoute(),
+      hasPreviewButton:!!el('amV656PreviewSendApproval'),
       activeCommunity:activeCommunity(),
-      hasPacketLast:!!packetLast(),
-      hasPacketHtml:!!(packetLast() && (packetLast().html || packetLast().packetHtml)),
-      lastSend:window.__AnnualMeetingsV655LastApprovalSend || null
+      savedRoute:savedRoute(),
+      hasPacketLast:!!last,
+      hasPacketHtml:!!(last && (last.html || last.packetHtml)),
+      lastSend:window.__AnnualMeetingsV656LastApprovalSend || null
     };
   };
-
-  function boot(){
-    bindRoutingPreference();
-    installPreviewButton();
-    watchPreviewOverlay();
-    setTimeout(bindRoutingPreference, 600);
-    setTimeout(installPreviewButton, 600);
-    setTimeout(watchPreviewOverlay, 1200);
-  }
 
   if(document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', boot, { once:true });
