@@ -1,0 +1,545 @@
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Content-Type": "application/json",
+};
+
+function json(status: number, body: unknown) {
+  return new Response(JSON.stringify(body), { status, headers: corsHeaders });
+}
+
+function clean(value: unknown): string {
+  return String(value ?? "").trim();
+}
+
+function isEmail(value: unknown): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean(value));
+}
+
+function escapeHtml(value: unknown): string {
+  return clean(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function dedupeRecipients(input: Array<{ email: string; name?: string; role?: string; source?: string }>) {
+  const seen = new Set<string>();
+  const out: Array<{ email: string; name?: string; role?: string; source?: string }> = [];
+  for (const item of input || []) {
+    const email = clean(item?.email).toLowerCase();
+    if (!isEmail(email) || seen.has(email)) continue;
+    seen.add(email);
+    out.push({
+      email,
+      name: clean(item?.name) || undefined,
+      role: clean(item?.role) || undefined,
+      source: clean(item?.source) || undefined,
+    });
+  }
+  return out;
+}
+
+async function restGet(args: {
+  supabaseUrl: string;
+  serviceRoleKey: string;
+  path: string;
+}) {
+  const url = `${args.supabaseUrl.replace(/\/$/, "")}/rest/v1/${args.path}`;
+  const res = await fetch(url, {
+    headers: {
+      "apikey": args.serviceRoleKey,
+      "Authorization": `Bearer ${args.serviceRoleKey}`,
+      "Content-Type": "application/json",
+    },
+  });
+  const raw = await res.text();
+  let data: any = null;
+  try { data = raw ? JSON.parse(raw) : null; } catch { data = raw; }
+  if (!res.ok) {
+    return { ok: false, status: res.status, data, error: typeof data === "string" ? data : data?.message || raw };
+  }
+  return { ok: true, status: res.status, data };
+}
+
+async function restPatch(args: {
+  supabaseUrl: string;
+  serviceRoleKey: string;
+  table: string;
+  id: string;
+  patch: Record<string, unknown>;
+}) {
+  const url = `${args.supabaseUrl.replace(/\/$/, "")}/rest/v1/${args.table}?id=eq.${encodeURIComponent(args.id)}`;
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: {
+      "apikey": args.serviceRoleKey,
+      "Authorization": `Bearer ${args.serviceRoleKey}`,
+      "Content-Type": "application/json",
+      "Prefer": "return=representation",
+    },
+    body: JSON.stringify(args.patch),
+  });
+  const raw = await res.text();
+  let data: any = null;
+  try { data = raw ? JSON.parse(raw) : null; } catch { data = raw; }
+  return { ok: res.ok, status: res.status, data, error: res.ok ? null : (typeof data === "string" ? data : data?.message || raw) };
+}
+
+async function restPost(args: {
+  supabaseUrl: string;
+  serviceRoleKey: string;
+  table: string;
+  body: Record<string, unknown>;
+}) {
+  const url = `${args.supabaseUrl.replace(/\/$/, "")}/rest/v1/${args.table}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "apikey": args.serviceRoleKey,
+      "Authorization": `Bearer ${args.serviceRoleKey}`,
+      "Content-Type": "application/json",
+      "Prefer": "return=representation",
+    },
+    body: JSON.stringify(args.body),
+  });
+  const raw = await res.text();
+  let data: any = null;
+  try { data = raw ? JSON.parse(raw) : null; } catch { data = raw; }
+  return { ok: res.ok, status: res.status, data, error: res.ok ? null : (typeof data === "string" ? data : data?.message || raw) };
+}
+
+function snapshot(request: any) {
+  return request?.packet_preview_snapshot && typeof request.packet_preview_snapshot === "object"
+    ? request.packet_preview_snapshot
+    : {};
+}
+
+function communityName(request: any): string {
+  const snap = snapshot(request);
+  return clean(snap?.community?.name) ||
+    clean(snap?.communityName) ||
+    clean(snap?.community_name) ||
+    clean(request?.community_name) ||
+    "Selected community";
+}
+
+function associationName(request: any): string {
+  const snap = snapshot(request);
+  return clean(request?.association_legal_name) ||
+    clean(snap?.associationName) ||
+    clean(snap?.association_legal_name) ||
+    clean(snap?.settings?.association_legal_name) ||
+    communityName(request);
+}
+
+function meetingDate(request: any): string {
+  const snap = snapshot(request);
+  return clean(request?.next_annual_meeting_date) ||
+    clean(snap?.meetingDate) ||
+    clean(snap?.settings?.next_annual_meeting_date) ||
+    clean(snap?.settings?.nextDate) ||
+    "";
+}
+
+function routeLabel(request: any): string {
+  const snap = snapshot(request);
+  return clean(request?.approval_route_label) ||
+    clean(snap?.routeLabel) ||
+    clean(request?.approval_route) ||
+    "Approval route";
+}
+
+function requestLink(step: string, siteUrl: string, request: any): string {
+  const communityId = clean(request?.community_id);
+  const community = encodeURIComponent(communityName(request));
+  const qs = `?community_id=${encodeURIComponent(communityId)}&community_name=${community}&approval_request_id=${encodeURIComponent(clean(request?.id))}`;
+  if (step === "pending_board") return `${siteUrl}/board_member_hub_v2.html${qs}`;
+  return `${siteUrl}/annual_meetings.html${qs}`;
+}
+
+function stepLabel(step: string) {
+  if (step === "pending_board") return "Board approval";
+  if (step === "pending_supervisor") return "Supervisor approval";
+  if (step === "pending_admin_mailing") return "Admin / mailing follow-up";
+  if (step === "board_rejected") return "Board changes requested";
+  if (step === "supervisor_rejected") return "Supervisor changes requested";
+  return "Approval review";
+}
+
+async function getRequest(args: { supabaseUrl: string; serviceRoleKey: string; requestId: string }) {
+  const path = `annual_meeting_approval_requests?id=eq.${encodeURIComponent(args.requestId)}&select=*&limit=1`;
+  const res = await restGet({ supabaseUrl: args.supabaseUrl, serviceRoleKey: args.serviceRoleKey, path });
+  if (!res.ok) throw new Error(`Approval request lookup failed: ${res.error || res.status}`);
+  const row = Array.isArray(res.data) ? res.data[0] : null;
+  if (!row) throw new Error("Approval request not found.");
+  return row;
+}
+
+function snapEmailCandidates(request: any, purpose: "supervisor" | "admin") {
+  const snap = snapshot(request);
+  const settings = snap?.settings || {};
+  const candidates: Array<{ email: string; name?: string; role?: string; source?: string }> = [];
+  const keys = purpose === "supervisor"
+    ? ["supervisor_email", "supervisorEmail", "supervisor_return_email", "supervisorReturnEmail", "return_email", "returnEmail"]
+    : ["admin_email", "adminEmail", "mailing_email", "mailingEmail", "company_email", "companyEmail", "return_email", "returnEmail"];
+  for (const key of keys) {
+    const email = clean(settings?.[key] ?? snap?.[key]);
+    if (isEmail(email)) candidates.push({ email, role: purpose, source: `packet_snapshot.${key}` });
+  }
+  return candidates;
+}
+
+async function recipientsFromBoardMembers(args: { supabaseUrl: string; serviceRoleKey: string; communityId: string }) {
+  const path = `BoardMembers?community_id=eq.${encodeURIComponent(args.communityId)}&is_active=eq.true&select=name,email&limit=200`;
+  const res = await restGet({ supabaseUrl: args.supabaseUrl, serviceRoleKey: args.serviceRoleKey, path });
+  if (!res.ok || !Array.isArray(res.data)) return [];
+  return res.data.map((r: any) => ({
+    email: clean(r?.email),
+    name: clean(r?.name),
+    role: "Board Member",
+    source: "BoardMembers",
+  }));
+}
+
+async function recipientsFromAssignments(args: { supabaseUrl: string; serviceRoleKey: string; communityId: string; role: string }) {
+  const path = `community_assignments?community_id=eq.${encodeURIComponent(args.communityId)}&select=employee_name,employee_email,assistant_name,assistant_email,community_name,company_name&limit=200`;
+  const res = await restGet({ supabaseUrl: args.supabaseUrl, serviceRoleKey: args.serviceRoleKey, path });
+  if (!res.ok || !Array.isArray(res.data)) return [];
+  const out: Array<{ email: string; name?: string; role?: string; source?: string }> = [];
+  for (const r of res.data) {
+    if (isEmail(r?.employee_email)) out.push({ email: clean(r.employee_email), name: clean(r.employee_name), role: args.role, source: "community_assignments.employee_email" });
+    if (isEmail(r?.assistant_email)) out.push({ email: clean(r.assistant_email), name: clean(r.assistant_name), role: args.role, source: "community_assignments.assistant_email" });
+  }
+  return out;
+}
+
+async function recipientsFromDirectoryTables(args: {
+  supabaseUrl: string;
+  serviceRoleKey: string;
+  communityId: string;
+  kind: "supervisor" | "admin";
+}) {
+  const tables = ["UserDirectory", "userdirectory", "Profiles", "profiles"];
+  const search = args.kind === "supervisor" ? "Supervisor" : "Admin";
+  const possibleSelects = [
+    "profile_name,profile_email,email,role,department,community_id,is_active",
+    "name,email,role,department,community_id,is_active",
+    "profile_name,profile_email,role,department,community_id",
+  ];
+
+  const recipients: Array<{ email: string; name?: string; role?: string; source?: string }> = [];
+
+  for (const table of tables) {
+    for (const select of possibleSelects) {
+      const basePath = `${table}?select=${encodeURIComponent(select)}&limit=200`;
+      const paths = [
+        `${basePath}&community_id=eq.${encodeURIComponent(args.communityId)}&or=(role.ilike.*${search}*,department.ilike.*${search}*)`,
+        `${basePath}&or=(role.ilike.*${search}*,department.ilike.*${search}*)`,
+      ];
+      for (const path of paths) {
+        const res = await restGet({ supabaseUrl: args.supabaseUrl, serviceRoleKey: args.serviceRoleKey, path });
+        if (!res.ok || !Array.isArray(res.data)) continue;
+        for (const r of res.data) {
+          const email = clean(r?.profile_email || r?.email);
+          if (!isEmail(email)) continue;
+          const active = r?.is_active;
+          if (active === false) continue;
+          recipients.push({
+            email,
+            name: clean(r?.profile_name || r?.name),
+            role: search,
+            source: table,
+          });
+        }
+        if (recipients.length) return recipients;
+      }
+    }
+  }
+
+  return recipients;
+}
+
+async function resolveRecipients(args: {
+  supabaseUrl: string;
+  serviceRoleKey: string;
+  request: any;
+  explicitRecipients?: unknown;
+}) {
+  const request = args.request;
+  const communityId = clean(request?.community_id);
+  const step = clean(request?.current_step || request?.approval_status);
+  const explicit = Array.isArray(args.explicitRecipients)
+    ? args.explicitRecipients.map((r: any) => ({ email: clean(r?.email || r), name: clean(r?.name), role: clean(r?.role), source: "explicit" }))
+    : [];
+
+  let recipients: Array<{ email: string; name?: string; role?: string; source?: string }> = [];
+
+  if (explicit.length) recipients = recipients.concat(explicit);
+
+  if (step === "pending_board") {
+    recipients = recipients.concat(await recipientsFromBoardMembers({
+      supabaseUrl: args.supabaseUrl,
+      serviceRoleKey: args.serviceRoleKey,
+      communityId,
+    }));
+  } else if (step === "pending_supervisor") {
+    recipients = recipients.concat(snapEmailCandidates(request, "supervisor"));
+    recipients = recipients.concat(await recipientsFromDirectoryTables({
+      supabaseUrl: args.supabaseUrl,
+      serviceRoleKey: args.serviceRoleKey,
+      communityId,
+      kind: "supervisor",
+    }));
+    // Fallback so the approval email does not silently disappear if the supervisor directory is not wired yet.
+    if (!dedupeRecipients(recipients).length) {
+      recipients = recipients.concat(await recipientsFromAssignments({
+        supabaseUrl: args.supabaseUrl,
+        serviceRoleKey: args.serviceRoleKey,
+        communityId,
+        role: "Supervisor fallback",
+      }));
+    }
+  } else if (step === "pending_admin_mailing" || step === "ready_to_mail") {
+    recipients = recipients.concat(snapEmailCandidates(request, "admin"));
+    recipients = recipients.concat(await recipientsFromDirectoryTables({
+      supabaseUrl: args.supabaseUrl,
+      serviceRoleKey: args.serviceRoleKey,
+      communityId,
+      kind: "admin",
+    }));
+    if (!dedupeRecipients(recipients).length) {
+      recipients = recipients.concat(await recipientsFromAssignments({
+        supabaseUrl: args.supabaseUrl,
+        serviceRoleKey: args.serviceRoleKey,
+        communityId,
+        role: "Admin fallback",
+      }));
+    }
+  }
+
+  return dedupeRecipients(recipients);
+}
+
+function emailContent(args: { request: any; step: string; siteUrl: string; note?: string }) {
+  const { request, step, siteUrl } = args;
+  const community = communityName(request);
+  const association = associationName(request);
+  const meeting = meetingDate(request);
+  const label = stepLabel(step);
+  const link = requestLink(step, siteUrl, request);
+  const route = routeLabel(request);
+
+  const subject = `Zummee: Annual meeting packet awaiting ${label} - ${community}`;
+  const text = [
+    `Annual meeting packet awaiting ${label}`,
+    ``,
+    `Association: ${association}`,
+    `Community: ${community}`,
+    meeting ? `Meeting date: ${meeting}` : "",
+    `Approval route: ${route}`,
+    args.note ? `Note: ${args.note}` : "",
+    ``,
+    `Open Zummee: ${link}`,
+  ].filter(Boolean).join("\n");
+
+  const html = `
+  <div style="margin:0;padding:0;background:#f4f8fc;font-family:Arial,Helvetica,sans-serif;color:#17365f;">
+    <div style="max-width:680px;margin:0 auto;padding:28px 16px;">
+      <div style="background:#ffffff;border:1px solid #d8e5f6;border-radius:22px;overflow:hidden;box-shadow:0 12px 28px rgba(23,54,95,.08);">
+        <div style="padding:24px 26px;border-bottom:1px solid #e2ecf8;background:#fbfdff;">
+          <div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#64748b;font-weight:800;margin-bottom:8px;">Zummee Annual Meeting Approvals</div>
+          <h1 style="margin:0;color:#17365f;font-size:26px;line-height:1.15;">Packet awaiting ${escapeHtml(label)}</h1>
+          <div style="margin-top:8px;color:#64748b;font-size:15px;font-weight:700;">${escapeHtml(community)}</div>
+        </div>
+        <div style="padding:24px 26px;">
+          <p style="margin:0 0 16px;font-size:16px;color:#28445f;">An annual meeting packet is ready for your review.</p>
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse;margin:18px 0;border:1px solid #d8e5f6;border-radius:16px;overflow:hidden;">
+            <tr><td style="padding:12px 14px;background:#f8fbff;border-bottom:1px solid #e2ecf8;font-weight:800;width:36%;">Association</td><td style="padding:12px 14px;border-bottom:1px solid #e2ecf8;">${escapeHtml(association)}</td></tr>
+            <tr><td style="padding:12px 14px;background:#f8fbff;border-bottom:1px solid #e2ecf8;font-weight:800;">Meeting date</td><td style="padding:12px 14px;border-bottom:1px solid #e2ecf8;">${escapeHtml(meeting || "Not set")}</td></tr>
+            <tr><td style="padding:12px 14px;background:#f8fbff;font-weight:800;">Approval route</td><td style="padding:12px 14px;">${escapeHtml(route)}</td></tr>
+          </table>
+          ${args.note ? `<div style="padding:14px 15px;border:1px solid #e2ecf8;border-radius:14px;background:#fbfdff;margin:16px 0;"><strong>Note:</strong><br>${escapeHtml(args.note)}</div>` : ""}
+          <div style="margin:22px 0;">
+            <a href="${escapeHtml(link)}" style="display:inline-block;background:#17365f;color:#ffffff;text-decoration:none;border-radius:14px;padding:13px 18px;font-weight:800;">Open approval packet</a>
+          </div>
+          <p style="margin:18px 0 0;font-size:13px;color:#64748b;">This email was generated by Zummee from the annual meeting approval workflow.</p>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  return { subject, text, html };
+}
+
+async function sendResend(args: {
+  apiKey: string;
+  from: string;
+  to: string[];
+  subject: string;
+  html: string;
+  text: string;
+}) {
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${args.apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: args.from,
+      to: args.to,
+      subject: args.subject,
+      html: args.html,
+      text: args.text,
+    }),
+  });
+  const raw = await res.text();
+  let data: any = null;
+  try { data = raw ? JSON.parse(raw) : null; } catch { data = raw; }
+  return { ok: res.ok, status: res.status, data, error: res.ok ? null : (typeof data === "string" ? data : data?.message || raw) };
+}
+
+async function logEvent(args: {
+  supabaseUrl: string;
+  serviceRoleKey: string;
+  request: any;
+  eventType: string;
+  toStep: string;
+  note?: string;
+  metadata: Record<string, unknown>;
+}) {
+  return await restPost({
+    supabaseUrl: args.supabaseUrl,
+    serviceRoleKey: args.serviceRoleKey,
+    table: "annual_meeting_approval_events",
+    body: {
+      approval_request_id: args.request.id,
+      company_id: args.request.company_id || null,
+      community_id: args.request.community_id,
+      event_type: args.eventType,
+      to_status: args.request.approval_status || null,
+      to_step: args.toStep || args.request.current_step || null,
+      note: args.note || null,
+      created_by: null,
+      created_at: new Date().toISOString(),
+      metadata: args.metadata || {},
+    },
+  });
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return json(405, { error: "Method not allowed" });
+
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
+  const FROM_EMAIL =
+    Deno.env.get("ANNUAL_APPROVAL_FROM_EMAIL") ||
+    Deno.env.get("VENDOR_FROM_EMAIL") ||
+    Deno.env.get("FROM_EMAIL") ||
+    "";
+  const SITE_URL = (Deno.env.get("PUBLIC_SITE_URL") || "https://zummee.net").replace(/\/$/, "");
+
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return json(500, { ok: false, error: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY." });
+  }
+  if (!RESEND_API_KEY || !FROM_EMAIL) {
+    return json(500, { ok: false, error: "Missing RESEND_API_KEY or ANNUAL_APPROVAL_FROM_EMAIL/VENDOR_FROM_EMAIL." });
+  }
+
+  try {
+    const body = await req.json();
+    const requestId = clean(body?.request_id || body?.approval_request_id || body?.id);
+    const note = clean(body?.note || body?.message || "");
+    if (!requestId) return json(400, { ok: false, error: "Missing request_id." });
+
+    const requestRow = await getRequest({ supabaseUrl: SUPABASE_URL, serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY, requestId });
+    const step = clean(body?.step || body?.current_step || requestRow?.current_step || requestRow?.approval_status);
+    const recipients = await resolveRecipients({
+      supabaseUrl: SUPABASE_URL,
+      serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
+      request: { ...requestRow, current_step: step },
+      explicitRecipients: body?.recipients,
+    });
+
+    if (!recipients.length) {
+      await logEvent({
+        supabaseUrl: SUPABASE_URL,
+        serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
+        request: requestRow,
+        eventType: "email_notification_skipped",
+        toStep: step,
+        note: "No recipients found for annual approval notification.",
+        metadata: { step, recipient_count: 0, source: "annual-approval-email" },
+      });
+      return json(200, {
+        ok: true,
+        sent: false,
+        skipped: true,
+        reason: "No recipients found.",
+        request_id: requestId,
+        step,
+      });
+    }
+
+    const content = emailContent({ request: { ...requestRow, current_step: step }, step, siteUrl: SITE_URL, note });
+    const resend = await sendResend({
+      apiKey: RESEND_API_KEY,
+      from: FROM_EMAIL,
+      to: recipients.map((r) => r.email),
+      subject: content.subject,
+      html: content.html,
+      text: content.text,
+    });
+
+    await logEvent({
+      supabaseUrl: SUPABASE_URL,
+      serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
+      request: requestRow,
+      eventType: resend.ok ? "email_notification_sent" : "email_notification_failed",
+      toStep: step,
+      note: resend.ok ? `Email notification sent for ${step}.` : `Email notification failed for ${step}.`,
+      metadata: {
+        step,
+        recipient_count: recipients.length,
+        recipients: recipients.map((r) => ({ email: r.email, role: r.role, source: r.source })),
+        resend_status: resend.status,
+        resend_response: resend.data,
+        resend_error: resend.error,
+        source: "annual-approval-email",
+      },
+    });
+
+    if (!resend.ok) {
+      return json(502, {
+        ok: false,
+        sent: false,
+        request_id: requestId,
+        step,
+        recipient_count: recipients.length,
+        error: resend.error,
+        resend_status: resend.status,
+      });
+    }
+
+    return json(200, {
+      ok: true,
+      sent: true,
+      request_id: requestId,
+      step,
+      recipient_count: recipients.length,
+      recipients: recipients.map((r) => ({ email: r.email, role: r.role, source: r.source })),
+      resend: resend.data,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[annual-approval-email] error", message);
+    return json(500, { ok: false, error: message, code: "ANNUAL_APPROVAL_EMAIL_FUNCTION_ERROR" });
+  }
+});
