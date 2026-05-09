@@ -415,7 +415,7 @@
     (function(){
       'use strict';
 
-      const BUILD = '2026-05-09-v702-review-page-correct-supabase-key';
+      const BUILD = '2026-05-09-v710-token-based-review';
       const SUPABASE_URL = window.SUPABASE_URL || window.ZUMMEE_SUPABASE_URL || 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
       const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || window.SUPABASE_KEY || window.ZUMMEE_SUPABASE_ANON_KEY || window.supabaseAnonKey || 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
 
@@ -437,6 +437,8 @@
       function clean(v){ return String(v == null ? '' : v).trim(); }
       function params(){ return new URLSearchParams(window.location.search || ''); }
       function requestId(){ return clean(params().get('approval_request_id') || params().get('request_id') || params().get('id')); }
+      function reviewToken(){ return clean(params().get('token') || params().get('approval_token') || params().get('review_token')); }
+      function functionUrl(name){ return SUPABASE_URL.replace(/\/$/, '') + '/functions/v1/' + name; }
 
       function setBackLinks(row){
         const p = params();
@@ -688,18 +690,26 @@
 
       async function loadRequest(){
         const id = requestId();
+        const token = reviewToken();
         if(!id) throw new Error('Missing approval_request_id in the link.');
+        if(!token) throw new Error('Missing approval token in the link.');
 
-        const c = await getSupabase();
-        const result = await c
-          .from('annual_meeting_approval_requests')
-          .select('*')
-          .eq('id', id)
-          .maybeSingle();
+        const response = await fetch(functionUrl('annual-approval-review'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+          },
+          body: JSON.stringify({ request_id: id, token })
+        });
 
-        if(result.error) throw result.error;
-        if(!result.data) throw new Error('Approval request not found or you do not have access.');
-        return result.data;
+        const payload = await response.json().catch(() => ({}));
+        if(!response.ok || !payload.ok){
+          throw new Error(payload.error || 'Approval request not found or you do not have access.');
+        }
+
+        return payload.request;
       }
 
       async function approve(){
@@ -712,39 +722,27 @@
         });
 
         try{
-          const c = await getSupabase();
-          const row = currentRequest;
-          const step = clean(row.current_step || row.approval_status);
+          const response = await fetch(functionUrl('annual-approval-approve'), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+            },
+            body: JSON.stringify({
+              request_id: currentRequest.id,
+              token: reviewToken()
+            })
+          });
 
-          let updates = {
-            updated_at: new Date().toISOString()
-          };
-
-          if(step === 'pending_board'){
-            updates.current_step = 'pending_supervisor';
-            updates.approval_status = 'pending_supervisor';
-            updates.board_approved_at = new Date().toISOString();
-          }else if(step === 'pending_supervisor'){
-            updates.current_step = 'pending_admin_mailing';
-            updates.approval_status = 'pending_admin_mailing';
-            updates.supervisor_approved_at = new Date().toISOString();
-          }else{
-            throw new Error('This packet is not currently awaiting your approval.');
+          const payload = await response.json().catch(() => ({}));
+          if(!response.ok || !payload.ok){
+            throw new Error(payload.error || 'Approval failed.');
           }
 
-          const result = await c
-            .from('annual_meeting_approval_requests')
-            .update(updates)
-            .eq('id', row.id)
-            .select('*')
-            .maybeSingle();
-
-          if(result.error) throw result.error;
-          if(!result.data) throw new Error('Approval update did not return a record.');
-
-          currentRequest = result.data;
+          currentRequest = payload.request;
           showStatus('Packet approved successfully.');
-          render(result.data);
+          render(payload.request);
 
           buttons.forEach(btn => {
             btn.disabled = false;
@@ -785,6 +783,7 @@
           build: BUILD,
           installed: true,
           requestId: requestId(),
+          hasToken: !!reviewToken(),
           hasRequest: !!currentRequest,
           outerFound: !!outer,
           innerFound: !!inner,
