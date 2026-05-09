@@ -375,6 +375,40 @@
       .packet-scale-inner{width:auto;zoom:1;transform:none!important}
       .packet-scale-inner .am-v652-page{box-shadow:none!important;border:0!important;border-radius:0!important;page-break-after:always}
     }
+  
+    /* v715 isolated print viewport */
+    .packet-frame-shell {
+      width: 100%;
+      overflow: hidden;
+      position: relative;
+      border-radius: 18px;
+      background: #eaf3fb;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .packet-print-frame {
+      width: 850px;
+      min-width: 850px;
+      max-width: 850px;
+      border: 0;
+      display: block;
+      transform-origin: top left;
+      background: transparent;
+      pointer-events: none;
+    }
+
+    .packet-frame-fallback {
+      width: 100%;
+      min-height: 300px;
+      color: #102f4f;
+      font-weight: 800;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 28px;
+    }
+
   </style>
 </head>
 
@@ -415,7 +449,7 @@
     (function(){
       'use strict';
 
-      const BUILD = '2026-05-09-v714-phone-compact-print-page';
+      const BUILD = '2026-05-09-v715-isolated-print-viewport';
       const SUPABASE_URL = window.SUPABASE_URL || window.ZUMMEE_SUPABASE_URL || 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
       const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || window.SUPABASE_KEY || window.ZUMMEE_SUPABASE_ANON_KEY || window.supabaseAnonKey || 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
 
@@ -553,37 +587,40 @@
 
 
       function injectPacketPrintLayoutLock(inner){
+        // v715 fallback only. Primary rendering uses isolated iframe.
         if(!inner) return;
-        const old = inner.querySelector('#approval-review-v711-packet-print-layout-lock, #approval-review-v712-ipad-look-layout-lock, #approval-review-v713-full-page-fit-lock, #approval-review-v714-compact-print-page-lock');
+        const old = inner.querySelector('#approval-review-v714-compact-print-page-lock, #approval-review-v715-isolated-print-lock');
         if(old) old.remove();
-
         const style = document.createElement('style');
-        style.id = 'approval-review-v714-compact-print-page-lock';
-        style.textContent = `
-          /*
-            v714: compact print-page phone preview.
-            Keeps the real packet page shape, but caps snapshot/mobile typography
-            so the page looks like a scaled printed page instead of a mobile card.
-          */
+        style.id = 'approval-review-v715-isolated-print-lock';
+        style.textContent = packetFrameCss();
+        inner.appendChild(style);
+      }
 
-          .packet-scale-inner,
-          .packet-scale-inner * {
+      function packetFrameCss(){
+        return `
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 850px !important;
+            min-width: 850px !important;
+            max-width: 850px !important;
+            overflow: hidden !important;
+            background: transparent !important;
+            -webkit-text-size-adjust: 100% !important;
+            text-size-adjust: 100% !important;
+          }
+
+          *, *::before, *::after {
             box-sizing: border-box !important;
             -webkit-text-size-adjust: 100% !important;
             text-size-adjust: 100% !important;
           }
 
-          .packet-scale-inner {
+          .am-v652-pages {
             width: 850px !important;
-            max-width: 850px !important;
             min-width: 850px !important;
-            transform-origin: top left !important;
-          }
-
-          .packet-scale-inner .am-v652-pages {
-            width: 850px !important;
             max-width: 850px !important;
-            min-width: 850px !important;
             display: flex !important;
             flex-direction: column !important;
             align-items: stretch !important;
@@ -596,159 +633,239 @@
             transform: none !important;
           }
 
-          .packet-scale-inner .am-v652-page {
+          .am-v652-page {
             width: 850px !important;
-            max-width: 850px !important;
             min-width: 850px !important;
+            max-width: 850px !important;
             height: 1100px !important;
             min-height: 1100px !important;
             max-height: 1100px !important;
             overflow: hidden !important;
             transform: none !important;
             background: #fff !important;
+            border: 1px solid #d7e3f1 !important;
             border-radius: 18px !important;
+            box-shadow: 0 16px 38px rgba(16,47,79,.13) !important;
             padding: 50px !important;
           }
 
-          .packet-scale-inner .am-v652-page-header {
+          .am-v652-page-header {
             display: flex !important;
             flex-direction: row !important;
-            justify-content: space-between !important;
             align-items: flex-start !important;
-            gap: 22px !important;
+            justify-content: space-between !important;
+            gap: 24px !important;
             border-bottom: 3px solid #102f4f !important;
             padding-bottom: 18px !important;
             margin-bottom: 22px !important;
           }
 
-          .packet-scale-inner .am-v652-logo,
-          .packet-scale-inner img.am-v652-logo,
-          .packet-scale-inner .am-v652-page-header img,
-          .packet-scale-inner img {
+          .am-v652-logo,
+          img.am-v652-logo,
+          .am-v652-page-header img,
+          img {
             width: auto !important;
             height: auto !important;
-            max-width: 170px !important;
-            max-height: 68px !important;
+            max-width: 165px !important;
+            max-height: 66px !important;
             object-fit: contain !important;
           }
 
-          .packet-scale-inner .am-v652-kicker,
-          .packet-scale-inner [class*="kicker"],
-          .packet-scale-inner label {
-            font-size: 11px !important;
+          .am-v652-kicker,
+          [class*="kicker"],
+          label {
+            font-size: 10px !important;
             line-height: 1.2 !important;
             letter-spacing: .15em !important;
             text-transform: uppercase !important;
             font-weight: 900 !important;
           }
 
-          .packet-scale-inner .am-v652-page h1,
-          .packet-scale-inner .am-v652-h1,
-          .packet-scale-inner h1 {
-            font-size: 31px !important;
+          h1, .am-v652-h1 {
+            font-size: 28px !important;
             line-height: 1.08 !important;
             letter-spacing: -0.02em !important;
-            margin-top: 6px !important;
-            margin-bottom: 12px !important;
+            margin: 6px 0 12px !important;
           }
 
-          .packet-scale-inner .am-v652-page h2,
-          .packet-scale-inner .am-v652-h2,
-          .packet-scale-inner h2 {
-            font-size: 23px !important;
+          h2, .am-v652-h2 {
+            font-size: 21px !important;
             line-height: 1.14 !important;
-            margin-top: 0 !important;
-            margin-bottom: 14px !important;
+            margin: 0 0 13px !important;
           }
 
-          .packet-scale-inner .am-v652-page h3,
-          .packet-scale-inner h3 {
-            font-size: 18px !important;
+          h3 {
+            font-size: 17px !important;
             line-height: 1.16 !important;
-            margin-top: 10px !important;
-            margin-bottom: 8px !important;
+            margin: 10px 0 8px !important;
           }
 
-          .packet-scale-inner .am-v652-page p,
-          .packet-scale-inner .am-v652-page li,
-          .packet-scale-inner .am-v652-page td,
-          .packet-scale-inner .am-v652-page th,
-          .packet-scale-inner .am-v652-page div,
-          .packet-scale-inner .am-v652-page span {
-            font-size: 14px !important;
-            line-height: 1.38 !important;
+          p, li, td, th {
+            font-size: 13px !important;
+            line-height: 1.34 !important;
           }
 
-          .packet-scale-inner .am-v652-page strong,
-          .packet-scale-inner .am-v652-page b {
+          strong, b {
             font-size: inherit !important;
             line-height: inherit !important;
           }
 
-          .packet-scale-inner .am-v652-page ul,
-          .packet-scale-inner .am-v652-page ol {
-            margin-top: 8px !important;
-            margin-bottom: 8px !important;
-            padding-left: 22px !important;
+          ul, ol {
+            margin: 7px 0 !important;
+            padding-left: 21px !important;
           }
 
-          .packet-scale-inner .am-v652-page li {
+          li {
             margin-bottom: 3px !important;
           }
 
-          .packet-scale-inner .am-v652-meta-grid {
+          .am-v652-meta-grid {
             display: grid !important;
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
             gap: 12px !important;
-            margin: 18px 0 !important;
-          }
-
-          .packet-scale-inner .am-v652-meta {
-            min-height: 72px !important;
-            padding: 12px 14px !important;
-            border-radius: 15px !important;
-          }
-
-          .packet-scale-inner .am-v652-meta label,
-          .packet-scale-inner .am-v652-meta .label,
-          .packet-scale-inner .am-v652-meta [class*="label"] {
-            font-size: 10px !important;
-            line-height: 1.18 !important;
-            letter-spacing: .12em !important;
-            margin-bottom: 6px !important;
-          }
-
-          .packet-scale-inner .am-v652-meta div,
-          .packet-scale-inner .am-v652-meta span,
-          .packet-scale-inner .am-v652-meta strong {
-            font-size: 15px !important;
-            line-height: 1.2 !important;
-          }
-
-          .packet-scale-inner .am-v652-box {
-            padding: 16px 18px !important;
-            border-radius: 16px !important;
             margin: 16px 0 !important;
           }
 
-          .packet-scale-inner table {
-            border-collapse: collapse !important;
+          .am-v652-meta {
+            min-height: 68px !important;
+            padding: 11px 13px !important;
+            border-radius: 14px !important;
           }
 
-          .packet-scale-inner th {
-            font-size: 10px !important;
+          .am-v652-meta label,
+          .am-v652-meta .label,
+          .am-v652-meta [class*="label"] {
+            font-size: 9.5px !important;
+            line-height: 1.16 !important;
+            letter-spacing: .12em !important;
+            margin-bottom: 5px !important;
+          }
+
+          .am-v652-meta div,
+          .am-v652-meta span,
+          .am-v652-meta strong {
+            font-size: 14px !important;
+            line-height: 1.18 !important;
+          }
+
+          .am-v652-box {
+            padding: 15px 17px !important;
+            border-radius: 15px !important;
+            margin: 15px 0 !important;
+          }
+
+          table {
+            border-collapse: collapse !important;
+            max-width: 100% !important;
+          }
+
+          th {
+            font-size: 9.5px !important;
             line-height: 1.15 !important;
             letter-spacing: .08em !important;
-            padding: 4px 7px !important;
+            padding: 4px 6px !important;
           }
 
-          .packet-scale-inner td {
-            font-size: 13px !important;
-            line-height: 1.28 !important;
-            padding: 4px 7px !important;
+          td {
+            font-size: 12px !important;
+            line-height: 1.26 !important;
+            padding: 4px 6px !important;
+          }
+
+          @media (max-width: 900px) {
+            html, body, .am-v652-pages, .am-v652-page {
+              width: 850px !important;
+              min-width: 850px !important;
+              max-width: 850px !important;
+            }
+
+            .am-v652-page-header {
+              flex-direction: row !important;
+            }
+
+            .am-v652-meta-grid {
+              grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
           }
         `;
-        inner.appendChild(style);
+      }
+
+      function buildIsolatedPacketFrame(packetHtml){
+        const body = els.body;
+        if(!body) return false;
+
+        body.innerHTML = `
+          <div class="packet-stage">
+            <div class="packet-frame-shell" id="packetFrameShell">
+              <iframe class="packet-print-frame" id="packetPrintFrame" title="Annual Meeting Packet Preview"></iframe>
+            </div>
+          </div>
+        `;
+
+        const frame = document.getElementById('packetPrintFrame');
+        const shell = document.getElementById('packetFrameShell');
+        if(!frame || !shell) return false;
+
+        const source = `
+          <!doctype html>
+          <html>
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=850, initial-scale=1">
+              <style>${packetFrameCss()}</style>
+            </head>
+            <body>${packetHtml || ''}</body>
+          </html>
+        `;
+
+        frame.srcdoc = source;
+
+        frame.onload = () => {
+          try{
+            const doc = frame.contentDocument;
+            if(doc) {
+              doc.querySelectorAll('img').forEach(img => {
+                const src = String(img.getAttribute('src') || '').toLowerCase();
+                const alt = String(img.getAttribute('alt') || '').toLowerCase();
+                if(img.classList.contains('am-v652-logo') || src.includes('logo') || src.includes('sixes') || alt.includes('logo')){
+                  img.classList.add('am-v652-logo');
+                }
+              });
+            }
+
+            const pageCount = doc ? (doc.querySelectorAll('.am-v652-page').length || 1) : 1;
+            const rawHeight = (pageCount * 1100) + Math.max(0, pageCount - 1) * 24;
+            frame.style.height = rawHeight + 'px';
+
+            const availableWidth = Math.max(280, body.clientWidth - 20);
+            const visibleHeight = Math.max(420, window.innerHeight - 300);
+            const scale = Math.min(1, availableWidth / 850, visibleHeight / 1100) * 0.96;
+
+            frame.style.transform = `scale(${scale})`;
+            frame.dataset.scale = String(scale);
+            shell.style.height = Math.ceil(rawHeight * scale) + 'px';
+            shell.dataset.pageCount = String(pageCount);
+            shell.dataset.scale = String(scale);
+
+            window.__approvalPacketFrameStatus = {
+              ok: true,
+              build: BUILD,
+              pageCount,
+              rawHeight,
+              scale,
+              shellHeight: shell.style.height,
+              frameWidth: 850
+            };
+          }catch(error){
+            window.__approvalPacketFrameStatus = {
+              ok: false,
+              build: BUILD,
+              error: error && error.message ? error.message : String(error)
+            };
+          }
+        };
+
+        return true;
       }
 
       function markLogos(inner){
@@ -819,34 +936,38 @@
         els.title.textContent = name + ' Packet Review';
         els.meta.textContent = date + ' • ' + statusLabel(row);
 
-        const html = packetHtmlFrom(row);
-        if(!html){
+        const packetMarkup = packetHtmlFrom(row);
+        if(!packetMarkup){
           showError('Packet preview is not available for this approval request.');
           return;
         }
 
-        els.body.innerHTML = `
-          <div class="packet-stage">
-            <div class="packet-scale-outer">
-              <div class="packet-scale-inner">${sanitizePreviewHtml(html)}</div>
-            </div>
-          </div>
-        `;
+        const safePacketMarkup = sanitizePreviewHtml(packetMarkup);
 
-        const inner = document.querySelector('.packet-scale-inner');
-        if(inner) {
-          injectPacketPrintLayoutLock(inner);
-          markLogos(inner);
+        if(!buildIsolatedPacketFrame(safePacketMarkup)){
+          els.body.innerHTML = `
+            <div class="packet-stage">
+              <div class="packet-scale-outer">
+                <div class="packet-scale-inner">${safePacketMarkup}</div>
+              </div>
+            </div>
+          `;
+
+          const inner = document.querySelector('.packet-scale-inner');
+          if(inner) {
+            injectPacketPrintLayoutLock(inner);
+            markLogos(inner);
+          }
+
+          requestAnimationFrame(() => {
+            applyScale();
+            setTimeout(applyScale, 260);
+            setTimeout(applyScale, 900);
+          });
         }
 
         const step = clean(row.current_step || row.approval_status);
         setApproveVisible(step === 'pending_board' || step === 'pending_supervisor');
-
-        requestAnimationFrame(() => {
-          applyScale();
-          setTimeout(applyScale, 260);
-          setTimeout(applyScale, 900);
-        });
       }
 
       async function getSupabase(){
@@ -983,16 +1104,23 @@
       window.getApprovalPacketReviewStatus = function(){
         const outer = document.querySelector('.packet-scale-outer');
         const inner = document.querySelector('.packet-scale-inner');
+        const frame = document.getElementById('packetPrintFrame');
+        const shell = document.getElementById('packetFrameShell');
         return {
           build: BUILD,
           installed: true,
           requestId: requestId(),
           hasToken: !!reviewToken(),
           hasRequest: !!currentRequest,
+          hasV715IsolatedFrame: !!frame,
+          frameStatus: window.__approvalPacketFrameStatus || null,
+          shellClientHeight: shell ? shell.clientHeight : null,
+          shellScrollHeight: shell ? shell.scrollHeight : null,
+          frameHeight: frame ? frame.style.height : null,
+          frameScale: frame ? frame.dataset.scale : null,
           outerFound: !!outer,
           innerFound: !!inner,
-          pageCount: inner ? inner.querySelectorAll('.am-v652-page').length : 0,
-          hasV714CompactPrintPage: !!document.getElementById('approval-review-v714-compact-print-page-lock'),
+          pageCount: frame && shell ? Number(shell.dataset.pageCount || 0) : (inner ? inner.querySelectorAll('.am-v652-page').length : 0),
           bodyClientHeight: els.body ? els.body.clientHeight : null,
           bodyScrollHeight: els.body ? els.body.scrollHeight : null,
           outerClientHeight: outer ? outer.clientHeight : null,
