@@ -396,6 +396,9 @@
       transform-origin: top left;
       background: transparent;
       pointer-events: none;
+      position: absolute;
+      top: 0;
+      left: 50%;
     }
 
     .packet-frame-fallback {
@@ -484,7 +487,7 @@
     (function(){
       'use strict';
 
-      const BUILD = '2026-05-09-v716-one-page-phone-viewer';
+      const BUILD = '2026-05-09-v717-centered-one-page-viewer';
       const SUPABASE_URL = window.SUPABASE_URL || window.ZUMMEE_SUPABASE_URL || 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
       const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || window.SUPABASE_KEY || window.ZUMMEE_SUPABASE_ANON_KEY || window.supabaseAnonKey || 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
 
@@ -681,7 +684,7 @@
             border: 1px solid #d7e3f1 !important;
             border-radius: 18px !important;
             box-shadow: 0 16px 38px rgba(16,47,79,.13) !important;
-            padding: 50px !important;
+            padding: 54px !important;
           }
 
           .am-v652-page-header {
@@ -701,8 +704,8 @@
           img {
             width: auto !important;
             height: auto !important;
-            max-width: 165px !important;
-            max-height: 66px !important;
+            max-width: 150px !important;
+            max-height: 60px !important;
             object-fit: contain !important;
           }
 
@@ -717,14 +720,14 @@
           }
 
           h1, .am-v652-h1 {
-            font-size: 28px !important;
+            font-size: 30px !important;
             line-height: 1.08 !important;
             letter-spacing: -0.02em !important;
             margin: 6px 0 12px !important;
           }
 
           h2, .am-v652-h2 {
-            font-size: 21px !important;
+            font-size: 22px !important;
             line-height: 1.14 !important;
             margin: 0 0 13px !important;
           }
@@ -736,8 +739,8 @@
           }
 
           p, li, td, th {
-            font-size: 13px !important;
-            line-height: 1.34 !important;
+            font-size: 13.5px !important;
+            line-height: 1.36 !important;
           }
 
           strong, b {
@@ -779,8 +782,8 @@
           .am-v652-meta div,
           .am-v652-meta span,
           .am-v652-meta strong {
-            font-size: 14px !important;
-            line-height: 1.18 !important;
+            font-size: 14.5px !important;
+            line-height: 1.2 !important;
           }
 
           .am-v652-box {
@@ -882,14 +885,21 @@
             const visibleHeight = Math.max(420, window.innerHeight - 310);
             scale = Math.min(1, availableWidth / 850, visibleHeight / 1100) * 0.98;
 
+            const scaledWidth = 850 * scale;
+            const scaledHeight = 1100 * scale;
+            const shellWidth = shell.clientWidth || body.clientWidth || availableWidth;
+            const offsetX = Math.max(0, (shellWidth - scaledWidth) / 2);
+
             frame.style.width = '850px';
             frame.style.height = '1100px';
-            frame.style.transform = `scale(${scale})`;
+            frame.style.transform = `translateX(${offsetX}px) scale(${scale})`;
             frame.dataset.scale = String(scale);
+            frame.dataset.offsetX = String(offsetX);
 
-            shell.style.height = Math.ceil(1100 * scale) + 'px';
+            shell.style.height = Math.ceil(scaledHeight) + 'px';
             shell.dataset.pageCount = String(pageCount);
             shell.dataset.scale = String(scale);
+            shell.dataset.offsetX = String(offsetX);
             shell.dataset.selectedPage = String(selectedPage + 1);
 
             if(controls) controls.hidden = pageCount <= 1;
@@ -900,19 +910,20 @@
             window.__approvalPacketFrameStatus = {
               ok: true,
               build: BUILD,
-              mode: 'one-page-phone-viewer',
+              mode: 'centered-one-page-phone-viewer',
               pageCount,
               selectedPage: selectedPage + 1,
               scale,
               shellHeight: shell.style.height,
               frameWidth: 850,
-              frameHeight: 1100
+              frameHeight: 1100,
+              offsetX
             };
           }catch(error){
             window.__approvalPacketFrameStatus = {
               ok: false,
               build: BUILD,
-              mode: 'one-page-phone-viewer',
+              mode: 'centered-one-page-phone-viewer',
               error: error && error.message ? error.message : String(error)
             };
           }
@@ -959,7 +970,7 @@
             window.__approvalPacketFrameStatus = {
               ok: false,
               build: BUILD,
-              mode: 'one-page-phone-viewer',
+              mode: 'centered-one-page-phone-viewer',
               error: error && error.message ? error.message : String(error)
             };
           }
@@ -1217,12 +1228,13 @@
           requestId: requestId(),
           hasToken: !!reviewToken(),
           hasRequest: !!currentRequest,
-          hasV716OnePageFrame: !!frame,
+          hasV717CenteredOnePageFrame: !!frame,
           frameStatus: window.__approvalPacketFrameStatus || null,
           shellClientHeight: shell ? shell.clientHeight : null,
           shellScrollHeight: shell ? shell.scrollHeight : null,
           frameHeight: frame ? frame.style.height : null,
           frameScale: frame ? frame.dataset.scale : null,
+          frameOffsetX: frame ? frame.dataset.offsetX : null,
           outerFound: !!outer,
           innerFound: !!inner,
           pageCount: frame && shell ? Number(shell.dataset.pageCount || 0) : (inner ? inner.querySelectorAll('.am-v652-page').length : 0),
