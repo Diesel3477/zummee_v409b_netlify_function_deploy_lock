@@ -813,6 +813,42 @@
   @media(max-width:760px){.annualPacketPreviewModal{padding:20px;border-radius:26px}.annualPacketPreviewGrid{grid-template-columns:1fr}.annualPacketPreviewActions button{width:100%}}
 </style>
 
+
+
+<style id="board-hub-annual-approval-preview-v617-match-annual-style">
+  .annualPacketPreviewModal.is-full-packet {
+    width:min(980px,96vw);
+  }
+  .annualPacketPreviewBody.is-full-packet {
+    display:block;
+  }
+  .annualPacketPreviewFullHtml {
+    border:1.5px solid #d8e5f6;
+    background:#fff;
+    border-radius:22px;
+    padding:24px;
+    color:#17365f;
+    line-height:1.45;
+    max-height:64vh;
+    overflow:auto;
+  }
+  .annualPacketPreviewFullHtml img {
+    max-width:100%;
+    height:auto;
+  }
+  .annualPacketPreviewFullHtml h1,
+  .annualPacketPreviewFullHtml h2,
+  .annualPacketPreviewFullHtml h3 {
+    color:#17365f;
+  }
+  .annualPacketPreviewFallbackNote {
+    margin:0 0 14px;
+    color:#64748b;
+    font-size:14px;
+    font-weight:850;
+  }
+</style>
+
 </head>
 <body>
   <div class="wrap">
@@ -2948,6 +2984,165 @@
   else boot();
 
   window.previewBoardHubAnnualMeetingPacket = openPreview;
+})();
+</script>
+
+
+
+<script id="board-hub-annual-approval-preview-v617-match-annual">
+(function(){
+  'use strict';
+  if(window.__BoardHubAnnualPreviewV617MatchAnnual) return;
+  window.__BoardHubAnnualPreviewV617MatchAnnual = true;
+
+  const BUILD = '2026-05-09-v617-board-hub-preview-matches-annual-page';
+
+  function el(id){ return document.getElementById(id); }
+  function clean(v){ return String(v == null ? '' : v).trim(); }
+  function escapeHtml(v){
+    return clean(v).replace(/[&<>"']/g, function(ch){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch];
+    });
+  }
+  function formatDate(value){
+    const v = clean(value).slice(0,10);
+    if(!v) return 'Not set';
+    const d = new Date(v + 'T00:00:00');
+    if(Number.isNaN(d.getTime())) return v;
+    return d.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
+  }
+  function rows(){
+    try{
+      const status = window.getBoardHubAnnualApprovalRequestsStatus && window.getBoardHubAnnualApprovalRequestsStatus();
+      if(status && Array.isArray(status.rows)) return status.rows;
+    }catch(e){}
+    try{
+      const s = window.__BoardHubAnnualApprovalRequestsV615Status;
+      if(s && Array.isArray(s.rows)) return s.rows;
+    }catch(e2){}
+    return [];
+  }
+  function rowById(id){
+    return rows().find(function(row){ return clean(row.id) === clean(id); }) || null;
+  }
+  function snapshot(row){
+    return row && row.packet_preview_snapshot && typeof row.packet_preview_snapshot === 'object'
+      ? row.packet_preview_snapshot
+      : {};
+  }
+  function packetHtmlFrom(row){
+    const snap = snapshot(row);
+    const keys = [
+      'html',
+      'packetHtml',
+      'packet_html',
+      'previewHtml',
+      'preview_html',
+      'packet_preview_html'
+    ];
+    for(const key of keys){
+      if(clean(snap[key])) return clean(snap[key]);
+    }
+    try{
+      if(snap.packet && clean(snap.packet.html)) return clean(snap.packet.html);
+      if(snap.preview && clean(snap.preview.html)) return clean(snap.preview.html);
+      if(snap.document && clean(snap.document.html)) return clean(snap.document.html);
+    }catch(e){}
+    return '';
+  }
+  function sanitizePreviewHtml(html){
+    let out = String(html || '');
+    out = out.replace(new RegExp('<' + 'script[\\s\\S]*?<' + '\\/script>', 'gi'), '');
+    out = out.replace(/\son[a-z]+\s*=\s*(['"]).*?\1/gi, '');
+    out = out.replace(/javascript:/gi, '');
+    return out;
+  }
+  function fallbackDetails(row){
+    const snap = snapshot(row);
+    const association = row.association_legal_name || snap.associationName || snap.association_name || snap.associationLegalName || 'Annual Meeting Packet';
+    const community = (snap.community && snap.community.name) || row.community_name || '';
+    const route = row.approval_route_label || snap.routeLabel || row.approval_route || '';
+    const meetingDate = row.next_annual_meeting_date || snap.meetingDate || snap.next_annual_meeting_date || '';
+    return '' +
+      '<p class="annualPacketPreviewFallbackNote">The full generated packet HTML was not found on this request. Showing saved packet metadata instead.</p>' +
+      '<div class="annualPacketPreviewCard">' +
+        '<h3>Packet Details</h3>' +
+        '<div class="annualPacketPreviewGrid">' +
+          field('Association', association) +
+          field('Community', community) +
+          field('Meeting Date', formatDate(meetingDate)) +
+          field('Approval Route', route) +
+        '</div>' +
+      '</div>' +
+      '<div class="annualPacketPreviewCard"><h3>Saved Snapshot</h3><div class="annualPacketPreviewJson">' + escapeHtml(JSON.stringify(snap || {}, null, 2)) + '</div></div>';
+  }
+  function field(label, value){
+    return '<div class="annualPacketPreviewField"><div class="annualPacketPreviewLabel">' + escapeHtml(label) + '</div><div class="annualPacketPreviewValue">' + escapeHtml(value || '—') + '</div></div>';
+  }
+  function openMatchingPreview(id){
+    const row = rowById(id);
+    if(!row){
+      alert('Packet preview is not available yet. Refresh the approval requests and try again.');
+      return;
+    }
+
+    const shade = el('annualPacketPreviewShade');
+    const body = el('annualPacketPreviewBody');
+    const meta = el('annualPacketPreviewMeta');
+    const modal = shade && shade.querySelector('.annualPacketPreviewModal');
+
+    if(!shade || !body) return;
+
+    const html = packetHtmlFrom(row);
+    const snap = snapshot(row);
+    const association = row.association_legal_name || snap.associationName || snap.association_name || 'Annual Meeting Packet';
+    const meetingDate = row.next_annual_meeting_date || snap.meetingDate || snap.next_annual_meeting_date || '';
+
+    if(meta){
+      meta.textContent = association + ' · Meeting date: ' + formatDate(meetingDate);
+    }
+
+    if(modal) modal.classList.add('is-full-packet');
+    body.classList.add('is-full-packet');
+
+    if(html){
+      body.innerHTML = '<div class="annualPacketPreviewFullHtml">' + sanitizePreviewHtml(html) + '</div>';
+    }else{
+      body.innerHTML = fallbackDetails(row);
+    }
+
+    shade.classList.add('open');
+    shade.setAttribute('aria-hidden', 'false');
+  }
+
+  // Use capture phase to override the v616 preview button handler.
+  document.addEventListener('click', function(event){
+    const button = event.target && event.target.closest
+      ? event.target.closest('[data-annual-approval-action="preview"][data-id]')
+      : null;
+
+    if(!button) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    if(event.stopImmediatePropagation) event.stopImmediatePropagation();
+
+    openMatchingPreview(button.getAttribute('data-id'));
+  }, true);
+
+  window.previewBoardHubAnnualMeetingPacket = openMatchingPreview;
+  window.getBoardHubAnnualPreviewMatchStatus = function(){
+    const r = rows();
+    const first = r[0] || null;
+    const html = first ? packetHtmlFrom(first) : '';
+    return {
+      build:BUILD,
+      installed:true,
+      rowCount:r.length,
+      firstHasPacketHtml:!!html,
+      firstPacketHtmlLength:html.length
+    };
+  };
 })();
 </script>
 
