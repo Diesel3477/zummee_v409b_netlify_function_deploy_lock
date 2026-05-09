@@ -2904,12 +2904,25 @@ window.ZUMMEE_ANNUAL_MEETINGS_STABLE_BASELINE = "v648";
       const title = el('amV652PacketTitle');
       const sub = el('amV652PacketSub');
       const content = el('amV652PacketContent');
+      const packetHtml = buildPacketHtml(data);
       if(title) title.textContent = data.associationName + ' Packet Preview';
       if(sub) sub.textContent = 'Meeting date: ' + formatDate(data.entry.nextDate) + ' • Seats: ' + data.seats;
-      if(content) content.innerHTML = buildPacketHtml(data);
+      if(content) content.innerHTML = packetHtml;
       overlay.classList.add('is-open');
-      window.__AnnualMeetingsV652PacketLast = { community, settings:entry, roster, generatedAt:Date.now() };
-      console.info('[Annual v652] packet preview generated', window.__AnnualMeetingsV652PacketLast);
+      window.__AnnualMeetingsV652PacketLast = {
+        community,
+        settings:entry,
+        roster,
+        data,
+        html:packetHtml,
+        packetHtml,
+        associationName:data.associationName,
+        meetingDate:data.entry.nextDate,
+        seats:data.seats,
+        generatedAt:Date.now(),
+        generatedAtIso:new Date().toISOString()
+      };
+      console.info('[Annual v653] packet preview generated with full HTML snapshot', window.__AnnualMeetingsV652PacketLast);
       return window.__AnnualMeetingsV652PacketLast;
     }catch(err){
       console.error('[Annual v652] packet preview failed', err);
@@ -3089,6 +3102,40 @@ window.ZUMMEE_ANNUAL_MEETINGS_STABLE_BASELINE = "v648";
     if(btn){ btn.disabled = !!on; btn.textContent = on ? 'Initiating...' : 'Initiate Approval Process'; }
   }
 
+
+  function packetSnapshot(community, settings, routeKey, route){
+    const last = window.ZummeeAnnualMeetingsPacketPreview &&
+      window.ZummeeAnnualMeetingsPacketPreview.last &&
+      window.ZummeeAnnualMeetingsPacketPreview.last();
+
+    const content = el('amV652PacketContent');
+    const currentHtml = content && content.innerHTML ? content.innerHTML : '';
+
+    const html = last && (last.html || last.packetHtml)
+      ? (last.html || last.packetHtml)
+      : currentHtml;
+
+    const data = last && last.data ? last.data : {};
+    const roster = last && last.roster ? last.roster : {};
+
+    return {
+      version:'v653-full-packet-preview',
+      community,
+      settings,
+      routeKey,
+      routeLabel: route.label,
+      generatedAt: (last && last.generatedAtIso) || now(),
+      packetPreviewAvailable: !!html,
+      html: html || '',
+      packetHtml: html || '',
+      packetData: data || {},
+      roster: roster || {},
+      associationName: (last && last.associationName) || settings.association_legal_name || '',
+      meetingDate: (last && last.meetingDate) || settings.next_annual_meeting_date || '',
+      seats: (last && last.seats) || ''
+    };
+  }
+
   function payload(table, community, settings, routeKey, route, note){
     const common = {
       community_id: community.id,
@@ -3106,14 +3153,7 @@ window.ZUMMEE_ANNUAL_MEETINGS_STABLE_BASELINE = "v648";
       annual_meeting_settings_id: settings.id || null,
       next_annual_meeting_date: settings.next_annual_meeting_date || null,
       association_legal_name: settings.association_legal_name || null,
-      packet_preview_snapshot: {
-        community,
-        settings,
-        routeKey,
-        routeLabel: route.label,
-        generatedAt: now(),
-        packetPreviewAvailable: !!(window.ZummeeAnnualMeetingsPacketPreview && window.ZummeeAnnualMeetingsPacketPreview.last && window.ZummeeAnnualMeetingsPacketPreview.last())
-      }
+      packet_preview_snapshot: packetSnapshot(community, settings, routeKey, route)
     };
     if(table === FALLBACK_APPROVAL_TABLE){
       return {
@@ -3135,10 +3175,44 @@ window.ZUMMEE_ANNUAL_MEETINGS_STABLE_BASELINE = "v648";
 
   async function tryWrite(sb, table, data){
     try{
+      // Long-term behavior: if a pending/active approval already exists for this
+      // community + annual meeting date, update it instead of creating a duplicate.
+      try{
+        let existingQuery = sb.from(table)
+          .select('id,approval_status,current_step,updated_at')
+          .eq('community_id', data.community_id)
+          .order('updated_at', { ascending:false })
+          .limit(1);
+
+        if(data.next_annual_meeting_date){
+          existingQuery = existingQuery.eq('next_annual_meeting_date', data.next_annual_meeting_date);
+        }
+
+        if(table === PRIMARY_APPROVAL_TABLE){
+          existingQuery = existingQuery.not('approval_status', 'in', '("archived","cancelled","mailed")');
+        }
+
+        const existing = await existingQuery.maybeSingle();
+
+        if(existing && existing.data && existing.data.id){
+          const upd = await sb.from(table)
+            .update(data)
+            .eq('id', existing.data.id)
+            .select('*')
+            .maybeSingle();
+
+          if(upd && !upd.error) return { ok:true, table, data:upd.data || null, mode:'updated_existing' };
+        }
+      }catch(findErr){
+        console.warn('[Annual v653] existing approval lookup skipped', findErr);
+      }
+
       const up = await sb.from(table).upsert(data, { onConflict:'community_id', ignoreDuplicates:false }).select('*').maybeSingle();
-      if(up && !up.error) return { ok:true, table, data:up.data || null };
+      if(up && !up.error) return { ok:true, table, data:up.data || null, mode:'upserted' };
+
       const ins = await sb.from(table).insert(data).select('*').maybeSingle();
-      if(ins && !ins.error) return { ok:true, table, data:ins.data || null };
+      if(ins && !ins.error) return { ok:true, table, data:ins.data || null, mode:'inserted' };
+
       return { ok:false, table, error:(ins && ins.error) || (up && up.error) || 'unknown error' };
     }catch(err){ return { ok:false, table, error:err }; }
   }
@@ -3202,6 +3276,30 @@ window.getAnnualMeetingsV652Status = function(){
   };
 };
 console.info("[Annual Meetings v652] packet preview + approval routing loaded safely");
+</script>
+
+
+
+<script id="annual-meetings-v653-save-full-packet-preview">
+(function(){
+  window.getAnnualMeetingPacketSnapshotStatus = function(){
+    var last = null;
+    try{
+      last = window.ZummeeAnnualMeetingsPacketPreview &&
+        window.ZummeeAnnualMeetingsPacketPreview.last &&
+        window.ZummeeAnnualMeetingsPacketPreview.last();
+    }catch(e){}
+    return {
+      build:'2026-05-09-v653-save-full-packet-preview',
+      hasLast:!!last,
+      hasHtml:!!(last && (last.html || last.packetHtml)),
+      htmlLength:last && (last.html || last.packetHtml) ? String(last.html || last.packetHtml).length : 0,
+      associationName:last && last.associationName || '',
+      meetingDate:last && last.meetingDate || '',
+      generatedAt:last && last.generatedAtIso || ''
+    };
+  };
+})();
 </script>
 
 </body>
