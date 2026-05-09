@@ -1036,6 +1036,62 @@
   }
 </style>
 
+
+
+<style id="board-hub-v623-mobile-approval-deeplink-style">
+  /* v623: annual packet approval must be reachable on phone */
+  @media(max-width:760px){
+    #annualApprovalRequestsSection,
+    #annualMeetingApprovalsSection,
+    #annualApprovalsSection,
+    [data-section="annual-approvals"],
+    [data-annual-approval-section],
+    .annualApprovalRequestsSection,
+    .annualMeetingApprovalsSection {
+      display:block !important;
+      visibility:visible !important;
+      opacity:1 !important;
+      height:auto !important;
+      max-height:none !important;
+      overflow:visible !important;
+    }
+
+    .annualPacketPreviewShade.open,
+    #annualPacketPreviewShade.open {
+      display:flex !important;
+      visibility:visible !important;
+      opacity:1 !important;
+      align-items:flex-start !important;
+      justify-content:center !important;
+      padding:18px 12px !important;
+      overflow:auto !important;
+    }
+
+    .annualPacketPreviewModal,
+    .annualPacketPreviewModal.is-full-packet {
+      width:96vw !important;
+      max-width:96vw !important;
+      max-height:92vh !important;
+      margin:0 auto !important;
+      border-radius:22px !important;
+    }
+
+    .annualPacketPreviewFullHtml {
+      max-height:66vh !important;
+      overflow:auto !important;
+      padding:12px !important;
+    }
+
+    .annualPacketPreviewActions {
+      position:sticky;
+      bottom:0;
+      background:#f6f9fd;
+      padding:12px 0 0;
+      z-index:10;
+    }
+  }
+</style>
+
 </head>
 <body>
   <div class="wrap">
@@ -3999,6 +4055,269 @@
 
   window.addEventListener('pageshow', function(){
     if(shouldOpen() && !window.__BoardHubV622OpenApprovalPacketLast) setTimeout(openWhenReady, 500);
+  });
+})();
+</script>
+
+
+
+<script id="board-hub-v623-mobile-approval-deeplink">
+(function(){
+  'use strict';
+  if(window.__BoardHubV623MobileApprovalDeepLink) return;
+  window.__BoardHubV623MobileApprovalDeepLink = true;
+
+  const BUILD = '2026-05-09-v623-mobile-approval-deeplink-direct';
+
+  function clean(v){ return String(v == null ? '' : v).trim(); }
+  function el(id){ return document.getElementById(id); }
+  function params(){ return new URLSearchParams(window.location.search || ''); }
+  function shouldOpen(){
+    const p = params();
+    return clean(p.get('approval_request_id')) && (
+      clean(p.get('open_approval_packet')) === '1' ||
+      clean(p.get('open')) === 'approval_packet' ||
+      clean(p.get('review')) === 'packet'
+    );
+  }
+  function requestId(){ return clean(params().get('approval_request_id')); }
+
+  function formatDate(value){
+    const v = clean(value).slice(0,10);
+    if(!v) return 'Not set';
+    const d = new Date(v + 'T00:00:00');
+    if(Number.isNaN(d.getTime())) return v;
+    return d.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
+  }
+
+  function snapshot(row){
+    return row && row.packet_preview_snapshot && typeof row.packet_preview_snapshot === 'object'
+      ? row.packet_preview_snapshot
+      : {};
+  }
+
+  function packetHtmlFrom(row){
+    const snap = snapshot(row);
+    const keys = ['html','packetHtml','packet_html','previewHtml','preview_html','packet_preview_html'];
+    for(const key of keys){
+      if(clean(snap[key])) return clean(snap[key]);
+    }
+    try{
+      if(snap.packet && clean(snap.packet.html)) return clean(snap.packet.html);
+      if(snap.preview && clean(snap.preview.html)) return clean(snap.preview.html);
+      if(snap.document && clean(snap.document.html)) return clean(snap.document.html);
+    }catch(e){}
+    return '';
+  }
+
+  function sanitizePreviewHtml(html){
+    let out = String(html || '');
+    out = out.replace(new RegExp('<' + 'script[\\s\\S]*?<' + '\\/script>', 'gi'), '');
+    out = out.replace(/\son[a-z]+\s*=\s*(['"]).*?\1/gi, '');
+    out = out.replace(/javascript:/gi, '');
+    return out;
+  }
+
+  async function client(){
+    const start = Date.now();
+    while(Date.now() - start < 8000){
+      try{
+        const c = window.supabaseClient || (window.getSupabase && window.getSupabase()) || null;
+        if(c && typeof c.from === 'function') return c;
+      }catch(e){}
+      await new Promise(resolve => setTimeout(resolve, 120));
+    }
+    throw new Error('Supabase client not ready.');
+  }
+
+  async function loadRequest(id){
+    const c = await client();
+    const result = await c
+      .from('annual_meeting_approval_requests')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if(result.error) throw result.error;
+    if(!result.data) throw new Error('Approval request not found.');
+    return result.data;
+  }
+
+  function ensurePreviewShell(){
+    let shade = el('annualPacketPreviewShade');
+    if(shade) return shade;
+
+    shade = document.createElement('div');
+    shade.id = 'annualPacketPreviewShade';
+    shade.className = 'annualPacketPreviewShade';
+    shade.setAttribute('aria-hidden', 'true');
+    shade.innerHTML = '' +
+      '<div class="annualPacketPreviewModal is-full-packet">' +
+        '<div class="annualPacketPreviewHeader">' +
+          '<div>' +
+            '<h2 id="annualPacketPreviewTitle">Annual Meeting Packet Preview</h2>' +
+            '<p id="annualPacketPreviewMeta"></p>' +
+          '</div>' +
+          '<button type="button" id="annualPacketPreviewClose" class="annualPacketPreviewClose">×</button>' +
+        '</div>' +
+        '<div id="annualPacketPreviewBody" class="annualPacketPreviewBody is-full-packet"></div>' +
+        '<div class="annualPacketPreviewActions">' +
+          '<button type="button" id="annualPacketPreviewCloseBottom" class="annualPacketPreviewCloseBottom">Close Preview</button>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(shade);
+
+    function close(){
+      shade.classList.remove('open');
+      shade.setAttribute('aria-hidden', 'true');
+    }
+    const top = el('annualPacketPreviewClose');
+    const bottom = el('annualPacketPreviewCloseBottom');
+    if(top) top.addEventListener('click', close);
+    if(bottom) bottom.addEventListener('click', close);
+
+    return shade;
+  }
+
+  function openDirectPreview(row){
+    const shade = ensurePreviewShell();
+    const modal = shade.querySelector('.annualPacketPreviewModal');
+    const body = el('annualPacketPreviewBody');
+    const meta = el('annualPacketPreviewMeta');
+    const title = el('annualPacketPreviewTitle');
+
+    const snap = snapshot(row);
+    const association = clean(row.association_legal_name) ||
+      clean(snap.associationName) ||
+      clean(snap.association_legal_name) ||
+      clean(snap.settings && snap.settings.association_legal_name) ||
+      'Annual Meeting Packet';
+
+    const meetingDate = clean(row.next_annual_meeting_date) ||
+      clean(snap.meetingDate) ||
+      clean(snap.settings && snap.settings.next_annual_meeting_date);
+
+    const html = packetHtmlFrom(row);
+
+    if(title) title.textContent = association + ' Packet Preview';
+    if(meta) meta.textContent = 'Meeting date: ' + formatDate(meetingDate);
+    if(modal) modal.classList.add('is-full-packet');
+    if(body){
+      body.classList.add('is-full-packet');
+      body.innerHTML = html
+        ? '<div class="annualPacketPreviewFullHtml">' + sanitizePreviewHtml(html) + '</div>'
+        : '<div class="annualPacketPreviewFullHtml"><div style="padding:22px;border:1px solid #d8e5f6;border-radius:18px;background:#fff;color:#17365f;font-weight:800;">Packet preview HTML was not found for this approval request.</div></div>';
+    }
+
+    shade.classList.add('open');
+    shade.setAttribute('aria-hidden', 'false');
+
+    window.__BoardHubV623MobileApprovalDeepLinkLast = {
+      build:BUILD,
+      ok:true,
+      request_id:row.id,
+      current_step:row.current_step,
+      approval_status:row.approval_status,
+      hasPacketHtml:!!html,
+      packetHtmlLength:(html || '').length,
+      openedAt:new Date().toISOString()
+    };
+
+    return window.__BoardHubV623MobileApprovalDeepLinkLast;
+  }
+
+  async function openFromLink(){
+    if(!shouldOpen()) return { ok:false, skipped:true, reason:'no_open_packet_param' };
+    const id = requestId();
+
+    try{
+      // Prefer existing Board Hub preview when available.
+      if(typeof window.previewBoardHubAnnualMeetingPacket === 'function'){
+        try{
+          window.previewBoardHubAnnualMeetingPacket(id);
+          const shade = el('annualPacketPreviewShade');
+          if(shade && shade.classList.contains('open')){
+            window.__BoardHubV623MobileApprovalDeepLinkLast = {
+              build:BUILD,
+              ok:true,
+              request_id:id,
+              openedWith:'existing_preview_function',
+              openedAt:new Date().toISOString()
+            };
+            return window.__BoardHubV623MobileApprovalDeepLinkLast;
+          }
+        }catch(e){}
+      }
+
+      // Mobile-safe fallback: load the request directly and render the saved packet HTML.
+      const row = await loadRequest(id);
+      return openDirectPreview(row);
+    }catch(error){
+      const msg = error && error.message ? error.message : String(error);
+      window.__BoardHubV623MobileApprovalDeepLinkLast = {
+        build:BUILD,
+        ok:false,
+        request_id:id,
+        error:msg,
+        failedAt:new Date().toISOString()
+      };
+      console.error('[Board Hub v623] mobile approval deep link failed', error);
+      alert('Could not open the approval packet: ' + msg);
+      return window.__BoardHubV623MobileApprovalDeepLinkLast;
+    }
+  }
+
+  function forceApprovalSectionVisible(){
+    const selectors = [
+      '#annualApprovalRequestsSection',
+      '#annualMeetingApprovalsSection',
+      '#annualApprovalsSection',
+      '[data-section="annual-approvals"]',
+      '[data-annual-approval-section]',
+      '.annualApprovalRequestsSection',
+      '.annualMeetingApprovalsSection'
+    ];
+    selectors.forEach(function(selector){
+      document.querySelectorAll(selector).forEach(function(node){
+        node.style.display = 'block';
+        node.style.visibility = 'visible';
+        node.style.opacity = '1';
+        node.style.height = 'auto';
+        node.style.maxHeight = 'none';
+        node.style.overflow = 'visible';
+      });
+    });
+  }
+
+  window.openBoardHubApprovalPacketFromLink = openFromLink;
+  window.getBoardHubMobileApprovalDeepLinkStatus = function(){
+    return {
+      build:BUILD,
+      installed:true,
+      shouldOpen:shouldOpen(),
+      requestId:requestId(),
+      approvalSectionCandidates:document.querySelectorAll('#annualApprovalRequestsSection,#annualMeetingApprovalsSection,#annualApprovalsSection,[data-section="annual-approvals"],[data-annual-approval-section],.annualApprovalRequestsSection,.annualMeetingApprovalsSection').length,
+      last:window.__BoardHubV623MobileApprovalDeepLinkLast || null
+    };
+  };
+
+  function boot(){
+    forceApprovalSectionVisible();
+    if(shouldOpen()) setTimeout(openFromLink, 900);
+    setTimeout(forceApprovalSectionVisible, 1200);
+    setTimeout(function(){ if(shouldOpen() && !window.__BoardHubV623MobileApprovalDeepLinkLast) openFromLink(); }, 2200);
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', boot, { once:true });
+  }else{
+    boot();
+  }
+
+  window.addEventListener('pageshow', function(){
+    forceApprovalSectionVisible();
+    if(shouldOpen() && !window.__BoardHubV623MobileApprovalDeepLinkLast) setTimeout(openFromLink, 500);
   });
 })();
 </script>
