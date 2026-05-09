@@ -2173,6 +2173,128 @@
   }
 </style>
 
+
+
+<style id="board-hub-v631-phone-print-cleanup-style">
+  /* v631: cleanup exact printable packet preview on phone without changing iPad/desktop */
+  @media(max-width:760px){
+    .bh-phone-print-view {
+      padding: 8px !important;
+      background: #edf4fb !important;
+    }
+
+    .bh-phone-print-scale-inner .am-v652-pages {
+      gap: 18px !important;
+    }
+
+    .bh-phone-print-scale-inner .am-v652-page {
+      padding: 42px !important;
+      border-radius: 16px !important;
+      box-shadow: 0 12px 28px rgba(16,47,79,.13) !important;
+    }
+
+    .bh-phone-print-scale-inner .am-v652-page-header {
+      padding-bottom: 18px !important;
+      margin-bottom: 22px !important;
+      gap: 18px !important;
+    }
+
+    .bh-phone-print-scale-inner .am-v652-logo,
+    .bh-phone-print-scale-inner img.am-v652-logo,
+    .bh-phone-print-scale-inner .am-v652-page img {
+      max-width: 230px !important;
+      width: auto !important;
+      max-height: 95px !important;
+      object-fit: contain !important;
+    }
+
+    .bh-phone-print-scale-inner .am-v652-page-header .am-v652-logo,
+    .bh-phone-print-scale-inner .am-v652-page-header img {
+      max-width: 190px !important;
+      max-height: 78px !important;
+    }
+
+    .bh-phone-print-scale-inner .am-v652-h1 {
+      font-size: 31px !important;
+      line-height: 1.08 !important;
+      margin-top: 6px !important;
+    }
+
+    .bh-phone-print-scale-inner .am-v652-h2 {
+      font-size: 23px !important;
+      line-height: 1.16 !important;
+      margin-bottom: 14px !important;
+    }
+
+    .bh-phone-print-scale-inner .am-v652-kicker {
+      font-size: 11px !important;
+      letter-spacing: .15em !important;
+    }
+
+    .bh-phone-print-scale-inner .am-v652-meta-grid {
+      gap: 12px !important;
+      margin: 18px 0 !important;
+    }
+
+    .bh-phone-print-scale-inner .am-v652-meta {
+      padding: 12px 14px !important;
+      border-radius: 14px !important;
+    }
+
+    .bh-phone-print-scale-inner .am-v652-meta label {
+      font-size: 10px !important;
+      margin-bottom: 5px !important;
+    }
+
+    .bh-phone-print-scale-inner .am-v652-meta div {
+      font-size: 15px !important;
+      line-height: 1.24 !important;
+    }
+
+    .bh-phone-print-scale-inner .am-v652-box {
+      padding: 15px 17px !important;
+      margin: 16px 0 !important;
+      border-radius: 16px !important;
+    }
+
+    .bh-phone-print-scale-inner .am-v652-p,
+    .bh-phone-print-scale-inner .am-v652-li,
+    .bh-phone-print-scale-inner p,
+    .bh-phone-print-scale-inner li {
+      font-size: 14px !important;
+      line-height: 1.48 !important;
+    }
+
+    .bh-phone-print-scale-inner ul,
+    .bh-phone-print-scale-inner ol {
+      margin-top: 8px !important;
+      margin-bottom: 8px !important;
+    }
+
+    .bh-phone-print-scale-inner .am-v652-table {
+      font-size: 12.5px !important;
+    }
+
+    .bh-phone-print-scale-inner .am-v652-table th,
+    .bh-phone-print-scale-inner .am-v652-table td {
+      padding: 7px 6px !important;
+    }
+
+    .bh-phone-print-actions {
+      padding: 9px 12px 12px !important;
+      gap: 7px !important;
+    }
+
+    .bh-phone-print-primary,
+    .bh-phone-print-secondary,
+    .bh-phone-print-danger {
+      min-height: 39px !important;
+      border-radius: 13px !important;
+      font-size: 13px !important;
+    }
+  }
+</style>
+
 </head>
 <body>
   <div class="wrap">
@@ -6715,6 +6837,82 @@
       modalOpen:!!document.querySelector('#bhPhonePrintPacketShade.is-open'),
       scale:window.__BoardHubV630PhonePrintScale || null,
       last:window.__BoardHubV630PhonePrintAccurateLast || null
+    };
+  };
+})();
+</script>
+
+
+
+<script id="board-hub-v631-phone-print-cleanup-script">
+(function(){
+  'use strict';
+  if(window.__BoardHubV631PhonePrintCleanup) return;
+  window.__BoardHubV631PhonePrintCleanup = true;
+
+  const BUILD = '2026-05-09-v631-phone-print-cleanup-logo-spacing';
+
+  function isPhone(){ return window.matchMedia && window.matchMedia('(max-width: 760px)').matches; }
+
+  function cleanupPhonePacket(){
+    if(!isPhone()) return;
+    const root = document.querySelector('#bhPhonePrintScaleInner');
+    if(!root) return;
+
+    root.querySelectorAll('img').forEach(function(img){
+      const src = String(img.getAttribute('src') || '').toLowerCase();
+      const alt = String(img.getAttribute('alt') || '').toLowerCase();
+      const isLogo = img.classList.contains('am-v652-logo') || src.includes('logo') || alt.includes('logo') || src.includes('sixes');
+      if(isLogo){
+        img.classList.add('am-v652-logo');
+        img.style.maxWidth = '230px';
+        img.style.maxHeight = '95px';
+        img.style.width = 'auto';
+        img.style.height = 'auto';
+        img.style.objectFit = 'contain';
+      }
+    });
+
+    window.__BoardHubV631PhonePrintCleanupLast = {
+      build: BUILD,
+      ok: true,
+      images: root.querySelectorAll('img').length,
+      cleanedAt: new Date().toISOString()
+    };
+  }
+
+  const oldOpen = window.openBoardHubPhonePrintAccuratePreview;
+  if(typeof oldOpen === 'function'){
+    window.openBoardHubPhonePrintAccuratePreview = async function(id){
+      const result = await oldOpen(id);
+      setTimeout(cleanupPhonePacket, 150);
+      setTimeout(cleanupPhonePacket, 450);
+      return result;
+    };
+  }
+
+  const oldPreview = window.previewBoardHubAnnualMeetingPacket;
+  if(typeof oldPreview === 'function'){
+    window.previewBoardHubAnnualMeetingPacket = async function(id){
+      const result = await oldPreview(id);
+      setTimeout(cleanupPhonePacket, 150);
+      setTimeout(cleanupPhonePacket, 450);
+      return result;
+    };
+  }
+
+  window.addEventListener('pageshow', function(){
+    setTimeout(cleanupPhonePacket, 500);
+  });
+
+  window.getBoardHubPhonePrintCleanupStatus = function(){
+    return {
+      build: BUILD,
+      installed: true,
+      isPhone: isPhone(),
+      modalOpen: !!document.querySelector('#bhPhonePrintPacketShade.is-open'),
+      rootPresent: !!document.querySelector('#bhPhonePrintScaleInner'),
+      last: window.__BoardHubV631PhonePrintCleanupLast || null
     };
   };
 })();
