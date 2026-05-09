@@ -2163,6 +2163,272 @@
 })();
 </script>
 
+
+
+<style id="board-hub-v635-phone-scale-stability-style">
+  /* v635: keep v634 look, but prevent phone packet pages from clipping */
+  @media(max-width:760px){
+    body.bh-v635-stable-exact-scale #annualPacketPreviewBody.is-full-packet,
+    body.bh-v635-stable-exact-scale .annualPacketPreviewBody.is-full-packet {
+      overflow-y:auto !important;
+      overflow-x:hidden !important;
+      -webkit-overflow-scrolling:touch !important;
+      overscroll-behavior:contain !important;
+    }
+
+    body.bh-v635-stable-exact-scale .bh-v634-scale-outer,
+    body.bh-v635-stable-exact-scale .bh-v635-scale-outer {
+      width:100% !important;
+      overflow:visible !important;
+      position:relative !important;
+      margin:0 auto !important;
+      display:block !important;
+    }
+
+    body.bh-v635-stable-exact-scale .bh-v634-scale-inner,
+    body.bh-v635-stable-exact-scale .bh-v635-scale-inner {
+      width:850px !important;
+      max-width:none !important;
+      transform-origin:top left !important;
+      display:block !important;
+    }
+
+    body.bh-v635-stable-exact-scale .bh-v634-scale-inner .am-v652-page,
+    body.bh-v635-stable-exact-scale .bh-v635-scale-inner .am-v652-page {
+      min-height:auto !important;
+      height:auto !important;
+      overflow:visible !important;
+      contain:none !important;
+    }
+
+    body.bh-v635-stable-exact-scale .bh-v634-scale-inner .am-v652-pages,
+    body.bh-v635-stable-exact-scale .bh-v635-scale-inner .am-v652-pages {
+      height:auto !important;
+      min-height:auto !important;
+      overflow:visible !important;
+      contain:none !important;
+    }
+
+    body.bh-v635-stable-exact-scale .annualPacketPreviewActions {
+      position:relative !important;
+      z-index:5 !important;
+    }
+  }
+</style>
+
+
+<script id="board-hub-v635-phone-scale-stability-script">
+(function(){
+  'use strict';
+  if(window.__BoardHubV635PhoneScaleStability) return;
+  window.__BoardHubV635PhoneScaleStability = true;
+
+  const BUILD = '2026-05-09-v635-phone-scale-stability-no-clipping';
+
+  let scaleTimer = null;
+  let lastSignature = '';
+
+  function isPhone(){
+    return window.matchMedia && window.matchMedia('(max-width: 760px)').matches;
+  }
+
+  function modalOpen(){
+    return !!document.querySelector('#annualPacketPreviewShade.open, .annualPacketPreviewShade.open');
+  }
+
+  function getParts(){
+    const body = document.getElementById('annualPacketPreviewBody');
+    const full = document.querySelector('#annualPacketPreviewBody .annualPacketPreviewFullHtml, .annualPacketPreviewFullHtml');
+    const outer = full && (full.querySelector('.bh-v635-scale-outer') || full.querySelector('.bh-v634-scale-outer'));
+    const inner = outer && (outer.querySelector('.bh-v635-scale-inner') || outer.querySelector('.bh-v634-scale-inner'));
+    return { body, full, outer, inner };
+  }
+
+  function ensureWrapped(){
+    const parts = getParts();
+    const body = parts.body;
+    const full = parts.full;
+    let outer = parts.outer;
+    let inner = parts.inner;
+
+    if(!body || !full) return null;
+
+    document.body.classList.add('bh-v635-stable-exact-scale');
+    document.body.classList.add('bh-v634-force-exact-scale');
+
+    if(outer && inner) {
+      outer.classList.add('bh-v635-scale-outer');
+      inner.classList.add('bh-v635-scale-inner');
+      return { body, full, outer, inner };
+    }
+
+    outer = document.createElement('div');
+    outer.className = 'bh-v634-scale-outer bh-v635-scale-outer';
+
+    inner = document.createElement('div');
+    inner.className = 'bh-v634-scale-inner bh-v635-scale-inner';
+
+    while(full.firstChild){
+      inner.appendChild(full.firstChild);
+    }
+
+    outer.appendChild(inner);
+    full.appendChild(outer);
+
+    return { body, full, outer, inner };
+  }
+
+  function cleanImages(inner){
+    inner.querySelectorAll('img').forEach(function(img){
+      const src = String(img.getAttribute('src') || '').toLowerCase();
+      const alt = String(img.getAttribute('alt') || '').toLowerCase();
+      const isLogo = img.classList.contains('am-v652-logo') || src.includes('logo') || src.includes('sixes') || alt.includes('logo');
+      if(isLogo) img.classList.add('am-v652-logo');
+      if(!img.dataset.v635LoadBound){
+        img.dataset.v635LoadBound = '1';
+        img.addEventListener('load', function(){ scheduleScale('image-load'); }, { once:false });
+        img.addEventListener('error', function(){ scheduleScale('image-error'); }, { once:false });
+      }
+    });
+  }
+
+  function calculate(reason){
+    if(!isPhone()) return null;
+
+    const parts = ensureWrapped();
+    if(!parts) {
+      window.__BoardHubV635PhoneScaleStabilityLast = {
+        build: BUILD,
+        ok:false,
+        reason: reason || 'unknown',
+        error:'missing preview parts',
+        modalOpen: modalOpen(),
+        at:new Date().toISOString()
+      };
+      return window.__BoardHubV635PhoneScaleStabilityLast;
+    }
+
+    const { body, outer, inner } = parts;
+    cleanImages(inner);
+
+    const available = Math.max(280, body.clientWidth - 20);
+    const scale = available / 850;
+
+    inner.style.transform = 'scale(' + scale + ')';
+    inner.style.transformOrigin = 'top left';
+    inner.style.width = '850px';
+    inner.style.maxWidth = 'none';
+
+    // Temporarily clear height so scrollHeight is measured from the real unscaled content.
+    outer.style.height = 'auto';
+    outer.style.width = Math.ceil(850 * scale) + 'px';
+
+    // Force a layout read after images/classes have settled.
+    const rawHeight = Math.max(
+      inner.scrollHeight || 0,
+      inner.getBoundingClientRect().height / Math.max(scale, 0.001) || 0,
+      Array.from(inner.querySelectorAll('.am-v652-page')).reduce((sum, page) => sum + (page.scrollHeight || 0), 0)
+    ) || 1200;
+
+    const scaledHeight = Math.ceil(rawHeight * scale);
+    outer.style.height = scaledHeight + 'px';
+
+    const pageCount = inner.querySelectorAll('.am-v652-page').length;
+    const signature = [pageCount, rawHeight, available, scale.toFixed(5)].join('|');
+    lastSignature = signature;
+
+    window.__BoardHubV635PhoneScaleStabilityLast = {
+      build: BUILD,
+      ok:true,
+      reason:reason || 'manual',
+      modalOpen:modalOpen(),
+      available,
+      scale,
+      rawHeight,
+      scaledWidth:Math.ceil(850 * scale),
+      scaledHeight,
+      pageCount,
+      outerPresent:!!outer,
+      innerPresent:!!inner,
+      bodyScrollHeight:body.scrollHeight,
+      bodyClientHeight:body.clientHeight,
+      signature,
+      at:new Date().toISOString()
+    };
+
+    return window.__BoardHubV635PhoneScaleStabilityLast;
+  }
+
+  function scheduleScale(reason){
+    if(!isPhone()) return;
+    clearTimeout(scaleTimer);
+    scaleTimer = setTimeout(function(){
+      calculate(reason || 'scheduled');
+      setTimeout(function(){ calculate((reason || 'scheduled') + ':settled'); }, 350);
+    }, 120);
+  }
+
+  const oldForce = window.forceBoardHubPhoneExactScale;
+  window.forceBoardHubPhoneExactScale = function(){
+    return calculate('manual-force');
+  };
+
+  const oldPreview = window.previewBoardHubAnnualMeetingPacket;
+  if(typeof oldPreview === 'function'){
+    window.previewBoardHubAnnualMeetingPacket = async function(id){
+      const result = await oldPreview(id);
+      scheduleScale('preview');
+      setTimeout(function(){ calculate('preview:late'); }, 900);
+      return result;
+    };
+  }
+
+  const oldOpen = window.openBoardHubApprovalPacketFromLink;
+  if(typeof oldOpen === 'function'){
+    window.openBoardHubApprovalPacketFromLink = async function(){
+      const result = await oldOpen();
+      scheduleScale('deeplink');
+      setTimeout(function(){ calculate('deeplink:late'); }, 900);
+      return result;
+    };
+  }
+
+  const observer = new MutationObserver(function(){
+    if(isPhone() && modalOpen() && document.querySelector('.annualPacketPreviewFullHtml')) {
+      const pages = document.querySelectorAll('.am-v652-page').length;
+      const full = document.querySelector('.annualPacketPreviewFullHtml');
+      const sig = pages + '|' + (full ? full.textContent.length : 0) + '|' + window.innerWidth;
+      if(sig !== lastSignature) scheduleScale('observer');
+    }
+  });
+
+  if(document.documentElement){
+    observer.observe(document.documentElement, { childList:true, subtree:true });
+  }
+
+  window.addEventListener('pageshow', function(){ scheduleScale('pageshow'); });
+  window.addEventListener('resize', function(){ scheduleScale('resize'); });
+  window.addEventListener('orientationchange', function(){ setTimeout(function(){ scheduleScale('orientation'); }, 250); });
+
+  window.getBoardHubPhoneScaleStabilityStatus = function(){
+    const parts = getParts();
+    return {
+      build: BUILD,
+      installed:true,
+      isPhone:isPhone(),
+      modalOpen:modalOpen(),
+      bodyFound:!!parts.body,
+      fullFound:!!parts.full,
+      pageCount:document.querySelectorAll('.am-v652-page').length,
+      outerPresent:!!parts.outer,
+      innerPresent:!!parts.inner,
+      oldV634Present:!!document.getElementById('board-hub-v634-force-phone-exact-scale-script'),
+      last:window.__BoardHubV635PhoneScaleStabilityLast || null
+    };
+  };
+})();
+</script>
+
 </head>
 <body>
   <div class="wrap">
