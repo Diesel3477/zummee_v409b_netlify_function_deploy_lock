@@ -409,6 +409,41 @@
       padding: 28px;
     }
 
+  
+    /* v716 one-page phone packet viewer */
+    .packet-page-controls {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 4px 4px;
+    }
+
+    .packet-page-btn {
+      min-height: 44px;
+      border-radius: 16px;
+      border: 2px solid #9cc5ff;
+      background: #fff;
+      color: #123a63;
+      font-weight: 900;
+      font-size: 14px;
+      padding: 0 14px;
+      cursor: pointer;
+    }
+
+    .packet-page-btn:disabled {
+      opacity: .42;
+      cursor: default;
+    }
+
+    .packet-page-indicator {
+      color: #123a63;
+      font-weight: 950;
+      font-size: 14px;
+      letter-spacing: .02em;
+      white-space: nowrap;
+    }
+
   </style>
 </head>
 
@@ -449,7 +484,7 @@
     (function(){
       'use strict';
 
-      const BUILD = '2026-05-09-v715-isolated-print-viewport';
+      const BUILD = '2026-05-09-v716-one-page-phone-viewer';
       const SUPABASE_URL = window.SUPABASE_URL || window.ZUMMEE_SUPABASE_URL || 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
       const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || window.SUPABASE_KEY || window.ZUMMEE_SUPABASE_ANON_KEY || window.supabaseAnonKey || 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
 
@@ -799,11 +834,21 @@
             <div class="packet-frame-shell" id="packetFrameShell">
               <iframe class="packet-print-frame" id="packetPrintFrame" title="Annual Meeting Packet Preview"></iframe>
             </div>
+            <div class="packet-page-controls" id="packetPageControls" hidden>
+              <button type="button" class="packet-page-btn" id="packetPrevPage">Previous</button>
+              <div class="packet-page-indicator" id="packetPageIndicator">Page 1 of 1</div>
+              <button type="button" class="packet-page-btn" id="packetNextPage">Next</button>
+            </div>
           </div>
         `;
 
         const frame = document.getElementById('packetPrintFrame');
         const shell = document.getElementById('packetFrameShell');
+        const controls = document.getElementById('packetPageControls');
+        const prev = document.getElementById('packetPrevPage');
+        const next = document.getElementById('packetNextPage');
+        const indicator = document.getElementById('packetPageIndicator');
+
         if(!frame || !shell) return false;
 
         const source = `
@@ -817,6 +862,82 @@
             <body>${packetHtml || ''}</body>
           </html>
         `;
+
+        let selectedPage = 0;
+        let pageCount = 1;
+        let scale = 1;
+
+        function applySelectedPage(){
+          try{
+            const doc = frame.contentDocument;
+            const pages = doc ? Array.from(doc.querySelectorAll('.am-v652-page')) : [];
+            pageCount = pages.length || 1;
+
+            pages.forEach((page, index) => {
+              page.style.display = index === selectedPage ? 'block' : 'none';
+              page.setAttribute('data-page-visible', index === selectedPage ? 'true' : 'false');
+            });
+
+            const availableWidth = Math.max(280, body.clientWidth - 20);
+            const visibleHeight = Math.max(420, window.innerHeight - 310);
+            scale = Math.min(1, availableWidth / 850, visibleHeight / 1100) * 0.98;
+
+            frame.style.width = '850px';
+            frame.style.height = '1100px';
+            frame.style.transform = `scale(${scale})`;
+            frame.dataset.scale = String(scale);
+
+            shell.style.height = Math.ceil(1100 * scale) + 'px';
+            shell.dataset.pageCount = String(pageCount);
+            shell.dataset.scale = String(scale);
+            shell.dataset.selectedPage = String(selectedPage + 1);
+
+            if(controls) controls.hidden = pageCount <= 1;
+            if(indicator) indicator.textContent = `Page ${selectedPage + 1} of ${pageCount}`;
+            if(prev) prev.disabled = selectedPage <= 0;
+            if(next) next.disabled = selectedPage >= pageCount - 1;
+
+            window.__approvalPacketFrameStatus = {
+              ok: true,
+              build: BUILD,
+              mode: 'one-page-phone-viewer',
+              pageCount,
+              selectedPage: selectedPage + 1,
+              scale,
+              shellHeight: shell.style.height,
+              frameWidth: 850,
+              frameHeight: 1100
+            };
+          }catch(error){
+            window.__approvalPacketFrameStatus = {
+              ok: false,
+              build: BUILD,
+              mode: 'one-page-phone-viewer',
+              error: error && error.message ? error.message : String(error)
+            };
+          }
+        }
+
+        if(prev) {
+          prev.onclick = () => {
+            selectedPage = Math.max(0, selectedPage - 1);
+            applySelectedPage();
+          };
+        }
+
+        if(next) {
+          next.onclick = () => {
+            selectedPage = Math.min(pageCount - 1, selectedPage + 1);
+            applySelectedPage();
+          };
+        }
+
+        window.__approvalPacketGoToPage = function(pageNumber){
+          const n = Number(pageNumber);
+          if(!Number.isFinite(n)) return;
+          selectedPage = Math.max(0, Math.min(pageCount - 1, n - 1));
+          applySelectedPage();
+        };
 
         frame.srcdoc = source;
 
@@ -832,38 +953,22 @@
                 }
               });
             }
-
-            const pageCount = doc ? (doc.querySelectorAll('.am-v652-page').length || 1) : 1;
-            const rawHeight = (pageCount * 1100) + Math.max(0, pageCount - 1) * 24;
-            frame.style.height = rawHeight + 'px';
-
-            const availableWidth = Math.max(280, body.clientWidth - 20);
-            const visibleHeight = Math.max(420, window.innerHeight - 300);
-            const scale = Math.min(1, availableWidth / 850, visibleHeight / 1100) * 0.96;
-
-            frame.style.transform = `scale(${scale})`;
-            frame.dataset.scale = String(scale);
-            shell.style.height = Math.ceil(rawHeight * scale) + 'px';
-            shell.dataset.pageCount = String(pageCount);
-            shell.dataset.scale = String(scale);
-
-            window.__approvalPacketFrameStatus = {
-              ok: true,
-              build: BUILD,
-              pageCount,
-              rawHeight,
-              scale,
-              shellHeight: shell.style.height,
-              frameWidth: 850
-            };
+            selectedPage = 0;
+            applySelectedPage();
           }catch(error){
             window.__approvalPacketFrameStatus = {
               ok: false,
               build: BUILD,
+              mode: 'one-page-phone-viewer',
               error: error && error.message ? error.message : String(error)
             };
           }
         };
+
+        window.addEventListener('resize', () => {
+          clearTimeout(window.__approvalPacketResizeTimer);
+          window.__approvalPacketResizeTimer = setTimeout(applySelectedPage, 120);
+        }, { passive: true });
 
         return true;
       }
@@ -1112,7 +1217,7 @@
           requestId: requestId(),
           hasToken: !!reviewToken(),
           hasRequest: !!currentRequest,
-          hasV715IsolatedFrame: !!frame,
+          hasV716OnePageFrame: !!frame,
           frameStatus: window.__approvalPacketFrameStatus || null,
           shellClientHeight: shell ? shell.clientHeight : null,
           shellScrollHeight: shell ? shell.scrollHeight : null,
