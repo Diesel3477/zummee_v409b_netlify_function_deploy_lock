@@ -3928,6 +3928,81 @@
 })();
 </script>
 
+
+
+<script id="board-hub-v622-open-approval-packet-link">
+(function(){
+  'use strict';
+  if(window.__BoardHubV622OpenApprovalPacketLink) return;
+  window.__BoardHubV622OpenApprovalPacketLink = true;
+
+  const BUILD = '2026-05-09-v622-board-open-approval-packet-link';
+
+  function clean(v){ return String(v == null ? '' : v).trim(); }
+  function params(){ return new URLSearchParams(window.location.search || ''); }
+  function shouldOpen(){
+    const p = params();
+    return clean(p.get('approval_request_id')) && (
+      clean(p.get('open_approval_packet')) === '1' ||
+      clean(p.get('open')) === 'approval_packet' ||
+      clean(p.get('review')) === 'packet'
+    );
+  }
+  function requestId(){ return clean(params().get('approval_request_id')); }
+
+  async function openWhenReady(){
+    if(!shouldOpen()) return { ok:false, skipped:true, reason:'no_open_approval_packet_param' };
+    const id = requestId();
+    const start = Date.now();
+
+    while(Date.now() - start < 8000){
+      try{
+        if(typeof window.previewBoardHubAnnualMeetingPacket === 'function'){
+          window.previewBoardHubAnnualMeetingPacket(id);
+          window.__BoardHubV622OpenApprovalPacketLast = {
+            build:BUILD,
+            ok:true,
+            request_id:id,
+            openedAt:new Date().toISOString()
+          };
+          return window.__BoardHubV622OpenApprovalPacketLast;
+        }
+      }catch(e){}
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+
+    window.__BoardHubV622OpenApprovalPacketLast = {
+      build:BUILD,
+      ok:false,
+      request_id:id,
+      error:'previewBoardHubAnnualMeetingPacket was not ready.',
+      failedAt:new Date().toISOString()
+    };
+    return window.__BoardHubV622OpenApprovalPacketLast;
+  }
+
+  window.openBoardHubApprovalPacketFromLink = openWhenReady;
+  window.getBoardHubApprovalPacketLinkStatus = function(){
+    return {
+      build:BUILD,
+      installed:true,
+      shouldOpen:shouldOpen(),
+      requestId:requestId(),
+      last:window.__BoardHubV622OpenApprovalPacketLast || null
+    };
+  };
+
+  function boot(){ if(shouldOpen()) setTimeout(openWhenReady, 700); }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once:true });
+  else boot();
+
+  window.addEventListener('pageshow', function(){
+    if(shouldOpen() && !window.__BoardHubV622OpenApprovalPacketLast) setTimeout(openWhenReady, 500);
+  });
+})();
+</script>
+
 </body>
 </html>
 
