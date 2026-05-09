@@ -2866,7 +2866,55 @@ window.ZUMMEE_ANNUAL_MEETINGS_STABLE_BASELINE = "v648";
     const doc = [
       '<!doctype html><html><head><title>Annual Meeting Packet</title>',
       css ? css.outerHTML : '',
-      '</head><body><div class="am-v652-body">',
+      '
+
+<style id="annual-meetings-v654-preview-send-style">
+  #amV654PreviewSendApproval {
+    margin-left: 10px;
+    border: 2px solid #17365f;
+    background: #17365f;
+    color: #fff;
+    border-radius: 18px;
+    min-height: 46px;
+    padding: 0 18px;
+    font-weight: 950;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(23,54,95,.18);
+  }
+  #amV654PreviewSendApproval:disabled {
+    opacity: .62;
+    cursor: wait;
+  }
+  #amV654PreviewSendStatus {
+    margin: 12px 0 0;
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 850;
+  }
+  #amV654PreviewSendStatus.ok { color: #15803d; }
+  #amV654PreviewSendStatus.err { color: #b91c1c; }
+  .amV654RouteLockNote {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 999px;
+    border: 1px solid #d8e5f6;
+    background: #f8fbff;
+    color: #17365f;
+    font-size: 13px;
+    font-weight: 900;
+  }
+  @media(max-width:760px){
+    #amV654PreviewSendApproval {
+      width: 100%;
+      margin: 10px 0 0;
+    }
+  }
+</style>
+
+</head><body><div class="am-v652-body">',
       content.innerHTML,
       '</div></body></html>'
     ].join('');
@@ -3054,7 +3102,7 @@ window.ZUMMEE_ANNUAL_MEETINGS_STABLE_BASELINE = "v648";
     card.innerHTML =
       '<div class="am-v652-route-head"><div><div class="am-v652-route-kicker">Approval Routing</div><h2 class="am-v652-route-title">Choose who reviews this annual meeting packet</h2><p class="am-v652-route-sub">Different companies and boards handle notices differently. Select the approval route before sending the packet into the approval process.</p></div><div id="annualApprovalRouteStatus" class="am-v652-status-pill">Draft</div></div>' +
       '<div class="am-v652-route-grid"><div class="am-v652-route-panel"><label class="am-v652-route-label" for="annualApprovalRouteSelect">Approval Route</label><select id="annualApprovalRouteSelect" class="am-v652-route-select"><option value="board_then_supervisor">Board then Supervisor</option><option value="supervisor_then_board">Supervisor then Board</option><option value="board_only">Board Approval Only</option><option value="supervisor_only">Supervisor Approval Only</option><option value="custom">Custom Route</option></select><p id="annualApprovalRouteHint" class="am-v652-route-hint"></p><label class="am-v652-route-label" for="annualApprovalRouteNote" style="margin-top:14px;">Approval Note / Special Instructions</label><textarea id="annualApprovalRouteNote" class="am-v652-route-textarea" placeholder="Example: Board wants to approve the packet before supervisor review."></textarea></div><div class="am-v652-route-panel"><label class="am-v652-route-label">Approval Flow</label><div id="annualApprovalFlowBox" class="am-v652-flow"></div></div></div>' +
-      '<div class="am-v652-route-actions"><button type="button" id="annualApprovalPreviewRouteBtn" class="am-v652-route-btn">Preview Route</button><button type="button" id="annualApprovalInitiateBtn" class="am-v652-route-btn primary">Initiate Approval Process</button></div><div id="annualApprovalRouteMessage" class="am-v652-route-message"></div>';
+      '<div class="am-v652-route-actions"><button type="button" id="annualApprovalPreviewRouteBtn" class="am-v652-route-btn">Preview Saved Route</button><button type="button" id="annualApprovalInitiateBtn" class="am-v652-route-btn primary">Save / Update Approval Route</button></div><div id="annualApprovalRouteMessage" class="am-v652-route-message"></div>';
 
     if(anchor){
       const container = anchor.closest('section, .card, .annualCard, .page-card, .settingsCard, .packetCard') || anchor.parentElement;
@@ -3299,6 +3347,478 @@ console.info("[Annual Meetings v652] packet preview + approval routing loaded sa
       generatedAt:last && last.generatedAtIso || ''
     };
   };
+})();
+</script>
+
+
+
+<script id="annual-meetings-v654-preview-send">
+(function(){
+  'use strict';
+  if(window.__AnnualMeetingsV654PreviewSend) return;
+  window.__AnnualMeetingsV654PreviewSend = true;
+
+  const BUILD = '2026-05-09-v654-preview-send-approval';
+  const ROUTE_STORAGE_KEY = 'zummee_annual_meeting_saved_approval_route_v654';
+  const PRIMARY_APPROVAL_TABLE = 'annual_meeting_approval_requests';
+
+  function el(id){ return document.getElementById(id); }
+  function clean(v){ return String(v == null ? '' : v).trim(); }
+  function now(){ return new Date().toISOString(); }
+  function uuidish(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean(v)); }
+  function setText(id, txt){ const node = el(id); if(node) node.textContent = txt || ''; }
+
+  function activeCommunity(){
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const c = window.ZummeeCommunityState.getActiveCommunity();
+        if(c && uuidish(c.id)) return { id:clean(c.id), name:clean(c.name), source:'ZummeeCommunityState' };
+      }
+    }catch(e){}
+    const select = el('communitySelect') || el('annualCommunitySelect') || document.querySelector('select[data-community-select]');
+    if(select && uuidish(select.value)){
+      const opt = select.options && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
+      return { id:clean(select.value), name:clean(opt && opt.textContent), source:'select' };
+    }
+    try{
+      if(uuidish(window.selectedCommunityId)) return { id:clean(window.selectedCommunityId), name:clean(window.selectedCommunityName), source:'window.selectedCommunityId' };
+    }catch(e2){}
+    return { id:'', name:'', source:'none' };
+  }
+
+  async function client(){
+    const start = Date.now();
+    while(Date.now() - start < 5000){
+      try{
+        const c = window.supabaseClient || (window.getSupabase && window.getSupabase()) || null;
+        if(c && typeof c.from === 'function') return c;
+      }catch(e){}
+      await new Promise(resolve => setTimeout(resolve, 80));
+    }
+    throw new Error('Supabase client unavailable.');
+  }
+
+  async function currentUserId(sb){
+    try{
+      if(sb && sb.auth && typeof sb.auth.getSession === 'function'){
+        const res = await sb.auth.getSession();
+        const id = res && res.data && res.data.session && res.data.session.user && res.data.session.user.id;
+        if(id) return clean(id);
+      }
+    }catch(e){}
+    try{
+      return clean(localStorage.getItem('zummee_user_id_v1') || sessionStorage.getItem('zummee_user_id_v1') || '');
+    }catch(e2){}
+    return '';
+  }
+
+  function routeOptions(){
+    return {
+      board_only: {
+        label:'Board Only',
+        status:'pending_board',
+        step:'pending_board',
+        board:true,
+        supervisor:false,
+        admin:true,
+        steps:['Employee initiates','Board approval','Admin / mailing follow-up']
+      },
+      supervisor_only: {
+        label:'Supervisor Only',
+        status:'pending_supervisor',
+        step:'pending_supervisor',
+        board:false,
+        supervisor:true,
+        admin:true,
+        steps:['Employee initiates','Supervisor approval','Admin / mailing follow-up']
+      },
+      board_then_supervisor: {
+        label:'Board then Supervisor',
+        status:'pending_board',
+        step:'pending_board',
+        board:true,
+        supervisor:true,
+        admin:true,
+        steps:['Employee initiates','Board approval','Supervisor approval','Admin / mailing follow-up']
+      },
+      supervisor_then_board: {
+        label:'Supervisor then Board',
+        status:'pending_supervisor',
+        step:'pending_supervisor',
+        board:true,
+        supervisor:true,
+        admin:true,
+        steps:['Employee initiates','Supervisor approval','Board approval','Admin / mailing follow-up']
+      }
+    };
+  }
+
+  function getRouteSelect(){
+    return el('approvalRouteSelect') ||
+      el('annualApprovalRouteSelect') ||
+      document.querySelector('select[name="approval_route"]') ||
+      document.querySelector('select[data-approval-route]');
+  }
+
+  function getRouteNote(){
+    return el('approvalNote') ||
+      el('annualApprovalNote') ||
+      document.querySelector('textarea[name="approval_note"]') ||
+      document.querySelector('textarea[data-approval-note]');
+  }
+
+  function selectedRouteKey(){
+    const select = getRouteSelect();
+    return clean(select && select.value) || savedRoute().routeKey || 'board_then_supervisor';
+  }
+
+  function selectedNote(){
+    const note = getRouteNote();
+    return clean(note && note.value) || savedRoute().note || '';
+  }
+
+  function savedRoute(){
+    try{
+      const c = activeCommunity();
+      const all = JSON.parse(localStorage.getItem(ROUTE_STORAGE_KEY) || '{}') || {};
+      return (c.id && all[c.id]) || {};
+    }catch(e){}
+    return {};
+  }
+
+  function saveRoutePreference(){
+    const community = activeCommunity();
+    if(!community.id) return null;
+    const routeKey = selectedRouteKey();
+    const routes = routeOptions();
+    const route = routes[routeKey] || routes.board_then_supervisor;
+    const note = selectedNote();
+
+    const payload = {
+      community,
+      routeKey,
+      routeLabel: route.label,
+      note,
+      savedAt: now()
+    };
+
+    try{
+      const all = JSON.parse(localStorage.getItem(ROUTE_STORAGE_KEY) || '{}') || {};
+      all[community.id] = payload;
+      localStorage.setItem(ROUTE_STORAGE_KEY, JSON.stringify(all));
+    }catch(e){}
+
+    updateRouteLockNote(payload);
+    return payload;
+  }
+
+  function applySavedRoutePreference(){
+    const pref = savedRoute();
+    if(!pref || !pref.routeKey) return;
+    const select = getRouteSelect();
+    if(select && Array.from(select.options).some(o => o.value === pref.routeKey)){
+      select.value = pref.routeKey;
+      try{ select.dispatchEvent(new Event('change', { bubbles:true })); }catch(e){}
+    }
+    const note = getRouteNote();
+    if(note && pref.note && !clean(note.value)) note.value = pref.note;
+    updateRouteLockNote(pref);
+  }
+
+  function updateRouteLockNote(pref){
+    let holder = el('amV654RouteLockNote');
+    const routePanel = getRouteSelect() ? getRouteSelect().closest('section, .card, div') : null;
+    const anchor = routePanel || getRouteSelect();
+    if(!anchor) return;
+
+    if(!holder){
+      holder = document.createElement('div');
+      holder.id = 'amV654RouteLockNote';
+      holder.className = 'amV654RouteLockNote';
+      if(anchor && anchor.parentNode){
+        anchor.parentNode.insertBefore(holder, anchor.nextSibling);
+      }
+    }
+
+    const routeLabel = pref && pref.routeLabel ? pref.routeLabel : (routeOptions()[selectedRouteKey()] || routeOptions().board_then_supervisor).label;
+    holder.textContent = 'Approval route saved: ' + routeLabel + '. Preview packet, then send for approval.';
+  }
+
+  function packetLast(){
+    try{
+      if(window.ZummeeAnnualMeetingsPacketPreview && typeof window.ZummeeAnnualMeetingsPacketPreview.last === 'function'){
+        return window.ZummeeAnnualMeetingsPacketPreview.last();
+      }
+    }catch(e){}
+    return window.__AnnualMeetingsV652PacketLast || null;
+  }
+
+  function collectSettingsFromLastOrForm(){
+    const last = packetLast();
+    if(last && last.settings) return last.settings;
+    // Minimal fallback if preview has not populated the full object.
+    return {
+      association_legal_name: clean((el('associationLegalName') || el('associationName') || {}).value),
+      next_annual_meeting_date: clean((el('nextAnnualMeetingDate') || el('annualMeetingDate') || {}).value)
+    };
+  }
+
+  function packetSnapshot(community, settings, routeKey, route){
+    const last = packetLast();
+    const content = el('amV652PacketContent');
+    const currentHtml = content && content.innerHTML ? content.innerHTML : '';
+    const html = last && (last.html || last.packetHtml) ? (last.html || last.packetHtml) : currentHtml;
+    return {
+      version:'v654-preview-send-full-packet',
+      community,
+      settings,
+      routeKey,
+      routeLabel:route.label,
+      generatedAt:(last && last.generatedAtIso) || now(),
+      packetPreviewAvailable:!!html,
+      html:html || '',
+      packetHtml:html || '',
+      packetData:(last && last.data) || {},
+      roster:(last && last.roster) || {},
+      associationName:(last && last.associationName) || settings.association_legal_name || '',
+      meetingDate:(last && last.meetingDate) || settings.next_annual_meeting_date || '',
+      seats:(last && last.seats) || ''
+    };
+  }
+
+  function buildPayload(community, settings, routeKey, route, note, userId){
+    return {
+      company_id: settings.company_id || community.company_id || null,
+      community_id: community.id,
+      annual_meeting_settings_id: settings.id || null,
+      association_legal_name: settings.association_legal_name || settings.associationLegalName || null,
+      next_annual_meeting_date: settings.next_annual_meeting_date || settings.nextDate || settings.meetingDate || null,
+      approval_route: routeKey,
+      approval_route_label: route.label,
+      approval_status: route.status,
+      current_step: route.step,
+      board_required: !!route.board,
+      supervisor_required: !!route.supervisor,
+      admin_mailing_required: !!route.admin,
+      route_steps: route.steps || [],
+      approval_note: note || null,
+      packet_preview_snapshot: packetSnapshot(community, settings, routeKey, route),
+      initiated_by: userId || null,
+      initiated_at: now(),
+      updated_at: now()
+    };
+  }
+
+  async function writeApprovalRequest(data){
+    const sb = await client();
+
+    // Update existing active request for same community/date first.
+    let existingQuery = sb.from(PRIMARY_APPROVAL_TABLE)
+      .select('id,approval_status,current_step,updated_at')
+      .eq('community_id', data.community_id)
+      .order('updated_at', { ascending:false })
+      .limit(1);
+
+    if(data.next_annual_meeting_date){
+      existingQuery = existingQuery.eq('next_annual_meeting_date', data.next_annual_meeting_date);
+    }
+
+    try{
+      existingQuery = existingQuery.not('approval_status', 'in', '("archived","cancelled","mailed")');
+    }catch(e){}
+
+    const existing = await existingQuery.maybeSingle();
+    if(existing && existing.error && existing.error.code && existing.error.code !== 'PGRST116'){
+      // Keep going to insert path for schema variations.
+      console.warn('[Annual v654] existing lookup warning', existing.error);
+    }
+
+    if(existing && existing.data && existing.data.id){
+      const upd = await sb.from(PRIMARY_APPROVAL_TABLE)
+        .update(data)
+        .eq('id', existing.data.id)
+        .select('*')
+        .maybeSingle();
+
+      if(upd.error) throw upd.error;
+      return { mode:'updated_existing', data:upd.data };
+    }
+
+    const ins = await sb.from(PRIMARY_APPROVAL_TABLE)
+      .insert(data)
+      .select('*')
+      .maybeSingle();
+
+    if(ins.error) throw ins.error;
+    return { mode:'inserted', data:ins.data };
+  }
+
+  async function sendCurrentPreviewForApproval(){
+    const button = el('amV654PreviewSendApproval');
+    const status = el('amV654PreviewSendStatus');
+    function show(message, type){
+      if(!status) return;
+      status.textContent = message || '';
+      status.classList.toggle('ok', type === 'ok');
+      status.classList.toggle('err', type === 'err');
+    }
+
+    try{
+      if(button){ button.disabled = true; button.textContent = 'Sending…'; }
+      show('Sending packet for approval…', '');
+
+      const community = activeCommunity();
+      if(!community.id) throw new Error('Select a community before sending for approval.');
+
+      const last = packetLast();
+      if(!last || !(last.html || last.packetHtml)){
+        throw new Error('Generate the packet preview first so the full packet can be sent.');
+      }
+
+      const routeKey = selectedRouteKey();
+      const routes = routeOptions();
+      const route = routes[routeKey] || routes.board_then_supervisor;
+      const note = selectedNote();
+      const pref = saveRoutePreference();
+
+      const sb = await client();
+      const userId = await currentUserId(sb);
+      const settings = collectSettingsFromLastOrForm();
+
+      const data = buildPayload(community, settings, routeKey, route, note, userId);
+      const result = await writeApprovalRequest(data);
+
+      window.__AnnualMeetingsV654LastApprovalSend = {
+        build:BUILD,
+        ok:true,
+        mode:result.mode,
+        routePreference:pref,
+        request:result.data,
+        sentAt:now()
+      };
+
+      show('Packet sent for approval using saved route: ' + route.label + '.', 'ok');
+
+      try{
+        if(window.getAnnualMeetingPacketSnapshotStatus){
+          console.info('[Annual v654] packet snapshot status', window.getAnnualMeetingPacketSnapshotStatus());
+        }
+      }catch(e){}
+
+      return window.__AnnualMeetingsV654LastApprovalSend;
+    }catch(error){
+      const message = error && error.message ? error.message : String(error);
+      window.__AnnualMeetingsV654LastApprovalSend = { build:BUILD, ok:false, error:message, sentAt:now() };
+      show(message, 'err');
+      alert(message);
+      return window.__AnnualMeetingsV654LastApprovalSend;
+    }finally{
+      if(button){ button.disabled = false; button.textContent = 'Send for Approval'; }
+    }
+  }
+
+  function installPreviewButton(){
+    const overlay =
+      el('amV652PacketOverlay') ||
+      el('packetPreviewOverlay') ||
+      document.querySelector('.packet-preview-overlay') ||
+      document.querySelector('[id*="Packet"][id*="Overlay"]');
+
+    if(!overlay) return false;
+
+    if(el('amV654PreviewSendApproval')) return true;
+
+    let footer =
+      overlay.querySelector('.annualPacketPreviewActions') ||
+      overlay.querySelector('.modal-actions') ||
+      overlay.querySelector('.preview-actions') ||
+      overlay.querySelector('.actions') ||
+      overlay.querySelector('footer');
+
+    if(!footer){
+      footer = document.createElement('div');
+      footer.className = 'annualPacketPreviewActions';
+      footer.style.cssText = 'display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:18px;';
+      const inner =
+        overlay.querySelector('.modal, .preview-modal, .packet-modal, .card') ||
+        overlay.firstElementChild ||
+        overlay;
+      inner.appendChild(footer);
+    }
+
+    const btn = document.createElement('button');
+    btn.id = 'amV654PreviewSendApproval';
+    btn.type = 'button';
+    btn.textContent = 'Send for Approval';
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      sendCurrentPreviewForApproval();
+    });
+
+    const status = document.createElement('div');
+    status.id = 'amV654PreviewSendStatus';
+
+    footer.appendChild(btn);
+    footer.parentNode.insertBefore(status, footer.nextSibling);
+    return true;
+  }
+
+  function bindRoutingPreference(){
+    const select = getRouteSelect();
+    const note = getRouteNote();
+
+    if(select && !select.__v654RouteBound){
+      select.__v654RouteBound = true;
+      select.addEventListener('change', saveRoutePreference);
+    }
+    if(note && !note.__v654RouteBound){
+      note.__v654RouteBound = true;
+      note.addEventListener('change', saveRoutePreference);
+      note.addEventListener('blur', saveRoutePreference);
+    }
+
+    applySavedRoutePreference();
+    saveRoutePreference();
+  }
+
+  const originalPreview = window.ZummeeAnnualMeetingsPacketPreview && window.ZummeeAnnualMeetingsPacketPreview.generate;
+  if(typeof originalPreview === 'function' && !originalPreview.__v654Wrapped){
+    const wrapped = async function(){
+      bindRoutingPreference();
+      const result = await originalPreview.apply(this, arguments);
+      setTimeout(installPreviewButton, 50);
+      return result;
+    };
+    wrapped.__v654Wrapped = true;
+    window.ZummeeAnnualMeetingsPacketPreview.generate = wrapped;
+  }
+
+  window.sendAnnualMeetingPacketForApprovalFromPreview = sendCurrentPreviewForApproval;
+  window.getAnnualMeetingPreviewSendStatus = function(){
+    return {
+      build:BUILD,
+      installed:true,
+      hasPreviewButton:!!el('amV654PreviewSendApproval'),
+      savedRoute:savedRoute(),
+      activeCommunity:activeCommunity(),
+      lastSend:window.__AnnualMeetingsV654LastApprovalSend || null
+    };
+  };
+
+  function boot(){
+    bindRoutingPreference();
+    installPreviewButton();
+    setTimeout(bindRoutingPreference, 500);
+    setTimeout(installPreviewButton, 500);
+    setTimeout(installPreviewButton, 1500);
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', boot, { once:true });
+  }else{
+    boot();
+  }
 })();
 </script>
 
