@@ -4343,5 +4343,197 @@ console.info("[Annual Meetings v652] packet preview + approval routing loaded sa
 })();
 </script>
 
+
+
+<script id="annual-meetings-v661-open-approval-packet-link">
+(function(){
+  'use strict';
+  if(window.__AnnualMeetingsV661OpenApprovalPacketLink) return;
+  window.__AnnualMeetingsV661OpenApprovalPacketLink = true;
+
+  const BUILD = '2026-05-09-v661-open-approval-packet-link';
+
+  function clean(v){ return String(v == null ? '' : v).trim(); }
+  function el(id){ return document.getElementById(id); }
+  function params(){ return new URLSearchParams(window.location.search || ''); }
+  function shouldOpen(){
+    const p = params();
+    return clean(p.get('approval_request_id')) && (
+      clean(p.get('open_approval_packet')) === '1' ||
+      clean(p.get('open')) === 'approval_packet' ||
+      clean(p.get('review')) === 'packet'
+    );
+  }
+  function requestId(){ return clean(params().get('approval_request_id')); }
+
+  async function waitForClient(){
+    const start = Date.now();
+    while(Date.now() - start < 6500){
+      try{
+        const c = window.supabaseClient || (window.getSupabase && window.getSupabase()) || null;
+        if(c && typeof c.from === 'function') return c;
+      }catch(e){}
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    throw new Error('Supabase client not ready.');
+  }
+
+  function formatDate(value){
+    const v = clean(value).slice(0,10);
+    if(!v) return 'Not set';
+    const d = new Date(v + 'T00:00:00');
+    if(Number.isNaN(d.getTime())) return v;
+    return d.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
+  }
+
+  function snapshot(row){
+    return row && row.packet_preview_snapshot && typeof row.packet_preview_snapshot === 'object'
+      ? row.packet_preview_snapshot
+      : {};
+  }
+
+  function packetHtmlFrom(row){
+    const snap = snapshot(row);
+    const keys = ['html','packetHtml','packet_html','previewHtml','preview_html','packet_preview_html'];
+    for(const key of keys){
+      if(clean(snap[key])) return clean(snap[key]);
+    }
+    try{
+      if(snap.packet && clean(snap.packet.html)) return clean(snap.packet.html);
+      if(snap.preview && clean(snap.preview.html)) return clean(snap.preview.html);
+      if(snap.document && clean(snap.document.html)) return clean(snap.document.html);
+    }catch(e){}
+    return '';
+  }
+
+  function sanitizePreviewHtml(html){
+    let out = String(html || '');
+    out = out.replace(new RegExp('<' + 'script[\\s\\S]*?<' + '\\/script>', 'gi'), '');
+    out = out.replace(/\son[a-z]+\s*=\s*(['"]).*?\1/gi, '');
+    out = out.replace(/javascript:/gi, '');
+    return out;
+  }
+
+  function ensureOverlay(){
+    let overlay = el('amV652PacketOverlay') || el('packetPreviewOverlay');
+    if(overlay) return overlay;
+
+    overlay = document.createElement('div');
+    overlay.id = 'amV652PacketOverlay';
+    overlay.className = 'am-v652-overlay';
+    overlay.innerHTML = '' +
+      '<div class="am-v652-modal">' +
+        '<div class="am-v652-modal-top">' +
+          '<div><h2 id="amV652PacketTitle">Annual Meeting Packet Preview</h2><p id="amV652PacketSub"></p></div>' +
+          '<div class="am-v652-actions"><button class="am-v652-btn danger" id="amV652CloseBtn" type="button">Close</button></div>' +
+        '</div>' +
+        '<div id="amV652PacketContent" class="am-v652-modal-body"></div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    const close = el('amV652CloseBtn');
+    if(close) close.addEventListener('click', function(){ overlay.classList.remove('is-open'); });
+    return overlay;
+  }
+
+  function openRequestPreview(row){
+    const overlay = ensureOverlay();
+    const title = el('amV652PacketTitle');
+    const sub = el('amV652PacketSub');
+    const content = el('amV652PacketContent');
+
+    const snap = snapshot(row);
+    const association = clean(row.association_legal_name) ||
+      clean(snap.associationName) ||
+      clean(snap.association_legal_name) ||
+      clean(snap.settings && snap.settings.association_legal_name) ||
+      'Annual Meeting Packet';
+
+    const meetingDate = clean(row.next_annual_meeting_date) ||
+      clean(snap.meetingDate) ||
+      clean(snap.settings && snap.settings.next_annual_meeting_date);
+
+    const route = clean(row.approval_route_label) || clean(snap.routeLabel) || clean(row.approval_route);
+    const step = clean(row.current_step || row.approval_status);
+
+    if(title) title.textContent = association + ' Packet Review';
+    if(sub) sub.textContent = 'Meeting date: ' + formatDate(meetingDate) + (route ? ' • Route: ' + route : '') + (step ? ' • Step: ' + step : '');
+
+    const html = packetHtmlFrom(row);
+    if(content){
+      if(html){
+        content.innerHTML = sanitizePreviewHtml(html);
+      }else{
+        content.innerHTML = '<div style="padding:22px;border:1px solid #d8e5f6;border-radius:18px;background:#fff;color:#17365f;font-weight:800;">Packet preview HTML was not found on this approval request.</div>';
+      }
+    }
+
+    overlay.classList.add('is-open');
+    document.body.classList.add('packetPrintRoot');
+
+    window.__AnnualMeetingsV661OpenApprovalPacketLast = {
+      build:BUILD,
+      ok:true,
+      request_id:row.id,
+      current_step:row.current_step,
+      approval_status:row.approval_status,
+      hasPacketHtml:!!html,
+      packetHtmlLength:(html || '').length,
+      openedAt:new Date().toISOString()
+    };
+    return window.__AnnualMeetingsV661OpenApprovalPacketLast;
+  }
+
+  async function loadAndOpen(){
+    if(!shouldOpen()) return { ok:false, skipped:true, reason:'no_open_approval_packet_param' };
+    const id = requestId();
+    try{
+      const client = await waitForClient();
+      const result = await client
+        .from('annual_meeting_approval_requests')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if(result.error) throw result.error;
+      if(!result.data) throw new Error('Approval request not found.');
+
+      return openRequestPreview(result.data);
+    }catch(error){
+      const msg = error && error.message ? error.message : String(error);
+      window.__AnnualMeetingsV661OpenApprovalPacketLast = {
+        build:BUILD,
+        ok:false,
+        request_id:id,
+        error:msg,
+        failedAt:new Date().toISOString()
+      };
+      console.error('[Annual v661] open approval packet failed', error);
+      alert('Could not open approval packet: ' + msg);
+      return window.__AnnualMeetingsV661OpenApprovalPacketLast;
+    }
+  }
+
+  window.openAnnualMeetingApprovalPacketFromLink = loadAndOpen;
+  window.getAnnualMeetingApprovalPacketLinkStatus = function(){
+    return {
+      build:BUILD,
+      installed:true,
+      shouldOpen:shouldOpen(),
+      requestId:requestId(),
+      last:window.__AnnualMeetingsV661OpenApprovalPacketLast || null
+    };
+  };
+
+  function boot(){ if(shouldOpen()) setTimeout(loadAndOpen, 500); }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once:true });
+  else boot();
+
+  window.addEventListener('pageshow', function(){
+    if(shouldOpen() && !window.__AnnualMeetingsV661OpenApprovalPacketLast) setTimeout(loadAndOpen, 300);
+  });
+})();
+</script>
+
 </body>
 </html>
