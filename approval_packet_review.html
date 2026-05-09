@@ -487,13 +487,14 @@
     (function(){
       'use strict';
 
-      const BUILD = '2026-05-09-v722-expected-step-frontend-guard';
+      const BUILD = '2026-05-09-v723-one-approve-per-page-load';
       const SUPABASE_URL = window.SUPABASE_URL || window.ZUMMEE_SUPABASE_URL || 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
       const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || window.SUPABASE_KEY || window.ZUMMEE_SUPABASE_ANON_KEY || window.supabaseAnonKey || 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
 
       let supabaseClient = null;
       let currentRequest = null;
       let loadedApprovalStep = '';
+      let approvalCompletedThisPageLoad = false;
 
       const els = {
         title: document.getElementById('pageTitle'),
@@ -1175,15 +1176,17 @@
         }
 
         const step = clean(row.current_step || row.approval_status);
-        const canApprove = step === 'pending_board' || step === 'pending_supervisor';
+        const canApprove = !approvalCompletedThisPageLoad && (step === 'pending_board' || step === 'pending_supervisor');
         setApproveVisible(canApprove);
         [els.approveTop, els.approveBottom].forEach(btn => {
           if(canApprove){
             btn.disabled = false;
             btn.textContent = 'Approve Packet';
+            btn.style.display = '';
           }else{
             btn.disabled = true;
-            btn.textContent = 'Approval Complete';
+            btn.textContent = approvalCompletedThisPageLoad ? 'Approved' : 'Approval Complete';
+            btn.style.display = approvalCompletedThisPageLoad ? 'none' : btn.style.display;
           }
         });
       }
@@ -1257,6 +1260,10 @@
 
       async function approve(){
         if(!currentRequest || !currentRequest.id) return;
+        if(approvalCompletedThisPageLoad) {
+          showStatus('This approval step has already been completed on this page.');
+          return;
+        }
 
         const buttons = [els.approveTop, els.approveBottom];
         buttons.forEach(btn => {
@@ -1289,6 +1296,7 @@
 
           currentRequest = payload.request;
           loadedApprovalStep = '';
+          approvalCompletedThisPageLoad = true;
           showStatus('Packet approved successfully. This approval step is complete and has been sent to the next step.');
 
           buttons.forEach(btn => {
@@ -1338,6 +1346,7 @@
           hasToken: !!reviewToken(),
           hasRequest: !!currentRequest,
           loadedApprovalStep,
+          approvalCompletedThisPageLoad,
           hasV719PremiumPrintPage: !!frame,
           frameStatus: window.__approvalPacketFrameStatus || null,
           shellClientHeight: shell ? shell.clientHeight : null,
