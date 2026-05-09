@@ -1713,587 +1713,425 @@
 
 
 
-<style id="board-hub-v628-phone-packet-review-style">
-  /* v628: dedicated phone review mode for annual meeting packets */
+
+
+
+
+
+
+
+
+
+
+
+
+<style id="board-hub-v632-phone-ipad-style-preview-style">
+  /* v632: phone uses the same professional preview feel as iPad, just scaled */
   @media(max-width:760px){
-    #bhPhonePacketReviewShade {
-      position: fixed;
-      inset: 0;
-      z-index: 999999;
-      display: none;
-      align-items: flex-start;
-      justify-content: center;
-      padding: 8px;
-      background: rgba(15, 42, 70, .48);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      overflow: auto;
-      -webkit-overflow-scrolling: touch;
+    #annualPacketPreviewShade.open,
+    .annualPacketPreviewShade.open {
+      display:flex !important;
+      align-items:flex-start !important;
+      justify-content:center !important;
+      padding:8px 6px !important;
+      background:rgba(16,47,79,.45) !important;
+      backdrop-filter:blur(10px) !important;
+      -webkit-backdrop-filter:blur(10px) !important;
+      overflow:auto !important;
     }
 
-    #bhPhonePacketReviewShade.is-open {
-      display: flex;
+    #annualPacketPreviewShade .annualPacketPreviewModal.is-full-packet,
+    .annualPacketPreviewModal.is-full-packet {
+      width:calc(100vw - 14px) !important;
+      max-width:calc(100vw - 14px) !important;
+      max-height:calc(100svh - 18px) !important;
+      border-radius:22px !important;
+      border:2px solid #9ec5ff !important;
+      background:#f6f9fd !important;
+      box-shadow:0 28px 70px rgba(16,47,79,.30) !important;
+      overflow:hidden !important;
+      display:flex !important;
+      flex-direction:column !important;
     }
 
-    .bh-phone-packet-modal {
-      width: min(430px, calc(100vw - 16px));
-      max-height: calc(100svh - 18px);
-      background: #f6f9fd;
-      border: 2px solid #9ec5ff;
-      border-radius: 24px;
-      box-shadow: 0 28px 70px rgba(16,47,79,.30);
-      overflow: hidden;
-      color: #102f4f;
-      display: flex;
-      flex-direction: column;
+    #annualPacketPreviewShade .annualPacketPreviewHeader,
+    .annualPacketPreviewHeader {
+      flex:0 0 auto !important;
+      padding:16px 18px 12px !important;
+      border-bottom:1px solid #d8e5f6 !important;
+      background:#f8fbff !important;
+      display:flex !important;
+      align-items:flex-start !important;
+      justify-content:space-between !important;
+      gap:12px !important;
     }
 
-    .bh-phone-packet-head {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 17px 18px 13px;
-      border-bottom: 1px solid #dbe8f6;
-      background: linear-gradient(180deg, #fbfdff, #f6f9fd);
+    #annualPacketPreviewTitle {
+      font-size:20px !important;
+      line-height:1.12 !important;
+      letter-spacing:-.025em !important;
+      margin:0 !important;
+      color:#17365f !important;
+      max-width:calc(100vw - 100px) !important;
     }
 
-    .bh-phone-packet-kicker {
-      font-size: 10px;
-      letter-spacing: .15em;
-      text-transform: uppercase;
-      color: #517199;
-      font-weight: 950;
-      margin-bottom: 6px;
+    #annualPacketPreviewMeta {
+      font-size:12.5px !important;
+      line-height:1.28 !important;
+      margin:6px 0 0 !important;
+      color:#64748b !important;
+      font-weight:850 !important;
     }
 
-    .bh-phone-packet-title {
-      margin: 0;
-      font-size: 21px;
-      line-height: 1.09;
-      letter-spacing: -0.03em;
-      color: #12375e;
-      font-weight: 950;
+    #annualPacketPreviewShade .annualPacketPreviewClose,
+    .annualPacketPreviewClose {
+      width:40px !important;
+      min-width:40px !important;
+      height:40px !important;
+      border-radius:14px !important;
+      border:0 !important;
+      background:#edf4fb !important;
+      color:#17365f !important;
+      font-size:27px !important;
+      line-height:1 !important;
+      font-weight:950 !important;
     }
 
-    .bh-phone-packet-sub {
-      margin: 7px 0 0;
-      color: #64748b;
-      font-size: 13px;
-      line-height: 1.25;
-      font-weight: 850;
+    #annualPacketPreviewBody.is-full-packet,
+    .annualPacketPreviewBody.is-full-packet {
+      flex:1 1 auto !important;
+      min-height:0 !important;
+      overflow:auto !important;
+      -webkit-overflow-scrolling:touch !important;
+      background:#edf4fb !important;
+      padding:10px !important;
     }
 
-    .bh-phone-packet-x {
-      width: 42px;
-      min-width: 42px;
-      height: 42px;
-      border: 0;
-      border-radius: 15px;
-      background: #edf4fb;
-      color: #17365f;
-      font-size: 28px;
-      line-height: 1;
-      font-weight: 950;
+    #annualPacketPreviewBody .annualPacketPreviewFullHtml,
+    .annualPacketPreviewFullHtml {
+      border:0 !important;
+      background:#edf4fb !important;
+      border-radius:0 !important;
+      padding:0 !important;
+      max-height:none !important;
+      overflow:visible !important;
+      width:100% !important;
     }
 
-    .bh-phone-packet-body {
-      padding: 13px;
-      overflow: auto;
-      -webkit-overflow-scrolling: touch;
+    /* Same page structure as iPad, but sized to the phone viewport */
+    #annualPacketPreviewBody .am-v652-pages,
+    .annualPacketPreviewFullHtml .am-v652-pages {
+      display:flex !important;
+      flex-direction:column !important;
+      align-items:center !important;
+      gap:14px !important;
+      width:100% !important;
+      padding:0 !important;
+      margin:0 !important;
     }
 
-    .bh-phone-packet-card {
-      background: #ffffff;
-      border: 1.5px solid #d8e5f6;
-      border-radius: 18px;
-      padding: 14px;
-      margin-bottom: 12px;
-      box-shadow: 0 8px 20px rgba(16,47,79,.06);
+    #annualPacketPreviewBody .am-v652-page,
+    .annualPacketPreviewFullHtml .am-v652-page {
+      width:100% !important;
+      max-width:100% !important;
+      min-height:auto !important;
+      box-sizing:border-box !important;
+      background:#fff !important;
+      border:1px solid #d7e3f1 !important;
+      border-radius:17px !important;
+      box-shadow:0 10px 24px rgba(16,47,79,.11) !important;
+      padding:28px !important;
+      color:#102f4f !important;
+      overflow:hidden !important;
     }
 
-    .bh-phone-packet-card-title {
-      margin: 0 0 10px;
-      font-size: 17px;
-      line-height: 1.15;
-      color: #12375e;
-      font-weight: 950;
+    #annualPacketPreviewBody .am-v652-page-header,
+    .annualPacketPreviewFullHtml .am-v652-page-header {
+      display:flex !important;
+      align-items:flex-start !important;
+      justify-content:space-between !important;
+      gap:14px !important;
+      border-bottom:3px solid #102f4f !important;
+      padding-bottom:16px !important;
+      margin-bottom:20px !important;
     }
 
-    .bh-phone-packet-logo {
-      display: block;
-      width: 132px;
-      max-width: 58%;
-      height: auto;
-      object-fit: contain;
-      margin: 8px auto 12px;
+    #annualPacketPreviewBody .am-v652-logo,
+    #annualPacketPreviewBody img.am-v652-logo,
+    #annualPacketPreviewBody .am-v652-page-header img,
+    .annualPacketPreviewFullHtml .am-v652-logo,
+    .annualPacketPreviewFullHtml img.am-v652-logo,
+    .annualPacketPreviewFullHtml .am-v652-page-header img {
+      max-width:132px !important;
+      max-height:54px !important;
+      width:auto !important;
+      height:auto !important;
+      object-fit:contain !important;
+      flex:0 0 auto !important;
     }
 
-    .bh-phone-packet-details {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 8px;
+    #annualPacketPreviewBody .am-v652-page > img:not(.am-v652-logo),
+    .annualPacketPreviewFullHtml .am-v652-page > img:not(.am-v652-logo) {
+      max-width:150px !important;
+      max-height:64px !important;
+      width:auto !important;
+      height:auto !important;
+      object-fit:contain !important;
+      display:block !important;
+      margin:8px auto 14px !important;
     }
 
-    .bh-phone-detail {
-      background: #f8fbff;
-      border: 1px solid #dce8f4;
-      border-radius: 14px;
-      padding: 10px 11px;
+    #annualPacketPreviewBody .am-v652-kicker,
+    .annualPacketPreviewFullHtml .am-v652-kicker {
+      font-size:10px !important;
+      letter-spacing:.14em !important;
+      color:#6d7f92 !important;
+      text-transform:uppercase !important;
+      font-weight:900 !important;
     }
 
-    .bh-phone-detail-label {
-      font-size: 9px;
-      letter-spacing: .13em;
-      text-transform: uppercase;
-      color: #64748b;
-      font-weight: 950;
-      margin-bottom: 4px;
+    #annualPacketPreviewBody .am-v652-h1,
+    .annualPacketPreviewFullHtml .am-v652-h1 {
+      font-size:27px !important;
+      line-height:1.07 !important;
+      letter-spacing:-.03em !important;
+      margin:6px 0 0 !important;
+      color:#102f4f !important;
+      font-weight:950 !important;
     }
 
-    .bh-phone-detail-value {
-      color: #102f4f;
-      font-size: 15px;
-      line-height: 1.25;
-      font-weight: 900;
-      word-break: break-word;
+    #annualPacketPreviewBody .am-v652-h2,
+    .annualPacketPreviewFullHtml .am-v652-h2 {
+      font-size:21px !important;
+      line-height:1.15 !important;
+      margin:0 0 12px !important;
+      color:#102f4f !important;
+      font-weight:950 !important;
     }
 
-    .bh-phone-section {
-      background: #fff;
-      border: 1.5px solid #d8e5f6;
-      border-radius: 18px;
-      overflow: hidden;
-      margin-bottom: 10px;
+    #annualPacketPreviewBody .am-v652-meta-grid,
+    .annualPacketPreviewFullHtml .am-v652-meta-grid {
+      display:grid !important;
+      grid-template-columns:1fr !important;
+      gap:10px !important;
+      margin:16px 0 !important;
     }
 
-    .bh-phone-section summary {
-      list-style: none;
-      cursor: pointer;
-      padding: 13px 14px;
-      color: #12375e;
-      font-weight: 950;
-      font-size: 15px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
+    #annualPacketPreviewBody .am-v652-meta,
+    .annualPacketPreviewFullHtml .am-v652-meta {
+      border:1px solid #d8e4f0 !important;
+      border-radius:14px !important;
+      padding:11px 12px !important;
+      background:#f8fbff !important;
     }
 
-    .bh-phone-section summary::-webkit-details-marker {
-      display: none;
+    #annualPacketPreviewBody .am-v652-meta label,
+    .annualPacketPreviewFullHtml .am-v652-meta label {
+      display:block !important;
+      font-size:9.5px !important;
+      letter-spacing:.12em !important;
+      text-transform:uppercase !important;
+      font-weight:900 !important;
+      color:#6d7f92 !important;
+      margin-bottom:5px !important;
     }
 
-    .bh-phone-section summary::after {
-      content: "+";
-      width: 26px;
-      height: 26px;
-      border-radius: 999px;
-      background: #eef5ff;
-      color: #2462a9;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 950;
-      flex: 0 0 auto;
+    #annualPacketPreviewBody .am-v652-meta div,
+    .annualPacketPreviewFullHtml .am-v652-meta div {
+      font-size:15px !important;
+      line-height:1.25 !important;
+      font-weight:900 !important;
+      color:#102f4f !important;
     }
 
-    .bh-phone-section[open] summary {
-      border-bottom: 1px solid #dce8f4;
+    #annualPacketPreviewBody .am-v652-box,
+    .annualPacketPreviewFullHtml .am-v652-box {
+      border:2px solid #dce8f4 !important;
+      border-radius:16px !important;
+      padding:14px 15px !important;
+      background:#fbfdff !important;
+      margin:14px 0 !important;
     }
 
-    .bh-phone-section[open] summary::after {
-      content: "–";
+    #annualPacketPreviewBody .am-v652-p,
+    #annualPacketPreviewBody .am-v652-li,
+    #annualPacketPreviewBody p,
+    #annualPacketPreviewBody li,
+    .annualPacketPreviewFullHtml .am-v652-p,
+    .annualPacketPreviewFullHtml .am-v652-li,
+    .annualPacketPreviewFullHtml p,
+    .annualPacketPreviewFullHtml li {
+      font-size:13.5px !important;
+      line-height:1.45 !important;
+      color:#223c59 !important;
     }
 
-    .bh-phone-section-content {
-      padding: 12px 14px 14px;
-      color: #213f5e;
-      font-size: 13.5px;
-      line-height: 1.45;
+    #annualPacketPreviewBody ul,
+    #annualPacketPreviewBody ol,
+    .annualPacketPreviewFullHtml ul,
+    .annualPacketPreviewFullHtml ol {
+      padding-left:20px !important;
+      margin:8px 0 !important;
     }
 
-    .bh-phone-section-content p {
-      margin: 0 0 9px;
+    #annualPacketPreviewBody .am-v652-table,
+    .annualPacketPreviewFullHtml .am-v652-table {
+      width:100% !important;
+      border-collapse:collapse !important;
+      font-size:12px !important;
+      display:block !important;
+      overflow-x:auto !important;
+      -webkit-overflow-scrolling:touch !important;
     }
 
-    .bh-phone-section-content ul,
-    .bh-phone-section-content ol {
-      margin: 8px 0;
-      padding-left: 20px;
+    #annualPacketPreviewBody .am-v652-table th,
+    #annualPacketPreviewBody .am-v652-table td,
+    .annualPacketPreviewFullHtml .am-v652-table th,
+    .annualPacketPreviewFullHtml .am-v652-table td {
+      padding:7px 5px !important;
+      border-bottom:1px solid #dde7f2 !important;
+      text-align:left !important;
+      vertical-align:top !important;
     }
 
-    .bh-phone-section-content li {
-      margin: 4px 0;
+    #annualPacketPreviewShade .annualPacketPreviewActions,
+    .annualPacketPreviewActions {
+      flex:0 0 auto !important;
+      display:flex !important;
+      justify-content:flex-end !important;
+      align-items:center !important;
+      gap:9px !important;
+      padding:10px 14px 14px !important;
+      border-top:1px solid #d8e5f6 !important;
+      background:rgba(246,249,253,.97) !important;
     }
 
-    .bh-phone-packet-actions {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 9px;
-      padding: 11px 13px 14px;
-      background: rgba(246,249,253,.96);
-      border-top: 1px solid #dbe8f6;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+    #annualPacketPreviewCloseBottom,
+    .annualPacketPreviewCloseBottom {
+      width:auto !important;
+      min-width:132px !important;
+      min-height:39px !important;
+      border-radius:14px !important;
+      border:2px solid #9ec5ff !important;
+      background:#fff !important;
+      color:#17365f !important;
+      font-size:12.5px !important;
+      font-weight:950 !important;
+      padding:0 16px !important;
+    }
+  }
+
+  @media(max-width:390px){
+    #annualPacketPreviewTitle {
+      font-size:18px !important;
     }
 
-    .bh-phone-primary,
-    .bh-phone-secondary,
-    .bh-phone-danger {
-      min-height: 43px;
-      border-radius: 15px;
-      font-size: 14px;
-      font-weight: 950;
-      cursor: pointer;
+    #annualPacketPreviewBody .am-v652-page,
+    .annualPacketPreviewFullHtml .am-v652-page {
+      padding:22px !important;
     }
 
-    .bh-phone-primary {
-      background: #17365f;
-      color: #fff;
-      border: 2px solid #17365f;
+    #annualPacketPreviewBody .am-v652-h1,
+    .annualPacketPreviewFullHtml .am-v652-h1 {
+      font-size:24px !important;
     }
 
-    .bh-phone-secondary {
-      background: #fff;
-      color: #17365f;
-      border: 2px solid #9ec5ff;
-    }
-
-    .bh-phone-danger {
-      background: #fff;
-      color: #9b1c1c;
-      border: 2px solid #f4c7c7;
-    }
-
-    .bh-phone-status {
-      min-height: 18px;
-      color: #64748b;
-      font-size: 12px;
-      line-height: 1.25;
-      text-align: center;
-      font-weight: 800;
-    }
-
-    .bh-phone-status.ok { color: #166534; }
-    .bh-phone-status.err { color: #b91c1c; }
-
-    body.bh-phone-review-open {
-      overflow: hidden !important;
+    #annualPacketPreviewBody .am-v652-logo,
+    #annualPacketPreviewBody img.am-v652-logo,
+    #annualPacketPreviewBody .am-v652-page-header img,
+    .annualPacketPreviewFullHtml .am-v652-logo,
+    .annualPacketPreviewFullHtml img.am-v652-logo,
+    .annualPacketPreviewFullHtml .am-v652-page-header img {
+      max-width:112px !important;
+      max-height:48px !important;
     }
   }
 </style>
 
+<script id="board-hub-v632-phone-ipad-style-preview-script">
+(function(){
+  'use strict';
+  if(window.__BoardHubV632PhoneIpadStylePreview) return;
+  window.__BoardHubV632PhoneIpadStylePreview = true;
 
+  const BUILD = '2026-05-09-v632-phone-ipad-style-preview';
 
+  function isPhone(){ return window.matchMedia && window.matchMedia('(max-width: 760px)').matches; }
 
+  function cleanup(){
+    if(!isPhone()) return;
+    const root = document.querySelector('#annualPacketPreviewBody');
+    if(!root) return;
 
+    root.querySelectorAll('img').forEach(function(img){
+      const src = String(img.getAttribute('src') || '').toLowerCase();
+      const alt = String(img.getAttribute('alt') || '').toLowerCase();
+      const isLogo = img.classList.contains('am-v652-logo') || src.includes('logo') || src.includes('sixes') || alt.includes('logo');
+      if(isLogo){
+        img.classList.add('am-v652-logo');
+        img.style.maxWidth = '132px';
+        img.style.maxHeight = '54px';
+        img.style.width = 'auto';
+        img.style.height = 'auto';
+        img.style.objectFit = 'contain';
+      }
+    });
 
-<style id="board-hub-v630-phone-print-accurate-style">
-  /* v630: phone approval preview must show the exact printable packet, scaled to fit */
-  @media(max-width:760px){
-    #bhPhonePrintPacketShade {
-      position: fixed;
-      inset: 0;
-      z-index: 1000000;
-      display: none;
-      align-items: flex-start;
-      justify-content: center;
-      padding: 7px;
-      background: rgba(15,42,70,.50);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      overflow: hidden;
-    }
-
-    #bhPhonePrintPacketShade.is-open {
-      display: flex;
-    }
-
-    .bh-phone-print-modal {
-      width: min(430px, calc(100vw - 14px));
-      height: calc(100svh - 16px);
-      background: #f6f9fd;
-      border: 2px solid #9ec5ff;
-      border-radius: 22px;
-      box-shadow: 0 28px 70px rgba(16,47,79,.30);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      color: #102f4f;
-    }
-
-    .bh-phone-print-head {
-      flex: 0 0 auto;
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 13px 15px 10px;
-      border-bottom: 1px solid #dbe8f6;
-      background: linear-gradient(180deg, #fbfdff, #f6f9fd);
-    }
-
-    .bh-phone-print-kicker {
-      font-size: 9px;
-      letter-spacing: .16em;
-      text-transform: uppercase;
-      color: #517199;
-      font-weight: 950;
-      margin-bottom: 5px;
-    }
-
-    .bh-phone-print-title {
-      margin: 0;
-      font-size: 18px;
-      line-height: 1.11;
-      letter-spacing: -.025em;
-      color: #12375e;
-      font-weight: 950;
-      max-width: calc(100vw - 88px);
-    }
-
-    .bh-phone-print-sub {
-      margin: 6px 0 0;
-      color: #64748b;
-      font-size: 12px;
-      line-height: 1.25;
-      font-weight: 850;
-    }
-
-    .bh-phone-print-x {
-      width: 38px;
-      min-width: 38px;
-      height: 38px;
-      border: 0;
-      border-radius: 14px;
-      background: #edf4fb;
-      color: #17365f;
-      font-size: 25px;
-      line-height: 1;
-      font-weight: 950;
-      cursor: pointer;
-    }
-
-    .bh-phone-print-view {
-      flex: 1 1 auto;
-      min-height: 0;
-      padding: 10px;
-      background: #edf4fb;
-      overflow: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    .bh-phone-print-scale-wrap {
-      position: relative;
-      width: 100%;
-      min-height: 100%;
-    }
-
-    .bh-phone-print-scale-inner {
-      transform-origin: top left;
-      width: 850px;
-    }
-
-    .bh-phone-print-scale-inner .am-v652-pages {
-      display: flex !important;
-      flex-direction: column !important;
-      gap: 24px !important;
-      align-items: center !important;
-      width: 850px !important;
-    }
-
-    .bh-phone-print-scale-inner .am-v652-page {
-      width: 850px !important;
-      min-height: 1050px !important;
-      background: #fff !important;
-      color: #102f4f !important;
-      border: 1px solid #d7e3f1 !important;
-      box-shadow: 0 14px 34px rgba(16,47,79,.16) !important;
-      border-radius: 18px !important;
-      padding: 54px !important;
-      box-sizing: border-box !important;
-    }
-
-    .bh-phone-print-actions {
-      flex: 0 0 auto;
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 8px;
-      padding: 10px 12px 13px;
-      background: rgba(246,249,253,.97);
-      border-top: 1px solid #dbe8f6;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-    }
-
-    .bh-phone-print-primary,
-    .bh-phone-print-secondary,
-    .bh-phone-print-danger {
-      min-height: 41px;
-      border-radius: 14px;
-      font-size: 13.5px;
-      font-weight: 950;
-      cursor: pointer;
-    }
-
-    .bh-phone-print-primary {
-      background: #17365f;
-      color: #fff;
-      border: 2px solid #17365f;
-    }
-
-    .bh-phone-print-secondary {
-      background: #fff;
-      color: #17365f;
-      border: 2px solid #9ec5ff;
-    }
-
-    .bh-phone-print-danger {
-      background: #fff;
-      color: #9b1c1c;
-      border: 2px solid #f4c7c7;
-    }
-
-    .bh-phone-print-status {
-      min-height: 17px;
-      color: #64748b;
-      font-size: 11.5px;
-      line-height: 1.25;
-      text-align: center;
-      font-weight: 800;
-    }
-
-    .bh-phone-print-status.ok { color: #166534; }
-    .bh-phone-print-status.err { color: #b91c1c; }
-
-    body.bh-phone-print-open {
-      overflow: hidden !important;
-    }
+    window.__BoardHubV632PhoneIpadStylePreviewLast = {
+      build: BUILD,
+      ok: true,
+      modalOpen: !!document.querySelector('#annualPacketPreviewShade.open, .annualPacketPreviewShade.open'),
+      images: root.querySelectorAll('img').length,
+      cleanedAt: new Date().toISOString()
+    };
   }
-</style>
 
+  // Make sure phone no longer opens the old separate phone modals if any stale HTML remains.
+  ['bhPhonePacketReviewShade','bhPhonePrintPacketShade'].forEach(function(id){
+    const node = document.getElementById(id);
+    if(node) node.remove();
+  });
 
-
-<style id="board-hub-v631-phone-print-cleanup-style">
-  /* v631: cleanup exact printable packet preview on phone without changing iPad/desktop */
-  @media(max-width:760px){
-    .bh-phone-print-view {
-      padding: 8px !important;
-      background: #edf4fb !important;
-    }
-
-    .bh-phone-print-scale-inner .am-v652-pages {
-      gap: 18px !important;
-    }
-
-    .bh-phone-print-scale-inner .am-v652-page {
-      padding: 42px !important;
-      border-radius: 16px !important;
-      box-shadow: 0 12px 28px rgba(16,47,79,.13) !important;
-    }
-
-    .bh-phone-print-scale-inner .am-v652-page-header {
-      padding-bottom: 18px !important;
-      margin-bottom: 22px !important;
-      gap: 18px !important;
-    }
-
-    .bh-phone-print-scale-inner .am-v652-logo,
-    .bh-phone-print-scale-inner img.am-v652-logo,
-    .bh-phone-print-scale-inner .am-v652-page img {
-      max-width: 230px !important;
-      width: auto !important;
-      max-height: 95px !important;
-      object-fit: contain !important;
-    }
-
-    .bh-phone-print-scale-inner .am-v652-page-header .am-v652-logo,
-    .bh-phone-print-scale-inner .am-v652-page-header img {
-      max-width: 190px !important;
-      max-height: 78px !important;
-    }
-
-    .bh-phone-print-scale-inner .am-v652-h1 {
-      font-size: 31px !important;
-      line-height: 1.08 !important;
-      margin-top: 6px !important;
-    }
-
-    .bh-phone-print-scale-inner .am-v652-h2 {
-      font-size: 23px !important;
-      line-height: 1.16 !important;
-      margin-bottom: 14px !important;
-    }
-
-    .bh-phone-print-scale-inner .am-v652-kicker {
-      font-size: 11px !important;
-      letter-spacing: .15em !important;
-    }
-
-    .bh-phone-print-scale-inner .am-v652-meta-grid {
-      gap: 12px !important;
-      margin: 18px 0 !important;
-    }
-
-    .bh-phone-print-scale-inner .am-v652-meta {
-      padding: 12px 14px !important;
-      border-radius: 14px !important;
-    }
-
-    .bh-phone-print-scale-inner .am-v652-meta label {
-      font-size: 10px !important;
-      margin-bottom: 5px !important;
-    }
-
-    .bh-phone-print-scale-inner .am-v652-meta div {
-      font-size: 15px !important;
-      line-height: 1.24 !important;
-    }
-
-    .bh-phone-print-scale-inner .am-v652-box {
-      padding: 15px 17px !important;
-      margin: 16px 0 !important;
-      border-radius: 16px !important;
-    }
-
-    .bh-phone-print-scale-inner .am-v652-p,
-    .bh-phone-print-scale-inner .am-v652-li,
-    .bh-phone-print-scale-inner p,
-    .bh-phone-print-scale-inner li {
-      font-size: 14px !important;
-      line-height: 1.48 !important;
-    }
-
-    .bh-phone-print-scale-inner ul,
-    .bh-phone-print-scale-inner ol {
-      margin-top: 8px !important;
-      margin-bottom: 8px !important;
-    }
-
-    .bh-phone-print-scale-inner .am-v652-table {
-      font-size: 12.5px !important;
-    }
-
-    .bh-phone-print-scale-inner .am-v652-table th,
-    .bh-phone-print-scale-inner .am-v652-table td {
-      padding: 7px 6px !important;
-    }
-
-    .bh-phone-print-actions {
-      padding: 9px 12px 12px !important;
-      gap: 7px !important;
-    }
-
-    .bh-phone-print-primary,
-    .bh-phone-print-secondary,
-    .bh-phone-print-danger {
-      min-height: 39px !important;
-      border-radius: 13px !important;
-      font-size: 13px !important;
-    }
+  const oldPreview = window.previewBoardHubAnnualMeetingPacket;
+  if(typeof oldPreview === 'function'){
+    window.previewBoardHubAnnualMeetingPacket = async function(id){
+      const result = await oldPreview(id);
+      setTimeout(cleanup, 100);
+      setTimeout(cleanup, 400);
+      return result;
+    };
   }
-</style>
+
+  const oldOpen = window.openBoardHubApprovalPacketFromLink;
+  if(typeof oldOpen === 'function'){
+    window.openBoardHubApprovalPacketFromLink = async function(){
+      const result = await oldOpen();
+      setTimeout(cleanup, 100);
+      setTimeout(cleanup, 400);
+      return result;
+    };
+  }
+
+  window.addEventListener('pageshow', function(){
+    setTimeout(cleanup, 450);
+  });
+
+  window.addEventListener('resize', function(){
+    setTimeout(cleanup, 100);
+  });
+
+  window.getBoardHubPhoneIpadStylePreviewStatus = function(){
+    return {
+      build: BUILD,
+      installed: true,
+      isPhone: isPhone(),
+      modalOpen: !!document.querySelector('#annualPacketPreviewShade.open, .annualPacketPreviewShade.open'),
+      separatePhoneModalPresent: !!document.querySelector('#bhPhonePacketReviewShade, #bhPhonePrintPacketShade'),
+      last: window.__BoardHubV632PhoneIpadStylePreviewLast || null
+    };
+  };
+})();
+</script>
 
 </head>
 <body>
@@ -6031,892 +5869,15 @@
 
 
 
-<script id="board-hub-v628-phone-packet-review-script">
-(function(){
-  'use strict';
-  if(window.__BoardHubV628PhonePacketReview) return;
-  window.__BoardHubV628PhonePacketReview = true;
 
-  const BUILD = '2026-05-09-v628-phone-packet-review';
 
-  function clean(v){ return String(v == null ? '' : v).trim(); }
-  function isPhone(){ return window.matchMedia && window.matchMedia('(max-width: 760px)').matches; }
-  function el(id){ return document.getElementById(id); }
-  function params(){ return new URLSearchParams(window.location.search || ''); }
-  function shouldOpen(){
-    const p = params();
-    return clean(p.get('approval_request_id')) && (
-      clean(p.get('open_approval_packet')) === '1' ||
-      clean(p.get('open')) === 'approval_packet' ||
-      clean(p.get('review')) === 'packet'
-    );
-  }
-  function requestId(){ return clean(params().get('approval_request_id')); }
 
-  function esc(v){
-    return clean(v)
-      .replace(/&/g,'&amp;')
-      .replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;')
-      .replace(/"/g,'&quot;')
-      .replace(/'/g,'&#039;');
-  }
 
-  function formatDate(value){
-    const v = clean(value).slice(0,10);
-    if(!v) return '—';
-    const d = new Date(v + 'T00:00:00');
-    if(Number.isNaN(d.getTime())) return v;
-    return d.toLocaleDateString(undefined, { month:'long', day:'numeric', year:'numeric' });
-  }
 
-  function snapshot(row){
-    return row && row.packet_preview_snapshot && typeof row.packet_preview_snapshot === 'object'
-      ? row.packet_preview_snapshot
-      : {};
-  }
 
-  function settings(row){
-    const snap = snapshot(row);
-    return snap.settings && typeof snap.settings === 'object' ? snap.settings : {};
-  }
 
-  function communityName(row){
-    const snap = snapshot(row);
-    return clean(snap.community && snap.community.name) ||
-      clean(snap.communityName) ||
-      clean(row.community_name) ||
-      'Selected community';
-  }
 
-  function associationName(row){
-    const snap = snapshot(row);
-    const s = settings(row);
-    return clean(row.association_legal_name) ||
-      clean(snap.associationName) ||
-      clean(snap.association_legal_name) ||
-      clean(s.association_legal_name) ||
-      communityName(row);
-  }
 
-  function meetingDate(row){
-    const snap = snapshot(row);
-    const s = settings(row);
-    return clean(row.next_annual_meeting_date) ||
-      clean(snap.meetingDate) ||
-      clean(s.next_annual_meeting_date) ||
-      clean(s.nextDate);
-  }
-
-  function meetingTime(row){
-    const snap = snapshot(row);
-    const s = settings(row);
-    return clean(s.meeting_time) || clean(s.meetingTime) || clean(snap.meetingTime) || clean(snap.meeting_time);
-  }
-
-  function meetingFormat(row){
-    const snap = snapshot(row);
-    const s = settings(row);
-    return clean(s.meeting_format) || clean(s.meetingFormat) || clean(snap.meetingFormat) || clean(snap.meeting_format);
-  }
-
-  function meetingLocation(row){
-    const snap = snapshot(row);
-    const s = settings(row);
-    return clean(s.meeting_location) || clean(s.meetingLocation) || clean(snap.meetingLocation) || clean(snap.meeting_location);
-  }
-
-  function quorum(row){
-    const snap = snapshot(row);
-    const s = settings(row);
-    return clean(s.quorum_requirement) || clean(s.quorumRequirement) || clean(snap.quorum) || clean(snap.quorumRequirement);
-  }
-
-  function seats(row){
-    const snap = snapshot(row);
-    const s = settings(row);
-    return clean(s.seats_up_for_election) || clean(s.seatsUpForElection) || clean(snap.seats) || clean(row.seats_up_for_election);
-  }
-
-  function routeLabel(row){
-    const snap = snapshot(row);
-    return clean(row.approval_route_label) || clean(snap.routeLabel) || clean(row.approval_route) || 'Approval route';
-  }
-
-  function statusLabel(row){
-    const step = clean(row.current_step || row.approval_status);
-    if(step === 'pending_board') return 'Awaiting Board approval';
-    if(step === 'pending_supervisor') return 'Awaiting Supervisor approval';
-    if(step === 'pending_admin_mailing') return 'Awaiting Admin / mailing follow-up';
-    return step || 'Approval review';
-  }
-
-  function packetHtmlFrom(row){
-    const snap = snapshot(row);
-    const keys = ['html','packetHtml','packet_html','previewHtml','preview_html','packet_preview_html'];
-    for(const key of keys){
-      if(clean(snap[key])) return clean(snap[key]);
-    }
-    try{
-      if(snap.packet && clean(snap.packet.html)) return clean(snap.packet.html);
-      if(snap.preview && clean(snap.preview.html)) return clean(snap.preview.html);
-      if(snap.document && clean(snap.document.html)) return clean(snap.document.html);
-    }catch(e){}
-    return '';
-  }
-
-  function extractSectionsFromHtml(html){
-    if(!html) return [];
-    try{
-      const doc = new DOMParser().parseFromString(String(html), 'text/html');
-      const pages = Array.from(doc.querySelectorAll('.am-v652-page'));
-      const sectionNodes = pages.length ? pages : Array.from(doc.body.children || []);
-      return sectionNodes.slice(0, 8).map(function(node, idx){
-        let title = clean(
-          (node.querySelector('.am-v652-h2') && node.querySelector('.am-v652-h2').textContent) ||
-          (node.querySelector('.am-v652-h1') && node.querySelector('.am-v652-h1').textContent) ||
-          (node.querySelector('h2') && node.querySelector('h2').textContent) ||
-          (node.querySelector('h1') && node.querySelector('h1').textContent)
-        );
-        if(!title){
-          title = idx === 0 ? 'Packet Cover' : 'Packet Section ' + (idx + 1);
-        }
-        let text = clean(node.innerText || node.textContent || '');
-        text = text.replace(/\n{3,}/g, '\n\n');
-        if(text.length > 1800) text = text.slice(0, 1800).trim() + '…';
-        const paragraphs = text
-          .split(/\n{2,}/)
-          .map(t => clean(t))
-          .filter(Boolean)
-          .slice(0, 8);
-        return { title, paragraphs };
-      }).filter(s => s.paragraphs.length);
-    }catch(error){
-      return [];
-    }
-  }
-
-  function logoFromHtml(html){
-    if(!html) return '';
-    try{
-      const doc = new DOMParser().parseFromString(String(html), 'text/html');
-      const img = doc.querySelector('img.am-v652-logo, .am-v652-logo img, img');
-      return img ? clean(img.getAttribute('src')) : '';
-    }catch(e){
-      return '';
-    }
-  }
-
-  async function client(){
-    const start = Date.now();
-    while(Date.now() - start < 8000){
-      try{
-        const c = window.supabaseClient || (window.getSupabase && window.getSupabase()) || null;
-        if(c && typeof c.from === 'function') return c;
-      }catch(e){}
-      await new Promise(resolve => setTimeout(resolve, 120));
-    }
-    throw new Error('Supabase client not ready.');
-  }
-
-  async function loadRequest(id){
-    const c = await client();
-    const result = await c
-      .from('annual_meeting_approval_requests')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
-
-    if(result.error) throw result.error;
-    if(!result.data) throw new Error('Approval request not found.');
-    return result.data;
-  }
-
-  function ensureShade(){
-    let shade = el('bhPhonePacketReviewShade');
-    if(shade) return shade;
-
-    shade = document.createElement('div');
-    shade.id = 'bhPhonePacketReviewShade';
-    shade.innerHTML = '' +
-      '<div class="bh-phone-packet-modal" role="dialog" aria-modal="true">' +
-        '<div class="bh-phone-packet-head">' +
-          '<div>' +
-            '<div class="bh-phone-packet-kicker">Annual Meeting Approval</div>' +
-            '<h2 class="bh-phone-packet-title" id="bhPhonePacketTitle">Packet Review</h2>' +
-            '<p class="bh-phone-packet-sub" id="bhPhonePacketSub"></p>' +
-          '</div>' +
-          '<button class="bh-phone-packet-x" id="bhPhonePacketCloseTop" type="button" aria-label="Close">×</button>' +
-        '</div>' +
-        '<div class="bh-phone-packet-body" id="bhPhonePacketBody"></div>' +
-        '<div class="bh-phone-packet-actions">' +
-          '<button class="bh-phone-primary" id="bhPhonePacketApproveBtn" type="button">Approve Packet</button>' +
-          '<button class="bh-phone-secondary" id="bhPhonePacketPrintableBtn" type="button">View Printable Packet</button>' +
-          '<button class="bh-phone-danger" id="bhPhonePacketCloseBtn" type="button">Close Preview</button>' +
-          '<div class="bh-phone-status" id="bhPhonePacketStatus"></div>' +
-        '</div>' +
-      '</div>';
-
-    document.body.appendChild(shade);
-
-    function close(){
-      shade.classList.remove('is-open');
-      document.body.classList.remove('bh-phone-review-open');
-    }
-
-    const closeTop = el('bhPhonePacketCloseTop');
-    const closeBtn = el('bhPhonePacketCloseBtn');
-    if(closeTop) closeTop.addEventListener('click', close);
-    if(closeBtn) closeBtn.addEventListener('click', close);
-
-    return shade;
-  }
-
-  function detail(label, value){
-    return '' +
-      '<div class="bh-phone-detail">' +
-        '<div class="bh-phone-detail-label">' + esc(label) + '</div>' +
-        '<div class="bh-phone-detail-value">' + esc(value || '—') + '</div>' +
-      '</div>';
-  }
-
-  function sectionHtml(section, idx){
-    const open = idx < 2 ? ' open' : '';
-    const body = section.paragraphs.map(function(p){
-      return '<p>' + esc(p).replace(/\n/g, '<br>') + '</p>';
-    }).join('');
-    return '' +
-      '<details class="bh-phone-section"' + open + '>' +
-        '<summary>' + esc(section.title) + '</summary>' +
-        '<div class="bh-phone-section-content">' + body + '</div>' +
-      '</details>';
-  }
-
-  function renderPhoneReview(row){
-    const shade = ensureShade();
-    const title = el('bhPhonePacketTitle');
-    const sub = el('bhPhonePacketSub');
-    const body = el('bhPhonePacketBody');
-    const approve = el('bhPhonePacketApproveBtn');
-    const printable = el('bhPhonePacketPrintableBtn');
-    const status = el('bhPhonePacketStatus');
-
-    const packetHtml = packetHtmlFrom(row);
-    const sections = extractSectionsFromHtml(packetHtml);
-    const logo = logoFromHtml(packetHtml);
-
-    if(title) title.textContent = associationName(row) + ' Packet Review';
-    if(sub) sub.textContent = formatDate(meetingDate(row)) + ' • ' + statusLabel(row);
-
-    const details = [
-      ['Community', communityName(row)],
-      ['Meeting Date', formatDate(meetingDate(row))],
-      ['Meeting Time', meetingTime(row)],
-      ['Meeting Format', meetingFormat(row)],
-      ['Meeting Location', meetingLocation(row)],
-      ['Quorum Requirement', quorum(row)],
-      ['Seats Up For Election', seats(row)],
-      ['Approval Route', routeLabel(row)]
-    ].map(function(pair){ return detail(pair[0], pair[1]); }).join('');
-
-    if(body){
-      body.innerHTML = '' +
-        '<div class="bh-phone-packet-card">' +
-          '<h3 class="bh-phone-packet-card-title">Packet Details</h3>' +
-          (logo ? '<img class="bh-phone-packet-logo" src="' + esc(logo) + '" alt="Company logo">' : '') +
-          '<div class="bh-phone-packet-details">' + details + '</div>' +
-        '</div>' +
-        '<div class="bh-phone-packet-card">' +
-          '<h3 class="bh-phone-packet-card-title">Review Sections</h3>' +
-          (sections.length ? sections.map(sectionHtml).join('') : '<p class="bh-phone-section-content">Packet sections were not available in the saved snapshot.</p>') +
-        '</div>';
-    }
-
-    if(status){
-      status.textContent = '';
-      status.className = 'bh-phone-status';
-    }
-
-    if(approve){
-      const step = clean(row.current_step || row.approval_status);
-      approve.style.display = step === 'pending_board' ? '' : 'none';
-      approve.onclick = async function(){
-        approve.disabled = true;
-        approve.textContent = 'Approving…';
-        if(status){
-          status.textContent = 'Approving packet…';
-          status.className = 'bh-phone-status';
-        }
-        try{
-          if(typeof window.approveBoardHubAnnualPacketFromPreview === 'function'){
-            const result = await window.approveBoardHubAnnualPacketFromPreview(row.id);
-            if(result && result.ok === false) throw new Error(result.error || 'Approval failed.');
-          }else{
-            throw new Error('Approval function is not available on this page.');
-          }
-          if(status){
-            status.textContent = 'Packet approved and moved to the next step.';
-            status.className = 'bh-phone-status ok';
-          }
-          approve.textContent = 'Approved';
-        }catch(error){
-          const msg = error && error.message ? error.message : String(error);
-          if(status){
-            status.textContent = msg;
-            status.className = 'bh-phone-status err';
-          }
-          approve.disabled = false;
-          approve.textContent = 'Approve Packet';
-        }
-      };
-    }
-
-    if(printable){
-      printable.onclick = function(){
-        shade.classList.remove('is-open');
-        document.body.classList.remove('bh-phone-review-open');
-        if(typeof window.openBoardHubApprovalPacketFromLink === 'function'){
-          window.openBoardHubApprovalPacketFromLink();
-        }else if(typeof window.previewBoardHubAnnualMeetingPacket === 'function'){
-          window.previewBoardHubAnnualMeetingPacket(row.id);
-        }
-      };
-    }
-
-    shade.classList.add('is-open');
-    document.body.classList.add('bh-phone-review-open');
-
-    window.__BoardHubV628PhonePacketReviewLast = {
-      build:BUILD,
-      ok:true,
-      request_id:row.id,
-      current_step:row.current_step,
-      approval_status:row.approval_status,
-      hasPacketHtml:!!packetHtml,
-      sections:sections.length,
-      openedAt:new Date().toISOString()
-    };
-
-    return window.__BoardHubV628PhonePacketReviewLast;
-  }
-
-  async function openPhoneReview(id){
-    const rid = clean(id || requestId());
-    if(!rid) return { ok:false, error:'missing_request_id' };
-
-    try{
-      const row = await loadRequest(rid);
-      return renderPhoneReview(row);
-    }catch(error){
-      const msg = error && error.message ? error.message : String(error);
-      window.__BoardHubV628PhonePacketReviewLast = {
-        build:BUILD,
-        ok:false,
-        request_id:rid,
-        error:msg,
-        failedAt:new Date().toISOString()
-      };
-      alert('Could not open mobile packet review: ' + msg);
-      return window.__BoardHubV628PhonePacketReviewLast;
-    }
-  }
-
-  const previousPreview = window.previewBoardHubAnnualMeetingPacket;
-  window.previewBoardHubAnnualMeetingPacket = function(id){
-    if(isPhone()) return openPhoneReview(id);
-    if(typeof previousPreview === 'function') return previousPreview(id);
-    return openPhoneReview(id);
-  };
-
-  // Email/deep link phone mode: run after the normal page code settles.
-  function boot(){
-    if(isPhone() && shouldOpen()) setTimeout(function(){ openPhoneReview(requestId()); }, 1200);
-  }
-
-  if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', boot, { once:true });
-  }else{
-    boot();
-  }
-
-  window.addEventListener('pageshow', function(){
-    if(isPhone() && shouldOpen() && !window.__BoardHubV628PhonePacketReviewLast){
-      setTimeout(function(){ openPhoneReview(requestId()); }, 700);
-    }
-  });
-
-  window.openBoardHubPhonePacketReview = openPhoneReview;
-  window.getBoardHubPhonePacketReviewStatus = function(){
-    return {
-      build:BUILD,
-      installed:true,
-      isPhone:isPhone(),
-      shouldOpen:shouldOpen(),
-      requestId:requestId(),
-      shadePresent:!!el('bhPhonePacketReviewShade'),
-      modalOpen:!!document.querySelector('#bhPhonePacketReviewShade.is-open'),
-      last:window.__BoardHubV628PhonePacketReviewLast || null
-    };
-  };
-})();
-</script>
-
-
-
-
-
-
-<script id="board-hub-v630-phone-print-accurate-script">
-(function(){
-  'use strict';
-  if(window.__BoardHubV630PhonePrintAccurate) return;
-  window.__BoardHubV630PhonePrintAccurate = true;
-
-  const BUILD = '2026-05-09-v630-phone-print-accurate';
-
-  function clean(v){ return String(v == null ? '' : v).trim(); }
-  function el(id){ return document.getElementById(id); }
-  function isPhone(){ return window.matchMedia && window.matchMedia('(max-width: 760px)').matches; }
-  function params(){ return new URLSearchParams(window.location.search || ''); }
-  function requestId(){ return clean(params().get('approval_request_id')); }
-  function shouldOpen(){
-    const p = params();
-    return clean(p.get('approval_request_id')) && (
-      clean(p.get('open_approval_packet')) === '1' ||
-      clean(p.get('open')) === 'approval_packet' ||
-      clean(p.get('review')) === 'packet'
-    );
-  }
-
-  function esc(v){
-    return clean(v)
-      .replace(/&/g,'&amp;')
-      .replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;')
-      .replace(/"/g,'&quot;')
-      .replace(/'/g,'&#039;');
-  }
-
-  function titleCase(v){
-    return clean(v).replace(/_/g, ' ').replace(/\b\w/g, function(ch){ return ch.toUpperCase(); });
-  }
-
-  function formatDate(value){
-    const v = clean(value).slice(0,10);
-    if(!v) return '—';
-    const d = new Date(v + 'T00:00:00');
-    if(Number.isNaN(d.getTime())) return v;
-    return d.toLocaleDateString(undefined, { month:'long', day:'numeric', year:'numeric' });
-  }
-
-  function snapshot(row){
-    return row && row.packet_preview_snapshot && typeof row.packet_preview_snapshot === 'object'
-      ? row.packet_preview_snapshot
-      : {};
-  }
-
-  function settings(row){
-    const snap = snapshot(row);
-    return snap.settings && typeof snap.settings === 'object' ? snap.settings : {};
-  }
-
-  function nested(obj, keys){
-    for(const key of keys){
-      try{
-        const parts = key.split('.');
-        let cur = obj;
-        for(const p of parts){
-          if(!cur || typeof cur !== 'object') { cur = null; break; }
-          cur = cur[p];
-        }
-        if(clean(cur)) return clean(cur);
-      }catch(e){}
-    }
-    return '';
-  }
-
-  function value(row, keys){
-    const snap = snapshot(row);
-    const set = settings(row);
-    return nested(row, keys) || nested(snap, keys) || nested(set, keys);
-  }
-
-  function associationName(row){
-    return value(row, [
-      'association_legal_name',
-      'associationName',
-      'settings.association_legal_name',
-      'settings.associationName',
-      'community.name',
-      'communityName',
-      'community_name'
-    ]) || 'Annual Meeting Packet';
-  }
-
-  function meetingDate(row){
-    return value(row, [
-      'next_annual_meeting_date',
-      'meetingDate',
-      'nextDate',
-      'settings.next_annual_meeting_date',
-      'settings.nextDate'
-    ]);
-  }
-
-  function statusLabel(row){
-    const step = clean(row.current_step || row.approval_status);
-    if(step === 'pending_board') return 'Awaiting Board approval';
-    if(step === 'pending_supervisor') return 'Awaiting Supervisor approval';
-    if(step === 'pending_admin_mailing') return 'Awaiting Admin / mailing follow-up';
-    if(step === 'approved' || step === 'complete') return 'Approved';
-    return titleCase(step || 'Approval Review');
-  }
-
-  function packetHtmlFrom(row){
-    const snap = snapshot(row);
-    const keys = ['html','packetHtml','packet_html','previewHtml','preview_html','packet_preview_html'];
-    for(const key of keys){
-      if(clean(snap[key])) return clean(snap[key]);
-    }
-    try{
-      if(snap.packet && clean(snap.packet.html)) return clean(snap.packet.html);
-      if(snap.preview && clean(snap.preview.html)) return clean(snap.preview.html);
-      if(snap.document && clean(snap.document.html)) return clean(snap.document.html);
-    }catch(e){}
-    return '';
-  }
-
-  function sanitizePreviewHtml(html){
-    let out = String(html || '');
-    out = out.replace(new RegExp('<' + 'script[\\s\\S]*?<' + '\\/script>', 'gi'), '');
-    out = out.replace(/\son[a-z]+\s*=\s*(['"]).*?\1/gi, '');
-    out = out.replace(/javascript:/gi, '');
-    return out;
-  }
-
-  async function client(){
-    const start = Date.now();
-    while(Date.now() - start < 8000){
-      try{
-        const c = window.supabaseClient || (window.getSupabase && window.getSupabase()) || null;
-        if(c && typeof c.from === 'function') return c;
-      }catch(e){}
-      await new Promise(resolve => setTimeout(resolve, 120));
-    }
-    throw new Error('Supabase client not ready.');
-  }
-
-  async function loadRequest(id){
-    const c = await client();
-    const result = await c
-      .from('annual_meeting_approval_requests')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
-
-    if(result.error) throw result.error;
-    if(!result.data) throw new Error('Approval request not found.');
-    return result.data;
-  }
-
-  function ensureShade(){
-    let shade = el('bhPhonePrintPacketShade');
-    if(shade) return shade;
-
-    shade = document.createElement('div');
-    shade.id = 'bhPhonePrintPacketShade';
-    shade.innerHTML = '' +
-      '<div class="bh-phone-print-modal" role="dialog" aria-modal="true">' +
-        '<div class="bh-phone-print-head">' +
-          '<div>' +
-            '<div class="bh-phone-print-kicker">Annual Meeting Approval</div>' +
-            '<h2 class="bh-phone-print-title" id="bhPhonePrintPacketTitle">Packet Review</h2>' +
-            '<p class="bh-phone-print-sub" id="bhPhonePrintPacketSub"></p>' +
-          '</div>' +
-          '<button class="bh-phone-print-x" id="bhPhonePrintPacketCloseTop" type="button" aria-label="Close">×</button>' +
-        '</div>' +
-        '<div class="bh-phone-print-view" id="bhPhonePrintPacketView">' +
-          '<div class="bh-phone-print-scale-wrap" id="bhPhonePrintScaleWrap">' +
-            '<div class="bh-phone-print-scale-inner" id="bhPhonePrintScaleInner"></div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="bh-phone-print-actions">' +
-          '<button class="bh-phone-print-primary" id="bhPhonePrintApproveBtn" type="button">Approve Packet</button>' +
-          '<button class="bh-phone-print-secondary" id="bhPhonePrintZoomBtn" type="button">Zoom In</button>' +
-          '<button class="bh-phone-print-danger" id="bhPhonePrintCloseBtn" type="button">Close Preview</button>' +
-          '<div class="bh-phone-print-status" id="bhPhonePrintStatus"></div>' +
-        '</div>' +
-      '</div>';
-
-    document.body.appendChild(shade);
-
-    function close(){
-      shade.classList.remove('is-open');
-      document.body.classList.remove('bh-phone-print-open');
-    }
-
-    const top = el('bhPhonePrintPacketCloseTop');
-    const bottom = el('bhPhonePrintCloseBtn');
-    if(top) top.addEventListener('click', close);
-    if(bottom) bottom.addEventListener('click', close);
-
-    return shade;
-  }
-
-  function applyScale(zoomMode){
-    const view = el('bhPhonePrintPacketView');
-    const wrap = el('bhPhonePrintScaleWrap');
-    const inner = el('bhPhonePrintScaleInner');
-    if(!view || !wrap || !inner) return;
-
-    const pageWidth = 850;
-    const available = Math.max(280, view.clientWidth - 2);
-    const fitScale = available / pageWidth;
-    const scale = zoomMode ? Math.min(0.72, fitScale * 1.55) : fitScale;
-
-    inner.style.transform = 'scale(' + scale + ')';
-    inner.style.width = pageWidth + 'px';
-
-    const rawHeight = inner.scrollHeight || 1200;
-    wrap.style.height = Math.ceil(rawHeight * scale) + 'px';
-    wrap.style.width = Math.ceil(pageWidth * scale) + 'px';
-
-    window.__BoardHubV630PhonePrintScale = { fitScale, scale, zoomMode, rawHeight, available };
-  }
-
-  function render(row){
-    const shade = ensureShade();
-    const title = el('bhPhonePrintPacketTitle');
-    const sub = el('bhPhonePrintPacketSub');
-    const inner = el('bhPhonePrintScaleInner');
-    const approve = el('bhPhonePrintApproveBtn');
-    const zoom = el('bhPhonePrintZoomBtn');
-    const status = el('bhPhonePrintStatus');
-
-    const html = packetHtmlFrom(row);
-    const safeHtml = sanitizePreviewHtml(html);
-
-    if(title) title.textContent = associationName(row) + ' Packet Review';
-    if(sub) sub.textContent = formatDate(meetingDate(row)) + ' • ' + statusLabel(row);
-
-    if(inner){
-      inner.innerHTML = safeHtml || '<div class="am-v652-pages"><div class="am-v652-page"><h1 class="am-v652-h1">Packet preview is not available.</h1></div></div>';
-    }
-
-    let zoomMode = false;
-    if(zoom){
-      zoom.textContent = 'Zoom In';
-      zoom.onclick = function(){
-        zoomMode = !zoomMode;
-        zoom.textContent = zoomMode ? 'Fit to Screen' : 'Zoom In';
-        applyScale(zoomMode);
-      };
-    }
-
-    if(status){
-      status.textContent = '';
-      status.className = 'bh-phone-print-status';
-    }
-
-    if(approve){
-      const step = clean(row.current_step || row.approval_status);
-      approve.style.display = step === 'pending_board' ? '' : 'none';
-      approve.disabled = false;
-      approve.textContent = 'Approve Packet';
-      approve.onclick = async function(){
-        approve.disabled = true;
-        approve.textContent = 'Approving…';
-        if(status){
-          status.textContent = 'Approving packet…';
-          status.className = 'bh-phone-print-status';
-        }
-        try{
-          if(typeof window.approveBoardHubAnnualPacketFromPreview !== 'function'){
-            throw new Error('Approval function is not available on this page.');
-          }
-          const result = await window.approveBoardHubAnnualPacketFromPreview(row.id);
-          if(result && result.ok === false) throw new Error(result.error || 'Approval failed.');
-          if(status){
-            status.textContent = 'Packet approved and moved to the next step.';
-            status.className = 'bh-phone-print-status ok';
-          }
-          approve.textContent = 'Approved';
-        }catch(error){
-          const msg = error && error.message ? error.message : String(error);
-          if(status){
-            status.textContent = msg;
-            status.className = 'bh-phone-print-status err';
-          }
-          approve.disabled = false;
-          approve.textContent = 'Approve Packet';
-        }
-      };
-    }
-
-    shade.classList.add('is-open');
-    document.body.classList.add('bh-phone-print-open');
-
-    requestAnimationFrame(function(){
-      applyScale(false);
-      setTimeout(function(){ applyScale(false); }, 250);
-    });
-
-    window.__BoardHubV630PhonePrintAccurateLast = {
-      build:BUILD,
-      ok:true,
-      request_id:row.id,
-      current_step:row.current_step,
-      approval_status:row.approval_status,
-      hasPacketHtml:!!html,
-      packetHtmlLength:(html || '').length,
-      openedAt:new Date().toISOString()
-    };
-
-    return window.__BoardHubV630PhonePrintAccurateLast;
-  }
-
-  async function openPrintAccurate(id){
-    const rid = clean(id || requestId());
-    if(!rid) return { ok:false, error:'missing_request_id' };
-
-    try{
-      const row = await loadRequest(rid);
-      return render(row);
-    }catch(error){
-      const msg = error && error.message ? error.message : String(error);
-      window.__BoardHubV630PhonePrintAccurateLast = {
-        build:BUILD,
-        ok:false,
-        request_id:rid,
-        error:msg,
-        failedAt:new Date().toISOString()
-      };
-      alert('Could not open packet preview: ' + msg);
-      return window.__BoardHubV630PhonePrintAccurateLast;
-    }
-  }
-
-  window.__BoardHubV630PreviousPreview = window.previewBoardHubAnnualMeetingPacket;
-  window.previewBoardHubAnnualMeetingPacket = function(id){
-    if(isPhone()) return openPrintAccurate(id);
-    if(typeof window.__BoardHubV630PreviousPreview === 'function') return window.__BoardHubV630PreviousPreview(id);
-    return openPrintAccurate(id);
-  };
-
-  window.openBoardHubPhonePrintAccuratePreview = openPrintAccurate;
-  window.openBoardHubPhonePacketReview = openPrintAccurate;
-
-  function boot(){
-    if(isPhone() && shouldOpen()) setTimeout(function(){ openPrintAccurate(requestId()); }, 1350);
-  }
-
-  if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', boot, { once:true });
-  }else{
-    boot();
-  }
-
-  window.addEventListener('resize', function(){
-    if(isPhone() && document.querySelector('#bhPhonePrintPacketShade.is-open')) applyScale(false);
-  });
-
-  window.addEventListener('pageshow', function(){
-    if(isPhone() && shouldOpen() && !window.__BoardHubV630PhonePrintAccurateLast){
-      setTimeout(function(){ openPrintAccurate(requestId()); }, 850);
-    }
-  });
-
-  window.getBoardHubPhonePrintAccurateStatus = function(){
-    return {
-      build:BUILD,
-      installed:true,
-      isPhone:isPhone(),
-      shouldOpen:shouldOpen(),
-      requestId:requestId(),
-      shadePresent:!!el('bhPhonePrintPacketShade'),
-      modalOpen:!!document.querySelector('#bhPhonePrintPacketShade.is-open'),
-      scale:window.__BoardHubV630PhonePrintScale || null,
-      last:window.__BoardHubV630PhonePrintAccurateLast || null
-    };
-  };
-})();
-</script>
-
-
-
-<script id="board-hub-v631-phone-print-cleanup-script">
-(function(){
-  'use strict';
-  if(window.__BoardHubV631PhonePrintCleanup) return;
-  window.__BoardHubV631PhonePrintCleanup = true;
-
-  const BUILD = '2026-05-09-v631-phone-print-cleanup-logo-spacing';
-
-  function isPhone(){ return window.matchMedia && window.matchMedia('(max-width: 760px)').matches; }
-
-  function cleanupPhonePacket(){
-    if(!isPhone()) return;
-    const root = document.querySelector('#bhPhonePrintScaleInner');
-    if(!root) return;
-
-    root.querySelectorAll('img').forEach(function(img){
-      const src = String(img.getAttribute('src') || '').toLowerCase();
-      const alt = String(img.getAttribute('alt') || '').toLowerCase();
-      const isLogo = img.classList.contains('am-v652-logo') || src.includes('logo') || alt.includes('logo') || src.includes('sixes');
-      if(isLogo){
-        img.classList.add('am-v652-logo');
-        img.style.maxWidth = '230px';
-        img.style.maxHeight = '95px';
-        img.style.width = 'auto';
-        img.style.height = 'auto';
-        img.style.objectFit = 'contain';
-      }
-    });
-
-    window.__BoardHubV631PhonePrintCleanupLast = {
-      build: BUILD,
-      ok: true,
-      images: root.querySelectorAll('img').length,
-      cleanedAt: new Date().toISOString()
-    };
-  }
-
-  const oldOpen = window.openBoardHubPhonePrintAccuratePreview;
-  if(typeof oldOpen === 'function'){
-    window.openBoardHubPhonePrintAccuratePreview = async function(id){
-      const result = await oldOpen(id);
-      setTimeout(cleanupPhonePacket, 150);
-      setTimeout(cleanupPhonePacket, 450);
-      return result;
-    };
-  }
-
-  const oldPreview = window.previewBoardHubAnnualMeetingPacket;
-  if(typeof oldPreview === 'function'){
-    window.previewBoardHubAnnualMeetingPacket = async function(id){
-      const result = await oldPreview(id);
-      setTimeout(cleanupPhonePacket, 150);
-      setTimeout(cleanupPhonePacket, 450);
-      return result;
-    };
-  }
-
-  window.addEventListener('pageshow', function(){
-    setTimeout(cleanupPhonePacket, 500);
-  });
-
-  window.getBoardHubPhonePrintCleanupStatus = function(){
-    return {
-      build: BUILD,
-      installed: true,
-      isPhone: isPhone(),
-      modalOpen: !!document.querySelector('#bhPhonePrintPacketShade.is-open'),
-      rootPresent: !!document.querySelector('#bhPhonePrintScaleInner'),
-      last: window.__BoardHubV631PhonePrintCleanupLast || null
-    };
-  };
-})();
-</script>
 
 </body>
 </html>
