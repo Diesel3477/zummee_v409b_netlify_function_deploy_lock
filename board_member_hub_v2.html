@@ -2375,6 +2375,265 @@
 })();
 </script>
 
+
+
+<style id="board-hub-v640-no-cutoff-height-style">
+  /* v640: preserve v639 layout, prevent lower packet pages from being clipped on phone */
+  @media(max-width:760px){
+    body.bh-v640-no-cutoff-height #annualPacketPreviewBody.is-full-packet,
+    body.bh-v640-no-cutoff-height .annualPacketPreviewBody.is-full-packet {
+      overflow-y:auto !important;
+      overflow-x:hidden !important;
+      -webkit-overflow-scrolling:touch !important;
+      padding-bottom:18px !important;
+      overscroll-behavior:contain !important;
+    }
+
+    body.bh-v640-no-cutoff-height .bh-v638-scale-outer {
+      overflow:visible !important;
+      display:block !important;
+      position:relative !important;
+      padding-bottom:26px !important;
+      box-sizing:content-box !important;
+    }
+
+    body.bh-v640-no-cutoff-height .bh-v638-scale-inner {
+      overflow:visible !important;
+      contain:none !important;
+    }
+
+    body.bh-v640-no-cutoff-height .bh-v638-scale-inner .am-v652-pages,
+    body.bh-v640-no-cutoff-height .bh-v638-scale-inner .am-v652-page {
+      overflow:visible !important;
+      contain:none !important;
+    }
+
+    body.bh-v640-no-cutoff-height .annualPacketPreviewActions {
+      flex:0 0 auto !important;
+      position:relative !important;
+      z-index:10 !important;
+    }
+  }
+</style>
+
+
+<script id="board-hub-v640-no-cutoff-height-script">
+(function(){
+  'use strict';
+  if(window.__BoardHubV640NoCutoffHeight) return;
+  window.__BoardHubV640NoCutoffHeight = true;
+
+  const BUILD = '2026-05-09-v640-no-cutoff-height';
+
+  let timer = null;
+
+  function isPhone(){
+    return window.matchMedia && window.matchMedia('(max-width: 760px)').matches;
+  }
+
+  function getParts(){
+    const outer = document.querySelector('.bh-v638-scale-outer');
+    const inner = document.querySelector('.bh-v638-scale-inner');
+    const body = document.querySelector('#annualPacketPreviewBody, .annualPacketPreviewBody');
+    const visibleBody = Array.from(document.querySelectorAll('#annualPacketPreviewBody, .annualPacketPreviewBody')).find(function(b){
+      const r = b.getBoundingClientRect();
+      const cs = getComputedStyle(b);
+      return r.width > 20 && r.height > 20 && cs.display !== 'none' && cs.visibility !== 'hidden';
+    }) || body;
+    return { outer, inner, body: visibleBody };
+  }
+
+  function getScale(inner){
+    if(!inner) return 1;
+    const t = inner.style.transform || getComputedStyle(inner).transform || '';
+    const m1 = t.match(/scale\(([^)]+)\)/);
+    if(m1) return parseFloat(m1[1]) || 1;
+    if(t && t !== 'none'){
+      const nums = t.match(/matrix\(([^)]+)\)/);
+      if(nums){
+        const parts = nums[1].split(',').map(Number);
+        if(parts.length >= 1 && parts[0]) return parts[0];
+      }
+    }
+    return 1;
+  }
+
+  function numericPx(value){
+    const n = parseFloat(value || '0');
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function pageUnscaledHeight(page, scale){
+    const cs = getComputedStyle(page);
+    const rect = page.getBoundingClientRect();
+    const minH = numericPx(cs.minHeight);
+    const h = numericPx(cs.height);
+
+    return Math.max(
+      1050,
+      page.scrollHeight || 0,
+      page.offsetHeight || 0,
+      rect.height / Math.max(scale, 0.001) || 0,
+      minH || 0,
+      h || 0
+    );
+  }
+
+  function gapUnscaled(inner){
+    const pages = inner && inner.querySelector('.am-v652-pages');
+    if(!pages) return 22;
+    const cs = getComputedStyle(pages);
+    return numericPx(cs.rowGap || cs.gap) || 22;
+  }
+
+  function calculateHeight(reason){
+    if(!isPhone()) return null;
+
+    const { outer, inner, body } = getParts();
+    if(!outer || !inner){
+      window.__BoardHubV640NoCutoffHeightLast = {
+        build: BUILD,
+        ok:false,
+        reason,
+        error:'scale wrapper missing',
+        at:new Date().toISOString()
+      };
+      return window.__BoardHubV640NoCutoffHeightLast;
+    }
+
+    document.body.classList.add('bh-v640-no-cutoff-height');
+    document.body.classList.add('bh-v639-ipad-packet-layout');
+
+    const scale = getScale(inner);
+    const pages = Array.from(inner.querySelectorAll('.am-v652-page'));
+    const gap = gapUnscaled(inner);
+
+    let rawHeight = 0;
+    pages.forEach(function(page){
+      rawHeight += pageUnscaledHeight(page, scale);
+    });
+    if(pages.length > 1) rawHeight += gap * (pages.length - 1);
+
+    rawHeight = Math.max(
+      rawHeight,
+      inner.scrollHeight || 0,
+      1050 * Math.max(pages.length, 1) + gap * Math.max(pages.length - 1, 0)
+    );
+
+    const actions = document.querySelector('.annualPacketPreviewActions');
+    const actionsHeight = actions ? actions.getBoundingClientRect().height : 0;
+
+    // Safety buffer covers rounding, iOS visual viewport changes, and the footer/action area.
+    const buffer = Math.max(90, actionsHeight + 42);
+    const scaledHeight = Math.ceil(rawHeight * scale + buffer);
+
+    outer.style.height = scaledHeight + 'px';
+    outer.style.minHeight = scaledHeight + 'px';
+    outer.style.paddingBottom = '26px';
+
+    const bodyScrollHeight = body ? body.scrollHeight : null;
+    const bodyClientHeight = body ? body.clientHeight : null;
+
+    window.__BoardHubV640NoCutoffHeightLast = {
+      build: BUILD,
+      ok:true,
+      reason,
+      pageCount:pages.length,
+      scale,
+      gap,
+      rawHeight,
+      scaledHeight,
+      buffer,
+      actionsHeight,
+      bodyClientHeight,
+      bodyScrollHeight,
+      outerHeightStyle:outer.style.height,
+      pages:pages.map(function(page, i){
+        const cs = getComputedStyle(page);
+        return {
+          page:i+1,
+          scrollHeight:page.scrollHeight,
+          offsetHeight:page.offsetHeight,
+          minHeight:cs.minHeight,
+          height:cs.height,
+          rectHeight:page.getBoundingClientRect().height
+        };
+      }),
+      at:new Date().toISOString()
+    };
+
+    return window.__BoardHubV640NoCutoffHeightLast;
+  }
+
+  function schedule(reason, delay){
+    if(!isPhone()) return;
+    clearTimeout(timer);
+    timer = setTimeout(function(){
+      calculateHeight(reason || 'scheduled');
+      setTimeout(function(){ calculateHeight((reason || 'scheduled') + ':settled'); }, 450);
+      setTimeout(function(){ calculateHeight((reason || 'scheduled') + ':late'); }, 1200);
+    }, delay == null ? 120 : delay);
+  }
+
+  const oldForce = window.forceBoardHubPhoneExactScale;
+  window.forceBoardHubPhoneExactScale = function(){
+    let result = null;
+    if(typeof oldForce === 'function') result = oldForce();
+    schedule('manual-force-v640', 120);
+    return result || calculateHeight('manual-force-v640-direct');
+  };
+
+  const oldPreview = window.previewBoardHubAnnualMeetingPacket;
+  if(typeof oldPreview === 'function'){
+    window.previewBoardHubAnnualMeetingPacket = async function(id){
+      const result = await oldPreview(id);
+      schedule('preview-v640', 180);
+      return result;
+    };
+  }
+
+  const oldOpen = window.openBoardHubApprovalPacketFromLink;
+  if(typeof oldOpen === 'function'){
+    window.openBoardHubApprovalPacketFromLink = async function(){
+      const result = await oldOpen();
+      schedule('deeplink-v640', 180);
+      return result;
+    };
+  }
+
+  const observer = new MutationObserver(function(){
+    if(isPhone() && document.querySelector('.bh-v638-scale-inner .am-v652-page')) {
+      schedule('observer-v640', 220);
+    }
+  });
+
+  if(document.documentElement){
+    observer.observe(document.documentElement, { childList:true, subtree:true, attributes:true, attributeFilter:['class','style'] });
+  }
+
+  window.addEventListener('pageshow', function(){ schedule('pageshow-v640', 350); });
+  window.addEventListener('resize', function(){ schedule('resize-v640', 180); });
+  window.addEventListener('orientationchange', function(){ setTimeout(function(){ schedule('orientation-v640', 300); }, 450); });
+
+  window.getBoardHubNoCutoffHeightStatus = function(){
+    const { outer, inner, body } = getParts();
+    return {
+      build: BUILD,
+      installed:true,
+      isPhone:isPhone(),
+      bodyClass:document.body.classList.contains('bh-v640-no-cutoff-height'),
+      outerPresent:!!outer,
+      innerPresent:!!inner,
+      pageCount:inner ? inner.querySelectorAll('.am-v652-page').length : 0,
+      bodyClientHeight:body ? body.clientHeight : null,
+      bodyScrollHeight:body ? body.scrollHeight : null,
+      outerHeightStyle:outer ? outer.style.height : null,
+      last:window.__BoardHubV640NoCutoffHeightLast || null
+    };
+  };
+})();
+</script>
+
 </head>
 <body>
   <div class="wrap">
