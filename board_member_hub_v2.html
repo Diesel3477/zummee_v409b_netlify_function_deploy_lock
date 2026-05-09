@@ -2842,6 +2842,234 @@
 })();
 </script>
 
+
+
+<style id="board-hub-v642-footer-safe-scroll-style">
+  /* v642: keep v641 layout, but prevent action footer from covering packet content on phone */
+  @media(max-width:760px){
+    body.bh-v642-footer-safe-scroll #annualPacketPreviewBody.is-full-packet,
+    body.bh-v642-footer-safe-scroll .annualPacketPreviewBody.is-full-packet {
+      overflow-y:auto !important;
+      overflow-x:hidden !important;
+      -webkit-overflow-scrolling:touch !important;
+      overscroll-behavior:contain !important;
+      padding-bottom:150px !important;
+      scroll-padding-bottom:150px !important;
+      box-sizing:border-box !important;
+    }
+
+    body.bh-v642-footer-safe-scroll .annualPacketPreviewFullHtml {
+      padding-bottom:120px !important;
+      box-sizing:border-box !important;
+      overflow:visible !important;
+      max-height:none !important;
+    }
+
+    body.bh-v642-footer-safe-scroll .bh-v638-scale-outer {
+      overflow:visible !important;
+      display:block !important;
+      position:relative !important;
+      padding-bottom:130px !important;
+      box-sizing:content-box !important;
+    }
+
+    body.bh-v642-footer-safe-scroll .bh-v638-scale-outer::after {
+      content:"";
+      display:block;
+      height:120px;
+      width:100%;
+      pointer-events:none;
+    }
+
+    body.bh-v642-footer-safe-scroll .annualPacketPreviewActions {
+      flex:0 0 auto !important;
+      position:relative !important;
+      z-index:20 !important;
+      background:rgba(246,249,253,.98) !important;
+      border-top:1px solid #d8e5f6 !important;
+    }
+
+    body.bh-v642-footer-safe-scroll .bh-v638-scale-inner,
+    body.bh-v642-footer-safe-scroll .bh-v638-scale-inner .am-v652-pages,
+    body.bh-v642-footer-safe-scroll .bh-v638-scale-inner .am-v652-page {
+      overflow:visible !important;
+      contain:none !important;
+    }
+  }
+</style>
+
+
+<script id="board-hub-v642-footer-safe-scroll-script">
+(function(){
+  'use strict';
+  if(window.__BoardHubV642FooterSafeScroll) return;
+  window.__BoardHubV642FooterSafeScroll = true;
+
+  const BUILD = '2026-05-09-v642-footer-safe-scroll';
+
+  function isPhone(){
+    return window.matchMedia && window.matchMedia('(max-width: 760px)').matches;
+  }
+
+  function visibleBody(){
+    return Array.from(document.querySelectorAll('#annualPacketPreviewBody, .annualPacketPreviewBody')).find(function(node){
+      const r = node.getBoundingClientRect();
+      const cs = getComputedStyle(node);
+      return r.width > 20 && r.height > 20 && cs.display !== 'none' && cs.visibility !== 'hidden';
+    }) || document.querySelector('#annualPacketPreviewBody, .annualPacketPreviewBody');
+  }
+
+  function getScale(inner){
+    if(!inner) return 1;
+    const m = (inner.style.transform || '').match(/scale\(([^)]+)\)/);
+    return m ? (parseFloat(m[1]) || 1) : 1;
+  }
+
+  function safeScroll(reason){
+    if(!isPhone()) return null;
+
+    document.body.classList.add('bh-v642-footer-safe-scroll');
+
+    const body = visibleBody();
+    const full = body ? body.querySelector('.annualPacketPreviewFullHtml') : document.querySelector('.annualPacketPreviewFullHtml');
+    const outer = document.querySelector('.bh-v638-scale-outer');
+    const inner = document.querySelector('.bh-v638-scale-inner');
+    const actions = document.querySelector('.annualPacketPreviewActions');
+
+    if(!body || !outer || !inner){
+      window.__BoardHubV642FooterSafeScrollLast = {
+        build:BUILD,
+        ok:false,
+        reason,
+        error:'missing body/outer/inner',
+        at:new Date().toISOString()
+      };
+      return window.__BoardHubV642FooterSafeScrollLast;
+    }
+
+    if(full){
+      full.style.maxHeight = 'none';
+      full.style.overflow = 'visible';
+      full.style.paddingBottom = '120px';
+    }
+
+    const actionsHeight = actions ? Math.ceil(actions.getBoundingClientRect().height) : 90;
+    const safePad = Math.max(150, actionsHeight + 90);
+
+    body.style.paddingBottom = safePad + 'px';
+    body.style.scrollPaddingBottom = safePad + 'px';
+    body.style.overflowY = 'auto';
+    body.style.overflowX = 'hidden';
+
+    outer.style.overflow = 'visible';
+    outer.style.paddingBottom = Math.max(130, actionsHeight + 80) + 'px';
+
+    const scale = getScale(inner);
+    const currentHeight = parseFloat(outer.style.height || '0') || outer.clientHeight || 0;
+    const minHeight = Math.ceil((inner.scrollHeight || 0) * scale + safePad);
+
+    if(currentHeight < minHeight){
+      outer.style.height = minHeight + 'px';
+      outer.style.minHeight = minHeight + 'px';
+    }
+
+    window.__BoardHubV642FooterSafeScrollLast = {
+      build:BUILD,
+      ok:true,
+      reason:reason || 'manual',
+      actionsHeight,
+      safePad,
+      scale,
+      innerScrollHeight:inner.scrollHeight,
+      outerHeightStyle:outer.style.height,
+      outerClientHeight:outer.clientHeight,
+      bodyClientHeight:body.clientHeight,
+      bodyScrollHeight:body.scrollHeight,
+      fullScrollHeight:full ? full.scrollHeight : null,
+      at:new Date().toISOString()
+    };
+
+    return window.__BoardHubV642FooterSafeScrollLast;
+  }
+
+  function schedule(reason, delay){
+    setTimeout(function(){
+      safeScroll(reason);
+      setTimeout(function(){ safeScroll(reason + ':settled'); }, 450);
+    }, delay == null ? 150 : delay);
+  }
+
+  const oldForce = window.forceBoardHubPhoneExactScale;
+  window.forceBoardHubPhoneExactScale = function(){
+    let result = null;
+    if(typeof oldForce === 'function') result = oldForce();
+    schedule('manual-force-v642', 160);
+    return result || safeScroll('manual-force-v642-direct');
+  };
+
+  const oldPreview = window.previewBoardHubAnnualMeetingPacket;
+  if(typeof oldPreview === 'function'){
+    window.previewBoardHubAnnualMeetingPacket = async function(id){
+      const result = await oldPreview(id);
+      schedule('preview-v642', 250);
+      setTimeout(function(){ safeScroll('preview-v642:late'); }, 1200);
+      return result;
+    };
+  }
+
+  const oldOpen = window.openBoardHubApprovalPacketFromLink;
+  if(typeof oldOpen === 'function'){
+    window.openBoardHubApprovalPacketFromLink = async function(){
+      const result = await oldOpen();
+      schedule('deeplink-v642', 250);
+      setTimeout(function(){ safeScroll('deeplink-v642:late'); }, 1200);
+      return result;
+    };
+  }
+
+  const observer = new MutationObserver(function(){
+    if(isPhone() && document.querySelector('.bh-v638-scale-inner')) {
+      schedule('observer-v642', 250);
+    }
+  });
+
+  if(document.documentElement){
+    observer.observe(document.documentElement, { childList:true, subtree:true, attributes:true, attributeFilter:['class','style'] });
+  }
+
+  window.addEventListener('pageshow', function(){ schedule('pageshow-v642', 500); });
+  window.addEventListener('resize', function(){ schedule('resize-v642', 220); });
+  window.addEventListener('orientationchange', function(){ setTimeout(function(){ schedule('orientation-v642', 300); }, 450); });
+
+  window.getBoardHubFooterSafeScrollStatus = function(){
+    const body = visibleBody();
+    const outer = document.querySelector('.bh-v638-scale-outer');
+    const inner = document.querySelector('.bh-v638-scale-inner');
+    const actions = document.querySelector('.annualPacketPreviewActions');
+
+    return {
+      build:BUILD,
+      installed:true,
+      isPhone:isPhone(),
+      bodyClass:document.body.classList.contains('bh-v642-footer-safe-scroll'),
+      bodyFound:!!body,
+      outerFound:!!outer,
+      innerFound:!!inner,
+      actionsFound:!!actions,
+      bodyClientHeight:body ? body.clientHeight : null,
+      bodyScrollHeight:body ? body.scrollHeight : null,
+      bodyPaddingBottom:body ? getComputedStyle(body).paddingBottom : null,
+      outerHeightStyle:outer ? outer.style.height : null,
+      outerPaddingBottom:outer ? getComputedStyle(outer).paddingBottom : null,
+      actionsHeight:actions ? actions.getBoundingClientRect().height : null,
+      last:window.__BoardHubV642FooterSafeScrollLast || null
+    };
+  };
+
+  setTimeout(function(){ safeScroll('initial-v642'); }, 1100);
+})();
+</script>
+
 </head>
 <body>
   <div class="wrap">
