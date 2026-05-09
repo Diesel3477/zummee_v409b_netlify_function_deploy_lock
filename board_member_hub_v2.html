@@ -1797,6 +1797,342 @@ window.getBoardHubDirectPhonePacketViewerStatus=function(){const body=document.g
 })();
 </script>
 
+
+
+<style id="board-hub-v649-direct-viewer-overwrite-guard-style">
+  /* v649: prevent visible raw/overwritten packet while direct phone viewer finalizes */
+  @media(max-width:760px){
+    body.bh-v649-direct-guarding #annualPacketPreviewShade.open .annualPacketPreviewModal {
+      opacity:0 !important;
+      pointer-events:none !important;
+    }
+
+    body.bh-v649-direct-ready #annualPacketPreviewShade.open .annualPacketPreviewModal {
+      opacity:1 !important;
+      pointer-events:auto !important;
+      transition:opacity .10s ease !important;
+    }
+  }
+</style>
+
+
+<script id="board-hub-v649-direct-viewer-overwrite-guard-script">
+(function(){
+  'use strict';
+  if(window.__BoardHubV649DirectViewerOverwriteGuard) return;
+  window.__BoardHubV649DirectViewerOverwriteGuard = true;
+
+  const BUILD = '2026-05-09-v649-direct-viewer-overwrite-guard';
+  let cachedRow = null;
+  let lastGoodHtml = '';
+  let rebuilding = false;
+  let guardTimer = null;
+
+  function isPhone(){
+    return window.matchMedia && window.matchMedia('(max-width: 760px)').matches;
+  }
+
+  function clean(v){ return String(v == null ? '' : v).trim(); }
+
+  function params(){ return new URLSearchParams(window.location.search || ''); }
+
+  function requestId(){
+    return clean(params().get('approval_request_id'));
+  }
+
+  function shouldOpenFromUrl(){
+    const p = params();
+    return !!clean(p.get('approval_request_id')) && (
+      clean(p.get('open_approval_packet')) === '1' ||
+      clean(p.get('open')) === 'approval_packet' ||
+      clean(p.get('review')) === 'packet'
+    );
+  }
+
+  function modalOpen(){
+    return !!document.querySelector('#annualPacketPreviewShade.open, .annualPacketPreviewShade.open');
+  }
+
+  function fullNode(){
+    return document.querySelector('#annualPacketPreviewShade.open .annualPacketPreviewFullHtml, .annualPacketPreviewShade.open .annualPacketPreviewFullHtml, .annualPacketPreviewFullHtml');
+  }
+
+  function wrapperReady(){
+    const full = fullNode();
+    const outer = full ? full.querySelector('.bh-v648-scale-outer') : null;
+    const inner = full ? full.querySelector('.bh-v648-scale-inner') : null;
+    const pages = inner ? inner.querySelectorAll('.am-v652-page').length : 0;
+    return !!(full && outer && inner && pages > 0);
+  }
+
+  function setGuarding(reason){
+    if(!isPhone()) return;
+    document.body.classList.add('bh-v649-direct-guarding');
+    document.body.classList.remove('bh-v649-direct-ready');
+    window.__BoardHubV649DirectViewerOverwriteGuardLast = {
+      build: BUILD,
+      state: 'guarding',
+      reason: reason || 'manual',
+      modalOpen: modalOpen(),
+      wrapperReady: wrapperReady(),
+      at: new Date().toISOString()
+    };
+  }
+
+  function setReady(reason){
+    if(!isPhone()) return;
+    document.body.classList.remove('bh-v649-direct-guarding');
+    document.body.classList.add('bh-v649-direct-ready');
+    window.__BoardHubV649DirectViewerOverwriteGuardLast = {
+      build: BUILD,
+      state: 'ready',
+      reason: reason || 'manual',
+      modalOpen: modalOpen(),
+      wrapperReady: wrapperReady(),
+      pageCount: document.querySelectorAll('.bh-v648-scale-inner .am-v652-page').length,
+      at: new Date().toISOString()
+    };
+  }
+
+  function snapshot(row){
+    return row && row.packet_preview_snapshot && typeof row.packet_preview_snapshot === 'object' ? row.packet_preview_snapshot : {};
+  }
+
+  function packetHtmlFrom(row){
+    const snap = snapshot(row);
+    const keys = ['html','packetHtml','packet_html','previewHtml','preview_html','packet_preview_html'];
+    for(const key of keys){
+      if(clean(snap[key])) return clean(snap[key]);
+    }
+    try{
+      if(snap.packet && clean(snap.packet.html)) return clean(snap.packet.html);
+      if(snap.preview && clean(snap.preview.html)) return clean(snap.preview.html);
+      if(snap.document && clean(snap.document.html)) return clean(snap.document.html);
+    }catch(e){}
+    return '';
+  }
+
+  function sanitizePreviewHtml(html){
+    let out = String(html || '');
+    out = out.replace(new RegExp('<' + 'script[\\s\\S]*?<' + '\\/script>', 'gi'), '');
+    out = out.replace(/\son[a-z]+\s*=\s*(['"]).*?\1/gi, '');
+    out = out.replace(/javascript:/gi, '');
+    return out;
+  }
+
+  function pageHeightSum(inner){
+    const pages = Array.from(inner.querySelectorAll('.am-v652-page'));
+    const pagesContainer = inner.querySelector('.am-v652-pages');
+    const gap = pagesContainer ? (parseFloat(getComputedStyle(pagesContainer).rowGap || getComputedStyle(pagesContainer).gap || '0') || 22) : 22;
+    if(!pages.length) return Math.max(inner.scrollHeight || 0, 1200);
+    let total = 0;
+    pages.forEach(function(page){
+      total += Math.max(1050, page.scrollHeight || 0, page.offsetHeight || 0);
+    });
+    total += gap * Math.max(0, pages.length - 1);
+    return Math.max(total, inner.scrollHeight || 0);
+  }
+
+  function applyScale(){
+    const body = document.getElementById('annualPacketPreviewBody') || document.querySelector('.annualPacketPreviewBody');
+    const outer = document.querySelector('.bh-v648-scale-outer');
+    const inner = document.querySelector('.bh-v648-scale-inner');
+    if(!body || !outer || !inner) return null;
+
+    const available = Math.max(280, body.clientWidth - 20);
+    const scale = available / 850;
+    document.body.style.setProperty('--bh-v648-scale', String(scale));
+
+    outer.style.width = Math.ceil(850 * scale) + 'px';
+    inner.style.zoom = String(scale);
+    inner.style.transform = 'none';
+    outer.style.height = 'auto';
+    outer.style.minHeight = '0';
+
+    setTimeout(function(){
+      if(outer.clientHeight < 100){
+        inner.style.zoom = '1';
+        inner.style.transform = 'scale(' + scale + ')';
+        inner.style.transformOrigin = 'top left';
+        const raw = pageHeightSum(inner);
+        outer.style.height = Math.ceil(raw * scale + 40) + 'px';
+        outer.style.minHeight = outer.style.height;
+        inner.classList.add('bh-v648-transform-fallback');
+      }
+    }, 40);
+
+    return { scale };
+  }
+
+  function markLogos(inner){
+    inner.querySelectorAll('img').forEach(function(img){
+      const src = String(img.getAttribute('src') || '').toLowerCase();
+      const alt = String(img.getAttribute('alt') || '').toLowerCase();
+      if(img.classList.contains('am-v652-logo') || src.includes('logo') || src.includes('sixes') || alt.includes('logo')){
+        img.classList.add('am-v652-logo');
+      }
+      if(!img.dataset.v649Bound){
+        img.dataset.v649Bound = '1';
+        img.addEventListener('load', function(){ setTimeout(applyScale, 80); }, { once:false });
+      }
+    });
+  }
+
+  function rebuildFromCache(reason){
+    if(!isPhone() || rebuilding) return null;
+    const full = fullNode();
+    if(!full) return null;
+
+    const sourceHtml = packetHtmlFrom(cachedRow) || lastGoodHtml;
+    if(!sourceHtml) return null;
+
+    rebuilding = true;
+    setGuarding(reason || 'rebuild');
+
+    const safe = sanitizePreviewHtml(sourceHtml);
+    full.innerHTML = '<div class="bh-v648-scale-outer"><div class="bh-v648-scale-inner">' + safe + '</div></div>';
+
+    const inner = full.querySelector('.bh-v648-scale-inner');
+    if(inner) markLogos(inner);
+
+    requestAnimationFrame(function(){
+      applyScale();
+      setTimeout(applyScale, 180);
+      setTimeout(function(){
+        rebuilding = false;
+        if(wrapperReady()) setReady(reason || 'rebuild-ready');
+      }, 260);
+    });
+
+    return {
+      ok: true,
+      reason: reason || 'rebuild',
+      rebuilt: true
+    };
+  }
+
+  function guard(reason){
+    if(!isPhone()) return null;
+
+    if(!modalOpen()){
+      document.body.classList.remove('bh-v649-direct-guarding','bh-v649-direct-ready');
+      return null;
+    }
+
+    const full = fullNode();
+    if(!full) return null;
+
+    if(wrapperReady()){
+      lastGoodHtml = full.querySelector('.bh-v648-scale-inner')?.innerHTML || lastGoodHtml;
+      applyScale();
+      setReady(reason || 'guard-ready');
+      return window.__BoardHubV649DirectViewerOverwriteGuardLast;
+    }
+
+    // The original/older preview writer has overwritten the wrapper. Put the direct viewer back before revealing.
+    if(cachedRow || lastGoodHtml){
+      return rebuildFromCache(reason || 'guard-rebuild');
+    }
+
+    setGuarding(reason || 'guard-no-cache');
+    return window.__BoardHubV649DirectViewerOverwriteGuardLast;
+  }
+
+  // Wrap v648 direct opener so we cache the row and prevent the modal from being visible until final wrapper exists.
+  const oldDirect = window.openBoardHubDirectPhonePacketViewer;
+  if(typeof oldDirect === 'function'){
+    window.openBoardHubDirectPhonePacketViewer = async function(id){
+      if(isPhone()) setGuarding('before-direct-open');
+      const result = await oldDirect(id);
+      setTimeout(function(){ guard('after-direct-open'); }, 80);
+      setTimeout(function(){ guard('after-direct-open-late'); }, 420);
+      return result;
+    };
+  }
+
+  // Capture approval request row when v648 status has succeeded, then guard the DOM.
+  function captureFromV648(){
+    const last = window.__BoardHubV648DirectPhonePacketViewerLast;
+    if(last && last.ok && last.request_id && !cachedRow && window.supabaseClient){
+      // no-op here; cached row is filled by query below to avoid relying on private v648 locals.
+    }
+  }
+
+  async function fetchRowIfNeeded(){
+    if(cachedRow) return cachedRow;
+    const id = requestId();
+    if(!id) return null;
+    const c = window.supabaseClient || (window.getSupabase && window.getSupabase()) || null;
+    if(!c || typeof c.from !== 'function') return null;
+    const result = await c.from('annual_meeting_approval_requests').select('*').eq('id', id).maybeSingle();
+    if(result && !result.error && result.data){
+      cachedRow = result.data;
+      const html = packetHtmlFrom(cachedRow);
+      if(html) lastGoodHtml = html;
+      return cachedRow;
+    }
+    return null;
+  }
+
+  async function guardWithFetch(reason){
+    if(!isPhone() || !modalOpen()) return;
+    await fetchRowIfNeeded();
+    guard(reason || 'guard-with-fetch');
+  }
+
+  // Intercept phone URL boot again after page settles. This prevents later old writers from staying visible.
+  if(isPhone() && shouldOpenFromUrl()){
+    setGuarding('url-boot');
+    setTimeout(function(){ guardWithFetch('url-boot-1'); }, 1000);
+    setTimeout(function(){ guardWithFetch('url-boot-2'); }, 1500);
+    setTimeout(function(){ guardWithFetch('url-boot-3'); }, 2300);
+  }
+
+  const observer = new MutationObserver(function(){
+    if(!isPhone() || !modalOpen()) return;
+    clearTimeout(guardTimer);
+    guardTimer = setTimeout(function(){
+      guardWithFetch('observer');
+    }, 60);
+  });
+
+  if(document.documentElement){
+    observer.observe(document.documentElement, { childList:true, subtree:true });
+  }
+
+  window.addEventListener('pageshow', function(){ setTimeout(function(){ guardWithFetch('pageshow'); }, 450); });
+  window.addEventListener('resize', function(){ setTimeout(function(){ guard('resize'); }, 160); });
+
+  window.forceBoardHubDirectPhoneViewerGuard = function(){
+    return guardWithFetch('manual-force');
+  };
+
+  window.getBoardHubDirectViewerGuardStatus = function(){
+    const full = fullNode();
+    const outer = full ? full.querySelector('.bh-v648-scale-outer') : null;
+    const inner = full ? full.querySelector('.bh-v648-scale-inner') : null;
+    return {
+      build: BUILD,
+      installed: true,
+      isPhone: isPhone(),
+      modalOpen: modalOpen(),
+      guarding: document.body.classList.contains('bh-v649-direct-guarding'),
+      ready: document.body.classList.contains('bh-v649-direct-ready'),
+      fullFound: !!full,
+      outerFound: !!outer,
+      innerFound: !!inner,
+      pageCount: inner ? inner.querySelectorAll('.am-v652-page').length : 0,
+      cachedRow: !!cachedRow,
+      lastGoodHtmlLength: lastGoodHtml ? lastGoodHtml.length : 0,
+      wrapperReady: wrapperReady(),
+      v648Present: !!document.getElementById('board-hub-v648-direct-phone-packet-viewer-script'),
+      last: window.__BoardHubV649DirectViewerOverwriteGuardLast || null,
+      v648Last: window.__BoardHubV648DirectPhonePacketViewerLast || null
+    };
+  };
+})();
+</script>
+
 </head>
 <body>
   <div class="wrap">
