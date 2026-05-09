@@ -1,0 +1,782 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Annual Meeting Approval Packet</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root{
+      --navy:#17365f;
+      --navy-2:#102f4f;
+      --muted:#64748b;
+      --line:#d8e5f6;
+      --line-2:#9ec5ff;
+      --bg:#edf4fb;
+      --card:#ffffff;
+      --soft:#f8fbff;
+      --danger:#a61b1b;
+      --success:#0f6b3f;
+      --scale:.92;
+    }
+
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--navy-2);background:linear-gradient(135deg,#dfeaf7,#9fb4ca)}
+    body{padding:18px;overflow:hidden}
+
+    .review-shell{
+      width:min(1180px,calc(100vw - 28px));
+      height:calc(100svh - 36px);
+      margin:0 auto;
+      border:2px solid var(--line-2);
+      border-radius:28px;
+      background:#f6f9fd;
+      box-shadow:0 30px 80px rgba(16,47,79,.30);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .review-header{
+      flex:0 0 auto;
+      padding:24px 34px 20px;
+      border-bottom:1px solid var(--line);
+      background:rgba(248,251,255,.98);
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:18px;
+    }
+
+    .eyebrow{
+      margin:0 0 7px;
+      color:#617792;
+      font-size:13px;
+      letter-spacing:.18em;
+      text-transform:uppercase;
+      font-weight:950;
+    }
+
+    h1{
+      margin:0;
+      color:var(--navy);
+      font-size:34px;
+      line-height:1.08;
+      letter-spacing:-.035em;
+      font-weight:950;
+    }
+
+    .meta{
+      margin:8px 0 0;
+      color:#64748b;
+      font-size:16px;
+      line-height:1.35;
+      font-weight:850;
+    }
+
+    .header-actions{
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    button,.button-link{
+      appearance:none;
+      border:2px solid var(--line-2);
+      border-radius:18px;
+      min-height:46px;
+      padding:0 20px;
+      background:#fff;
+      color:var(--navy);
+      font-size:14px;
+      font-weight:950;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      white-space:nowrap;
+    }
+
+    button.primary{background:var(--navy);border-color:var(--navy);color:#fff}
+    button.danger,.button-link.danger{color:var(--danger);border-color:#f2c1c1}
+    button:disabled{opacity:.65;cursor:not-allowed}
+
+    .review-body{
+      flex:1 1 auto;
+      min-height:0;
+      overflow-y:auto;
+      overflow-x:hidden;
+      -webkit-overflow-scrolling:touch;
+      background:var(--bg);
+      padding:22px;
+    }
+
+    .loading-card,.error-card,.status-card{
+      max-width:760px;
+      margin:40px auto;
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:22px;
+      padding:28px;
+      box-shadow:0 16px 42px rgba(16,47,79,.12);
+      color:var(--navy);
+      font-size:17px;
+      font-weight:850;
+      line-height:1.45;
+    }
+
+    .status-card.success{border-color:#b8e3c7;color:var(--success)}
+    .status-card.error,.error-card{border-color:#f2c1c1;color:var(--danger)}
+
+    .packet-stage{
+      width:100%;
+      max-width:none;
+      height:auto;
+      overflow:visible;
+      display:block;
+      padding:0 0 20px;
+      background:var(--bg);
+    }
+
+    .packet-scale-outer{
+      width:calc(850px * var(--scale));
+      max-width:100%;
+      margin:0 auto 22px;
+      padding:0 0 28px;
+      overflow:visible;
+      display:block;
+      box-sizing:content-box;
+    }
+
+    .packet-scale-inner{
+      width:850px;
+      max-width:850px;
+      transform-origin:top left;
+      zoom:var(--scale);
+      overflow:visible;
+      display:block;
+      contain:none;
+    }
+
+    .packet-scale-inner.transform-fallback{
+      zoom:1 !important;
+      transform:scale(var(--scale));
+      transform-origin:top left;
+    }
+
+    .packet-scale-inner .am-v652-pages{
+      width:850px !important;
+      max-width:none !important;
+      display:flex !important;
+      flex-direction:column !important;
+      align-items:center !important;
+      gap:22px !important;
+      padding:0 !important;
+      margin:0 !important;
+      height:auto !important;
+      min-height:auto !important;
+      overflow:visible !important;
+      contain:none !important;
+    }
+
+    .packet-scale-inner .am-v652-page{
+      width:850px !important;
+      max-width:850px !important;
+      min-height:1050px !important;
+      height:auto !important;
+      box-sizing:border-box !important;
+      background:#fff !important;
+      border:1px solid #d7e3f1 !important;
+      border-radius:18px !important;
+      box-shadow:0 16px 38px rgba(16,47,79,.13) !important;
+      padding:54px !important;
+      color:#102f4f !important;
+      overflow:visible !important;
+      contain:none !important;
+      flex:0 0 auto !important;
+    }
+
+    .packet-scale-inner .am-v652-page-header{
+      display:flex !important;
+      flex-direction:row !important;
+      align-items:flex-start !important;
+      justify-content:space-between !important;
+      gap:22px !important;
+      border-bottom:3px solid #102f4f !important;
+      padding-bottom:22px !important;
+      margin-bottom:28px !important;
+    }
+
+    .packet-scale-inner .am-v652-logo,
+    .packet-scale-inner img.am-v652-logo,
+    .packet-scale-inner .am-v652-page-header img{
+      max-width:190px !important;
+      max-height:80px !important;
+      width:auto !important;
+      height:auto !important;
+      object-fit:contain !important;
+      flex:0 0 auto !important;
+      display:block !important;
+      margin:0 !important;
+    }
+
+    .packet-scale-inner .am-v652-kicker{
+      font-size:12px !important;
+      letter-spacing:.16em !important;
+      color:#6d7f92 !important;
+      text-transform:uppercase !important;
+      font-weight:900 !important;
+    }
+
+    .packet-scale-inner .am-v652-h1{
+      font-size:34px !important;
+      line-height:1.05 !important;
+      letter-spacing:normal !important;
+      margin:8px 0 0 !important;
+      color:#102f4f !important;
+      font-weight:950 !important;
+    }
+
+    .packet-scale-inner .am-v652-h2{
+      font-size:24px !important;
+      line-height:1.15 !important;
+      margin:0 0 16px !important;
+      color:#102f4f !important;
+      font-weight:950 !important;
+    }
+
+    .packet-scale-inner .am-v652-meta-grid{
+      display:grid !important;
+      grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+      gap:14px !important;
+      margin:22px 0 !important;
+    }
+
+    .packet-scale-inner .am-v652-meta{
+      border:1px solid #d8e4f0 !important;
+      border-radius:16px !important;
+      padding:14px 16px !important;
+      background:#f8fbff !important;
+      box-sizing:border-box !important;
+    }
+
+    .packet-scale-inner .am-v652-meta label{
+      display:block !important;
+      font-size:11px !important;
+      letter-spacing:.12em !important;
+      text-transform:uppercase !important;
+      font-weight:900 !important;
+      color:#6d7f92 !important;
+      margin-bottom:7px !important;
+    }
+
+    .packet-scale-inner .am-v652-meta div{
+      font-size:16px !important;
+      line-height:1.25 !important;
+      font-weight:900 !important;
+      color:#102f4f !important;
+    }
+
+    .packet-scale-inner .am-v652-box{
+      border:2px solid #dce8f4 !important;
+      border-radius:18px !important;
+      padding:18px 20px !important;
+      background:#fbfdff !important;
+      margin:20px 0 !important;
+      box-sizing:border-box !important;
+    }
+
+    .packet-scale-inner p,
+    .packet-scale-inner li,
+    .packet-scale-inner .am-v652-p,
+    .packet-scale-inner .am-v652-li{
+      font-size:15px !important;
+      line-height:1.55 !important;
+      color:#223c59 !important;
+    }
+
+    .packet-scale-inner ul,
+    .packet-scale-inner ol{padding-left:24px !important;margin:12px 0 !important}
+
+    .review-footer{
+      flex:0 0 auto;
+      display:flex;
+      justify-content:flex-end;
+      align-items:center;
+      gap:12px;
+      padding:14px 22px max(14px,env(safe-area-inset-bottom));
+      border-top:1px solid var(--line);
+      background:rgba(246,249,253,.98);
+    }
+
+    .mobile-only{display:none}
+
+    @media(max-width:760px){
+      body{padding:7px 6px}
+      .review-shell{
+        width:calc(100vw - 12px);
+        max-width:calc(100vw - 12px);
+        height:calc(100svh - 16px);
+        max-height:calc(100svh - 16px);
+        border-radius:24px;
+      }
+      .review-header{padding:16px 18px 13px}
+      .eyebrow{display:none}
+      h1{font-size:21px;line-height:1.12;max-width:calc(100vw - 100px)}
+      .meta{font-size:13px;line-height:1.28}
+      .header-actions{gap:8px}
+      .header-actions .button-link,.header-actions button:not(.mobile-x){display:none}
+      .mobile-only{display:inline-flex}
+      .mobile-x{
+        width:42px;
+        min-width:42px;
+        height:42px;
+        border-radius:15px;
+        border:0;
+        background:#edf4fb;
+        color:var(--navy);
+        font-size:28px;
+        line-height:1;
+        padding:0;
+      }
+      .review-body{padding:10px}
+      .review-footer{padding:10px 14px 14px;gap:9px}
+      .review-footer button,.review-footer .button-link{
+        min-height:39px;
+        min-width:132px;
+        border-radius:14px;
+        font-size:12.5px;
+        padding:0 16px;
+      }
+      .review-footer{justify-content:flex-end}
+      .hide-phone{display:none!important}
+      .loading-card,.error-card,.status-card{margin:20px auto;font-size:15px;padding:20px}
+    }
+
+    @media(max-width:430px){
+      .review-footer{
+        display:grid;
+        grid-template-columns:1fr;
+      }
+      .review-footer button,.review-footer .button-link{width:100%}
+    }
+
+    @media print{
+      body{background:#fff;padding:0;overflow:visible}
+      .review-shell{width:auto;height:auto;border:0;box-shadow:none;border-radius:0}
+      .review-header,.review-footer{display:none!important}
+      .review-body{overflow:visible;background:#fff;padding:0}
+      .packet-scale-outer{width:auto;margin:0;padding:0}
+      .packet-scale-inner{width:auto;zoom:1;transform:none!important}
+      .packet-scale-inner .am-v652-page{box-shadow:none!important;border:0!important;border-radius:0!important;page-break-after:always}
+    }
+  </style>
+</head>
+
+<body>
+  <main class="review-shell">
+    <header class="review-header">
+      <div>
+        <p class="eyebrow">Annual Meeting Approval</p>
+        <h1 id="pageTitle">Annual Meeting Packet Review</h1>
+        <p class="meta" id="pageMeta">Loading approval packet…</p>
+      </div>
+      <div class="header-actions">
+        <a class="button-link" id="backTop" href="board_member_hub_v2.html">Back to Board Hub</a>
+        <button type="button" class="primary" id="approveTop">Approve Packet</button>
+        <button type="button" class="mobile-only mobile-x" id="closeTop" aria-label="Close">×</button>
+      </div>
+    </header>
+
+    <section class="review-body" id="reviewBody">
+      <div class="loading-card">Preparing packet preview…</div>
+    </section>
+
+    <footer class="review-footer">
+      <button type="button" class="primary" id="approveBottom">Approve Packet</button>
+      <button type="button" id="printButton" class="hide-phone">Print / Save PDF</button>
+      <a class="button-link" id="backBottom" href="board_member_hub_v2.html">Back to Board Hub</a>
+    </footer>
+  </main>
+
+  <script>
+    (function(){
+      'use strict';
+
+      const BUILD = '2026-05-09-v700-dedicated-approval-packet-review';
+      const SUPABASE_URL = window.SUPABASE_URL || window.ZUMMEE_SUPABASE_URL || 'https://slcwuwuyrgnmlmxpcaim.supabase.co';
+      const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || window.ZUMMEE_SUPABASE_ANON_KEY || window.supabaseAnonKey || '';
+
+      let supabaseClient = null;
+      let currentRequest = null;
+
+      const els = {
+        title: document.getElementById('pageTitle'),
+        meta: document.getElementById('pageMeta'),
+        body: document.getElementById('reviewBody'),
+        approveTop: document.getElementById('approveTop'),
+        approveBottom: document.getElementById('approveBottom'),
+        printButton: document.getElementById('printButton'),
+        backTop: document.getElementById('backTop'),
+        backBottom: document.getElementById('backBottom'),
+        closeTop: document.getElementById('closeTop')
+      };
+
+      function clean(v){ return String(v == null ? '' : v).trim(); }
+      function params(){ return new URLSearchParams(window.location.search || ''); }
+      function requestId(){ return clean(params().get('approval_request_id') || params().get('request_id') || params().get('id')); }
+
+      function setBackLinks(row){
+        const p = params();
+        let href = 'board_member_hub_v2.html';
+        const communityId = clean(p.get('community_id') || row?.community_id);
+        const communityName = clean(p.get('community_name') || row?.community_name);
+        const query = new URLSearchParams();
+        if(communityId) query.set('community_id', communityId);
+        if(communityName) query.set('community_name', communityName);
+        const qs = query.toString();
+        if(qs) href += '?' + qs;
+        els.backTop.href = href;
+        els.backBottom.href = href;
+      }
+
+      function showError(message){
+        els.body.innerHTML = '<div class="error-card">' + escapeHtml(message) + '</div>';
+        els.meta.textContent = 'Packet review unavailable';
+        setApproveVisible(false);
+      }
+
+      function showStatus(message, type='success'){
+        const card = document.createElement('div');
+        card.className = 'status-card ' + type;
+        card.textContent = message;
+        els.body.prepend(card);
+        setTimeout(() => card.remove(), 7000);
+      }
+
+      function escapeHtml(value){
+        return String(value == null ? '' : value)
+          .replace(/&/g,'&amp;')
+          .replace(/</g,'&lt;')
+          .replace(/>/g,'&gt;')
+          .replace(/"/g,'&quot;')
+          .replace(/'/g,'&#39;');
+      }
+
+      function sanitizePreviewHtml(html){
+        let out = String(html || '');
+        out = out.replace(new RegExp('<' + 'script[\\s\\S]*?<' + '\\/script>', 'gi'), '');
+        out = out.replace(/\son[a-z]+\s*=\s*(['"]).*?\1/gi, '');
+        out = out.replace(/javascript:/gi, '');
+        return out;
+      }
+
+      function snapshot(row){
+        return row && row.packet_preview_snapshot && typeof row.packet_preview_snapshot === 'object'
+          ? row.packet_preview_snapshot
+          : {};
+      }
+
+      function packetHtmlFrom(row){
+        const snap = snapshot(row);
+        const keys = ['html','packetHtml','packet_html','previewHtml','preview_html','packet_preview_html'];
+        for(const key of keys){
+          if(clean(snap[key])) return clean(snap[key]);
+        }
+        try{
+          if(snap.packet && clean(snap.packet.html)) return clean(snap.packet.html);
+          if(snap.preview && clean(snap.preview.html)) return clean(snap.preview.html);
+          if(snap.document && clean(snap.document.html)) return clean(snap.document.html);
+        }catch(e){}
+        return '';
+      }
+
+      function associationName(row){
+        const snap = snapshot(row);
+        const settings = snap.settings && typeof snap.settings === 'object' ? snap.settings : {};
+        return clean(row.association_legal_name) ||
+          clean(snap.associationName) ||
+          clean(snap.association_legal_name) ||
+          clean(settings.association_legal_name) ||
+          clean(settings.associationName) ||
+          clean(row.community_name) ||
+          'Annual Meeting Packet';
+      }
+
+      function meetingDate(row){
+        const snap = snapshot(row);
+        const settings = snap.settings && typeof snap.settings === 'object' ? snap.settings : {};
+        return clean(row.next_annual_meeting_date) ||
+          clean(snap.meetingDate) ||
+          clean(snap.nextDate) ||
+          clean(settings.next_annual_meeting_date) ||
+          clean(settings.nextDate);
+      }
+
+      function formatDate(value){
+        const v = clean(value).slice(0,10);
+        if(!v) return '—';
+        const d = new Date(v + 'T00:00:00');
+        return Number.isNaN(d.getTime())
+          ? v
+          : d.toLocaleDateString(undefined, { month:'long', day:'numeric', year:'numeric' });
+      }
+
+      function statusLabel(row){
+        const step = clean(row.current_step || row.approval_status);
+        if(step === 'pending_board') return 'Awaiting Board approval';
+        if(step === 'pending_supervisor') return 'Awaiting Supervisor approval';
+        if(step === 'pending_admin_mailing') return 'Awaiting Admin / mailing follow-up';
+        if(step === 'approved' || step === 'complete') return 'Approved';
+        return step ? step.replace(/_/g, ' ') : 'Approval Review';
+      }
+
+      function setApproveVisible(visible){
+        [els.approveTop, els.approveBottom].forEach(btn => {
+          btn.style.display = visible ? '' : 'none';
+        });
+      }
+
+      function markLogos(inner){
+        inner.querySelectorAll('img').forEach(img => {
+          const src = String(img.getAttribute('src') || '').toLowerCase();
+          const alt = String(img.getAttribute('alt') || '').toLowerCase();
+          if(img.classList.contains('am-v652-logo') || src.includes('logo') || src.includes('sixes') || alt.includes('logo')){
+            img.classList.add('am-v652-logo');
+          }
+          img.addEventListener('load', () => setTimeout(applyScale, 80), { once:false });
+        });
+      }
+
+      function pageHeightSum(inner){
+        const pages = Array.from(inner.querySelectorAll('.am-v652-page'));
+        const pagesContainer = inner.querySelector('.am-v652-pages');
+        const gap = pagesContainer ? (parseFloat(getComputedStyle(pagesContainer).rowGap || getComputedStyle(pagesContainer).gap || '0') || 22) : 22;
+        if(!pages.length) return Math.max(inner.scrollHeight || 0, 1200);
+
+        let total = 0;
+        pages.forEach(page => {
+          total += Math.max(1050, page.scrollHeight || 0, page.offsetHeight || 0);
+        });
+        total += gap * Math.max(0, pages.length - 1);
+        return Math.max(total, inner.scrollHeight || 0);
+      }
+
+      function applyScale(){
+        const body = els.body;
+        const outer = document.querySelector('.packet-scale-outer');
+        const inner = document.querySelector('.packet-scale-inner');
+        if(!body || !outer || !inner) return null;
+
+        const available = Math.max(280, body.clientWidth - 20);
+        const scale = Math.min(1, available / 850);
+
+        document.documentElement.style.setProperty('--scale', String(scale));
+        outer.style.width = Math.ceil(850 * scale) + 'px';
+
+        inner.style.zoom = String(scale);
+        inner.style.transform = 'none';
+        inner.classList.remove('transform-fallback');
+        outer.style.height = 'auto';
+        outer.style.minHeight = '0';
+
+        setTimeout(() => {
+          if(outer.clientHeight < 120){
+            inner.style.zoom = '1';
+            inner.style.transform = 'scale(' + scale + ')';
+            inner.style.transformOrigin = 'top left';
+            inner.classList.add('transform-fallback');
+            const raw = pageHeightSum(inner);
+            outer.style.height = Math.ceil(raw * scale + 40) + 'px';
+            outer.style.minHeight = outer.style.height;
+          }
+        }, 80);
+
+        return { scale };
+      }
+
+      function render(row){
+        currentRequest = row;
+        setBackLinks(row);
+
+        const name = associationName(row);
+        const date = formatDate(meetingDate(row));
+        els.title.textContent = name + ' Packet Review';
+        els.meta.textContent = date + ' • ' + statusLabel(row);
+
+        const html = packetHtmlFrom(row);
+        if(!html){
+          showError('Packet preview is not available for this approval request.');
+          return;
+        }
+
+        els.body.innerHTML = `
+          <div class="packet-stage">
+            <div class="packet-scale-outer">
+              <div class="packet-scale-inner">${sanitizePreviewHtml(html)}</div>
+            </div>
+          </div>
+        `;
+
+        const inner = document.querySelector('.packet-scale-inner');
+        if(inner) markLogos(inner);
+
+        const step = clean(row.current_step || row.approval_status);
+        setApproveVisible(step === 'pending_board' || step === 'pending_supervisor');
+
+        requestAnimationFrame(() => {
+          applyScale();
+          setTimeout(applyScale, 260);
+          setTimeout(applyScale, 900);
+        });
+      }
+
+      async function getSupabase(){
+        if(supabaseClient) return supabaseClient;
+
+        if(window.supabaseClient && typeof window.supabaseClient.from === 'function'){
+          supabaseClient = window.supabaseClient;
+          return supabaseClient;
+        }
+
+        if(window.getSupabase && typeof window.getSupabase === 'function'){
+          const c = window.getSupabase();
+          if(c && typeof c.from === 'function'){
+            supabaseClient = c;
+            return supabaseClient;
+          }
+        }
+
+        if(!SUPABASE_ANON_KEY){
+          throw new Error('Supabase anon key is missing on this review page. Add the same Supabase client setup used by the app, or define SUPABASE_ANON_KEY before this script.');
+        }
+
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        return supabaseClient;
+      }
+
+      async function loadRequest(){
+        const id = requestId();
+        if(!id) throw new Error('Missing approval_request_id in the link.');
+
+        const c = await getSupabase();
+        const result = await c
+          .from('annual_meeting_approval_requests')
+          .select('*')
+          .eq('id', id)
+          .maybeSingle();
+
+        if(result.error) throw result.error;
+        if(!result.data) throw new Error('Approval request not found or you do not have access.');
+        return result.data;
+      }
+
+      async function approve(){
+        if(!currentRequest || !currentRequest.id) return;
+
+        const buttons = [els.approveTop, els.approveBottom];
+        buttons.forEach(btn => {
+          btn.disabled = true;
+          btn.textContent = 'Approving…';
+        });
+
+        try{
+          const c = await getSupabase();
+          const row = currentRequest;
+          const step = clean(row.current_step || row.approval_status);
+
+          let updates = {
+            updated_at: new Date().toISOString()
+          };
+
+          if(step === 'pending_board'){
+            updates.current_step = 'pending_supervisor';
+            updates.approval_status = 'pending_supervisor';
+            updates.board_approved_at = new Date().toISOString();
+          }else if(step === 'pending_supervisor'){
+            updates.current_step = 'pending_admin_mailing';
+            updates.approval_status = 'pending_admin_mailing';
+            updates.supervisor_approved_at = new Date().toISOString();
+          }else{
+            throw new Error('This packet is not currently awaiting your approval.');
+          }
+
+          const result = await c
+            .from('annual_meeting_approval_requests')
+            .update(updates)
+            .eq('id', row.id)
+            .select('*')
+            .maybeSingle();
+
+          if(result.error) throw result.error;
+          if(!result.data) throw new Error('Approval update did not return a record.');
+
+          currentRequest = result.data;
+          showStatus('Packet approved successfully.');
+          render(result.data);
+
+          buttons.forEach(btn => {
+            btn.disabled = false;
+            btn.textContent = 'Approve Packet';
+          });
+        }catch(error){
+          showStatus(error && error.message ? error.message : String(error), 'error');
+          buttons.forEach(btn => {
+            btn.disabled = false;
+            btn.textContent = 'Approve Packet';
+          });
+        }
+      }
+
+      async function boot(){
+        try{
+          const row = await loadRequest();
+          render(row);
+        }catch(error){
+          showError(error && error.message ? error.message : String(error));
+        }
+      }
+
+      els.approveTop.addEventListener('click', approve);
+      els.approveBottom.addEventListener('click', approve);
+      els.printButton.addEventListener('click', () => window.print());
+      els.closeTop.addEventListener('click', () => {
+        const href = els.backBottom.getAttribute('href') || 'board_member_hub_v2.html';
+        window.location.href = href;
+      });
+      window.addEventListener('resize', () => setTimeout(applyScale, 120));
+      window.addEventListener('orientationchange', () => setTimeout(applyScale, 500));
+
+      window.getApprovalPacketReviewStatus = function(){
+        const outer = document.querySelector('.packet-scale-outer');
+        const inner = document.querySelector('.packet-scale-inner');
+        return {
+          build: BUILD,
+          installed: true,
+          requestId: requestId(),
+          hasRequest: !!currentRequest,
+          outerFound: !!outer,
+          innerFound: !!inner,
+          pageCount: inner ? inner.querySelectorAll('.am-v652-page').length : 0,
+          bodyClientHeight: els.body ? els.body.clientHeight : null,
+          bodyScrollHeight: els.body ? els.body.scrollHeight : null,
+          outerClientHeight: outer ? outer.clientHeight : null,
+          outerScrollHeight: outer ? outer.scrollHeight : null,
+          innerScrollHeight: inner ? inner.scrollHeight : null,
+          status: currentRequest ? {
+            current_step: currentRequest.current_step,
+            approval_status: currentRequest.approval_status
+          } : null
+        };
+      };
+
+      boot();
+    })();
+  </script>
+</body>
+</html>
