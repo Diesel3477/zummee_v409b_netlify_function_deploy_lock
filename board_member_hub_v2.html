@@ -3742,6 +3742,18 @@
         approvedAt:new Date().toISOString()
       };
 
+      try{
+        if(window.notifyAnnualApprovalEmail && result && result.data && result.data.id){
+          const emailResult = await window.notifyAnnualApprovalEmail(result.data, 'board_preview_approve');
+          window.__BoardHubAnnualPreviewApproveV620Last.emailNotification = emailResult;
+        }
+      }catch(emailNotifyErr){
+        window.__BoardHubAnnualPreviewApproveV620Last.emailNotification = {
+          ok:false,
+          error:emailNotifyErr && emailNotifyErr.message ? emailNotifyErr.message : String(emailNotifyErr)
+        };
+      }
+
       showStatus('Packet approved and moved to the next approval step.', 'ok');
 
       try{
@@ -3809,6 +3821,108 @@
       pendingRowCount:pendingRows().length,
       hasApproveButton:!!el('bhV619PreviewApproveBtn'),
       last:window.__BoardHubAnnualPreviewApproveV620Last || null
+    };
+  };
+})();
+</script>
+
+
+
+<script id="board-hub-v621-annual-approval-email-notify">
+(function(){
+  'use strict';
+  if(window.__BoardHubV621AnnualApprovalEmailNotify) return;
+  window.__BoardHubV621AnnualApprovalEmailNotify = true;
+
+  const BUILD = '2026-05-09-v621-board-hub-annual-approval-email-notify';
+
+  async function getClient(){
+    const start = Date.now();
+    while(Date.now() - start < 5000){
+      try{
+        const c = window.supabaseClient || (window.getSupabase && window.getSupabase()) || null;
+        if(c && c.auth) return c;
+      }catch(e){}
+      await new Promise(resolve => setTimeout(resolve, 80));
+    }
+    return null;
+  }
+
+  async function authHeaders(){
+    let accessToken = '';
+    try{
+      const c = await getClient();
+      if(c && c.auth && typeof c.auth.getSession === 'function'){
+        const res = await c.auth.getSession();
+        accessToken = res && res.data && res.data.session && res.data.session.access_token || '';
+      }
+    }catch(e){}
+    const base = String(
+      window.SUPABASE_URL ||
+      (typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : 'https://slcwuuwyrgnmlmxpcaim.supabase.co')
+    ).replace(/\/$/, '');
+    const anon = String(
+      window.SUPABASE_ANON_KEY ||
+      window.SUPABASE_KEY ||
+      (typeof SUPABASE_KEY !== 'undefined' ? SUPABASE_KEY : '') ||
+      ''
+    );
+    const headers = { 'Content-Type':'application/json', 'apikey': anon };
+    if(accessToken) headers.Authorization = 'Bearer ' + accessToken;
+    return { base, headers };
+  }
+
+  async function notifyAnnualApprovalEmail(request, source){
+    const id = request && request.id ? String(request.id) : '';
+    if(!id) return { ok:false, skipped:true, reason:'missing_request_id' };
+
+    try{
+      const cfg = await authHeaders();
+      const res = await fetch(cfg.base + '/functions/v1/annual-approval-email', {
+        method:'POST',
+        headers:cfg.headers,
+        body:JSON.stringify({
+          request_id:id,
+          source:source || 'board_member_hub',
+          step:request.current_step || request.approval_status || '',
+          note:'The annual meeting packet has moved to the next approval step.'
+        })
+      });
+
+      const raw = await res.text();
+      let parsed = null;
+      try{ parsed = raw ? JSON.parse(raw) : null; }catch(e){ parsed = raw; }
+
+      const result = {
+        ok:res.ok && !!(parsed && parsed.ok !== false),
+        httpStatus:res.status,
+        response:parsed,
+        request_id:id,
+        notifiedAt:new Date().toISOString()
+      };
+
+      window.__BoardHubV621LastApprovalEmail = result;
+      console.info('[Board Hub v621] approval email notification result', result);
+      return result;
+    }catch(error){
+      const result = {
+        ok:false,
+        request_id:id,
+        error:error && error.message ? error.message : String(error),
+        notifiedAt:new Date().toISOString()
+      };
+      window.__BoardHubV621LastApprovalEmail = result;
+      console.warn('[Board Hub v621] approval email notification failed', result);
+      return result;
+    }
+  }
+
+  window.notifyAnnualApprovalEmail = notifyAnnualApprovalEmail;
+  window.getBoardHubApprovalEmailNotifyStatus = function(){
+    return {
+      build:BUILD,
+      installed:true,
+      last:window.__BoardHubV621LastApprovalEmail || null
     };
   };
 })();
