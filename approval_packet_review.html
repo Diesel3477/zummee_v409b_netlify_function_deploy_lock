@@ -487,7 +487,7 @@
     (function(){
       'use strict';
 
-      const BUILD = '2026-05-10-v724-approver-identity-majority-ready';
+      const BUILD = '2026-05-10-v725-hide-already-voted-board-button';
       const SUPABASE_URL = window.SUPABASE_URL || window.ZUMMEE_SUPABASE_URL || 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
       const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || window.SUPABASE_KEY || window.ZUMMEE_SUPABASE_ANON_KEY || window.supabaseAnonKey || 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
 
@@ -495,6 +495,7 @@
       let currentRequest = null;
       let loadedApprovalStep = '';
       let approvalCompletedThisPageLoad = false;
+      let existingApproverVote = null;
 
       const els = {
         title: document.getElementById('pageTitle'),
@@ -626,6 +627,49 @@
         [els.approveTop, els.approveBottom].forEach(btn => {
           btn.style.display = visible ? '' : 'none';
         });
+      }
+
+      function markAlreadyApprovedByThisApprover(vote){
+        existingApproverVote = vote || { vote: 'approved' };
+        approvalCompletedThisPageLoad = true;
+        [els.approveTop, els.approveBottom].forEach(btn => {
+          btn.disabled = true;
+          btn.textContent = 'Already Approved';
+          btn.style.display = 'none';
+        });
+      }
+
+      async function loadExistingApproverVote(row){
+        existingApproverVote = null;
+
+        const step = clean(row?.current_step || row?.approval_status);
+        const email = approverEmail();
+        if(step !== 'pending_board' || !email || !row?.id) return null;
+
+        try{
+          const client = await getSupabase();
+          const { data, error } = await client
+            .from('annual_meeting_approval_votes')
+            .select('approval_request_id,voter_email,voter_name,voter_role,vote,created_at')
+            .eq('approval_request_id', row.id)
+            .eq('voter_role', 'board')
+            .ilike('voter_email', email)
+            .maybeSingle();
+
+          if(error){
+            console.warn('[Approval Review v725] Existing vote lookup skipped:', error.message || error);
+            return null;
+          }
+
+          if(data && data.vote){
+            markAlreadyApprovedByThisApprover(data);
+            return data;
+          }
+        }catch(error){
+          console.warn('[Approval Review v725] Existing vote lookup failed:', error && error.message ? error.message : error);
+        }
+
+        return null;
       }
 
 
@@ -1179,7 +1223,7 @@
         }
 
         const step = clean(row.current_step || row.approval_status);
-        const canApprove = !approvalCompletedThisPageLoad && (step === 'pending_board' || step === 'pending_supervisor');
+        const canApprove = !approvalCompletedThisPageLoad && !existingApproverVote && (step === 'pending_board' || step === 'pending_supervisor');
         setApproveVisible(canApprove);
         [els.approveTop, els.approveBottom].forEach(btn => {
           if(canApprove){
@@ -1188,7 +1232,7 @@
             btn.style.display = '';
           }else{
             btn.disabled = true;
-            btn.textContent = approvalCompletedThisPageLoad ? 'Approved' : 'Approval Complete';
+            btn.textContent = existingApproverVote ? 'Already Approved' : (approvalCompletedThisPageLoad ? 'Approved' : 'Approval Complete');
             btn.style.display = approvalCompletedThisPageLoad ? 'none' : btn.style.display;
           }
         });
@@ -1332,7 +1376,11 @@
       async function boot(){
         try{
           const row = await loadRequest();
+          await loadExistingApproverVote(row);
           render(row);
+          if(existingApproverVote){
+            showStatus('Your board approval has already been recorded for this packet. No further action is needed.');
+          }
         }catch(error){
           showError(error && error.message ? error.message : String(error));
         }
@@ -1365,6 +1413,8 @@
           hasRequest: !!currentRequest,
           loadedApprovalStep,
           approvalCompletedThisPageLoad,
+          existingApproverVote,
+          alreadyApprovedByThisApprover: !!existingApproverVote,
           hasV719PremiumPrintPage: !!frame,
           frameStatus: window.__approvalPacketFrameStatus || null,
           shellClientHeight: shell ? shell.clientHeight : null,
