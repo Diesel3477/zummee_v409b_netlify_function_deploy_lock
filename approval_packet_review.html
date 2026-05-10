@@ -487,7 +487,7 @@
     (function(){
       'use strict';
 
-      const BUILD = '2026-05-10-v726-use-review-server-vote-status';
+      const BUILD = '2026-05-10-v727-review-vote-payload-wired';
       const SUPABASE_URL = window.SUPABASE_URL || window.ZUMMEE_SUPABASE_URL || 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
       const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || window.SUPABASE_KEY || window.ZUMMEE_SUPABASE_ANON_KEY || window.supabaseAnonKey || 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
 
@@ -1284,6 +1284,10 @@
       async function loadRequest(){
         const id = requestId();
         const token = reviewToken();
+        const email = approverEmail();
+        const name = approverName();
+        const role = approverRole() || 'board';
+
         if(!id) throw new Error('Missing approval_request_id in the link.');
         if(!token) throw new Error('Missing approval token in the link.');
 
@@ -1294,10 +1298,26 @@
             apikey: SUPABASE_ANON_KEY,
             Authorization: `Bearer ${SUPABASE_ANON_KEY}`
           },
-          body: JSON.stringify({ request_id: id, token })
+          body: JSON.stringify({
+            request_id: id,
+            token,
+            approver_email: email,
+            approver_name: name,
+            approver_role: role
+          })
         });
 
         const payload = await response.json().catch(() => ({}));
+        window.__approvalReviewLastResponse = payload;
+
+        if(payload && payload.existing_approver_vote){
+          existingApproverVote = payload.existing_approver_vote;
+        }
+
+        if(payload && (payload.already_approved_by_this_approver || payload.alreadyApprovedByThisApprover)){
+          markAlreadyApprovedByThisApprover(payload.existing_approver_vote || { vote: 'approved', voter_email: email, voter_name: name, voter_role: role });
+        }
+
         if(!response.ok || !payload.ok){
           throw new Error(payload.error || 'Approval request not found or you do not have access.');
         }
@@ -1376,9 +1396,16 @@
       async function boot(){
         try{
           const row = await loadRequest();
-          await loadExistingApproverVote(row);
+
+          // Prefer secure server-side vote status from annual-approval-review.
+          // Fall back to direct client lookup only if the review function did not return a vote.
+          if(!existingApproverVote){
+            await loadExistingApproverVote(row);
+          }
+
           render(row);
           if(existingApproverVote){
+            markAlreadyApprovedByThisApprover(existingApproverVote);
             showStatus('Your board approval has already been recorded for this packet. No further action is needed.');
           }
         }catch(error){
@@ -1415,6 +1442,7 @@
           approvalCompletedThisPageLoad,
           existingApproverVote,
           alreadyApprovedByThisApprover: !!existingApproverVote,
+          reviewResponse: window.__approvalReviewLastResponse || null,
           hasV719PremiumPrintPage: !!frame,
           frameStatus: window.__approvalPacketFrameStatus || null,
           shellClientHeight: shell ? shell.clientHeight : null,
