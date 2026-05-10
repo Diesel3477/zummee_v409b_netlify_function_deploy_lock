@@ -2,6 +2,467 @@
 <html lang="en">
 <head>
 
+<script id="manager-hub-v634-annual-approvals-real-source-marker">
+window.ZUMMEE_BUILD = "2026-05-08-v633-manager-hub-accessible-smart-alerts";
+window.__MANAGER_HUB_V633_ACCESSIBLE_SMART_ALERTS = true;
+console.info("[Manager Hub v633] accessible smart alerts loaded", window.ZUMMEE_BUILD);
+</script>
+
+<script id="manager-hub-v634-annual-approvals-real-source">
+(function(){
+  if(window.__ManagerHubAccessibleSmartAlertsV633) return;
+  window.__ManagerHubAccessibleSmartAlertsV633 = true;
+
+  const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
+  const TIMEOUT_MS = 5000;
+
+  const state = {
+    inFlight:null,
+    latest:null,
+    lastGood:{ board:0, maintenance:0, annual:0 }
+  };
+
+  function s(v){ return String(v == null ? '' : v).trim(); }
+  function uuidish(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s(v)); }
+  function sleep(ms){ return new Promise(resolve => setTimeout(resolve, ms)); }
+
+  async function ensureSupabaseSdk(){
+    if(window.supabase && typeof window.supabase.createClient === 'function') return true;
+    const existing = document.querySelector('script[src*="supabase-js"]');
+    if(existing){
+      for(let i=0;i<40;i++){
+        if(window.supabase && typeof window.supabase.createClient === 'function') return true;
+        await sleep(100);
+      }
+    }
+    return false;
+  }
+
+  function findExistingClient(){
+    const names = [
+      'supabaseClient',
+      'sb',
+      'supabaseClientV2',
+      'ZUMMEE_SUPABASE',
+      '__zummeeSupabase',
+      'zummeeSupabase',
+      '__sb'
+    ];
+
+    for(const name of names){
+      try{
+        const c = window[name];
+        if(c && typeof c.from === 'function') return { client:c, source:'window.' + name };
+      }catch(_e){}
+    }
+
+    const fns = ['getSupabase','ensureSupabaseSync','requireSb'];
+    for(const name of fns){
+      try{
+        const fn = window[name];
+        if(typeof fn === 'function'){
+          const c = fn();
+          if(c && typeof c.from === 'function') return { client:c, source:name + '()' };
+        }
+      }catch(_e){}
+    }
+
+    return { client:null, source:'' };
+  }
+
+  async function resolveClient(){
+    const existing = findExistingClient();
+    if(existing.client) return existing;
+
+    await ensureSupabaseSdk();
+
+    try{
+      if(window.supabase && typeof window.supabase.createClient === 'function'){
+        if(!window.__ManagerHubSmartAlertsSbV633){
+          window.__ManagerHubSmartAlertsSbV633 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
+        if(window.__ManagerHubSmartAlertsSbV633 && typeof window.__ManagerHubSmartAlertsSbV633.from === 'function'){
+          return { client:window.__ManagerHubSmartAlertsSbV633, source:'v633-created-client' };
+        }
+      }
+    }catch(err){
+      return { client:null, source:'createClient failed: ' + (err && err.message ? err.message : String(err)) };
+    }
+
+    return { client:null, source:'no-client' };
+  }
+
+  function activeCommunity(){
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const a = window.ZummeeCommunityState.getActiveCommunity();
+        if(a && a.id) return { id:s(a.id), name:s(a.name), source:'ZummeeCommunityState' };
+      }
+    }catch(_e){}
+
+    try{
+      const sel = document.getElementById('zummeeCommunitySelect') ||
+                  document.getElementById('communitySelect') ||
+                  document.querySelector('select[data-community-select], select[name="community"]');
+      if(sel && uuidish(sel.value)){
+        const opt = sel.options && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+        return { id:s(sel.value), name:s(opt && opt.textContent), source:'dropdown' };
+      }
+    }catch(_e2){}
+
+    try{
+      const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+      const obj = raw ? JSON.parse(raw) : null;
+      if(obj && obj.id) return { id:s(obj.id), name:s(obj.name), source:'storage-v601' };
+    }catch(_e3){}
+
+    return { id:'', name:'', source:'none' };
+  }
+
+  function withTimeout(promise, label){
+    return new Promise(function(resolve){
+      let done = false;
+      const timer = setTimeout(function(){
+        if(done) return;
+        done = true;
+        resolve({ ok:false, label, timeout:true, error:'Timed out after ' + TIMEOUT_MS + 'ms', count:0, rows:[], totalRows:0 });
+      }, TIMEOUT_MS);
+
+      Promise.resolve(promise).then(function(value){
+        if(done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve(value);
+      }).catch(function(err){
+        if(done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve({ ok:false, label, error:err && err.message ? err.message : String(err), count:0, rows:[], totalRows:0 });
+      });
+    });
+  }
+
+  function metadata(row){
+    const raw = row && row.metadata;
+    if(!raw) return {};
+    if(typeof raw === 'object') return raw;
+    try{ return JSON.parse(raw); }catch(_e){ return {}; }
+  }
+
+  function statusOf(row){
+    const m = metadata(row);
+    return s(row && (
+      row.status ||
+      row.approval_status ||
+      row.state ||
+      row.workflow_status ||
+      row.board_status ||
+      row.item_status ||
+      m.status ||
+      m.approval_status ||
+      m.state ||
+      m.workflow_status ||
+      m.board_status
+    )).toLowerCase();
+  }
+
+  function isClosed(row){
+    const st = statusOf(row);
+    if(row && (row.archived_at || row.completed_at || row.deleted_at || row.closed_at)) return true;
+    return ['completed','complete','closed','archived','approved','rejected','done','mailed','cancelled','canceled','inactive','resolved'].includes(st);
+  }
+
+  function isOverdue(row){
+    const raw = s(row && (row.due_date || row.deadline || row.created_at || row.updated_at || row.next_annual_meeting_date)).slice(0,10);
+    if(!raw) return false;
+    const dt = new Date(raw + 'T00:00:00');
+    if(Number.isNaN(dt.getTime())) return false;
+    const today = new Date(); today.setHours(0,0,0,0);
+    return dt.getTime() < today.getTime();
+  }
+
+  function normalize(label, source, clientSource, community, rows, filter){
+    rows = Array.isArray(rows) ? rows : [];
+    filter = filter || function(row){ return !isClosed(row); };
+    const open = rows.filter(filter);
+    return {
+      ok:true,
+      label,
+      source,
+      clientSource,
+      communityId:community.id,
+      communityName:community.name,
+      count:open.length,
+      overdue:open.filter(isOverdue).length,
+      rows:open,
+      totalRows:rows.length
+    };
+  }
+
+  async function loadBoard(client, clientSource, community){
+    if(!client || !uuidish(community.id)){
+      return { ok:false, label:'board', source:'none', clientSource, communityId:community.id, error:'Missing client or valid community', count:0, rows:[], totalRows:0 };
+    }
+
+    const res = await client.from('notification_events')
+      .select('*')
+      .eq('community_id', community.id)
+      .eq('event_type','board_item_submitted')
+      .limit(200);
+
+    if(res && res.error){
+      return { ok:false, label:'board', source:'notification_events.board_item_submitted', clientSource, communityId:community.id, error:res.error.message || JSON.stringify(res.error), count:0, rows:[], totalRows:0 };
+    }
+
+    return normalize('board', 'notification_events.board_item_submitted', clientSource, community, res && res.data);
+  }
+
+  function isOpenMaintenance(row){
+    if(isClosed(row)) return false;
+    const st = statusOf(row);
+    return !['draft','deleted','void'].includes(st);
+  }
+
+  async function loadMaintenance(client, clientSource, community){
+    if(!client || !uuidish(community.id)){
+      return { ok:false, label:'maintenance', source:'none', clientSource, communityId:community.id, error:'Missing client or valid community', count:0, rows:[], totalRows:0 };
+    }
+
+    const res = await client.from('resident_work_orders')
+      .select('*')
+      .eq('community_id', community.id)
+      .limit(200);
+
+    if(res && res.error){
+      return { ok:false, label:'maintenance', source:'resident_work_orders', clientSource, communityId:community.id, error:res.error.message || JSON.stringify(res.error), count:0, rows:[], totalRows:0 };
+    }
+
+    const result = normalize('maintenance', 'resident_work_orders', clientSource, community, res && res.data, isOpenMaintenance);
+    result.urgent = result.rows.filter(row => /urgent|emergency|high/i.test(s(row.priority || row.severity || row.level))).length;
+    return result;
+  }
+
+  async function loadAnnual(client, clientSource, community){
+    if(!client || !uuidish(community.id)){
+      return { ok:false, label:'annual', source:'none', clientSource, communityId:community.id, error:'Missing client or valid community', count:0, rows:[], totalRows:0 };
+    }
+
+    // v634 source of truth for Manager Hub Annual Meeting Approvals:
+    // public.annual_meeting_approval_requests active workflows only.
+    const res = await client.from('annual_meeting_approval_requests')
+      .select('id,community_id,current_step,approval_status,archived_at,mailed_at,created_at,updated_at,initiated_at,next_annual_meeting_date')
+      .eq('community_id', community.id)
+      .is('archived_at', null)
+      .neq('current_step', 'completed')
+      .neq('approval_status', 'completed')
+      .limit(50);
+
+    if(res && res.error){
+      return { ok:false, label:'annual', source:'annual_meeting_approval_requests', clientSource, communityId:community.id, error:res.error.message || JSON.stringify(res.error), count:0, rows:[], totalRows:0 };
+    }
+
+    return normalize('annual', 'annual_meeting_approval_requests', clientSource, community, res && res.data, function(row){
+      var st = String((row && (row.current_step || row.approval_status)) || '').toLowerCase().trim();
+      if(!row) return false;
+      if(row.archived_at || row.mailed_at) return false;
+      if(st === 'completed' || st === 'complete' || st === 'closed' || st === 'archived') return false;
+      return true;
+    });
+  }
+
+  function useCount(key, result){
+    if(result && Number.isFinite(Number(result.count))){
+      state.lastGood[key] = Number(result.count);
+    }
+    return Number(state.lastGood[key] || 0);
+  }
+
+  async function loadSummary(){
+    const community = activeCommunity();
+    const resolved = await resolveClient();
+    const client = resolved.client;
+    const clientSource = resolved.source;
+
+    const results = await Promise.all([
+      withTimeout(loadBoard(client, clientSource, community), 'board'),
+      withTimeout(loadMaintenance(client, clientSource, community), 'maintenance'),
+      withTimeout(loadAnnual(client, clientSource, community), 'annual')
+    ]);
+
+    const board = results[0] || {};
+    const maintenance = results[1] || {};
+    const annual = results[2] || {};
+
+    const summary = {
+      community,
+      clientReady:!!client,
+      clientSource,
+      board:useCount('board', board),
+      boardOverdue:Number(board.overdue || 0),
+      maintenance:useCount('maintenance', maintenance),
+      maintenanceUrgent:Number(maintenance.urgent || 0),
+      annual:useCount('annual', annual),
+      annualOverdue:Number(annual.overdue || 0),
+      sources:{ board, maintenance, annual },
+      loadedAt:Date.now()
+    };
+
+    state.latest = summary;
+    window.__ManagerHubSmartAlertsSummaryV633 = summary;
+    return summary;
+  }
+
+  function setAlert(id, opts){
+    const card = document.getElementById(id);
+    if(!card) return;
+
+    opts = opts || {};
+    const tone = opts.tone || 'good';
+
+    card.dataset.smartAlertsV633 = 'true';
+    card.style.display = '';
+    card.style.visibility = 'visible';
+    card.style.opacity = '1';
+
+    card.classList.remove('is-good','is-attention','is-urgent');
+    card.classList.add(tone === 'urgent' ? 'is-urgent' : (tone === 'attention' ? 'is-attention' : 'is-good'));
+
+    if(opts.href) card.setAttribute('href', opts.href);
+
+    const title = card.querySelector('.mh2-alert-title');
+    const badge = card.querySelector('.mh2-alert-badge');
+    const copy = card.querySelector('.mh2-alert-copy');
+
+    if(title) title.textContent = opts.title || '';
+    if(badge) badge.textContent = opts.badge || '';
+    if(copy) copy.textContent = opts.copy || '';
+  }
+
+  function render(summary){
+    summary = summary || state.latest;
+    if(!summary) return false;
+
+    const boardCount = Number(summary.board || 0);
+    const boardOverdue = Number(summary.boardOverdue || 0);
+    setAlert('mh2AlertBoard', {
+      tone: boardOverdue > 0 ? 'urgent' : (boardCount > 0 ? 'attention' : 'good'),
+      title:'Board review status',
+      badge: boardOverdue > 0 ? (boardOverdue + ' overdue') : (boardCount > 0 ? (boardCount + ' open') : 'Clear'),
+      copy: boardCount > 0 ? (boardCount + ' board-submitted item' + (boardCount === 1 ? '' : 's') + ' awaiting review.') : 'No board items need review right now.',
+      href:'board_member_hub_v2.html'
+    });
+
+    const maintCount = Number(summary.maintenance || 0);
+    const maintUrgent = Number(summary.maintenanceUrgent || 0);
+    setAlert('mh2AlertActivity', {
+      tone: maintUrgent > 0 ? 'urgent' : (maintCount > 0 ? 'attention' : 'good'),
+      title:'Maintenance activity',
+      badge: maintUrgent > 0 ? (maintUrgent + ' urgent') : (maintCount > 0 ? (maintCount + ' open') : 'Quiet'),
+      copy: maintCount > 0 ? (maintCount + ' open maintenance item' + (maintCount === 1 ? '' : 's') + ' for this community.') : 'No open maintenance activity for this community.',
+      href:'maintenance_updates.html'
+    });
+
+    const annualCount = Number(summary.annual || 0);
+    const annualOverdue = Number(summary.annualOverdue || 0);
+    setAlert('mh2AlertApprovals', {
+      tone: annualOverdue > 0 ? 'urgent' : (annualCount > 0 ? 'attention' : 'good'),
+      title:'Annual meeting approvals',
+      badge: annualOverdue > 0 ? (annualOverdue + ' overdue') : (annualCount > 0 ? (annualCount + ' open') : 'Clear'),
+      copy: annualCount > 0 ? (annualCount + ' annual meeting approval workflow' + (annualCount === 1 ? '' : 's') + ' active for this community.') : 'No active annual meeting approval workflows.',
+      href:'board_member_hub_v2.html#annualApprovalRequestsSection'
+    });
+
+    try{ document.documentElement.setAttribute('data-zummee-smart-alerts-v426-ready', '1'); }catch(_e){}
+
+    console.info('[Manager Hub v633] accessible smart alerts rendered', summary);
+    return true;
+  }
+
+  async function refresh(){
+    if(state.inFlight) return state.inFlight;
+
+    state.inFlight = (async function(){
+      try{
+        const summary = await loadSummary();
+        render(summary);
+        return summary;
+      }catch(err){
+        const fallback = state.latest || {
+          community:activeCommunity(),
+          clientReady:false,
+          clientSource:'fatal',
+          board:Number(state.lastGood.board || 0),
+          boardOverdue:0,
+          maintenance:Number(state.lastGood.maintenance || 0),
+          maintenanceUrgent:0,
+          annual:Number(state.lastGood.annual || 0),
+          annualOverdue:0,
+          sources:{ fatal:err && err.message ? err.message : String(err) },
+          loadedAt:Date.now()
+        };
+        state.latest = fallback;
+        window.__ManagerHubSmartAlertsSummaryV633 = fallback;
+        render(fallback);
+        return fallback;
+      }finally{
+        state.inFlight = null;
+      }
+    })();
+
+    return state.inFlight;
+  }
+
+  window.refreshManagerHubCanonicalSmartAlerts = refresh;
+  window.refreshManagerHubSmartCardsAuthoritative = refresh;
+  window.getManagerHubSmartCardsSummary = function(){ return window.__ManagerHubSmartAlertsSummaryV633 || state.latest || null; };
+  window.getManagerHubSmartCardsDeploymentStatus = function(){
+    return {
+      build: window.ZUMMEE_BUILD || '',
+      accessibleMarker: !!window.__MANAGER_HUB_V633_ACCESSIBLE_SMART_ALERTS,
+      helperType: typeof window.refreshManagerHubCanonicalSmartAlerts,
+      summary: window.getManagerHubSmartCardsSummary()
+    };
+  };
+
+  function boot(){
+    setTimeout(refresh, 300);
+    [1000, 2200, 4200, 7200, 11000].forEach(function(ms){ setTimeout(refresh, ms); });
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', boot, { once:true });
+  }else{
+    boot();
+  }
+
+  window.addEventListener('pageshow', function(){ setTimeout(boot, 150); });
+  window.addEventListener('focus', function(){ setTimeout(refresh, 150); });
+  window.addEventListener('zummee:community-changed', function(){ setTimeout(boot, 150); });
+})();
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <style id="zummee-manager-smooth-return-css-v611">
   /*
     v611: Smooth Manager Hub return.
@@ -43,7 +504,7 @@
 
 
 
-<script>window.ZUMMEE_BUILD="2026-05-08-v616-manager-hub-ops-reminders-pill";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD = "2026-05-08-v633-manager-hub-accessible-smart-alerts";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <script id="zummee-manager-canonical-preboot-v608">
 /*
@@ -434,9 +895,9 @@ window.__MH_VERSION = 'v611_smooth_return_no_jump';
     document.addEventListener('community:changed', resetForCommunityChange);
     window.addEventListener('zummee:community-changed', resetForCommunityChange);
   })();
-  
+</script>
 
-  <script>
+<script>
     (function(){
       try{
         var activeId = String(localStorage.getItem('zummeeActiveCommunityId') || localStorage.getItem('activeCommunityId') || localStorage.getItem('currentCommunityId') || localStorage.getItem('zummee_selected_community_id') || '').trim();
@@ -3072,6 +3533,51 @@ html[data-theme="dark"] .mh2-ask-close,html[data-theme="dark"] .mh2-ask-modal .m
   }
 }
 </style>
+
+<style id="manager-hub-v622-stable-ops-pill-css">
+#mh2OpsPortalPillStable{
+  margin-top:10px;
+  min-height:68px;
+  padding:12px 16px;
+  border-radius:22px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  text-decoration:none;
+  color:var(--ink);
+  background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(246,250,254,.90));
+  border:2px solid rgba(141,190,255,.55);
+  box-shadow:0 10px 24px rgba(18,42,67,.07), inset 0 1px 0 rgba(255,255,255,.80);
+  transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
+}
+#mh2OpsPortalPillStable:hover{
+  transform:translateY(-1px);
+  box-shadow:0 14px 28px rgba(18,42,67,.10), inset 0 1px 0 rgba(255,255,255,.85);
+}
+#mh2OpsPortalPillStable.is-clear{border-color:#22c55e;background:linear-gradient(180deg,#f7fbf8,#eef8f1);}
+#mh2OpsPortalPillStable.is-clear .mh2-ops-pill-kicker,
+#mh2OpsPortalPillStable.is-clear .mh2-ops-pill-title,
+#mh2OpsPortalPillStable.is-clear .mh2-ops-pill-badge{color:#166534;}
+#mh2OpsPortalPillStable.is-clear .mh2-ops-pill-badge{border-color:rgba(34,197,94,.36);}
+#mh2OpsPortalPillStable.is-due{border-color:#ef4444;background:linear-gradient(180deg,#fff7f7,#ffefef);box-shadow:0 0 0 0 rgba(239,68,68,.20),0 10px 24px rgba(239,68,68,.12);animation:mh2OpsPillPulse 1.8s ease-in-out infinite;}
+#mh2OpsPortalPillStable.is-due .mh2-ops-pill-kicker,
+#mh2OpsPortalPillStable.is-due .mh2-ops-pill-title,
+#mh2OpsPortalPillStable.is-due .mh2-ops-pill-badge{color:#b91c1c;}
+#mh2OpsPortalPillStable.is-due .mh2-ops-pill-badge{border-color:rgba(239,68,68,.42);}
+#mh2OpsPortalPillStable.is-loading{opacity:.82;}
+html[data-theme="dark"] #mh2OpsPortalPillStable{background:linear-gradient(180deg,rgba(24,39,57,.96),rgba(18,30,45,.94));border-color:rgba(130,177,255,.22);color:var(--ink);}
+html[data-theme="dark"] #mh2OpsPortalPillStable.is-clear{background:linear-gradient(180deg,rgba(18,52,38,.92),rgba(11,34,24,.96));border-color:rgba(34,197,94,.35);}
+html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradient(180deg,rgba(79,23,29,.96),rgba(53,14,19,.98));border-color:rgba(239,68,68,.48);}
+@media(max-width:760px){
+  #mh2OpsPortalPillStable{align-items:flex-start;flex-direction:column;border-radius:20px;}
+}
+</style>
+
+
+
+
+
 </head>
 <body class="manager-hub-page">
   <main class="mh2-page">
@@ -3176,12 +3682,12 @@ html[data-theme="dark"] .mh2-ask-close,html[data-theme="dark"] .mh2-ask-modal .m
           </div>
         </section>
 
-        <a id="mh2OperationsPortalPill" class="mh2-ops-portal-pill is-loading" href="daily_ops_rebuild.html" data-mh2-context-link aria-label="Operations Portal due-date status">
+        <a id="mh2OpsPortalPillStable" class="mh2-ops-portal-pill is-loading" href="daily_ops_rebuild.html" data-mh2-context-link aria-label="Operations Portal due-date status">
           <div class="mh2-ops-pill-main">
             <span class="mh2-ops-pill-kicker">Operations Portal</span>
-            <span id="mh2OperationsPortalPillTitle" class="mh2-ops-pill-title">Checking operations due dates…</span>
+            <span id="mh2OpsPortalPillTitleStable" class="mh2-ops-pill-title">Checking operations due dates…</span>
           </div>
-          <span id="mh2OperationsPortalPillBadge" class="mh2-ops-pill-badge">Loading</span>
+          <span id="mh2OpsPortalPillBadgeStable" class="mh2-ops-pill-badge">Loading</span>
         </a>
         <div id="mh2OperationsShortcutRow" class="mh2-ops-shortcut-row" aria-label="Operations quick actions">
           <a id="managerActionCenterLink" class="mh2-ops-shortcut mh2-ops-shortcut--primary" href="manager_action_center.html" data-mh2-context-link>Open Action Center</a>
@@ -4221,6 +4727,11 @@ html[data-theme="dark"] .mh2-ask-close,html[data-theme="dark"] .mh2-ask-modal .m
         }
       }
       function approvalStatusLabel(status){
+        var st = String(status || 'pending').toLowerCase().trim();
+        if(st === 'pending_board') return 'Board Review';
+        if(st === 'pending_supervisor') return 'Supervisor Review';
+        if(st === 'pending_admin_mailing' || st === 'ready_to_mail') return 'Admin / Mailing';
+        if(st === 'completed' || st === 'complete') return 'Completed';
         return String(status || 'pending').replace(/_/g,' ').replace(/(^|\s)\w/g, function(ch){ return ch.toUpperCase(); });
       }
       function annualApprovalStartedAt(row){
@@ -4248,7 +4759,13 @@ html[data-theme="dark"] .mh2-ask-close,html[data-theme="dark"] .mh2-ask-modal .m
       }
       function getActiveAnnualApprovalRows(rows){
         rows = Array.isArray(rows) ? rows : [];
-        return rows.filter(function(row){ return isActiveAnnualApprovalStatus(row && row.status); });
+        return rows.filter(function(row){
+          if(!row) return false;
+          if(row.archived_at || row.mailed_at) return false;
+          var st = String(row.current_step || row.approval_status || row.status || '').toLowerCase().trim();
+          if(st === 'completed' || st === 'complete' || st === 'closed' || st === 'archived') return false;
+          return true;
+        });
       }
       function normalizeAnnualCommunityName(value){
         return String(value || '').toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
@@ -4272,14 +4789,19 @@ html[data-theme="dark"] .mh2-ask-close,html[data-theme="dark"] .mh2-ask-modal .m
         if(!body) return;
         try{
           var sb = await requireSb();
-          var q = await sb.from('annual_meeting_packet_requests').select('*').limit(200);
+          var q = await sb.from('annual_meeting_approval_requests')
+            .select('id,community_id,association_legal_name,current_step,approval_status,archived_at,mailed_at,created_at,updated_at,initiated_at,next_annual_meeting_date')
+            .eq('community_id', communityId)
+            .is('archived_at', null)
+            .neq('current_step', 'completed')
+            .neq('approval_status', 'completed')
+            .order('updated_at', { ascending:false })
+            .limit(50);
           if(q.error) throw q.error;
-          var activeCommunityName = getSelectedCommunityName();
-          var allRows = (q.data || []).filter(function(item){ return annualApprovalMatchesCurrentCommunity(item, communityId, activeCommunityName); });
-          var rows = getActiveAnnualApprovalRows(allRows);
+          var rows = getActiveAnnualApprovalRows(q.data || []);
           setText('mh2ApprovalPill', String(rows.length));
-          setText('mh2ApprovalNote', rows.length ? ('Current approval items for ' + (getSelectedCommunityName() || 'the selected community') + '.') : 'No approval items for this community.');
-          setText('mh2ApprovalFoot', rows.length ? ('Showing the latest ' + String(Math.min(rows.length, 4)) + ' approval item' + (rows.length===1?'':'s') + ' for ' + (getSelectedCommunityName() || 'the selected community') + '.') : 'Open annual approval items for the selected community.');
+          setText('mh2ApprovalNote', rows.length ? ('Active annual meeting approval workflows for ' + (getSelectedCommunityName() || 'the selected community') + '.') : 'No active annual meeting approval workflows for this community.');
+          setText('mh2ApprovalFoot', rows.length ? ('Showing the latest ' + String(Math.min(rows.length, 4)) + ' active workflow' + (rows.length===1?'':'s') + ' for ' + (getSelectedCommunityName() || 'the selected community') + '.') : 'Open annual approval workflows for the selected community.');
           var overdueApprovalRows = rows.filter(isAnnualApprovalOverTwoDays);
           var overdueApprovalCount = overdueApprovalRows.length;
           var approvalAlertTone = overdueApprovalCount ? 'urgent' : (rows.length ? 'attention' : 'good');
@@ -4288,29 +4810,32 @@ html[data-theme="dark"] .mh2-ask-close,html[data-theme="dark"] .mh2-ask-modal .m
             title: 'Annual meeting approvals',
             badge: overdueApprovalCount ? (String(overdueApprovalCount) + ' overdue') : (rows.length ? (String(rows.length) + ' open') : 'Clear'),
             copy: overdueApprovalCount
-              ? (String(overdueApprovalCount) + ' annual meeting approval item' + (overdueApprovalCount===1?' has':'s have') + ' been open more than 2 days for ' + (getSelectedCommunityName() || 'the selected community') + '.')
-              : (rows.length ? (String(rows.length) + ' approval item' + (rows.length===1?'':'s') + ' in progress for ' + (getSelectedCommunityName() || 'the selected community') + '.') : 'No active items'),
-            href: getAnnualMeetingSmartHref()
+              ? (String(overdueApprovalCount) + ' annual meeting approval workflow' + (overdueApprovalCount===1?' has':'s have') + ' been open more than 2 days for ' + (getSelectedCommunityName() || 'the selected community') + '.')
+              : (rows.length ? (String(rows.length) + ' approval workflow' + (rows.length===1?'':'s') + ' in progress for ' + (getSelectedCommunityName() || 'the selected community') + '.') : 'No active annual meeting approval workflows.'),
+            href: 'board_member_hub_v2.html#annualApprovalRequestsSection'
           });
           if(!rows.length){
-            body.innerHTML = '<div class="mh2-placeholder">No annual approval items for this community.</div>';
+            body.innerHTML = '<div class="mh2-placeholder">No annual approval workflows for this community.</div>';
+            window.__ManagerHubAnnualApprovalSmartCardV634Status = { build:'v634-annual-approvals-real-source', ok:true, count:0, rows:[] };
             return;
           }
           body.innerHTML = rows.slice(0,4).map(function(row){
-            var href = getAnnualMeetingSmartHref();
-            var community = row.community_name || getSelectedCommunityName() || 'Community';
-            var status = approvalStatusLabel(row.status);
+            var href = 'board_member_hub_v2.html#annualApprovalRequestsSection';
+            var community = row.association_legal_name || getSelectedCommunityName() || 'Annual Meeting Packet';
+            var status = approvalStatusLabel(row.current_step || row.approval_status || row.status);
             var inner = '<article class="mh2-list-item">' +
               '<div><div class="mh2-item-title">' + esc(community) + '</div><div class="mh2-item-copy">Approval status: ' + esc(status) + '</div></div>' +
               '<div class="mh2-item-tag"' + (isAnnualApprovalOverTwoDays(row) ? ' style="color:#b91c1c;border-color:#fecaca;background:#fff5f5"' : '') + '>' + esc(fmtAgo(annualApprovalStartedAt(row))) + '</div>' +
             '</article>';
             return '<a href="' + esc(href) + '" style="text-decoration:none;color:inherit">' + inner + '</a>';
           }).join('');
+          window.__ManagerHubAnnualApprovalSmartCardV634Status = { build:'v634-annual-approvals-real-source', ok:true, count:rows.length, rows:rows };
         }catch(_e){
           setText('mh2ApprovalPill', '0');
           setText('mh2ApprovalNote', 'Approval data unavailable right now.');
-          setText('mh2ApprovalFoot', 'Open annual approval items for the selected community.');
+          setText('mh2ApprovalFoot', 'Open annual approval workflows for the selected community.');
           body.innerHTML = '<div class="mh2-placeholder">Unable to load annual approvals.</div>';
+          window.__ManagerHubAnnualApprovalSmartCardV634Status = { build:'v634-annual-approvals-real-source', ok:false, error:(_e && _e.message) ? _e.message : String(_e) };
         }
       }
       function setToolCardState(cardId, opts){
@@ -4776,12 +5301,8 @@ html[data-theme="dark"] .mh2-ask-close,html[data-theme="dark"] .mh2-ask-modal .m
           urgentActivity = 0;
         }
 
-        setToolCardState('dailyOpsCard', {
-          tone: boardOverdue ? 'urgent' : (boardOpen || liveEvents ? 'gold' : 'good'),
-          badge: boardOverdue ? 'Needs attention' : (boardOpen || liveEvents ? 'Active' : 'Ready'),
-          metric1: boardOpen,
-          metric2: boardOverdue + urgentWorkOrders
-        });
+        // v621: Daily Ops / Operations Portal is owned only by the Supabase Operations summary engine.
+        // Do not repaint this card from board/live legacy counts.
         setToolCardState('boardMemberHubCard', {
           tone: boardOverdue ? 'urgent' : (boardOpen ? 'gold' : 'good'),
           badge: boardOverdue ? 'Overdue' : (boardOpen ? 'Open' : 'Clear'),
@@ -4824,7 +5345,8 @@ html[data-theme="dark"] .mh2-ask-close,html[data-theme="dark"] .mh2-ask-modal .m
         setToolCardState('inspectionsCard', { tone: inspectionWos ? 'gold' : 'good', badge: inspectionWos ? 'Inspection open' : 'Field ready', metric1: inspectionWos, metric2: inspectionWos ? 'Follow-up' : 'Ready' });
         setToolCardState('annualMeetingsCard', { tone: approvalsOverdue ? 'urgent' : (approvals ? 'gold' : 'good'), badge: approvalsOverdue ? 'Overdue' : (approvals ? 'Open approvals' : 'Ready'), metric1: approvals, metric2: approvalsOverdue ? approvalsOverdue : (approvals ? 'In progress' : 'Clear') });
         setToolCardState('preferredVendorsCard', { tone: 'good', badge: 'Directory ready', metric1: 'Ready', metric2: 'On' });
-        setToolCardState('remindersCard', { tone: boardOverdue ? 'urgent' : (boardOpen ? 'gold' : 'good'), badge: boardOverdue ? 'Overdue' : (boardOpen ? 'Due soon' : 'Clear'), metric1: boardOpen, metric2: boardOverdue });
+        // v621: Reminders card is owned only by the Supabase Operations summary engine.
+        // Do not repaint this card from board legacy counts.
         setToolCardState('communityTextingCard', { tone: 'good', badge: 'Text ready', metric1: 'Ready', metric2: 'Live' });
         setToolCardState('companyDirectoryCard', { tone: 'good', badge: 'Directory', metric1: 'Ready', metric2: 'Company' });
         setToolCardState('managerTrainingCard', { tone: 'good', badge: 'Guide', metric1: 'Ready', metric2: 'Reference' });
@@ -7519,9 +8041,9 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
   }
 
   function renderOpsPill(summary){
-    const pill = $('mh2OperationsPortalPill');
-    const title = $('mh2OperationsPortalPillTitle');
-    const badge = $('mh2OperationsPortalPillBadge');
+    const pill = $('mh2OpsPortalPillStable');
+    const title = $('mh2OpsPortalPillTitleStable');
+    const badge = $('mh2OpsPortalPillBadgeStable');
 
     if(!pill || !title || !badge) return;
 
@@ -7589,172 +8111,84 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
 </script>
 
 
+<script id="manager-hub-v621-single-ops-writer-boot">
+/*
+  Manager Hub v621 — Single Operations Writer
 
-<script id="manager-hub-v617-annual-approval-smart-card-live-requests">
+  Long-term ownership:
+  - Supabase Operations summary is the only writer for:
+    - Operations Portal pill
+    - Daily Ops card
+    - Reminders card
+  - Legacy core card loader no longer writes those cards.
+  - No MutationObserver fight.
+  - No textContent guard.
+  - No protected setter.
+*/
 (function(){
-  'use strict';
-  if(window.__ManagerHubAnnualApprovalSmartCardV617) return;
-  window.__ManagerHubAnnualApprovalSmartCardV617 = true;
+  if(window.__ManagerHubSingleOpsWriterBootV621) return;
+  window.__ManagerHubSingleOpsWriterBootV621 = true;
 
-  const BUILD = '2026-05-10-v617-annual-approval-requests-smart-card';
-
-  function byId(id){ return document.getElementById(id); }
-  function clean(v){ return String(v == null ? '' : v).trim(); }
-  function esc(v){ return clean(v).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
-  function isUuid(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean(v)); }
-  function setText(id, value){ const n = byId(id); if(n) n.textContent = String(value); }
-
-  function getSb(){
-    try{ if(window.supabaseClient && typeof window.supabaseClient.from === 'function') return window.supabaseClient; }catch(_e){}
-    try{ if(window.sb && typeof window.sb.from === 'function') return window.sb; }catch(_e){}
-    try{ if(window.getSupabase){ const c = window.getSupabase(); if(c && typeof c.from === 'function') return c; } }catch(_e2){}
+  async function refresh(){
+    try{
+      if(typeof window.refreshManagerHubOperationsPortalPill === 'function'){
+        return await window.refreshManagerHubOperationsPortalPill();
+      }
+    }catch(err){
+      console.warn('[Manager Hub v621] Operations single-writer refresh failed', err);
+    }
     return null;
   }
 
-  function selectedCommunity(){
-    let id = '', name = '';
-    const sel = byId('zummeeCommunitySelect') || byId('communitySelect');
-    if(sel){
-      const raw = clean(sel.value);
-      if(isUuid(raw)) id = raw;
-      const opt = sel.options && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
-      name = clean(opt && opt.textContent);
-    }
-    try{
-      if(!id && window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
-        const c = window.ZummeeCommunityState.getActiveCommunity();
-        if(c && isUuid(c.id)){ id = clean(c.id); name = clean(c.name) || name; }
-      }
-    }catch(_e){}
-    return { id, name };
-  }
-
-  function step(row){
-    return clean(row && (row.current_step || row.approval_status)).toLowerCase();
-  }
-
-  function active(row){
-    const st = step(row);
-    if(!row) return false;
-    if(row.archived_at || row.mailed_at) return false;
-    if(st === 'completed' || st === 'complete' || st === 'closed' || st === 'archived') return false;
-    return true;
-  }
-
-  function label(row){
-    const st = step(row);
-    if(st === 'pending_board') return 'Board review';
-    if(st === 'pending_supervisor') return 'Supervisor review';
-    if(st === 'pending_admin_mailing' || st === 'ready_to_mail') return 'Admin / mailing';
-    if(st.indexOf('reject') >= 0) return 'Changes requested';
-    return st ? st.replace(/_/g, ' ') : 'In progress';
-  }
-
-  function when(row){
-    const raw = clean(row && (row.updated_at || row.created_at || row.initiated_at));
-    if(!raw) return '';
-    const d = new Date(raw);
-    if(Number.isNaN(d.getTime())) return raw.slice(0,10);
-    const diff = Date.now() - d.getTime();
-    const days = Math.floor(diff / 86400000);
-    if(days <= 0) return 'Today';
-    if(days === 1) return '1 day';
-    return days + ' days';
-  }
-
-  function overdue(row){
-    const raw = clean(row && (row.created_at || row.initiated_at || row.updated_at));
-    const d = raw ? new Date(raw) : null;
-    return !!(d && !Number.isNaN(d.getTime()) && Date.now() - d.getTime() >= 2 * 86400000);
-  }
-
-  function setAlertCard(openRows, ctx){
-    const card = byId('mh2AlertApprovals');
-    if(!card) return;
-    const overdueCount = openRows.filter(overdue).length;
-    const openCount = openRows.length;
-    const tone = overdueCount ? 'is-urgent' : (openCount ? 'is-attention' : 'is-good');
-    const badge = overdueCount ? overdueCount + ' OVERDUE' : (openCount ? openCount + ' OPEN' : 'CLEAR');
-    const copy = openCount
-      ? openCount + ' annual meeting approval workflow' + (openCount === 1 ? ' is' : 's are') + ' active for ' + (ctx.name || 'the selected community') + '.'
-      : 'No active annual meeting approval workflows.';
-    card.classList.remove('is-urgent','is-attention','is-good');
-    card.classList.add(tone);
-    card.setAttribute('href', 'board_member_hub_v2.html#annualApprovalRequestsSection');
-    card.innerHTML = '<div class="mh2-alert-top"><div class="mh2-alert-title">Annual meeting approvals</div><div class="mh2-alert-badge">' + esc(badge) + '</div></div><div class="mh2-alert-copy">' + esc(copy) + '</div>';
-  }
-
-  function renderList(openRows, ctx){
-    setText('mh2ApprovalPill', openRows.length);
-    setText('mh2ApprovalNote', openRows.length ? ('Active annual meeting approval workflows for ' + (ctx.name || 'the selected community') + '.') : 'No active annual meeting approval workflows.');
-    setText('mh2ApprovalFoot', openRows.length ? ('Showing latest ' + Math.min(openRows.length, 4) + ' active workflow' + (openRows.length === 1 ? '' : 's') + '.') : 'Open annual approval workflows for the selected community.');
-    const body = byId('annualApprovalBody');
-    if(!body) return;
-    if(!openRows.length){
-      body.innerHTML = '<div class="mh2-placeholder">No annual approval workflows for this community.</div>';
-      return;
-    }
-    body.innerHTML = openRows.slice(0,4).map(function(row){
-      const title = row.association_legal_name || ctx.name || 'Annual Meeting Packet';
-      return '<a href="board_member_hub_v2.html#annualApprovalRequestsSection" style="text-decoration:none;color:inherit">' +
-        '<article class="mh2-list-item">' +
-          '<div><div class="mh2-item-title">' + esc(title) + '</div><div class="mh2-item-copy">Approval status: ' + esc(label(row)) + '</div></div>' +
-          '<div class="mh2-item-tag">' + esc(when(row)) + '</div>' +
-        '</article>' +
-      '</a>';
-    }).join('');
-  }
-
-  async function refresh(){
-    const ctx = selectedCommunity();
-    const out = { build:BUILD, ok:false, community:ctx, rows:[], activeRows:[], error:null, loadedAt:new Date().toISOString() };
-    try{
-      const sb = getSb();
-      if(!sb) throw new Error('Supabase client unavailable.');
-      if(!ctx.id) throw new Error('No selected community.');
-      const res = await sb
-        .from('annual_meeting_approval_requests')
-        .select('id,community_id,association_legal_name,current_step,approval_status,archived_at,mailed_at,created_at,updated_at,initiated_at,next_annual_meeting_date')
-        .eq('community_id', ctx.id)
-        .is('archived_at', null)
-        .neq('current_step', 'completed')
-        .neq('approval_status', 'completed')
-        .order('updated_at', { ascending:false })
-        .limit(50);
-      if(res.error) throw res.error;
-      out.ok = true;
-      out.rows = Array.isArray(res.data) ? res.data : [];
-      out.activeRows = out.rows.filter(active);
-      setAlertCard(out.activeRows, ctx);
-      renderList(out.activeRows, ctx);
-    }catch(err){
-      out.error = err && err.message ? err.message : String(err);
-      setAlertCard([], ctx);
-      renderList([], ctx);
-    }
-    window.__ManagerHubAnnualApprovalSmartCardV617Status = out;
-    return out;
-  }
-
-  window.mh2RefreshAnnualApprovalSmartAlert = refresh;
-  window.getManagerHubAnnualApprovalSmartCardStatus = function(){ return window.__ManagerHubAnnualApprovalSmartCardV617Status || { build:BUILD, ok:false }; };
-
   function boot(){
-    setTimeout(refresh, 200);
-    setTimeout(refresh, 1200);
-    setTimeout(refresh, 3500);
-    const sel = byId('zummeeCommunitySelect') || byId('communitySelect');
-    if(sel && !sel.__annualV617Bound){
-      sel.__annualV617Bound = true;
-      sel.addEventListener('change', function(){ setTimeout(refresh, 150); setTimeout(refresh, 1000); });
-    }
+    [100, 400, 900, 1600, 2600, 4200, 6500].forEach(function(ms){
+      setTimeout(refresh, ms);
+    });
   }
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once:true });
-  else boot();
-  window.addEventListener('pageshow', function(){ setTimeout(refresh, 300); });
+
+  window.refreshManagerHubOperationsPortalPillStable = refresh;
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', boot, { once:true });
+  }else{
+    boot();
+  }
+
+  window.addEventListener('pageshow', function(){ setTimeout(boot, 100); });
+  window.addEventListener('focus', function(){ setTimeout(refresh, 100); });
+  window.addEventListener('zummee:community-changed', function(){ setTimeout(boot, 150); });
 })();
 </script>
 
+
+<script id="manager-hub-v622-stable-ops-dom-diagnostics">
+(function(){
+  if(window.__ManagerHubStableOpsDomDiagnosticsV622) return;
+  window.__ManagerHubStableOpsDomDiagnosticsV622 = true;
+
+  window.getManagerHubOperationsDomStatus = function(){
+    return {
+      oldPillExists: !!document.getElementById('mh2OperationsPortalPill'),
+      oldTitleExists: !!document.getElementById('mh2OperationsPortalPillTitle'),
+      oldBadgeExists: !!document.getElementById('mh2OperationsPortalPillBadge'),
+      stableTitle: document.getElementById('mh2OpsPortalPillTitleStable')?.textContent || '',
+      stableBadge: document.getElementById('mh2OpsPortalPillBadgeStable')?.textContent || '',
+      summary: (typeof window.getManagerHubOperationsPortalSummary === 'function' ? window.getManagerHubOperationsPortalSummary() : null)
+    };
+  };
+})();
+</script>
+
+
+
+
+<script id="manager-hub-v634-annual-approval-status-debug">
+(function(){
+  window.getManagerHubAnnualApprovalSmartCardStatus = function(){
+    return window.__ManagerHubAnnualApprovalSmartCardV634Status || { build:'v634-annual-approvals-real-source', note:'No approval summary loaded yet' };
+  };
+})();
+</script>
 </body>
 </html>
 
