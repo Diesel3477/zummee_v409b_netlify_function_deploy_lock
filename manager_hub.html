@@ -127,7 +127,7 @@
 </script>
 
 <style id="zummee-v412-smart-alert-early-hide-css">
-  /* v618: retired old smart-alert ready-gate rule */
+  html:not([data-zummee-smart-alerts-v426-ready="1"]) #smartAlertStrip .mh2-alert{visibility:hidden!important;opacity:0!important;}
 
 
 /* v466: compact Manager Hub polish + remove legacy floating debug close pill */
@@ -202,8 +202,8 @@
     min-width:64px!important;
     white-space:nowrap!important;
   }
-  /* v618: retired old smart-alert ready-gate rule */
-  /* v618: retired old smart-alert ready-gate rule */
+  html:not([data-zummee-smart-alerts-v426-ready="1"]) #smartAlertStrip .mh2-alert{visibility:hidden!important;opacity:0!important;}
+  html[data-zummee-smart-alerts-v426-ready="1"] #smartAlertStrip .mh2-alert{visibility:visible!important;opacity:1!important;transition:opacity .16s ease;}
   @media (max-width:760px){
     #smartAlertStrip{min-height:510px!important;}
     #smartAlertStrip .mh2-smart-strip{min-height:390px!important;}
@@ -259,6 +259,181 @@ window.__MH_VERSION = 'v611_smooth_return_no_jump';
     })();
 </script>
 
+  <script id="zummee-v522-smart-alert-stability-controller">
+  (function(){
+    'use strict';
+    if(window.__ZUMMEE_V522_SMART_ALERT_STABILITY__) return;
+
+    var READY_ATTR = 'data-zummee-smart-alerts-v426-ready';
+    var IDS = ['mh2AlertBoard','mh2AlertActivity','mh2AlertApprovals'];
+    var state = window.__ZUMMEE_V522_SMART_ALERT_STABILITY__ = {
+      version: 'v523-smart-alert-layout-reserve-lock',
+      allowReady: false,
+      pendingReady: false,
+      suppress: false,
+      startedAt: Date.now(),
+      lastStable: {},
+      readyTimer: null,
+      observer: null
+    };
+
+    var originalSetAttribute = Element.prototype.setAttribute;
+    var originalRemoveAttribute = Element.prototype.removeAttribute;
+
+    // Block older scripts from making the cards visible before all three cards settle.
+    Element.prototype.setAttribute = function(name, value){
+      try{
+        if(this === document.documentElement && String(name) === READY_ATTR && String(value) === '1' && !state.allowReady){
+          state.pendingReady = true;
+          scheduleReadyCheck(220);
+          return;
+        }
+      }catch(_e){}
+      return originalSetAttribute.apply(this, arguments);
+    };
+
+    function $(id){ return document.getElementById(id); }
+    function text(el, sel){ var node = el && el.querySelector(sel); return node ? String(node.textContent || '').trim() : ''; }
+    function ctxKey(){
+      var id = '';
+      try{
+        var sel = $('zummeeCommunitySelect') || $('communitySelect');
+        if(sel && sel.value) id = String(sel.value || '').trim();
+      }catch(_e){}
+      if(!id){
+        try{ id = String(localStorage.getItem('zummee_selected_community_id') || localStorage.getItem('zummeeActiveCommunityId') || localStorage.getItem('activeCommunityId') || localStorage.getItem('currentCommunityId') || '').trim(); }catch(_e2){}
+      }
+      return id || 'default';
+    }
+    function cacheKey(){ return 'zummee_manager_smart_alerts_stable_v522:' + ctxKey(); }
+    function toneOf(el){
+      if(!el) return 'good';
+      if(el.classList.contains('is-urgent')) return 'urgent';
+      if(el.classList.contains('is-attention')) return 'attention';
+      return 'good';
+    }
+    function isPlaceholderSnapshot(s){
+      if(!s) return true;
+      var joined = [s.title, s.badge, s.copy].join(' ').toLowerCase();
+      return /loading|checking|refreshing|please wait|will appear here after refresh/.test(joined);
+    }
+    function isEmptySnapshot(s){
+      if(!s) return false;
+      var joined = [s.badge, s.copy].join(' ').toLowerCase();
+      return /^(stable|clear|quiet)$/.test(String(s.badge || '').trim().toLowerCase()) || /no open|no active|no current|no approval|no maintenance/.test(joined);
+    }
+    function captureCard(id){
+      var el = $(id);
+      if(!el) return null;
+      return {
+        id: id,
+        tone: toneOf(el),
+        href: el.getAttribute('href') || '',
+        title: text(el, '.mh2-alert-title'),
+        badge: text(el, '.mh2-alert-badge'),
+        copy: text(el, '.mh2-alert-copy')
+      };
+    }
+    function renderCard(snap){
+      if(!snap || !snap.id) return;
+      var el = $(snap.id);
+      if(!el) return;
+      state.suppress = true;
+      try{
+        el.classList.remove('is-good','is-attention','is-urgent');
+        el.classList.add(snap.tone === 'urgent' ? 'is-urgent' : (snap.tone === 'attention' ? 'is-attention' : 'is-good'));
+        if(snap.href) el.setAttribute('href', snap.href);
+        var title = el.querySelector('.mh2-alert-title');
+        var badge = el.querySelector('.mh2-alert-badge');
+        var copy = el.querySelector('.mh2-alert-copy');
+        if(title) title.textContent = snap.title || '';
+        if(badge) badge.textContent = snap.badge || '';
+        if(copy) copy.textContent = snap.copy || '';
+      }catch(_e){} finally{
+        setTimeout(function(){ state.suppress = false; }, 0);
+      }
+    }
+    function readCache(){
+      try{ return JSON.parse(sessionStorage.getItem(cacheKey()) || localStorage.getItem(cacheKey()) || '{}') || {}; }catch(_e){ return {}; }
+    }
+    function writeCache(payload){
+      try{ sessionStorage.setItem(cacheKey(), JSON.stringify(payload || {})); }catch(_e){}
+      try{ localStorage.setItem(cacheKey(), JSON.stringify(payload || {})); }catch(_e2){}
+    }
+    function restoreCachedCards(){
+      var cached = readCache();
+      IDS.forEach(function(id){
+        if(cached[id] && !isPlaceholderSnapshot(cached[id])){
+          state.lastStable[id] = cached[id];
+          renderCard(cached[id]);
+        }
+      });
+    }
+    function captureStableCards(){
+      var cached = readCache();
+      var changed = false;
+      IDS.forEach(function(id){
+        var snap = captureCard(id);
+        if(!snap) return;
+        var prev = state.lastStable[id] || cached[id];
+
+        // Never store loading/checking states.
+        if(isPlaceholderSnapshot(snap)){
+          if(prev && !isPlaceholderSnapshot(prev)) renderCard(prev);
+          return;
+        }
+
+        // During the initial settle window, do not let a late legacy writer flash a populated card to empty.
+        if(Date.now() - state.startedAt < 4200 && prev && !isEmptySnapshot(prev) && isEmptySnapshot(snap)){
+          renderCard(prev);
+          return;
+        }
+
+        state.lastStable[id] = snap;
+        cached[id] = snap;
+        changed = true;
+      });
+      if(changed) writeCache(cached);
+    }
+    function markReady(){
+      captureStableCards();
+      state.allowReady = true;
+      try{ originalSetAttribute.call(document.documentElement, READY_ATTR, '1'); }catch(_e){}
+      try{ console.info('[v522 smart alerts] stable render ready', state.lastStable); }catch(_e2){}
+    }
+    function scheduleReadyCheck(delay){
+      clearTimeout(state.readyTimer);
+      state.readyTimer = setTimeout(function(){ markReady(); }, delay || 360);
+    }
+    function observe(){
+      var strip = $('smartAlertStrip');
+      if(!strip || state.observer) return;
+      state.observer = new MutationObserver(function(){
+        if(state.suppress) return;
+        scheduleReadyCheck(320);
+      });
+      state.observer.observe(strip, {subtree:true, childList:true, characterData:true, attributes:true, attributeFilter:['class','href']});
+    }
+    function resetForCommunityChange(){
+      state.allowReady = false;
+      state.startedAt = Date.now();
+      try{ originalRemoveAttribute.call(document.documentElement, READY_ATTR); }catch(_e){}
+      restoreCachedCards();
+      scheduleReadyCheck(650);
+    }
+    function init(){
+      try{ originalRemoveAttribute.call(document.documentElement, READY_ATTR); }catch(_e){}
+      restoreCachedCards();
+      observe();
+      scheduleReadyCheck(900);
+      setTimeout(markReady, 2800);
+    }
+
+    document.addEventListener('DOMContentLoaded', init, {once:true});
+    window.addEventListener('pageshow', function(){ setTimeout(init, 0); });
+    document.addEventListener('community:changed', resetForCommunityChange);
+    window.addEventListener('zummee:community-changed', resetForCommunityChange);
+  })();
   
 
   <script>
@@ -281,87 +456,6 @@ window.__MH_VERSION = 'v611_smooth_return_no_jump';
   </script>
   <link rel="icon" type="image/png" href="favicon.png" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<script id="manager-hub-v619-community-assignments-legacy-guard">
-/*
-  Manager Hub v619 — Community Assignments Legacy Guard
-
-  Purpose:
-  - Stop repeated bad community_assignments requests that use legacy/nonexistent columns.
-  - Does not change the canonical dropdown source.
-  - Does not change smart cards.
-  - Does not change Operations Portal pill.
-*/
-(function(){
-  if(window.__ManagerHubV619CommunityAssignmentsGuard) return;
-  window.__ManagerHubV619CommunityAssignmentsGuard = true;
-
-  function isBadLegacyCommunityAssignmentRequest(input){
-    try{
-      var url = typeof input === "string" ? input : (input && input.url ? input.url : "");
-      if(!url || url.indexOf("/rest/v1/community_assignments?") === -1) return false;
-
-      var decoded = "";
-      try{ decoded = decodeURIComponent(url); }catch(_e){ decoded = url; }
-
-      return (
-        decoded.indexOf("select=community_id&user_id=") !== -1 ||
-        decoded.indexOf("select=community_id&auth_user_id=") !== -1 ||
-        decoded.indexOf("select=community_id,user_id") !== -1 ||
-        decoded.indexOf("select=community_id,auth_user_id") !== -1
-      );
-    }catch(_err){
-      return false;
-    }
-  }
-
-  function guardedEmptyResponse(){
-    return new Response(JSON.stringify([]), {
-      status: 200,
-      statusText: "OK",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Zummee-Guard": "manager-hub-v619-community-assignments"
-      }
-    });
-  }
-
-  if(window.fetch && !window.__ManagerHubOriginalFetchV619){
-    window.__ManagerHubOriginalFetchV619 = window.fetch.bind(window);
-
-    window.fetch = function(input, init){
-      if(isBadLegacyCommunityAssignmentRequest(input)){
-        try{
-          console.info("[Manager Hub v619] blocked legacy community_assignments lookup", typeof input === "string" ? input : input.url);
-        }catch(_e){}
-        return Promise.resolve(guardedEmptyResponse());
-      }
-      return window.__ManagerHubOriginalFetchV619(input, init);
-    };
-  }
-
-  window.getManagerHubV619GuardStatus = function(){
-    return {
-      guardInstalled: !!window.__ManagerHubV619CommunityAssignmentsGuard,
-      fetchWrapped: !!window.__ManagerHubOriginalFetchV619,
-      smartCardsVisible: ["mh2AlertBoard","mh2AlertActivity","mh2AlertApprovals"].map(function(id){
-        var el = document.getElementById(id);
-        if(!el) return { id:id, exists:false };
-        var cs = getComputedStyle(el);
-        return {
-          id:id,
-          exists:true,
-          visible: !(el.offsetParent === null) && cs.display !== "none" && cs.visibility !== "hidden" && cs.opacity !== "0",
-          display: cs.display,
-          visibility: cs.visibility,
-          opacity: cs.opacity
-        };
-      })
-    };
-  };
-})();
-</script>
-
   <script src="shared/community-state.js?v=2026-05-07-v615"></script>
   <script src="shared/input-undo-guard.js?v=2026-05-07-v615"></script>
   <!-- shared/zummee-design-system.css removed: file not present in stable build -->
@@ -7159,53 +7253,109 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
 </script>
 
 
-
-
-
-
-
-
-
-
-
-
-
-<script id="manager-hub-v624-operations-portal-single-owner">
+<script id="manager-hub-v616-ops-reminders-pill">
 /*
-  Manager Hub v624 — Operations Portal Pill Single Owner
-
-  Base:
-  - v623 correctly calculated and rendered the Operations Portal pill,
-    but old code kept overwriting it, causing visible flashing.
-  - v624 keeps the v623 data mapping but stops using constant text-lock fighting.
-
-  Scope:
-  - Operations Portal pill only.
-  - No smart-card changes.
-  - No community dropdown changes.
-  - Keeps v619 community_assignments guard.
-  - Keeps v618 broken-v522 removal.
+  Zummee Manager Hub v616
+  Long-term Operations Portal count source:
+  - ops_reminders, filtered by selected community, active, not completed, not archived
+  - ops_important_dates, filtered by selected community, active, not completed, not archived, due within 30 days/overdue
+  - BoardMembers.term_end, filtered by selected community, active, term ends within 45 days/overdue
+  This fixes Manager Hub not counting Annual Meeting Preparation reminders created by Annual Meetings.
 */
 (function(){
-  if(window.__ManagerHubOperationsPortalPillV624) return;
-  window.__ManagerHubOperationsPortalPillV624 = true;
+  if(window.__ManagerHubOpsRemindersPillV616) return;
+  window.__ManagerHubOpsRemindersPillV616 = true;
 
   const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
 
-  let inFlight = null;
-  let lastSummary = null;
-  let observer = null;
-  let rendering = false;
-  let lastRenderKey = '';
-
   function s(v){ return String(v == null ? '' : v).trim(); }
   function $(id){ return document.getElementById(id); }
-  function sleep(ms){ return new Promise(resolve => setTimeout(resolve, ms)); }
+  function uuidish(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s(v)); }
 
-  function hasUsableId(v){
-    v = s(v);
-    return v.length >= 20 && v.indexOf('undefined') === -1 && v.indexOf('null') === -1;
+  async function getClient(){
+    try{ if(window.supabaseClient && window.supabaseClient.from) return window.supabaseClient; }catch(_e){}
+    try{ if(window.sb && window.sb.from) return window.sb; }catch(_e){}
+    try{ if(window.getSupabase){ const c = window.getSupabase(); if(c && c.from) return c; } }catch(_e){}
+    try{ if(window.ensureSupabaseSync){ const c2 = window.ensureSupabaseSync(); if(c2 && c2.from) return c2; } }catch(_e){}
+    try{
+      if(window.supabase && window.supabase.createClient){
+        if(!window.__ManagerHubOpsSbV616){
+          window.__ManagerHubOpsSbV616 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
+        return window.__ManagerHubOpsSbV616;
+      }
+    }catch(_e){}
+    return null;
+  }
+
+  function readActiveCommunity(){
+    let id = '';
+    let name = '';
+
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const active = window.ZummeeCommunityState.getActiveCommunity();
+        if(active && active.id){
+          id = s(active.id);
+          name = s(active.name);
+        }
+      }
+    }catch(_e){}
+
+    try{
+      const select = $('zummeeCommunitySelect') || $('communitySelect') || document.querySelector('select[data-community-select], select[name="community"]');
+      if(select){
+        if(uuidish(select.value)) id = s(select.value);
+        const opt = select.options && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
+        if(opt && s(opt.textContent)) name = s(opt.textContent);
+      }
+    }catch(_e2){}
+
+    if(!id){
+      try{
+        const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+        const obj = raw ? JSON.parse(raw) : null;
+        if(obj && obj.id){
+          id = s(obj.id);
+          name = name || s(obj.name);
+        }
+      }catch(_e3){}
+    }
+
+    if(!id){
+      const keys = [
+        'zummee_active_community_id',
+        'zummee_selected_community_id',
+        'zummeeActiveCommunityId',
+        'activeCommunityId',
+        'currentCommunityId'
+      ];
+      for(const key of keys){
+        try{
+          const v = s(localStorage.getItem(key) || sessionStorage.getItem(key));
+          if(uuidish(v)){ id = v; break; }
+        }catch(_e4){}
+      }
+    }
+
+    if(!name){
+      const nameKeys = [
+        'zummee_active_community_name',
+        'zummee_selected_community_name',
+        'activeCommunityName',
+        'currentCommunityName',
+        'zummeeCurrentCommunityName'
+      ];
+      for(const key of nameKeys){
+        try{
+          const v = s(localStorage.getItem(key) || sessionStorage.getItem(key));
+          if(v){ name = v; break; }
+        }catch(_e5){}
+      }
+    }
+
+    return { id, name };
   }
 
   function todayDate(){
@@ -7229,14 +7379,6 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     return Math.round((d.getTime() - todayDate().getTime()) / 86400000);
   }
 
-  function dueInfo(v, windowDays){
-    const diff = daysFromToday(v);
-    const hasDate = diff !== null;
-    const overdue = hasDate && diff < 0;
-    const dueSoon = hasDate && diff >= 0 && diff <= Number(windowDays || 0);
-    return { diff, hasDate, overdue, dueSoon, shouldCount: overdue || dueSoon };
-  }
-
   function isActiveRow(row){
     row = row || {};
     const status = s(row.status || row.state || '').toLowerCase();
@@ -7245,87 +7387,37 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
     return true;
   }
 
-  function getClient(){
-    try{ if(window.supabaseClient && window.supabaseClient.from) return { client:window.supabaseClient, source:'window.supabaseClient' }; }catch(_e){}
-    try{ if(window.sb && window.sb.from) return { client:window.sb, source:'window.sb' }; }catch(_e){}
-    try{
-      if(window.getSupabase && typeof window.getSupabase === 'function'){
-        const c = window.getSupabase();
-        if(c && c.from) return { client:c, source:'getSupabase()' };
-      }
-    }catch(_e){}
-    try{
-      if(window.ensureSupabaseSync && typeof window.ensureSupabaseSync === 'function'){
-        const c2 = window.ensureSupabaseSync();
-        if(c2 && c2.from) return { client:c2, source:'ensureSupabaseSync()' };
-      }
-    }catch(_e){}
-    try{
-      if(window.supabase && window.supabase.createClient){
-        if(!window.__ManagerHubOpsSbV624){
-          window.__ManagerHubOpsSbV624 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        }
-        return { client:window.__ManagerHubOpsSbV624, source:'v624-created-client' };
-      }
-    }catch(_e){}
-    return { client:null, source:'none' };
+  function rowDueInfo(row, windowDays){
+    const due = s(row && (row.due_date || row.date || row.term_end || row.deadline));
+    const diff = daysFromToday(due);
+    const hasDate = diff !== null;
+    const overdue = hasDate && diff < 0;
+    const dueSoon = hasDate && diff >= 0 && diff <= Number(windowDays || 0);
+    return { due, diff, overdue, dueSoon, shouldCount: overdue || dueSoon || (!hasDate && windowDays === 'all') };
   }
 
-  function activeCommunityOnce(){
-    let id = '';
-    let name = '';
-    let source = '';
+  async function fetchOpsSummary(){
+    const sb = await getClient();
+    const ctx = readActiveCommunity();
 
-    try{
-      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
-        const active = window.ZummeeCommunityState.getActiveCommunity();
-        if(active && hasUsableId(active.id)){
-          id = s(active.id);
-          name = s(active.name);
-          source = 'ZummeeCommunityState';
-        }
-      }
-    }catch(_e){}
+    const summary = {
+      community: ctx,
+      reminderRows: [],
+      importantDateRows: [],
+      boardTermRows: [],
+      count: 0,
+      overdue: 0,
+      dueSoon: 0,
+      error: ''
+    };
 
-    try{
-      const select = $('zummeeCommunitySelect') || $('communitySelect') || document.querySelector('select[data-community-select], select[name="community"]');
-      if(select && hasUsableId(select.value)){
-        id = s(select.value);
-        const opt = select.options && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
-        if(opt && s(opt.textContent)) name = s(opt.textContent);
-        source = source || 'dropdown';
-      }
-    }catch(_e2){}
-
-    if(!hasUsableId(id)){
-      try{
-        const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
-        const obj = raw ? JSON.parse(raw) : null;
-        if(obj && hasUsableId(obj.id)){
-          id = s(obj.id);
-          name = name || s(obj.name);
-          source = 'storage-v601';
-        }
-      }catch(_e3){}
+    if(!sb || !uuidish(ctx.id)){
+      summary.error = !sb ? 'no-client' : 'no-community';
+      return summary;
     }
 
-    return { id, name, source };
-  }
-
-  async function waitForCommunity(maxMs){
-    const started = Date.now();
-    let ctx = activeCommunityOnce();
-    while(!hasUsableId(ctx.id) && Date.now() - started < maxMs){
-      await sleep(150);
-      ctx = activeCommunityOnce();
-    }
-    return ctx;
-  }
-
-  async function queryOpsReminders(sb, ctx){
-    const result = { ok:false, source:'ops_reminders', rows:[], count:0, overdue:0, dueSoon:0, error:'' };
     try{
-      const res = await sb
+      const reminders = await sb
         .from('ops_reminders')
         .select('id,title,due_date,status,completed_at,archived_at,community_id,updated_at')
         .eq('community_id', ctx.id)
@@ -7333,28 +7425,21 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
         .is('completed_at', null)
         .order('due_date', { ascending:true });
 
-      if(res && res.error){
-        result.error = res.error.message || JSON.stringify(res.error);
-        return result;
+      if(!reminders.error && Array.isArray(reminders.data)){
+        summary.reminderRows = reminders.data.filter(isActiveRow).filter(function(row){
+          // Match Operations Reminders: active rows count, including overdue and future reminders.
+          // This ensures the Manager Hub pill matches the Reminders module count.
+          return true;
+        });
+      }else if(reminders.error){
+        console.warn('[Manager Hub v616] ops_reminders count failed', reminders.error);
       }
-
-      const rows = Array.isArray(res && res.data) ? res.data.filter(isActiveRow) : [];
-      result.ok = true;
-      result.rows = rows;
-      result.count = rows.length;
-      result.overdue = rows.filter(row => dueInfo(row.due_date, 0).overdue).length;
-      result.dueSoon = rows.filter(row => dueInfo(row.due_date, 15).dueSoon).length;
-      return result;
     }catch(err){
-      result.error = err && err.message ? err.message : String(err);
-      return result;
+      console.warn('[Manager Hub v616] ops_reminders exception', err);
     }
-  }
 
-  async function queryImportantDates(sb, ctx){
-    const result = { ok:false, source:'ops_important_dates', rows:[], count:0, overdue:0, dueSoon:0, error:'' };
     try{
-      const res = await sb
+      const important = await sb
         .from('ops_important_dates')
         .select('id,type,description,due_date,status,completed_at,archived_at,community_id,updated_at')
         .eq('community_id', ctx.id)
@@ -7362,467 +7447,311 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
         .is('completed_at', null)
         .order('due_date', { ascending:true });
 
-      if(res && res.error){
-        result.error = res.error.message || JSON.stringify(res.error);
-        return result;
+      if(!important.error && Array.isArray(important.data)){
+        summary.importantDateRows = important.data.filter(isActiveRow).filter(function(row){
+          return rowDueInfo(row, 30).shouldCount;
+        });
+      }else if(important.error){
+        console.warn('[Manager Hub v616] ops_important_dates count failed', important.error);
       }
-
-      const rows = (Array.isArray(res && res.data) ? res.data : [])
-        .filter(isActiveRow)
-        .filter(row => dueInfo(row.due_date, 30).shouldCount);
-
-      result.ok = true;
-      result.rows = rows;
-      result.count = rows.length;
-      result.overdue = rows.filter(row => dueInfo(row.due_date, 0).overdue).length;
-      result.dueSoon = rows.filter(row => dueInfo(row.due_date, 30).dueSoon).length;
-      return result;
-    }catch(err){
-      result.error = err && err.message ? err.message : String(err);
-      return result;
+    }catch(err2){
+      console.warn('[Manager Hub v616] ops_important_dates exception', err2);
     }
-  }
 
-  async function queryBoardTerms(sb, ctx){
-    const result = { ok:false, source:'BoardMembers.term_end', rows:[], count:0, overdue:0, dueSoon:0, error:'' };
     try{
-      const res = await sb
+      const board = await sb
         .from('BoardMembers')
         .select('id,name,position,term_end,is_active,community_id')
         .eq('community_id', ctx.id);
 
-      if(res && res.error){
-        result.error = res.error.message || JSON.stringify(res.error);
-        return result;
-      }
-
-      const rows = (Array.isArray(res && res.data) ? res.data : [])
-        .filter(row => row && row.is_active !== false)
-        .filter(row => dueInfo(row.term_end, 45).shouldCount);
-
-      result.ok = true;
-      result.rows = rows;
-      result.count = rows.length;
-      result.overdue = rows.filter(row => dueInfo(row.term_end, 0).overdue).length;
-      result.dueSoon = rows.filter(row => dueInfo(row.term_end, 45).dueSoon).length;
-      return result;
-    }catch(err){
-      result.error = err && err.message ? err.message : String(err);
-      return result;
-    }
-  }
-
-  async function fetchSummary(){
-    const ctx = await waitForCommunity(3500);
-    const resolved = getClient();
-    const sb = resolved.client;
-
-    const summary = {
-      version:'v624-operations-portal-single-owner',
-      community:ctx,
-      clientReady:!!sb,
-      clientSource:resolved.source,
-      reminders:{ ok:false, rows:[], count:0, overdue:0, dueSoon:0, error:'' },
-      importantDates:{ ok:false, rows:[], count:0, overdue:0, dueSoon:0, error:'' },
-      boardTerms:{ ok:false, rows:[], count:0, overdue:0, dueSoon:0, error:'' },
-      count:0,
-      overdue:0,
-      dueSoon:0,
-      error:'',
-      loadedAt:Date.now()
-    };
-
-    if(!sb || !hasUsableId(ctx.id)){
-      summary.error = !sb ? 'no-client' : 'no-community';
-      if(lastSummary && hasUsableId(lastSummary.community && lastSummary.community.id)){
-        return lastSummary;
-      }
-      return summary;
-    }
-
-    const results = await Promise.all([
-      queryOpsReminders(sb, ctx),
-      queryImportantDates(sb, ctx),
-      queryBoardTerms(sb, ctx)
-    ]);
-
-    summary.reminders = results[0];
-    summary.importantDates = results[1];
-    summary.boardTerms = results[2];
-
-    summary.count = Number(summary.reminders.count || 0) + Number(summary.importantDates.count || 0) + Number(summary.boardTerms.count || 0);
-    summary.overdue = Number(summary.reminders.overdue || 0) + Number(summary.importantDates.overdue || 0) + Number(summary.boardTerms.overdue || 0);
-    summary.dueSoon = Number(summary.reminders.dueSoon || 0) + Number(summary.importantDates.dueSoon || 0) + Number(summary.boardTerms.dueSoon || 0);
-
-    const errors = [summary.reminders, summary.importantDates, summary.boardTerms].filter(r => r.error).map(r => r.source + ': ' + r.error);
-    summary.error = errors.join(' | ');
-
-    return summary;
-  }
-
-  function desiredText(summary){
-    const count = Number(summary && summary.count || 0);
-    const overdue = Number(summary && summary.overdue || 0);
-    if(!count){
-      return { cls:'is-clear', title:'Operations Portal clear', badge:'CLEAR' };
-    }
-    return {
-      cls:'is-due',
-      title: count + ' operations item' + (count === 1 ? '' : 's') + ' need attention.',
-      badge: overdue ? (overdue + ' OVERDUE') : (count + ' PENDING')
-    };
-  }
-
-  function titleNode(){
-    return $('mh2OperationsPortalPillTitle') ||
-      document.querySelector('#mh2OperationsPortalPill .mh2-ops-pill-title');
-  }
-
-  function badgeNode(){
-    return $('mh2OperationsPortalPillBadge') ||
-      document.querySelector('#mh2OperationsPortalPill .mh2-ops-pill-badge');
-  }
-
-  function renderPill(summary, force){
-    if(!summary) return false;
-
-    const pill = $('mh2OperationsPortalPill');
-    const title = titleNode();
-    const badge = badgeNode();
-    const text = desiredText(summary);
-    const key = [summary.community && summary.community.id, summary.count, summary.overdue, text.title, text.badge].join('|');
-
-    if(!force && key === lastRenderKey && pill && pill.dataset.opsPillOwner === 'v624' && title && s(title.textContent) === text.title && badge && s(badge.textContent) === text.badge){
-      return true;
-    }
-
-    rendering = true;
-    try{
-      if(pill && title && badge){
-        pill.classList.remove('is-loading','is-clear','is-due');
-        pill.classList.add(text.cls);
-        title.textContent = text.title;
-        badge.textContent = text.badge;
-
-        pill.dataset.opsPillOwner = 'v624';
-        pill.dataset.opsPillCount = String(Number(summary.count || 0));
-        pill.dataset.opsPillOverdue = String(Number(summary.overdue || 0));
-        pill.dataset.opsPillCommunity = s(summary.community && summary.community.id);
-        pill.dataset.opsPillLoadedAt = String(summary.loadedAt || Date.now());
-        pill.dataset.opsPillTitle = text.title;
-        pill.dataset.opsPillBadge = text.badge;
-      }
-
-      ['dailyOpsCard','remindersCard'].forEach(function(cardId){
-        const card = $(cardId);
-        if(!card) return;
-
-        const count = Number(summary.count || 0);
-        const overdue = Number(summary.overdue || 0);
-        const tone = card.querySelector('[data-role="tone"]');
-        const metric1 = card.querySelector('[data-role="metric1"]');
-        const metric2 = card.querySelector('[data-role="metric2"]');
-
-        card.classList.remove('mh2-tool-card--gold','mh2-tool-card--urgent');
-        if(overdue) card.classList.add('mh2-tool-card--urgent');
-        else if(count) card.classList.add('mh2-tool-card--gold');
-
-        if(tone){
-          tone.textContent = overdue ? 'Overdue' : (count ? 'Pending' : 'Clear');
-          tone.className = 'mh2-tool-pill' + (overdue ? ' is-urgent' : (count ? ' is-gold' : ' is-good'));
-        }
-        if(metric1) metric1.textContent = String(count);
-        if(metric2) metric2.textContent = overdue ? (String(overdue) + ' overdue') : (count ? 'Pending' : 'Clear');
-      });
-
-      lastRenderKey = key;
-      return true;
-    }finally{
-      rendering = false;
-    }
-  }
-
-  function textMismatch(summary){
-    const pill = $('mh2OperationsPortalPill');
-    const title = titleNode();
-    const badge = badgeNode();
-    if(!pill || !summary) return false;
-    const text = desiredText(summary);
-    return (
-      pill.dataset.opsPillOwner !== 'v624' ||
-      pill.dataset.opsPillCount !== String(Number(summary.count || 0)) ||
-      pill.dataset.opsPillOverdue !== String(Number(summary.overdue || 0)) ||
-      (title && s(title.textContent) !== text.title) ||
-      (badge && s(badge.textContent) !== text.badge)
-    );
-  }
-
-  function startObserver(){
-    if(observer) return;
-
-    const pill = $('mh2OperationsPortalPill');
-    if(!pill || !window.MutationObserver) return;
-
-    observer = new MutationObserver(function(){
-      if(rendering || !lastSummary) return;
-      if(textMismatch(lastSummary)){
-        requestAnimationFrame(function(){
-          renderPill(lastSummary, true);
+      if(!board.error && Array.isArray(board.data)){
+        summary.boardTermRows = board.data.filter(function(row){
+          return row && row.is_active !== false && rowDueInfo({ due_date:row.term_end }, 45).shouldCount;
         });
+      }else if(board.error){
+        console.warn('[Manager Hub v616] BoardMembers term count failed', board.error);
       }
-    });
+    }catch(err3){
+      console.warn('[Manager Hub v616] BoardMembers term exception', err3);
+    }
 
-    observer.observe(pill, {
-      childList:true,
-      subtree:true,
-      characterData:true,
-      attributes:true
-    });
-  }
+    const allRows = []
+      .concat(summary.reminderRows.map(function(row){ return { type:'reminder', row }; }))
+      .concat(summary.importantDateRows.map(function(row){ return { type:'important_date', row }; }))
+      .concat(summary.boardTermRows.map(function(row){ return { type:'board_term', row }; }));
 
-  function render(summary){
-    lastSummary = summary;
-    window.__ManagerHubOpsPortalSummaryV624 = summary;
-    window.__ManagerHubOpsPortalSummaryV623 = summary;
-    window.__ManagerHubOpsPortalSummaryV622 = summary;
-    window.__ManagerHubOpsPortalSummaryV621 = summary;
-    window.__ManagerHubOpsPortalSummaryV620 = summary;
-    window.__ManagerHubOpsPortalSummaryV616 = summary;
-    renderPill(summary, true);
-    startObserver();
-    console.info('[Manager Hub v624] Operations Portal pill summary', summary);
+    summary.count = allRows.length;
+    summary.overdue = allRows.filter(function(item){
+      const row = item.row || {};
+      const due = item.type === 'board_term' ? row.term_end : row.due_date;
+      return rowDueInfo({ due_date:due }, 0).overdue;
+    }).length;
+    summary.dueSoon = allRows.filter(function(item){
+      const row = item.row || {};
+      const due = item.type === 'board_term' ? row.term_end : row.due_date;
+      return rowDueInfo({ due_date:due }, item.type === 'important_date' ? 30 : item.type === 'board_term' ? 45 : 15).dueSoon;
+    }).length;
+
     return summary;
   }
 
-  async function refresh(){
-    if(inFlight) return inFlight;
+  function setToolCard(cardId, summary){
+    const card = $(cardId);
+    if(!card) return;
 
-    inFlight = (async function(){
-      try{
-        const summary = await fetchSummary();
-        return render(summary);
-      }catch(err){
-        const fallback = lastSummary || {
-          version:'v624-operations-portal-single-owner',
-          community:activeCommunityOnce(),
-          count:0,
-          overdue:0,
-          dueSoon:0,
-          error:err && err.message ? err.message : String(err),
-          loadedAt:Date.now()
-        };
-        lastSummary = fallback;
-        window.__ManagerHubOpsPortalSummaryV624 = fallback;
-        renderPill(fallback, true);
-        startObserver();
-        console.warn('[Manager Hub v624] Operations Portal refresh failed', err);
-        return fallback;
-      }finally{
-        inFlight = null;
-      }
-    })();
+    const count = Number(summary.count || 0);
+    const overdue = Number(summary.overdue || 0);
 
-    return inFlight;
+    const tone = card.querySelector('[data-role="tone"]');
+    const metric1 = card.querySelector('[data-role="metric1"]');
+    const metric2 = card.querySelector('[data-role="metric2"]');
+
+    card.classList.remove('mh2-tool-card--gold','mh2-tool-card--urgent');
+    if(overdue) card.classList.add('mh2-tool-card--urgent');
+    else if(count) card.classList.add('mh2-tool-card--gold');
+
+    if(tone){
+      tone.textContent = overdue ? 'Overdue' : (count ? 'Pending' : 'Clear');
+      tone.className = 'mh2-tool-pill' + (overdue ? ' is-urgent' : (count ? ' is-gold' : ' is-good'));
+    }
+    if(metric1) metric1.textContent = String(count);
+    if(metric2) metric2.textContent = overdue ? (String(overdue) + ' overdue') : (count ? 'Pending' : 'Clear');
   }
 
-  function schedule(){
-    refresh();
-    [900, 2500, 6000, 11000].forEach(ms => setTimeout(refresh, ms));
+  function renderOpsPill(summary){
+    const pill = $('mh2OperationsPortalPill');
+    const title = $('mh2OperationsPortalPillTitle');
+    const badge = $('mh2OperationsPortalPillBadge');
+
+    if(!pill || !title || !badge) return;
+
+    const count = Number(summary.count || 0);
+    const overdue = Number(summary.overdue || 0);
+    const dueSoon = Number(summary.dueSoon || 0);
+
+    pill.classList.remove('is-loading','is-clear','is-due');
+
+    if(!count){
+      pill.classList.add('is-clear');
+      title.textContent = 'Operations Portal clear';
+      badge.textContent = 'Clear';
+    }else{
+      pill.classList.add(overdue ? 'is-due' : 'is-due');
+      title.textContent = count + ' operations item' + (count === 1 ? '' : 's') + ' pending';
+      badge.textContent = overdue ? (count + ' pending') : (count + ' pending');
+    }
+
+    setToolCard('dailyOpsCard', summary);
+    setToolCard('remindersCard', summary);
+
+    window.__ManagerHubOpsPortalSummaryV616 = summary;
+    console.info('[Manager Hub v616] Operations Portal summary', summary);
   }
 
-  window.refreshManagerHubOperationsPortalPill = refresh;
-  window.refreshManagerHubOperationsPortalPillAuthoritative = refresh;
-  window.enforceManagerHubOperationsPortalPillV624 = function(){ return renderPill(lastSummary, true); };
-  window.getManagerHubOperationsPortalSummary = function(){ return window.__ManagerHubOpsPortalSummaryV624 || lastSummary || null; };
-  window.getManagerHubV624OperationsPortalStatus = function(){
-    const summary = window.getManagerHubOperationsPortalSummary();
-    return {
-      installed:!!window.__ManagerHubOperationsPortalPillV624,
-      observerActive:!!observer,
-      textMismatch:textMismatch(summary),
-      summary:summary,
-      pillText:$('mh2OperationsPortalPill') ? $('mh2OperationsPortalPill').textContent.trim() : '',
-      titleText:titleNode() ? titleNode().textContent : '',
-      badgeText:badgeNode() ? badgeNode().textContent : '',
-      desired:desiredText(summary),
-      pillDataset:$('mh2OperationsPortalPill') ? Object.assign({}, $('mh2OperationsPortalPill').dataset || {}) : null,
-      smartCardsVisible:['mh2AlertBoard','mh2AlertActivity','mh2AlertApprovals'].map(function(id){
-        const el = $(id);
-        if(!el) return { id, exists:false };
-        const cs = getComputedStyle(el);
-        return { id, exists:true, visible:!(el.offsetParent === null) && cs.display !== 'none' && cs.visibility !== 'hidden' && cs.opacity !== '0' };
-      })
-    };
-  };
+  async function refreshOpsPill(){
+    try{
+      const summary = await fetchOpsSummary();
+      renderOpsPill(summary);
+      return summary;
+    }catch(err){
+      console.warn('[Manager Hub v616] Operations Portal refresh failed', err);
+      return null;
+    }
+  }
+
+  function scheduleRefreshes(){
+    refreshOpsPill();
+    [400, 1200, 2500, 5000, 9000].forEach(function(ms){
+      setTimeout(refreshOpsPill, ms);
+    });
+  }
+
+  window.refreshManagerHubOperationsPortalPill = refreshOpsPill;
+  window.getManagerHubOperationsPortalSummary = function(){ return window.__ManagerHubOpsPortalSummaryV616 || null; };
 
   if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', schedule, { once:true });
+    document.addEventListener('DOMContentLoaded', scheduleRefreshes, { once:true });
   }else{
-    schedule();
+    scheduleRefreshes();
   }
 
-  window.addEventListener('pageshow', function(){ setTimeout(schedule, 150); });
-  window.addEventListener('focus', function(){ setTimeout(refresh, 150); });
-  window.addEventListener('zummee:community-changed', function(){ setTimeout(schedule, 150); });
+  window.addEventListener('pageshow', function(){ setTimeout(scheduleRefreshes, 150); });
+  window.addEventListener('focus', function(){ setTimeout(refreshOpsPill, 150); });
+  window.addEventListener('zummee:community-changed', function(){ setTimeout(scheduleRefreshes, 150); });
+
   document.addEventListener('change', function(e){
     const target = e && e.target;
     if(target && target.matches && target.matches('#zummeeCommunitySelect, #communitySelect, select[data-community-select], select[name="community"]')){
-      setTimeout(schedule, 150);
+      setTimeout(scheduleRefreshes, 150);
     }
   }, true);
 })();
 </script>
 
-<script id="manager-hub-v618-remove-broken-v522-audit">
-/*
-  Manager Hub v618 — Remove broken v522 only.
 
-  Purpose:
-  - Remove malformed v522 smart-alert stability controller.
-  - Keep smart-card renderer unchanged.
-  - Keep community dropdown unchanged.
-  - Keep operations pill unchanged.
-  - Provide audit helpers only.
-*/
+
+<script id="manager-hub-v617-annual-approval-smart-card-live-requests">
 (function(){
-  if(window.__ManagerHubV618RemoveBrokenV522Audit) return;
-  window.__ManagerHubV618RemoveBrokenV522Audit = true;
+  'use strict';
+  if(window.__ManagerHubAnnualApprovalSmartCardV617) return;
+  window.__ManagerHubAnnualApprovalSmartCardV617 = true;
 
-  function s(v){ return String(v == null ? "" : v).trim(); }
-  function safeJson(raw){ try{ return raw ? JSON.parse(raw) : null; }catch(_e){ return null; } }
-  function text(sel){
-    var node = document.querySelector(sel);
-    return node ? s(node.textContent) : "";
+  const BUILD = '2026-05-10-v617-annual-approval-requests-smart-card';
+
+  function byId(id){ return document.getElementById(id); }
+  function clean(v){ return String(v == null ? '' : v).trim(); }
+  function esc(v){ return clean(v).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+  function isUuid(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean(v)); }
+  function setText(id, value){ const n = byId(id); if(n) n.textContent = String(value); }
+
+  function getSb(){
+    try{ if(window.supabaseClient && typeof window.supabaseClient.from === 'function') return window.supabaseClient; }catch(_e){}
+    try{ if(window.sb && typeof window.sb.from === 'function') return window.sb; }catch(_e){}
+    try{ if(window.getSupabase){ const c = window.getSupabase(); if(c && typeof c.from === 'function') return c; } }catch(_e2){}
+    return null;
   }
-  function card(id){
-    var el = document.getElementById(id);
-    if(!el) return { exists:false };
-    var cs = getComputedStyle(el);
-    return {
-      exists:true,
-      visible: !(el.offsetParent === null) && cs.visibility !== "hidden" && cs.opacity !== "0" && cs.display !== "none",
-      display: cs.display,
-      visibility: cs.visibility,
-      opacity: cs.opacity,
-      classes: el.className,
-      href: el.getAttribute("href") || "",
-      title: text("#" + id + " .mh2-alert-title"),
-      badge: text("#" + id + " .mh2-alert-badge"),
-      copy: text("#" + id + " .mh2-alert-copy")
-    };
-  }
-  function activeCommunity(){
-    var shared = null;
+
+  function selectedCommunity(){
+    let id = '', name = '';
+    const sel = byId('zummeeCommunitySelect') || byId('communitySelect');
+    if(sel){
+      const raw = clean(sel.value);
+      if(isUuid(raw)) id = raw;
+      const opt = sel.options && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+      name = clean(opt && opt.textContent);
+    }
     try{
-      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === "function"){
-        shared = window.ZummeeCommunityState.getActiveCommunity();
+      if(!id && window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const c = window.ZummeeCommunityState.getActiveCommunity();
+        if(c && isUuid(c.id)){ id = clean(c.id); name = clean(c.name) || name; }
       }
-    }catch(e){ shared = { error:String(e) }; }
-
-    var dropdown = null;
-    try{
-      var sel = document.getElementById("zummeeCommunitySelect") ||
-                document.getElementById("communitySelect") ||
-                document.querySelector("select[data-community-select], select[name='community']");
-      if(sel){
-        var opt = sel.options && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
-        dropdown = {
-          id: sel.value || "",
-          text: opt ? s(opt.textContent) : "",
-          optionCount: sel.options ? sel.options.length : 0
-        };
-      }
-    }catch(e2){ dropdown = { error:String(e2) }; }
-
-    return {
-      sharedState: shared,
-      dropdown: dropdown,
-      canonicalStorage: safeJson(localStorage.getItem("zummee_active_community_v601") || sessionStorage.getItem("zummee_active_community_v601") || "")
-    };
+    }catch(_e){}
+    return { id, name };
   }
 
-  window.auditManagerHubState = function(){
-    var report = {
-      auditBuild: "2026-05-08-v618-remove-broken-v522-only",
-      timestamp: new Date().toISOString(),
-      page: {
-        href: location.href,
-        title: document.title,
-        build: window.ZUMMEE_BUILD || "",
-        mhVersion: window.__MH_VERSION || ""
-      },
-      syntaxFix: {
-        brokenV522ControllerPresent: !!document.getElementById("zummee-v522-smart-alert-stability-controller"),
-        oldV522RuntimeObjectPresent: !!window.__ZUMMEE_V522_SMART_ALERT_STABILITY__,
-        smartReadyAttribute: document.documentElement.getAttribute("data-zummee-smart-alerts-v426-ready")
-      },
-      activeCommunity: activeCommunity(),
-      smartAlerts: {
-        stripExists: !!document.getElementById("smartAlertStrip"),
-        board: card("mh2AlertBoard"),
-        maintenance: card("mh2AlertActivity"),
-        annual: card("mh2AlertApprovals")
-      },
-      operationsPill: {
-        oldPillExists: !!document.getElementById("mh2OperationsPortalPill"),
-        stablePillExists: !!document.getElementById("mh2OpsPortalPillStable"),
-        oldTitle: text("#mh2OperationsPortalPillTitle"),
-        oldBadge: text("#mh2OperationsPortalPillBadge"),
-        stableTitle: text("#mh2OpsPortalPillTitleStable"),
-        stableBadge: text("#mh2OpsPortalPillBadgeStable"),
-        helpers: {
-          refreshManagerHubOperationsPortalPill: typeof window.refreshManagerHubOperationsPortalPill,
-          refreshManagerHubOperationsPortalPillStable: typeof window.refreshManagerHubOperationsPortalPillStable,
-          refreshManagerHubOperationsPortalPillAuthoritative: typeof window.refreshManagerHubOperationsPortalPillAuthoritative,
-          getManagerHubOperationsPortalSummary: typeof window.getManagerHubOperationsPortalSummary
-        },
-        summary: (typeof window.getManagerHubOperationsPortalSummary === "function" ? window.getManagerHubOperationsPortalSummary() : null)
-      },
-      supabase: {
-        sdkPresent: !!(window.supabase && typeof window.supabase.createClient === "function"),
-        supabaseClientPresent: !!(window.supabaseClient && typeof window.supabaseClient.from === "function"),
-        getSupabase: typeof window.getSupabase,
-        ensureSupabaseSync: typeof window.ensureSupabaseSync,
-        requireSb: typeof window.requireSb
-      },
-      riskFlags: {
-        scriptTagCount: document.querySelectorAll("script").length,
-        styleTagCount: document.querySelectorAll("style").length,
-        experimentalMarkers: ["v623","v624","v625","v626","v627","v628","v629","v630","v631","v632","v633"].filter(function(v){
-          return document.documentElement.outerHTML.indexOf("manager-hub-" + v) !== -1;
-        })
-      }
-    };
-    window.__MANAGER_HUB_AUDIT_V618_LAST_REPORT = report;
-    console.info("[Manager Hub v618 Audit]", report);
-    return report;
-  };
+  function step(row){
+    return clean(row && (row.current_step || row.approval_status)).toLowerCase();
+  }
 
-  window.printManagerHubAuditSummary = function(){
-    var r = window.auditManagerHubState();
-    var compact = {
-      build: r.page.build,
-      mhVersion: r.page.mhVersion,
-      brokenV522ControllerPresent: r.syntaxFix.brokenV522ControllerPresent,
-      oldV522RuntimeObjectPresent: r.syntaxFix.oldV522RuntimeObjectPresent,
-      smartReady: r.syntaxFix.smartReadyAttribute,
-      community: r.activeCommunity.dropdown || r.activeCommunity.canonicalStorage || r.activeCommunity.sharedState,
-      board: r.smartAlerts.board,
-      maintenance: r.smartAlerts.maintenance,
-      annual: r.smartAlerts.annual,
-      operationsPill: r.operationsPill,
-      supabase: r.supabase,
-      experimentalMarkers: r.riskFlags.experimentalMarkers,
-      communityAssignmentGuardV619: (typeof window.getManagerHubV619GuardStatus === "function" ? window.getManagerHubV619GuardStatus() : null),
-      operationsPortalV620: (typeof window.getManagerHubV620OperationsPortalStatus === "function" ? window.getManagerHubV620OperationsPortalStatus() : null),
-      operationsPortalV621: (typeof window.getManagerHubV621OperationsPortalStatus === "function" ? window.getManagerHubV621OperationsPortalStatus() : null),
-      operationsPortalV622: (typeof window.getManagerHubV622OperationsPortalStatus === "function" ? window.getManagerHubV622OperationsPortalStatus() : null),
-      operationsPortalV623: (typeof window.getManagerHubV623OperationsPortalStatus === "function" ? window.getManagerHubV623OperationsPortalStatus() : null),
-      operationsPortalV624: (typeof window.getManagerHubV624OperationsPortalStatus === "function" ? window.getManagerHubV624OperationsPortalStatus() : null)
-    };
-    console.log(compact);
-    return compact;
-  };
+  function active(row){
+    const st = step(row);
+    if(!row) return false;
+    if(row.archived_at || row.mailed_at) return false;
+    if(st === 'completed' || st === 'complete' || st === 'closed' || st === 'archived') return false;
+    return true;
+  }
+
+  function label(row){
+    const st = step(row);
+    if(st === 'pending_board') return 'Board review';
+    if(st === 'pending_supervisor') return 'Supervisor review';
+    if(st === 'pending_admin_mailing' || st === 'ready_to_mail') return 'Admin / mailing';
+    if(st.indexOf('reject') >= 0) return 'Changes requested';
+    return st ? st.replace(/_/g, ' ') : 'In progress';
+  }
+
+  function when(row){
+    const raw = clean(row && (row.updated_at || row.created_at || row.initiated_at));
+    if(!raw) return '';
+    const d = new Date(raw);
+    if(Number.isNaN(d.getTime())) return raw.slice(0,10);
+    const diff = Date.now() - d.getTime();
+    const days = Math.floor(diff / 86400000);
+    if(days <= 0) return 'Today';
+    if(days === 1) return '1 day';
+    return days + ' days';
+  }
+
+  function overdue(row){
+    const raw = clean(row && (row.created_at || row.initiated_at || row.updated_at));
+    const d = raw ? new Date(raw) : null;
+    return !!(d && !Number.isNaN(d.getTime()) && Date.now() - d.getTime() >= 2 * 86400000);
+  }
+
+  function setAlertCard(openRows, ctx){
+    const card = byId('mh2AlertApprovals');
+    if(!card) return;
+    const overdueCount = openRows.filter(overdue).length;
+    const openCount = openRows.length;
+    const tone = overdueCount ? 'is-urgent' : (openCount ? 'is-attention' : 'is-good');
+    const badge = overdueCount ? overdueCount + ' OVERDUE' : (openCount ? openCount + ' OPEN' : 'CLEAR');
+    const copy = openCount
+      ? openCount + ' annual meeting approval workflow' + (openCount === 1 ? ' is' : 's are') + ' active for ' + (ctx.name || 'the selected community') + '.'
+      : 'No active annual meeting approval workflows.';
+    card.classList.remove('is-urgent','is-attention','is-good');
+    card.classList.add(tone);
+    card.setAttribute('href', 'board_member_hub_v2.html#annualApprovalRequestsSection');
+    card.innerHTML = '<div class="mh2-alert-top"><div class="mh2-alert-title">Annual meeting approvals</div><div class="mh2-alert-badge">' + esc(badge) + '</div></div><div class="mh2-alert-copy">' + esc(copy) + '</div>';
+  }
+
+  function renderList(openRows, ctx){
+    setText('mh2ApprovalPill', openRows.length);
+    setText('mh2ApprovalNote', openRows.length ? ('Active annual meeting approval workflows for ' + (ctx.name || 'the selected community') + '.') : 'No active annual meeting approval workflows.');
+    setText('mh2ApprovalFoot', openRows.length ? ('Showing latest ' + Math.min(openRows.length, 4) + ' active workflow' + (openRows.length === 1 ? '' : 's') + '.') : 'Open annual approval workflows for the selected community.');
+    const body = byId('annualApprovalBody');
+    if(!body) return;
+    if(!openRows.length){
+      body.innerHTML = '<div class="mh2-placeholder">No annual approval workflows for this community.</div>';
+      return;
+    }
+    body.innerHTML = openRows.slice(0,4).map(function(row){
+      const title = row.association_legal_name || ctx.name || 'Annual Meeting Packet';
+      return '<a href="board_member_hub_v2.html#annualApprovalRequestsSection" style="text-decoration:none;color:inherit">' +
+        '<article class="mh2-list-item">' +
+          '<div><div class="mh2-item-title">' + esc(title) + '</div><div class="mh2-item-copy">Approval status: ' + esc(label(row)) + '</div></div>' +
+          '<div class="mh2-item-tag">' + esc(when(row)) + '</div>' +
+        '</article>' +
+      '</a>';
+    }).join('');
+  }
+
+  async function refresh(){
+    const ctx = selectedCommunity();
+    const out = { build:BUILD, ok:false, community:ctx, rows:[], activeRows:[], error:null, loadedAt:new Date().toISOString() };
+    try{
+      const sb = getSb();
+      if(!sb) throw new Error('Supabase client unavailable.');
+      if(!ctx.id) throw new Error('No selected community.');
+      const res = await sb
+        .from('annual_meeting_approval_requests')
+        .select('id,community_id,association_legal_name,current_step,approval_status,archived_at,mailed_at,created_at,updated_at,initiated_at,next_annual_meeting_date')
+        .eq('community_id', ctx.id)
+        .is('archived_at', null)
+        .neq('current_step', 'completed')
+        .neq('approval_status', 'completed')
+        .order('updated_at', { ascending:false })
+        .limit(50);
+      if(res.error) throw res.error;
+      out.ok = true;
+      out.rows = Array.isArray(res.data) ? res.data : [];
+      out.activeRows = out.rows.filter(active);
+      setAlertCard(out.activeRows, ctx);
+      renderList(out.activeRows, ctx);
+    }catch(err){
+      out.error = err && err.message ? err.message : String(err);
+      setAlertCard([], ctx);
+      renderList([], ctx);
+    }
+    window.__ManagerHubAnnualApprovalSmartCardV617Status = out;
+    return out;
+  }
+
+  window.mh2RefreshAnnualApprovalSmartAlert = refresh;
+  window.getManagerHubAnnualApprovalSmartCardStatus = function(){ return window.__ManagerHubAnnualApprovalSmartCardV617Status || { build:BUILD, ok:false }; };
+
+  function boot(){
+    setTimeout(refresh, 200);
+    setTimeout(refresh, 1200);
+    setTimeout(refresh, 3500);
+    const sel = byId('zummeeCommunitySelect') || byId('communitySelect');
+    if(sel && !sel.__annualV617Bound){
+      sel.__annualV617Bound = true;
+      sel.addEventListener('change', function(){ setTimeout(refresh, 150); setTimeout(refresh, 1000); });
+    }
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once:true });
+  else boot();
+  window.addEventListener('pageshow', function(){ setTimeout(refresh, 300); });
 })();
 </script>
 
