@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
 
-<script id="manager-hub-v634-annual-approvals-real-source-marker">
-window.ZUMMEE_BUILD = "2026-05-10-v636-manager-hub-stable-smart-alerts-annual-source-clean";
+<script id="manager-hub-v633-accessible-smart-alerts-marker">
+window.ZUMMEE_BUILD = "2026-05-08-v633-manager-hub-accessible-smart-alerts";
 window.__MANAGER_HUB_V633_ACCESSIBLE_SMART_ALERTS = true;
 console.info("[Manager Hub v633] accessible smart alerts loaded", window.ZUMMEE_BUILD);
 </script>
 
-<script id="manager-hub-v634-annual-approvals-real-source">
+<script id="manager-hub-v633-accessible-smart-alerts">
 (function(){
   if(window.__ManagerHubAccessibleSmartAlertsV633) return;
   window.__ManagerHubAccessibleSmartAlertsV633 = true;
@@ -248,26 +248,19 @@ console.info("[Manager Hub v633] accessible smart alerts loaded", window.ZUMMEE_
       return { ok:false, label:'annual', source:'none', clientSource, communityId:community.id, error:'Missing client or valid community', count:0, rows:[], totalRows:0 };
     }
 
-    // v634 source of truth for Manager Hub Annual Meeting Approvals:
-    // public.annual_meeting_approval_requests active workflows only.
-    const res = await client.from('annual_meeting_approval_requests')
-      .select('id,community_id,current_step,approval_status,archived_at,mailed_at,created_at,updated_at,initiated_at,next_annual_meeting_date')
+    // Stable accessible source. Do not query annual_meeting_packet_requests from Manager Hub;
+    // that table is currently blocked by access control checks.
+    const res = await client.from('annual_meeting_settings')
+      .select('id,community_id,next_annual_meeting_date,updated_at,created_at')
       .eq('community_id', community.id)
-      .is('archived_at', null)
-      .neq('current_step', 'completed')
-      .neq('approval_status', 'completed')
-      .limit(50);
+      .limit(20);
 
     if(res && res.error){
-      return { ok:false, label:'annual', source:'annual_meeting_approval_requests', clientSource, communityId:community.id, error:res.error.message || JSON.stringify(res.error), count:0, rows:[], totalRows:0 };
+      return { ok:false, label:'annual', source:'annual_meeting_settings', clientSource, communityId:community.id, error:res.error.message || JSON.stringify(res.error), count:0, rows:[], totalRows:0 };
     }
 
-    return normalize('annual', 'annual_meeting_approval_requests', clientSource, community, res && res.data, function(row){
-      var st = String((row && (row.current_step || row.approval_status)) || '').toLowerCase().trim();
-      if(!row) return false;
-      if(row.archived_at || row.mailed_at) return false;
-      if(st === 'completed' || st === 'complete' || st === 'closed' || st === 'archived') return false;
-      return true;
+    return normalize('annual', 'annual_meeting_settings', clientSource, community, res && res.data, function(row){
+      return !!(row && row.next_annual_meeting_date);
     });
   }
 
@@ -367,10 +360,10 @@ console.info("[Manager Hub v633] accessible smart alerts loaded", window.ZUMMEE_
     const annualOverdue = Number(summary.annualOverdue || 0);
     setAlert('mh2AlertApprovals', {
       tone: annualOverdue > 0 ? 'urgent' : (annualCount > 0 ? 'attention' : 'good'),
-      title:'Annual meeting approvals',
-      badge: annualOverdue > 0 ? (annualOverdue + ' overdue') : (annualCount > 0 ? (annualCount + ' open') : 'Clear'),
-      copy: annualCount > 0 ? (annualCount + ' annual meeting approval workflow' + (annualCount === 1 ? '' : 's') + ' active for this community.') : 'No active annual meeting approval workflows.',
-      href:'board_member_hub_v2.html#annualApprovalRequestsSection'
+      title:'Annual meetings',
+      badge: annualOverdue > 0 ? (annualOverdue + ' overdue') : (annualCount > 0 ? (annualCount + ' active') : 'Clear'),
+      copy: annualCount > 0 ? (annualCount + ' annual meeting setup record' + (annualCount === 1 ? '' : 's') + ' active for this community.') : 'No annual meeting setup needs attention right now.',
+      href:'annual_meetings.html'
     });
 
     try{ document.documentElement.setAttribute('data-zummee-smart-alerts-v426-ready', '1'); }catch(_e){}
@@ -504,7 +497,7 @@ console.info("[Manager Hub v633] accessible smart alerts loaded", window.ZUMMEE_
 
 
 
-<script>window.ZUMMEE_BUILD = "2026-05-10-v636-manager-hub-stable-smart-alerts-annual-source-clean";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD = "2026-05-08-v633-manager-hub-accessible-smart-alerts";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <script id="zummee-manager-canonical-preboot-v608">
 /*
@@ -4727,11 +4720,6 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
         }
       }
       function approvalStatusLabel(status){
-        var st = String(status || 'pending').toLowerCase().trim();
-        if(st === 'pending_board') return 'Board Review';
-        if(st === 'pending_supervisor') return 'Supervisor Review';
-        if(st === 'pending_admin_mailing' || st === 'ready_to_mail') return 'Admin / Mailing';
-        if(st === 'completed' || st === 'complete') return 'Completed';
         return String(status || 'pending').replace(/_/g,' ').replace(/(^|\s)\w/g, function(ch){ return ch.toUpperCase(); });
       }
       function annualApprovalStartedAt(row){
@@ -4759,13 +4747,7 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
       }
       function getActiveAnnualApprovalRows(rows){
         rows = Array.isArray(rows) ? rows : [];
-        return rows.filter(function(row){
-          if(!row) return false;
-          if(row.archived_at || row.mailed_at) return false;
-          var st = String(row.current_step || row.approval_status || row.status || '').toLowerCase().trim();
-          if(st === 'completed' || st === 'complete' || st === 'closed' || st === 'archived') return false;
-          return true;
-        });
+        return rows.filter(function(row){ return isActiveAnnualApprovalStatus(row && row.status); });
       }
       function normalizeAnnualCommunityName(value){
         return String(value || '').toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
@@ -4789,19 +4771,14 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
         if(!body) return;
         try{
           var sb = await requireSb();
-          var q = await sb.from('annual_meeting_approval_requests')
-            .select('id,community_id,association_legal_name,current_step,approval_status,archived_at,mailed_at,created_at,updated_at,initiated_at,next_annual_meeting_date')
-            .eq('community_id', communityId)
-            .is('archived_at', null)
-            .neq('current_step', 'completed')
-            .neq('approval_status', 'completed')
-            .order('updated_at', { ascending:false })
-            .limit(50);
+          var q = await sb.from('annual_meeting_packet_requests').select('*').limit(200);
           if(q.error) throw q.error;
-          var rows = getActiveAnnualApprovalRows(q.data || []);
+          var activeCommunityName = getSelectedCommunityName();
+          var allRows = (q.data || []).filter(function(item){ return annualApprovalMatchesCurrentCommunity(item, communityId, activeCommunityName); });
+          var rows = getActiveAnnualApprovalRows(allRows);
           setText('mh2ApprovalPill', String(rows.length));
-          setText('mh2ApprovalNote', rows.length ? ('Active annual meeting approval workflows for ' + (getSelectedCommunityName() || 'the selected community') + '.') : 'No active annual meeting approval workflows for this community.');
-          setText('mh2ApprovalFoot', rows.length ? ('Showing the latest ' + String(Math.min(rows.length, 4)) + ' active workflow' + (rows.length===1?'':'s') + ' for ' + (getSelectedCommunityName() || 'the selected community') + '.') : 'Open annual approval workflows for the selected community.');
+          setText('mh2ApprovalNote', rows.length ? ('Current approval items for ' + (getSelectedCommunityName() || 'the selected community') + '.') : 'No approval items for this community.');
+          setText('mh2ApprovalFoot', rows.length ? ('Showing the latest ' + String(Math.min(rows.length, 4)) + ' approval item' + (rows.length===1?'':'s') + ' for ' + (getSelectedCommunityName() || 'the selected community') + '.') : 'Open annual approval items for the selected community.');
           var overdueApprovalRows = rows.filter(isAnnualApprovalOverTwoDays);
           var overdueApprovalCount = overdueApprovalRows.length;
           var approvalAlertTone = overdueApprovalCount ? 'urgent' : (rows.length ? 'attention' : 'good');
@@ -4810,32 +4787,29 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
             title: 'Annual meeting approvals',
             badge: overdueApprovalCount ? (String(overdueApprovalCount) + ' overdue') : (rows.length ? (String(rows.length) + ' open') : 'Clear'),
             copy: overdueApprovalCount
-              ? (String(overdueApprovalCount) + ' annual meeting approval workflow' + (overdueApprovalCount===1?' has':'s have') + ' been open more than 2 days for ' + (getSelectedCommunityName() || 'the selected community') + '.')
-              : (rows.length ? (String(rows.length) + ' approval workflow' + (rows.length===1?'':'s') + ' in progress for ' + (getSelectedCommunityName() || 'the selected community') + '.') : 'No active annual meeting approval workflows.'),
-            href: 'board_member_hub_v2.html#annualApprovalRequestsSection'
+              ? (String(overdueApprovalCount) + ' annual meeting approval item' + (overdueApprovalCount===1?' has':'s have') + ' been open more than 2 days for ' + (getSelectedCommunityName() || 'the selected community') + '.')
+              : (rows.length ? (String(rows.length) + ' approval item' + (rows.length===1?'':'s') + ' in progress for ' + (getSelectedCommunityName() || 'the selected community') + '.') : 'No active items'),
+            href: getAnnualMeetingSmartHref()
           });
           if(!rows.length){
-            body.innerHTML = '<div class="mh2-placeholder">No annual approval workflows for this community.</div>';
-            window.__ManagerHubAnnualApprovalSmartCardV634Status = { build:'v634-annual-approvals-real-source', ok:true, count:0, rows:[] };
+            body.innerHTML = '<div class="mh2-placeholder">No annual approval items for this community.</div>';
             return;
           }
           body.innerHTML = rows.slice(0,4).map(function(row){
-            var href = 'board_member_hub_v2.html#annualApprovalRequestsSection';
-            var community = row.association_legal_name || getSelectedCommunityName() || 'Annual Meeting Packet';
-            var status = approvalStatusLabel(row.current_step || row.approval_status || row.status);
+            var href = getAnnualMeetingSmartHref();
+            var community = row.community_name || getSelectedCommunityName() || 'Community';
+            var status = approvalStatusLabel(row.status);
             var inner = '<article class="mh2-list-item">' +
               '<div><div class="mh2-item-title">' + esc(community) + '</div><div class="mh2-item-copy">Approval status: ' + esc(status) + '</div></div>' +
               '<div class="mh2-item-tag"' + (isAnnualApprovalOverTwoDays(row) ? ' style="color:#b91c1c;border-color:#fecaca;background:#fff5f5"' : '') + '>' + esc(fmtAgo(annualApprovalStartedAt(row))) + '</div>' +
             '</article>';
             return '<a href="' + esc(href) + '" style="text-decoration:none;color:inherit">' + inner + '</a>';
           }).join('');
-          window.__ManagerHubAnnualApprovalSmartCardV634Status = { build:'v634-annual-approvals-real-source', ok:true, count:rows.length, rows:rows };
         }catch(_e){
           setText('mh2ApprovalPill', '0');
           setText('mh2ApprovalNote', 'Approval data unavailable right now.');
-          setText('mh2ApprovalFoot', 'Open annual approval workflows for the selected community.');
+          setText('mh2ApprovalFoot', 'Open annual approval items for the selected community.');
           body.innerHTML = '<div class="mh2-placeholder">Unable to load annual approvals.</div>';
-          window.__ManagerHubAnnualApprovalSmartCardV634Status = { build:'v634-annual-approvals-real-source', ok:false, error:(_e && _e.message) ? _e.message : String(_e) };
         }
       }
       function setToolCardState(cardId, opts){
@@ -6897,9 +6871,122 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
 })();
 </script>
 
+<script id="mh2-annual-approval-alert-hard-lock-v288">
+(function(){
+  function $(id){ return document.getElementById(id); }
+  function esc(v){ return String(v == null ? '' : v).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];}); }
+  function getSb(){
+    try{ if(window.supabaseClient && typeof window.supabaseClient.from === 'function') return window.supabaseClient; }catch(e){}
+    try{ if(window.sb && typeof window.sb.from === 'function') return window.sb; }catch(e){}
+    try{ if(window.getSupabase){ var c=window.getSupabase(); if(c && typeof c.from === 'function') return c; } }catch(e){}
+    return null;
+  }
+  function isUuid(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||'').trim()); }
+  function selectedCommunity(){
+    var sel=$('zummeeCommunitySelect');
+    var id='', name='';
+    if(sel){
+      var raw=String(sel.value||'').trim();
+      if(isUuid(raw)) id=raw;
+      name=String(sel.options && sel.selectedIndex>=0 ? (sel.options[sel.selectedIndex].textContent||'') : '').trim();
+    }
+    if(!id){ try{ var vals=[localStorage.getItem('zummeeActiveCommunityId'),localStorage.getItem('activeCommunityId'),localStorage.getItem('currentCommunityId'),localStorage.getItem('zummee_selected_community_id')]; for(var vi=0;vi<vals.length;vi++){ if(isUuid(vals[vi])){ id=String(vals[vi]).trim(); break; } } }catch(e){} }
+    if(!name){ try{ name=String(localStorage.getItem('currentCommunityName')||localStorage.getItem('zummeeCurrentCommunityName')||'').trim(); }catch(e){} }
+    return {id:id,name:name};
+  }
+  function norm(v){ return String(v||'').toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' '); }
+  function statusIsOpen(row){
+    var st=String((row&&row.status)||'').toLowerCase().trim().replace(/[\s-]+/g,'_');
+    if(!st) return true;
+    if(st.indexOf('reject')>-1) return false;
+    if(st.indexOf('mail')>-1) return false;
+    if(st.indexOf('sent_to_admin')>-1) return false;
+    if(st==='approved' || st==='complete' || st==='completed' || st==='closed') return false;
+    if(st.indexOf('approved_ready')>-1) return false;
+    return st.indexOf('pending')>-1 || st.indexOf('board')>-1 || st.indexOf('supervisor')>-1 || st.indexOf('approval')>-1 || st==='draft';
+  }
+  function parseWhen(row){
+    var raw = row && (row.submitted_at || row.created_at || row.updated_at || row.created || row.date || '');
+    raw=String(raw||'').trim();
+    if(!raw) return null;
+    var t=Date.parse(raw);
+    if(isFinite(t)) return new Date(t);
+    var m=raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if(m) return new Date(Number(m[1]), Number(m[2])-1, Number(m[3]));
+    m=raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if(m) return new Date(Number(m[3]), Number(m[1])-1, Number(m[2]));
+    return null;
+  }
+  function isOverdue(row){
+    var d=parseWhen(row);
+    if(!d || !isFinite(d.getTime())) return false;
+    return (Date.now() - d.getTime()) >= (2*24*60*60*1000);
+  }
+  function matchesCommunity(row, ctx){
+    if(!row) return false;
+    var rid=String(row.community_id||row.communityId||'').trim();
+    if(ctx.id && rid && rid===ctx.id) return true;
+    var rname=norm(row.community_name||row.community||row.property_name||row.association_name||row.name);
+    var cname=norm(ctx.name);
+    return !!(cname && rname && cname===rname);
+  }
+  function paint(openCount, overdueCount, ctx){
+    var el=$('mh2AlertApprovals');
+    if(!el) return;
+    ctx = ctx || {};
+    var tone = overdueCount>0 ? 'is-urgent' : (openCount>0 ? 'is-attention' : 'is-good');
+    var badge = overdueCount>0 ? (String(overdueCount)+' OVERDUE') : (openCount>0 ? (String(openCount)+' OPEN') : 'CLEAR');
+    var copy = overdueCount>0
+      ? (String(overdueCount)+' annual meeting approval item'+(overdueCount===1?' has':'s have')+' been open more than 2 days for '+(ctx.name||'the selected community')+'.')
+      : (openCount>0 ? (String(openCount)+' annual meeting approval item'+(openCount===1?' is':'s are')+' still in progress for '+(ctx.name||'the selected community')+'.') : 'No active items');
 
-<!-- v636: removed legacy annual approval hard-lock script that queried annual_meeting_packet_requests and repainted mh2AlertApprovals. -->
+    // v537: allow the first paint and any real community/data change, but do not rebuild
+    // the Annual card DOM when the exact same community + payload is repainted by legacy timers.
+    // This stops the visible text blink while preserving community switching.
+    var communityKey = String(ctx.id || '') + '|' + String(ctx.name || '');
+    var renderKey = JSON.stringify({ community: communityKey, tone: tone, badge: badge, copy: copy, open: openCount, overdue: overdueCount });
+    if(window.__mh2AnnualApprovalLastRenderKey === renderKey){
+      try{ window.__mh2AnnualApprovalDuplicatePaintBlocked = (window.__mh2AnnualApprovalDuplicatePaintBlocked || 0) + 1; }catch(_e){}
+      return;
+    }
+    window.__mh2AnnualApprovalLastRenderKey = renderKey;
 
+    el.classList.remove('is-urgent','is-attention','is-good');
+    el.classList.add(tone);
+    el.setAttribute('href', (window.mh2IsPrivileged ? 'annual_meeting_approvals.html' : 'annual_meeting_status.html'));
+    el.innerHTML = '<div class="mh2-alert-top"><div class="mh2-alert-title">Annual meeting approvals</div><div class="mh2-alert-badge">'+esc(badge)+'</div></div><div class="mh2-alert-copy">'+esc(copy)+'</div>';
+    try{ window.__mh2AnnualApprovalAlertDebug={community:ctx,open:openCount,overdue:overdueCount,paintedAt:new Date().toISOString(),renderKey:renderKey}; }catch(e){}
+  }
+  async function refreshAnnualAlert(){
+    var sb=getSb();
+    if(!sb) return;
+    var ctx=selectedCommunity();
+    try{
+      var q=sb.from('annual_meeting_packet_requests').select('*').limit(200);
+      if(ctx.id) q=q.eq('community_id', ctx.id);
+      var res=await q;
+      if(res && res.error) throw res.error;
+      var rows=Array.isArray(res&&res.data)?res.data:[];
+      if(!ctx.id && ctx.name) rows=rows.filter(function(r){ return matchesCommunity(r,ctx); });
+      var open=rows.filter(statusIsOpen);
+      var overdue=open.filter(isOverdue);
+      paint(open.length, overdue.length, ctx);
+      try{ window.__mh2AnnualApprovalRows=rows; window.__mh2AnnualApprovalOpenRows=open; window.__mh2AnnualApprovalOverdueRows=overdue; }catch(e){}
+    }catch(e){
+      try{ console.warn('[MH2] annual approval hard-lock failed', e); window.__mh2AnnualApprovalAlertError=e; }catch(_e){}
+    }
+  }
+  window.mh2RefreshAnnualApprovalSmartAlert = refreshAnnualAlert;
+  function schedule(){ setTimeout(refreshAnnualAlert,250); setTimeout(refreshAnnualAlert,1200); setTimeout(refreshAnnualAlert,3500); }
+  document.addEventListener('DOMContentLoaded', function(){
+    schedule();
+    var sel=$('zummeeCommunitySelect');
+    if(sel) sel.addEventListener('change', function(){ setTimeout(refreshAnnualAlert,150); setTimeout(refreshAnnualAlert,1000); });
+    setInterval(refreshAnnualAlert, 15000);
+  });
+  if(document.readyState !== 'loading') schedule();
+})();
+</script>
 
 
 
@@ -8067,34 +8154,6 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
 </script>
 
 
-
-
-<script id="manager-hub-v634-annual-approval-status-debug">
-(function(){
-  window.getManagerHubAnnualApprovalSmartCardStatus = function(){
-    return window.__ManagerHubAnnualApprovalSmartCardV634Status || { build:'v634-annual-approvals-real-source', note:'No approval summary loaded yet' };
-  };
-})();
-</script>
-
-
-<script id="manager-hub-v636-smart-card-diagnostics-only">
-(function(){
-  if(window.__ManagerHubV636DiagnosticsOnly) return;
-  window.__ManagerHubV636DiagnosticsOnly = true;
-  window.getManagerHubV636Status = function(){
-    return {
-      build: "2026-05-10-v636-manager-hub-stable-smart-alerts-annual-source-clean",
-      oldAnnualHardLockRemoved: true,
-      smartAlerts: (typeof window.getManagerHubSmartCardsSummary === "function" ? window.getManagerHubSmartCardsSummary() : null),
-      annualApprovals: (typeof window.getManagerHubAnnualApprovalSmartCardStatus === "function" ? window.getManagerHubAnnualApprovalSmartCardStatus() : null),
-      annualCardText: (document.getElementById("mh2AlertApprovals") ? document.getElementById("mh2AlertApprovals").innerText : null),
-      boardCardText: (document.getElementById("mh2AlertBoard") ? document.getElementById("mh2AlertBoard").innerText : null),
-      maintenanceCardText: (document.getElementById("mh2AlertActivity") ? document.getElementById("mh2AlertActivity").innerText : null)
-    };
-  };
-})();
-</script>
 
 </body>
 </html>
