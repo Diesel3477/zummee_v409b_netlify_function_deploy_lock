@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-08-v648-annual-meetings-stable-baseline";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-10-v662-immutable-approval-requests";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annual Meetings</title>
@@ -3252,43 +3252,32 @@ window.ZUMMEE_ANNUAL_MEETINGS_STABLE_BASELINE = "v648";
 
   async function tryWrite(sb, table, data){
     try{
-      // Long-term behavior: if a pending/active approval already exists for this
-      // community + annual meeting date, update it instead of creating a duplicate.
-      try{
-        let existingQuery = sb.from(table)
-          .select('id,approval_status,current_step,updated_at')
-          .eq('community_id', data.community_id)
-          .order('updated_at', { ascending:false })
-          .limit(1);
+      const cleanData = Object.assign({}, data || {});
 
-        if(data.next_annual_meeting_date){
-          existingQuery = existingQuery.eq('next_annual_meeting_date', data.next_annual_meeting_date);
-        }
+      // v662 long-term approval architecture:
+      // annual_meeting_approval_requests is an immutable workflow table.
+      // Every packet approval send creates a NEW request id, token, snapshot, and event trail.
+      // Do not upsert/update by community_id here.
+      if(table === PRIMARY_APPROVAL_TABLE){
+        delete cleanData.id;
+        delete cleanData.created_at;
+        delete cleanData.board_approved_at;
+        delete cleanData.board_approved_by;
+        delete cleanData.supervisor_approved_at;
+        delete cleanData.supervisor_approved_by;
+        delete cleanData.approval_review_token_used_at;
 
-        if(table === PRIMARY_APPROVAL_TABLE){
-          existingQuery = existingQuery.not('approval_status', 'in', '("archived","cancelled","mailed")');
-        }
-
-        const existing = await existingQuery.maybeSingle();
-
-        if(existing && existing.data && existing.data.id){
-          const upd = await sb.from(table)
-            .update(data)
-            .eq('id', existing.data.id)
-            .select('*')
-            .maybeSingle();
-
-          if(upd && !upd.error) return { ok:true, table, data:upd.data || null, mode:'updated_existing' };
-        }
-      }catch(findErr){
-        console.warn('[Annual v653] existing approval lookup skipped', findErr);
+        const ins = await sb.from(table).insert(cleanData).select('*').maybeSingle();
+        if(ins && !ins.error) return { ok:true, table, data:ins.data || null, mode:'inserted_new_request' };
+        return { ok:false, table, error:(ins && ins.error) || 'primary insert failed' };
       }
 
-      const up = await sb.from(table).upsert(data, { onConflict:'community_id', ignoreDuplicates:false }).select('*').maybeSingle();
-      if(up && !up.error) return { ok:true, table, data:up.data || null, mode:'upserted' };
+      // Legacy fallback table can keep its old community-level behavior.
+      const up = await sb.from(table).upsert(cleanData, { onConflict:'community_id', ignoreDuplicates:false }).select('*').maybeSingle();
+      if(up && !up.error) return { ok:true, table, data:up.data || null, mode:'fallback_upserted' };
 
-      const ins = await sb.from(table).insert(data).select('*').maybeSingle();
-      if(ins && !ins.error) return { ok:true, table, data:ins.data || null, mode:'inserted' };
+      const ins = await sb.from(table).insert(cleanData).select('*').maybeSingle();
+      if(ins && !ins.error) return { ok:true, table, data:ins.data || null, mode:'fallback_inserted' };
 
       return { ok:false, table, error:(ins && ins.error) || (up && up.error) || 'unknown error' };
     }catch(err){ return { ok:false, table, error:err }; }
@@ -3341,7 +3330,7 @@ window.ZUMMEE_ANNUAL_MEETINGS_STABLE_BASELINE = "v648";
 
 
 <script id="annual-meetings-v652-status">
-window.ZUMMEE_ANNUAL_MEETINGS_SAFE_INSERT = "v652";
+window.ZUMMEE_ANNUAL_MEETINGS_SAFE_INSERT = "v662-immutable-approval-requests";
 window.getAnnualMeetingsV652Status = function(){
   return {
     safeInsert: window.ZUMMEE_ANNUAL_MEETINGS_SAFE_INSERT,
@@ -3352,7 +3341,7 @@ window.getAnnualMeetingsV652Status = function(){
     packetButtonExists: !!document.getElementById("packetBtn")
   };
 };
-console.info("[Annual Meetings v652] packet preview + approval routing loaded safely");
+console.info("[Annual Meetings v662] immutable approval request creation loaded safely");
 </script>
 
 
@@ -3387,7 +3376,7 @@ console.info("[Annual Meetings v652] packet preview + approval routing loaded sa
   if(window.__AnnualMeetingsV657PreviewSendInlineSafe) return;
   window.__AnnualMeetingsV657PreviewSendInlineSafe = true;
 
-  const BUILD = '2026-05-09-v657-preview-send-inline-safe';
+  const BUILD = '2026-05-10-v662-immutable-approval-requests-v657';
   const ROUTE_STORAGE_KEY = 'zummee_annual_meeting_saved_approval_route_v657';
   const PRIMARY_APPROVAL_TABLE = 'annual_meeting_approval_requests';
 
@@ -3615,7 +3604,7 @@ console.info("[Annual Meetings v652] packet preview + approval routing loaded sa
     const html = last && (last.html || last.packetHtml) ? (last.html || last.packetHtml) : currentHtml;
 
     return {
-      version:'v657-preview-send-inline-safe',
+      version:'v662-immutable-approval-requests-v657',
       community,
       settings,
       routeKey,
@@ -3657,41 +3646,26 @@ console.info("[Annual Meetings v652] packet preview + approval routing loaded sa
 
   async function writeApprovalRequest(data){
     const sb = await client();
+    const cleanData = Object.assign({}, data || {});
 
-    let existingQuery = sb.from(PRIMARY_APPROVAL_TABLE)
-      .select('id,approval_status,current_step,updated_at')
-      .eq('community_id', data.community_id)
-      .order('updated_at', { ascending:false })
-      .limit(1);
-
-    if(data.next_annual_meeting_date){
-      existingQuery = existingQuery.eq('next_annual_meeting_date', data.next_annual_meeting_date);
-    }
-
-    try{
-      existingQuery = existingQuery.not('approval_status', 'in', '("archived","cancelled","mailed")');
-    }catch(e){}
-
-    const existing = await existingQuery.maybeSingle();
-
-    if(existing && existing.data && existing.data.id){
-      const upd = await sb.from(PRIMARY_APPROVAL_TABLE)
-        .update(data)
-        .eq('id', existing.data.id)
-        .select('*')
-        .maybeSingle();
-
-      if(upd.error) throw upd.error;
-      return { mode:'updated_existing', data:upd.data };
-    }
+    // v662 immutable approval workflow:
+    // Each Send for Approval creates a brand-new annual_meeting_approval_requests row.
+    // This prevents old packets/events/tokens from being reused across tests or real cycles.
+    delete cleanData.id;
+    delete cleanData.created_at;
+    delete cleanData.board_approved_at;
+    delete cleanData.board_approved_by;
+    delete cleanData.supervisor_approved_at;
+    delete cleanData.supervisor_approved_by;
+    delete cleanData.approval_review_token_used_at;
 
     const ins = await sb.from(PRIMARY_APPROVAL_TABLE)
-      .insert(data)
+      .insert(cleanData)
       .select('*')
       .maybeSingle();
 
     if(ins.error) throw ins.error;
-    return { mode:'inserted', data:ins.data };
+    return { mode:'inserted_new_request', data:ins.data };
   }
 
   function showSendStatus(message, type){
@@ -3736,6 +3710,18 @@ console.info("[Annual Meetings v652] packet preview + approval routing loaded sa
         request:result.data,
         sentAt:now()
       };
+
+      try{
+        if(window.notifyAnnualApprovalEmail && result && result.data && result.data.id){
+          const emailResult = await window.notifyAnnualApprovalEmail(result.data, 'annual_meetings_v657_send_for_approval');
+          window.__AnnualMeetingsV657LastApprovalSend.emailNotification = emailResult;
+        }
+      }catch(emailNotifyErr){
+        window.__AnnualMeetingsV657LastApprovalSend.emailNotification = {
+          ok:false,
+          error:emailNotifyErr && emailNotifyErr.message ? emailNotifyErr.message : String(emailNotifyErr)
+        };
+      }
 
       showSendStatus('Packet sent for approval using saved route: ' + route.label + '.', 'ok');
       return window.__AnnualMeetingsV657LastApprovalSend;
@@ -3853,7 +3839,7 @@ console.info("[Annual Meetings v652] packet preview + approval routing loaded sa
   if(window.__AnnualMeetingsV659PreviewTopbarSend) return;
   window.__AnnualMeetingsV659PreviewTopbarSend = true;
 
-  const BUILD = '2026-05-09-v659-preview-topbar-send';
+  const BUILD = '2026-05-10-v662-immutable-approval-requests-v659';
   const ROUTE_STORAGE_KEY = 'zummee_annual_meeting_saved_approval_route_v659';
   const PRIMARY_APPROVAL_TABLE = 'annual_meeting_approval_requests';
 
@@ -4026,7 +4012,7 @@ console.info("[Annual Meetings v652] packet preview + approval routing loaded sa
     const currentHtml = content && content.innerHTML ? content.innerHTML : '';
     const html = last && (last.html || last.packetHtml) ? (last.html || last.packetHtml) : currentHtml;
     return {
-      version:'v659-preview-topbar-send',
+      version:'v662-immutable-approval-requests-v659',
       community,
       settings,
       routeKey,
@@ -4068,41 +4054,26 @@ console.info("[Annual Meetings v652] packet preview + approval routing loaded sa
 
   async function writeApprovalRequest(data){
     const sb = await client();
+    const cleanData = Object.assign({}, data || {});
 
-    let existingQuery = sb.from(PRIMARY_APPROVAL_TABLE)
-      .select('id,approval_status,current_step,updated_at')
-      .eq('community_id', data.community_id)
-      .order('updated_at', { ascending:false })
-      .limit(1);
-
-    if(data.next_annual_meeting_date){
-      existingQuery = existingQuery.eq('next_annual_meeting_date', data.next_annual_meeting_date);
-    }
-
-    try{
-      existingQuery = existingQuery.not('approval_status', 'in', '("archived","cancelled","mailed")');
-    }catch(e){}
-
-    const existing = await existingQuery.maybeSingle();
-
-    if(existing && existing.data && existing.data.id){
-      const upd = await sb.from(PRIMARY_APPROVAL_TABLE)
-        .update(data)
-        .eq('id', existing.data.id)
-        .select('*')
-        .maybeSingle();
-
-      if(upd.error) throw upd.error;
-      return { mode:'updated_existing', data:upd.data };
-    }
+    // v662 immutable approval workflow:
+    // Each Send for Approval creates a brand-new annual_meeting_approval_requests row.
+    // This prevents old packets/events/tokens from being reused across tests or real cycles.
+    delete cleanData.id;
+    delete cleanData.created_at;
+    delete cleanData.board_approved_at;
+    delete cleanData.board_approved_by;
+    delete cleanData.supervisor_approved_at;
+    delete cleanData.supervisor_approved_by;
+    delete cleanData.approval_review_token_used_at;
 
     const ins = await sb.from(PRIMARY_APPROVAL_TABLE)
-      .insert(data)
+      .insert(cleanData)
       .select('*')
       .maybeSingle();
 
     if(ins.error) throw ins.error;
-    return { mode:'inserted', data:ins.data };
+    return { mode:'inserted_new_request', data:ins.data };
   }
 
   function showStatus(message, type){
@@ -4532,6 +4503,23 @@ console.info("[Annual Meetings v652] packet preview + approval routing loaded sa
   window.addEventListener('pageshow', function(){
     if(shouldOpen() && !window.__AnnualMeetingsV661OpenApprovalPacketLast) setTimeout(loadAndOpen, 300);
   });
+})();
+</script>
+
+
+<script id="annual-meetings-v662-immutable-approval-status">
+(function(){
+  window.ZUMMEE_ANNUAL_MEETINGS_APPROVAL_CREATE_MODE = 'v662-insert-new-request-per-send';
+  window.getAnnualMeetingsApprovalCreateStatus = function(){
+    return {
+      build: window.ZUMMEE_BUILD || '',
+      createMode: window.ZUMMEE_ANNUAL_MEETINGS_APPROVAL_CREATE_MODE,
+      v657Last: window.__AnnualMeetingsV657LastApprovalSend || null,
+      v659Last: window.__AnnualMeetingsV659LastApprovalSend || null,
+      emailLast: window.__AnnualMeetingsV660LastApprovalEmail || null
+    };
+  };
+  console.info('[Annual Meetings v662] approval creation mode:', window.ZUMMEE_ANNUAL_MEETINGS_APPROVAL_CREATE_MODE);
 })();
 </script>
 
