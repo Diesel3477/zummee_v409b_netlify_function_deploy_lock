@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-10-v664-immutable-insert-syntax-fixed";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-10-v665-all-send-paths-immutable";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annual Meetings</title>
@@ -710,7 +710,7 @@
   Next workflow:
   - Packet generation must read from annual_meeting_settings.
 */
-window.ZUMMEE_ANNUAL_MEETINGS_STABLE_BASELINE = "v664-immutable-insert-syntax-fixed";
+window.ZUMMEE_ANNUAL_MEETINGS_STABLE_BASELINE = "v665-all-send-paths-immutable";
 </script>
 
 
@@ -3255,7 +3255,7 @@ window.ZUMMEE_ANNUAL_MEETINGS_STABLE_BASELINE = "v664-immutable-insert-syntax-fi
       const cleanData = Object.assign({}, data || {});
 
       /*
-        v664 — Immutable approval workflow record.
+        v665 — Immutable approval workflow record.
         annual_meeting_approval_requests must create a brand-new row for every
         approval packet send. Do not look up, update, or upsert by community_id.
       */
@@ -3272,14 +3272,14 @@ window.ZUMMEE_ANNUAL_MEETINGS_STABLE_BASELINE = "v664-immutable-insert-syntax-fi
           .maybeSingle();
 
         if(ins && !ins.error){
-          return { ok:true, table, data:ins.data || null, mode:'immutable_insert_v664' };
+          return { ok:true, table, data:ins.data || null, mode:'immutable_insert_v665' };
         }
 
         return {
           ok:false,
           table,
           error:(ins && ins.error) || 'primary immutable insert failed',
-          mode:'immutable_insert_v664_failed'
+          mode:'immutable_insert_v665_failed'
         };
       }
 
@@ -3668,40 +3668,24 @@ console.info("[Annual Meetings v652] packet preview + approval routing loaded sa
   async function writeApprovalRequest(data){
     const sb = await client();
 
-    let existingQuery = sb.from(PRIMARY_APPROVAL_TABLE)
-      .select('id,approval_status,current_step,updated_at')
-      .eq('community_id', data.community_id)
-      .order('updated_at', { ascending:false })
-      .limit(1);
-
-    if(data.next_annual_meeting_date){
-      existingQuery = existingQuery.eq('next_annual_meeting_date', data.next_annual_meeting_date);
-    }
-
-    try{
-      existingQuery = existingQuery.not('approval_status', 'in', '("archived","cancelled","mailed")');
-    }catch(e){}
-
-    const existing = await existingQuery.maybeSingle();
-
-    if(existing && existing.data && existing.data.id){
-      const upd = await sb.from(PRIMARY_APPROVAL_TABLE)
-        .update(data)
-        .eq('id', existing.data.id)
-        .select('*')
-        .maybeSingle();
-
-      if(upd.error) throw upd.error;
-      return { mode:'updated_existing', data:upd.data };
-    }
+    /*
+      v665 — Immutable approval workflow record.
+      This send path must never update/reuse an existing approval request.
+      Every new packet send creates a fresh annual_meeting_approval_requests row.
+    */
+    const cleanData = Object.assign({}, data || {});
+    delete cleanData.id;
+    delete cleanData.created_at;
+    cleanData.initiated_at = cleanData.initiated_at || now();
+    cleanData.updated_at = now();
 
     const ins = await sb.from(PRIMARY_APPROVAL_TABLE)
-      .insert(data)
+      .insert(cleanData)
       .select('*')
       .maybeSingle();
 
     if(ins.error) throw ins.error;
-    return { mode:'inserted', data:ins.data };
+    return { mode:'immutable_insert_v665', data:ins.data };
   }
 
   function showSendStatus(message, type){
@@ -4079,40 +4063,24 @@ console.info("[Annual Meetings v652] packet preview + approval routing loaded sa
   async function writeApprovalRequest(data){
     const sb = await client();
 
-    let existingQuery = sb.from(PRIMARY_APPROVAL_TABLE)
-      .select('id,approval_status,current_step,updated_at')
-      .eq('community_id', data.community_id)
-      .order('updated_at', { ascending:false })
-      .limit(1);
-
-    if(data.next_annual_meeting_date){
-      existingQuery = existingQuery.eq('next_annual_meeting_date', data.next_annual_meeting_date);
-    }
-
-    try{
-      existingQuery = existingQuery.not('approval_status', 'in', '("archived","cancelled","mailed")');
-    }catch(e){}
-
-    const existing = await existingQuery.maybeSingle();
-
-    if(existing && existing.data && existing.data.id){
-      const upd = await sb.from(PRIMARY_APPROVAL_TABLE)
-        .update(data)
-        .eq('id', existing.data.id)
-        .select('*')
-        .maybeSingle();
-
-      if(upd.error) throw upd.error;
-      return { mode:'updated_existing', data:upd.data };
-    }
+    /*
+      v665 — Immutable approval workflow record.
+      This send path must never update/reuse an existing approval request.
+      Every new packet send creates a fresh annual_meeting_approval_requests row.
+    */
+    const cleanData = Object.assign({}, data || {});
+    delete cleanData.id;
+    delete cleanData.created_at;
+    cleanData.initiated_at = cleanData.initiated_at || now();
+    cleanData.updated_at = now();
 
     const ins = await sb.from(PRIMARY_APPROVAL_TABLE)
-      .insert(data)
+      .insert(cleanData)
       .select('*')
       .maybeSingle();
 
     if(ins.error) throw ins.error;
-    return { mode:'inserted', data:ins.data };
+    return { mode:'immutable_insert_v665', data:ins.data };
   }
 
   function showStatus(message, type){
@@ -4546,28 +4514,39 @@ console.info("[Annual Meetings v652] packet preview + approval routing loaded sa
 </script>
 
 
-<script id="annual-meetings-v664-immutable-approval-diagnostics">
-window.ZUMMEE_ANNUAL_MEETINGS_APPROVAL_CREATE_BUILD = "v664-immutable-insert-syntax-fixed";
+<script id="annual-meetings-v665-immutable-approval-diagnostics">
+window.ZUMMEE_ANNUAL_MEETINGS_APPROVAL_CREATE_BUILD = "v665-all-send-paths-immutable";
 window.getAnnualMeetingsApprovalCreateStatus = function(){
-  var last = null;
+  var routeLast = null;
+  var v657 = window.__AnnualMeetingsV657LastApprovalSend || null;
+  var v659 = window.__AnnualMeetingsV659LastApprovalSend || null;
   try {
-    last = window.ZummeeAnnualMeetingsApprovalRouting && typeof window.ZummeeAnnualMeetingsApprovalRouting.last === "function"
+    routeLast = window.ZummeeAnnualMeetingsApprovalRouting && typeof window.ZummeeAnnualMeetingsApprovalRouting.last === "function"
       ? window.ZummeeAnnualMeetingsApprovalRouting.last()
       : window.__AnnualMeetingsApprovalRoutingV652Last || null;
   } catch(_e){}
+
+  var last = v659 || v657 || routeLast || null;
+  var result = last && last.result ? last.result : null;
+  var request = (result && result.data) || (last && last.request) || null;
+
   return {
     build: window.ZUMMEE_ANNUAL_MEETINGS_APPROVAL_CREATE_BUILD,
     pageBuild: window.ZUMMEE_BUILD || null,
     hasApprovalRouting: !!window.ZummeeAnnualMeetingsApprovalRouting,
-    lastMode: last && last.result ? last.result.mode : null,
-    lastRequestId: last && last.result && last.result.data ? last.result.data.id : null,
-    lastCurrentStep: last && last.result && last.result.data ? last.result.data.current_step : null,
-    lastApprovalStatus: last && last.result && last.result.data ? last.result.data.approval_status : null,
-    lastTable: last && last.result ? last.result.table : null,
-    lastOk: last && last.result ? last.result.ok : null
+    hasV657SendPath: !!window.sendAnnualMeetingPacketForApprovalFromPreview,
+    hasV659SendPath: !!window.sendAnnualMeetingPacketForApprovalFromTopbar,
+    lastSource: v659 ? "v659_topbar_send" : (v657 ? "v657_preview_send" : (routeLast ? "v652_route_send" : null)),
+    lastMode: (result && result.mode) || (last && last.mode) || null,
+    lastRequestId: request ? request.id : null,
+    lastCurrentStep: request ? request.current_step : null,
+    lastApprovalStatus: request ? request.approval_status : null,
+    lastTable: result ? result.table : null,
+    lastOk: (last && typeof last.ok !== "undefined") ? last.ok : (result ? result.ok : null),
+    lastEmailNotification: last ? (last.emailNotification || null) : null
   };
 };
-console.info("[Annual Meetings v664] immutable approval request insert diagnostics loaded");
+console.info("[Annual Meetings v665] all approval send paths use immutable insert");
 </script>
 
 </body>
