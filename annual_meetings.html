@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-10-v663-immutable-approval-request-insert";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-10-v664-immutable-insert-syntax-fixed";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annual Meetings</title>
@@ -710,7 +710,7 @@
   Next workflow:
   - Packet generation must read from annual_meeting_settings.
 */
-window.ZUMMEE_ANNUAL_MEETINGS_STABLE_BASELINE = "v663-immutable-approval-request-insert";
+window.ZUMMEE_ANNUAL_MEETINGS_STABLE_BASELINE = "v664-immutable-insert-syntax-fixed";
 </script>
 
 
@@ -2945,32 +2945,7 @@ window.ZUMMEE_ANNUAL_MEETINGS_STABLE_BASELINE = "v663-immutable-approval-request
       css ? css.outerHTML : '',
       '</head><body><div class="am-v652-body">',
       content.innerHTML,
-      '</div>
-<script id="annual-meetings-v663-immutable-approval-diagnostics">
-window.ZUMMEE_ANNUAL_MEETINGS_APPROVAL_CREATE_BUILD = "v663-immutable-approval-request-insert";
-window.getAnnualMeetingsApprovalCreateStatus = function(){
-  var last = null;
-  try {
-    last = window.ZummeeAnnualMeetingsApprovalRouting && typeof window.ZummeeAnnualMeetingsApprovalRouting.last === "function"
-      ? window.ZummeeAnnualMeetingsApprovalRouting.last()
-      : window.__AnnualMeetingsApprovalRoutingV652Last || null;
-  } catch(_e){}
-  return {
-    build: window.ZUMMEE_ANNUAL_MEETINGS_APPROVAL_CREATE_BUILD,
-    pageBuild: window.ZUMMEE_BUILD || null,
-    hasApprovalRouting: !!window.ZummeeAnnualMeetingsApprovalRouting,
-    lastMode: last && last.result ? last.result.mode : null,
-    lastRequestId: last && last.result && last.result.data ? last.result.data.id : null,
-    lastCurrentStep: last && last.result && last.result.data ? last.result.data.current_step : null,
-    lastApprovalStatus: last && last.result && last.result.data ? last.result.data.approval_status : null,
-    lastTable: last && last.result ? last.result.table : null,
-    lastOk: last && last.result ? last.result.ok : null
-  };
-};
-console.info("[Annual Meetings v663] immutable approval request insert diagnostics loaded");
-</script>
-
-</body></html>'
+      '</div></body></html>'
     ].join('');
     w.document.open();
     w.document.write(doc);
@@ -3280,7 +3255,7 @@ console.info("[Annual Meetings v663] immutable approval request insert diagnosti
       const cleanData = Object.assign({}, data || {});
 
       /*
-        v663 — Immutable approval workflow record.
+        v664 — Immutable approval workflow record.
         annual_meeting_approval_requests must create a brand-new row for every
         approval packet send. Do not look up, update, or upsert by community_id.
       */
@@ -3297,10 +3272,15 @@ console.info("[Annual Meetings v663] immutable approval request insert diagnosti
           .maybeSingle();
 
         if(ins && !ins.error){
-          return { ok:true, table, data:ins.data || null, mode:'immutable_insert_v663' };
+          return { ok:true, table, data:ins.data || null, mode:'immutable_insert_v664' };
         }
 
-        return { ok:false, table, error:(ins && ins.error) || 'primary immutable insert failed', mode:'immutable_insert_v663_failed' };
+        return {
+          ok:false,
+          table,
+          error:(ins && ins.error) || 'primary immutable insert failed',
+          mode:'immutable_insert_v664_failed'
+        };
       }
 
       // Legacy fallback table behavior remains unchanged.
@@ -4566,8 +4546,8 @@ console.info("[Annual Meetings v652] packet preview + approval routing loaded sa
 </script>
 
 
-<script id="annual-meetings-v663-immutable-approval-diagnostics">
-window.ZUMMEE_ANNUAL_MEETINGS_APPROVAL_CREATE_BUILD = "v663-immutable-approval-request-insert";
+<script id="annual-meetings-v664-immutable-approval-diagnostics">
+window.ZUMMEE_ANNUAL_MEETINGS_APPROVAL_CREATE_BUILD = "v664-immutable-insert-syntax-fixed";
 window.getAnnualMeetingsApprovalCreateStatus = function(){
   var last = null;
   try {
@@ -4587,7 +4567,7 @@ window.getAnnualMeetingsApprovalCreateStatus = function(){
     lastOk: last && last.result ? last.result.ok : null
   };
 };
-console.info("[Annual Meetings v663] immutable approval request insert diagnostics loaded");
+console.info("[Annual Meetings v664] immutable approval request insert diagnostics loaded");
 </script>
 
 </body>
