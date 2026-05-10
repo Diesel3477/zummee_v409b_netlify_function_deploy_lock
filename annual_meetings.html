@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-10-v665-all-send-paths-immutable";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-10-v728-resident-window-envelope-mail-merge";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Annual Meetings</title>
@@ -2945,7 +2945,541 @@ window.ZUMMEE_ANNUAL_MEETINGS_STABLE_BASELINE = "v665-all-send-paths-immutable";
       css ? css.outerHTML : '',
       '</head><body><div class="am-v652-body">',
       content.innerHTML,
+      '</div>
+<!-- Zummee v728 resident-personalized annual meeting packet generator -->
+<style id="annual-meetings-v728-resident-mail-merge-style">
+  .am-v728-mail-summary{
+    width:min(850px,100%);
+    margin:0 auto 18px;
+    border:2px solid #b9d8ff;
+    border-radius:22px;
+    background:#f8fbff;
+    padding:16px 18px;
+    color:#123151;
+    box-shadow:0 10px 24px rgba(16,47,79,.08);
+  }
+  .am-v728-mail-summary strong{
+    display:block;
+    font-size:18px;
+    font-weight:950;
+    margin-bottom:8px;
+  }
+  .am-v728-mail-summary span{
+    display:inline-flex;
+    margin:4px 8px 4px 0;
+    padding:8px 11px;
+    border-radius:999px;
+    background:#fff;
+    border:1px solid #d7e6f6;
+    font-weight:900;
+    font-size:13px;
+  }
+  .am-v728-mail-summary .warn{
+    color:#9a5d00;
+    border-color:#efd08a;
+    background:#fff9eb;
+  }
+  .am-v728-resident-break{
+    width:min(850px,100%);
+    margin:18px auto 0;
+    padding:10px 14px;
+    border-radius:999px;
+    background:#17365f;
+    color:#fff;
+    font-size:12px;
+    font-weight:950;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+  }
+  .am-v728-notice-page{
+    position:relative;
+  }
+  .am-v728-window-address{
+    margin:18px 0 24px 0;
+    width:3.85in;
+    min-height:1.05in;
+    border:1.5px dashed #b7c8da;
+    border-radius:10px;
+    background:#fff;
+    padding:.16in .22in;
+    color:#0f2f4f;
+    font-family:Arial, Helvetica, sans-serif;
+    font-size:13pt;
+    line-height:1.23;
+    font-weight:700;
+  }
+  .am-v728-window-address::before{
+    content:"WINDOW ENVELOPE ADDRESS";
+    display:block;
+    font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    font-size:7pt;
+    letter-spacing:.12em;
+    color:#71839a;
+    margin-bottom:.08in;
+    font-weight:950;
+  }
+  .am-v728-window-address.is-missing{
+    border-color:#e4b8b8;
+    background:#fff7f7;
+    color:#8f2626;
+  }
+  .am-v728-resident-note{
+    margin:10px 0 18px;
+    color:#627589;
+    font-size:12px;
+    font-weight:850;
+  }
+  @media print{
+    .am-v728-mail-summary,
+    .am-v728-resident-break{display:none!important}
+    .am-v728-window-address{
+      border-color:transparent!important;
+      background:#fff!important;
+      border-radius:0!important;
+      box-shadow:none!important;
+      page-break-inside:avoid;
+    }
+  }
+</style>
+
+<script id="annual-meetings-v728-resident-mail-merge">
+(function(){
+  'use strict';
+  if(window.__AnnualMeetingsResidentMailMergeV728) return;
+  window.__AnnualMeetingsResidentMailMergeV728 = true;
+
+  const BUILD = '2026-05-10-v728-resident-window-envelope-mail-merge';
+  const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
+
+  function s(v){ return String(v == null ? '' : v).trim(); }
+  function el(id){ return document.getElementById(id); }
+  function esc(v){
+    return s(v).replace(/[&<>"']/g, function(ch){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch];
+    });
+  }
+  function todayIso(){ return new Date().toISOString(); }
+  function parseISODate(value){
+    value = s(value);
+    if(!value) return null;
+    const d = new Date(value + 'T00:00:00');
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  function formatDate(value){
+    if(!value) return '—';
+    const d = parseISODate(value);
+    if(!d) return s(value);
+    return d.toLocaleDateString(undefined, { month:'long', day:'numeric', year:'numeric' });
+  }
+  function isoAddDays(value, days){
+    const d = parseISODate(value);
+    if(!d) return '';
+    d.setDate(d.getDate() + Number(days || 0));
+    return d.toISOString().slice(0,10);
+  }
+  function yearOf(value){
+    const d = parseISODate(value);
+    return d ? String(d.getFullYear()) : '';
+  }
+
+  async function client(){
+    const started = Date.now();
+    while(Date.now() - started < 6000){
+      try{
+        const c = window.supabaseClient ||
+          (window.getSupabase && window.getSupabase()) ||
+          (window.sb && window.sb.from ? window.sb : null);
+        if(c && typeof c.from === 'function') return c;
+      }catch(_e){}
+      try{
+        if(window.supabase && window.supabase.createClient){
+          if(!window.__AnnualMeetingsResidentMailMergeSbV728){
+            window.__AnnualMeetingsResidentMailMergeSbV728 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+          }
+          return window.__AnnualMeetingsResidentMailMergeSbV728;
+        }
+      }catch(_e2){}
+      await new Promise(resolve => setTimeout(resolve, 80));
+    }
+    throw new Error('Supabase client unavailable.');
+  }
+
+  function activeCommunity(){
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const c = window.ZummeeCommunityState.getActiveCommunity();
+        if(c && c.id) return { id:s(c.id), name:s(c.name), source:'ZummeeCommunityState' };
+      }
+    }catch(_e){}
+    const select = el('annualCommunitySelect') || el('communitySelect');
+    if(select && select.value){
+      const opt = select.options && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
+      return { id:s(select.value), name:s(opt && opt.textContent), source:'select' };
+    }
+    try{
+      const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+      const obj = raw ? JSON.parse(raw) : null;
+      if(obj && obj.id) return { id:s(obj.id), name:s(obj.name), source:'storage' };
+    }catch(_e2){}
+    return { id:'', name:'', source:'none' };
+  }
+
+  function collectEntry(){
+    return {
+      lastDate:s(el('lastDate') && el('lastDate').value),
+      nextDate:s(el('nextDate') && el('nextDate').value),
+      associationLegalName:s(el('associationLegalName') && el('associationLegalName').value),
+      quorumPercent:s(el('quorumPercent') && el('quorumPercent').value),
+      seatsOverride:s(el('seatsOverride') && el('seatsOverride').value),
+      meetingTime:s(el('meetingTime') && el('meetingTime').value) || '7:00 PM',
+      meetingFormat:s(el('meetingFormat') && el('meetingFormat').value) || 'in_person',
+      meetingLocation:s(el('meetingLocation') && el('meetingLocation').value),
+      meetingLink:s(el('meetingLink') && el('meetingLink').value),
+      nominationDeadline:s(el('nominationDeadline') && el('nominationDeadline').value),
+      proxyReturnDeadline:s(el('proxyReturnDeadline') && el('proxyReturnDeadline').value)
+    };
+  }
+
+  function logoUrl(){
+    const img = el('annualHeaderCompanyLogo');
+    if(img && img.src && !img.hidden) return img.src;
+    const any = document.querySelector('img[src*="logo"], img[alt*="logo" i]');
+    return any && any.src ? any.src : '';
+  }
+
+  function meetingFormatLabel(value){
+    return ({in_person:'In-Person Meeting', virtual:'Virtual Meeting', hybrid:'Hybrid Meeting', mail_only:'Mail / Proxy Only'})[s(value)] || s(value) || 'Annual Meeting';
+  }
+
+  function meta(label, value){
+    return '<div class="am-v652-meta"><label>' + esc(label) + '</label><div>' + esc(value || '—') + '</div></div>';
+  }
+
+  async function loadRoster(sb, communityId, nextDate){
+    const out = { all:[], seatsUp:[] };
+    if(!communityId) return out;
+    try{
+      const res = await sb.from('BoardMembers')
+        .select('id,name,position,email,term_end,is_active,community_id')
+        .eq('community_id', communityId)
+        .order('position', { ascending:true });
+      const rows = (res && Array.isArray(res.data) ? res.data : [])
+        .filter(row => row && row.is_active !== false)
+        .sort((a,b) => s(a.position).localeCompare(s(b.position)) || s(a.name).localeCompare(s(b.name)));
+      out.all = rows;
+      const y = yearOf(nextDate);
+      out.seatsUp = rows.filter(row => y && yearOf(row.term_end) === y);
+    }catch(err){
+      console.warn('[Annual v728] board roster load failed', err);
+    }
+    return out;
+  }
+
+  async function loadResidents(sb, communityId){
+    if(!communityId) return [];
+    const res = await sb.from('resident_directory')
+      .select('id,community_id,resident_name,unit_number,street_address,city,state,zip_code,email,lease_status,is_active')
+      .eq('community_id', communityId)
+      .eq('is_active', true)
+      .order('resident_name', { ascending:true });
+
+    if(res && res.error) throw res.error;
+
+    const seen = new Set();
+    return (Array.isArray(res && res.data) ? res.data : [])
+      .filter(row => row && row.id && !seen.has(row.id) && seen.add(row.id))
+      .sort((a,b) =>
+        s(a.resident_name).localeCompare(s(b.resident_name)) ||
+        s(a.unit_number).localeCompare(s(b.unit_number))
+      );
+  }
+
+  function boardRows(rows, includeEmail){
+    rows = rows || [];
+    if(!rows.length) return '<tr><td colspan="' + (includeEmail ? '4' : '3') + '">No active board members found for this community.</td></tr>';
+    return rows.map(function(row){
+      return '<tr><td>'+esc(row.name||'—')+'</td><td>'+esc(row.position||'—')+'</td><td>'+esc(formatDate(row.term_end))+'</td>' + (includeEmail ? '<td>'+esc(row.email||'')+'</td>' : '') + '</tr>';
+    }).join('');
+  }
+
+  function seatsRows(rows){
+    rows = rows || [];
+    if(!rows.length) return '<tr><td colspan="3">No board seats were automatically detected for the annual meeting year.</td></tr>';
+    return rows.map(function(row){
+      return '<tr><td>'+esc(row.name||'—')+'</td><td>'+esc(row.position||'—')+'</td><td>'+esc(formatDate(row.term_end))+'</td></tr>';
+    }).join('');
+  }
+
+  function residentName(row){
+    return s(row && row.resident_name) || 'Homeowner';
+  }
+
+  function addressLines(row){
+    row = row || {};
+    const lines = [];
+    const name = residentName(row);
+    const street = s(row.street_address);
+    const unit = s(row.unit_number);
+    const city = s(row.city);
+    const st = s(row.state);
+    const zip = s(row.zip_code);
+    if(name) lines.push(name);
+    if(street) lines.push(street);
+    if(unit) lines.push(/^unit\b/i.test(unit) ? unit : 'Unit ' + unit);
+    const cityLine = [city, st].filter(Boolean).join(', ') + (zip ? (city || st ? ' ' : '') + zip : '');
+    if(cityLine.trim()) lines.push(cityLine.trim());
+    return lines;
+  }
+
+  function mailingBlock(row){
+    const lines = addressLines(row);
+    const missing = lines.length < 3 || !s(row.street_address) || !s(row.city) || !s(row.state) || !s(row.zip_code);
+    return '<div class="am-v728-window-address' + (missing ? ' is-missing' : '') + '">' +
+      lines.map(esc).join('<br>') +
+      (missing ? '<br><strong>Missing mailing address details</strong>' : '') +
+      '</div>';
+  }
+
+  function packetSummary(data){
+    const missing = data.residents.filter(r => !s(r.street_address) || !s(r.city) || !s(r.state) || !s(r.zip_code));
+    const duplicateKey = {};
+    data.residents.forEach(function(r){
+      const key = [s(r.resident_name).toLowerCase(), s(r.unit_number).toLowerCase(), s(r.street_address).toLowerCase()].join('|');
+      duplicateKey[key] = (duplicateKey[key] || 0) + 1;
+    });
+    const duplicateCount = Object.values(duplicateKey).filter(n => n > 1).length;
+    return '<div class="am-v728-mail-summary">' +
+      '<strong>Resident Mailing Packet Set</strong>' +
+      '<span>Residents: ' + esc(data.residents.length) + '</span>' +
+      '<span>Pages per resident: 5</span>' +
+      '<span>Total print pages: ' + esc(data.residents.length * 5) + '</span>' +
+      (missing.length ? '<span class="warn">Missing address warnings: ' + esc(missing.length) + '</span>' : '') +
+      (duplicateCount ? '<span class="warn">Possible duplicate resident rows: ' + esc(duplicateCount) + '</span>' : '') +
+      '</div>';
+  }
+
+  function buildResidentPacket(data, resident, index){
+    const e = data.entry;
+    const logo = data.logo ? '<img class="am-v652-logo" src="' + esc(data.logo) + '" alt="Company logo">' : '';
+    const meetingLink = e.meetingLink ? '<p class="am-v652-p"><strong>Virtual Meeting Link:</strong> ' + esc(e.meetingLink) + '</p>' : '';
+    const residentLabel = residentName(resident) + (s(resident.unit_number) ? ' • Unit ' + s(resident.unit_number) : '');
+
+    return '<div class="am-v728-resident-break">Packet ' + esc(index + 1) + ' of ' + esc(data.residents.length) + ' • ' + esc(residentLabel) + '</div>' +
+
+      '<section class="am-v652-page"><div class="am-v652-page-header"><div><div class="am-v652-kicker">Annual Meeting Packet</div><h1 class="am-v652-h1">'+esc(data.associationName)+'</h1></div>'+logo+'</div>' +
+      '<div class="am-v652-meta-grid">'+
+      meta('Recipient', residentLabel)+meta('Community', data.community.name || data.community.id)+meta('Annual Meeting Date', formatDate(e.nextDate))+meta('Meeting Time', e.meetingTime)+meta('Meeting Format', data.meetingFormat)+meta('Meeting Location', e.meetingLocation || 'To be announced')+meta('Quorum Requirement', e.quorumPercent ? e.quorumPercent + '%' : '—')+meta('Seats Up for Election', data.seats)+
+      '</div><div class="am-v652-box"><h2 class="am-v652-h2">Packet Checklist</h2><ul><li class="am-v652-li">Annual meeting notice with window-envelope mailing address</li><li class="am-v652-li">Agenda</li><li class="am-v652-li">Proxy instructions</li><li class="am-v652-li">Nomination information</li><li class="am-v652-li">Board roster and seats up for election</li></ul></div></section>' +
+
+      '<section class="am-v652-page am-v728-notice-page"><div class="am-v652-page-header"><div><div class="am-v652-kicker">Official Notice</div><h1 class="am-v652-h1">Notice of Annual Meeting</h1></div>'+logo+'</div>' +
+      mailingBlock(resident) +
+      '<p class="am-v728-resident-note">This address block is positioned for a standard window envelope. Verify alignment with your envelope stock before final mailing.</p>' +
+      '<p class="am-v652-p">Dear Homeowner,</p><p class="am-v652-p">Please accept this notice of the Annual Meeting of the Members of <strong>'+esc(data.associationName)+'</strong>.</p>' +
+      '<div class="am-v652-meta-grid">'+meta('Meeting Date', formatDate(e.nextDate))+meta('Meeting Time', e.meetingTime)+meta('Meeting Format', data.meetingFormat)+meta('Location', e.meetingLocation || 'To be announced')+meta('Proxy Return Deadline', formatDate(e.proxyReturnDeadline))+meta('Nomination Deadline', formatDate(e.nominationDeadline))+'</div>' +
+      meetingLink + '<p class="am-v652-p">The purpose of the meeting is to conduct association business, confirm quorum, review annual matters, and hold elections for any seats up for election as applicable.</p><p class="am-v652-p">Sincerely,<br>'+esc(data.companyName || 'Management Team')+'</p></section>' +
+
+      '<section class="am-v652-page"><div class="am-v652-page-header"><div><div class="am-v652-kicker">Agenda</div><h1 class="am-v652-h1">Annual Meeting Agenda</h1></div>'+logo+'</div>' +
+      '<ol><li class="am-v652-li">Call to order</li><li class="am-v652-li">Establish quorum</li><li class="am-v652-li">Proof of notice</li><li class="am-v652-li">Approval of prior annual meeting minutes, if applicable</li><li class="am-v652-li">Board report / management report</li><li class="am-v652-li">Election of board members / announcement of results</li><li class="am-v652-li">Homeowner questions or open forum, as permitted</li><li class="am-v652-li">Adjournment</li></ol>' +
+      '<h2 class="am-v652-h2" style="margin-top:30px;">Seats Up for Election</h2><table class="am-v652-table"><thead><tr><th>Name</th><th>Position</th><th>Term End</th></tr></thead><tbody>'+seatsRows(data.roster.seatsUp)+'</tbody></table></section>' +
+
+      '<section class="am-v652-page"><div class="am-v652-page-header"><div><div class="am-v652-kicker">Proxy / Quorum Form</div><h1 class="am-v652-h1">Limited Proxy / Quorum Form</h1></div>'+logo+'</div>' +
+      '<div class="am-v652-box"><p class="am-v652-p"><strong>Homeowner:</strong> '+esc(residentName(resident))+'</p><p class="am-v652-p"><strong>Unit:</strong> '+esc(s(resident.unit_number) || '—')+'</p></div>' +
+      '<p class="am-v652-p">I appoint the proxy holder designated below to represent my household for quorum purposes and, if applicable, to vote as instructed for the Annual Meeting.</p>' +
+      '<div class="am-v652-kicker" style="margin-top:22px;">Proxy Holder Name</div><div class="am-v652-signature"></div><div class="am-v652-kicker" style="margin-top:22px;">Homeowner Signature</div><div class="am-v652-signature"></div><div class="am-v652-kicker" style="margin-top:22px;">Date</div><div class="am-v652-signature"></div>' +
+      '<p class="am-v652-p" style="margin-top:28px;"><strong>Proxy Return Deadline:</strong> '+esc(formatDate(e.proxyReturnDeadline))+'</p></section>' +
+
+      '<section class="am-v652-page"><div class="am-v652-page-header"><div><div class="am-v652-kicker">Board Information</div><h1 class="am-v652-h1">Board Roster</h1></div>'+logo+'</div><table class="am-v652-table"><thead><tr><th>Name</th><th>Position</th><th>Term End</th><th>Email</th></tr></thead><tbody>'+boardRows(data.roster.all, true)+'</tbody></table><div class="am-v652-box"><h2 class="am-v652-h2">Nomination Information</h2><p class="am-v652-p"><strong>Nomination Deadline:</strong> '+esc(formatDate(e.nominationDeadline))+'</p><p class="am-v652-p">Homeowners interested in serving on the Board should follow the association nomination instructions before the deadline shown above.</p></div></section>';
+  }
+
+  function buildPacketHtml(data){
+    return '<div class="am-v652-pages">' +
+      packetSummary(data) +
+      data.residents.map(function(resident, index){ return buildResidentPacket(data, resident, index); }).join('') +
+      '</div>';
+  }
+
+  function ensureOverlay(){
+    let overlay = el('amV652PacketOverlay');
+    if(overlay) return overlay;
+
+    overlay = document.createElement('div');
+    overlay.id = 'amV652PacketOverlay';
+    overlay.className = 'am-v652-overlay';
+    overlay.innerHTML =
+      '<div class="am-v652-shell"><div class="am-v652-topbar"><div class="am-v652-title"><strong id="amV652PacketTitle">Annual Meeting Packet Preview</strong><span id="amV652PacketSub">Ready</span></div><div class="am-v652-actions"><button class="am-v652-btn" id="amV652OpenBtn" type="button">Open Preview</button><button class="am-v652-btn primary" id="amV652PrintBtn" type="button">Print / Save PDF</button><button class="am-v652-btn primary" id="amV659PreviewSendApproval" type="button">Send for Approval</button><button class="am-v652-btn danger" id="amV652CloseBtn" type="button">Close</button><span id="amV659PreviewSendStatus" class="am-v659-send-status"></span></div></div><div class="am-v652-body"><div id="amV652PacketContent"></div></div></div>';
+    document.body.appendChild(overlay);
+    return overlay;
+  }
+
+  function bindOverlayButtons(){
+    const closeBtn = el('amV652CloseBtn');
+    if(closeBtn && !closeBtn.__v728Bound){
+      closeBtn.__v728Bound = true;
+      closeBtn.addEventListener('click', function(){ const o = el('amV652PacketOverlay'); if(o) o.classList.remove('is-open'); });
+    }
+
+    const printBtn = el('amV652PrintBtn');
+    if(printBtn && !printBtn.__v728Bound){
+      printBtn.__v728Bound = true;
+      printBtn.addEventListener('click', function(){ window.print(); });
+    }
+
+    const openBtn = el('amV652OpenBtn');
+    if(openBtn && !openBtn.__v728Bound){
+      openBtn.__v728Bound = true;
+      openBtn.addEventListener('click', openPreviewWindow);
+    }
+  }
+
+  function openPreviewWindow(){
+    const content = el('amV652PacketContent');
+    if(!content) return;
+    const w = window.open('', '_blank');
+    if(!w) return;
+    const packetCss = document.getElementById('annual-meetings-v652-packet-and-routing-style');
+    const mergeCss = document.getElementById('annual-meetings-v728-resident-mail-merge-style');
+    const doc = [
+      '<!doctype html><html><head><title>Resident Annual Meeting Packets</title>',
+      packetCss ? packetCss.outerHTML : '',
+      mergeCss ? mergeCss.outerHTML : '',
+      '</head><body><div class="am-v652-body">',
+      content.innerHTML,
       '</div></body></html>'
+    ].join('');
+    w.document.open();
+    w.document.write(doc);
+    w.document.close();
+  }
+
+  async function generateResidentPacketPreview(){
+    const button = el('packetBtn');
+    const originalText = button ? button.textContent : '';
+
+    try{
+      if(button){ button.disabled = true; button.textContent = 'Generating resident packets…'; }
+
+      const sb = await client();
+      const community = activeCommunity();
+      if(!community.id) throw new Error('Select a community before generating the packet.');
+
+      const entry = collectEntry();
+      const residents = await loadResidents(sb, community.id);
+      if(!residents.length) throw new Error('No active residents found in resident_directory for this community.');
+
+      const roster = await loadRoster(sb, community.id, entry.nextDate);
+      const sendDate = isoAddDays(entry.nextDate, -30);
+      const data = {
+        build: BUILD,
+        community,
+        entry,
+        residents,
+        roster,
+        logo: logoUrl(),
+        companyName:'Sixes Management Group',
+        associationName: entry.associationLegalName || (community.name ? community.name + ' Homeowners Association' : 'Homeowners Association'),
+        meetingFormat: meetingFormatLabel(entry.meetingFormat),
+        seats: entry.seatsOverride || String((roster.seatsUp || []).length || '—'),
+        sendDate
+      };
+
+      const overlay = ensureOverlay();
+      bindOverlayButtons();
+
+      const title = el('amV652PacketTitle');
+      const sub = el('amV652PacketSub');
+      const content = el('amV652PacketContent');
+      const packetHtml = buildPacketHtml(data);
+
+      if(title) title.textContent = (community.name || 'Community') + ' Resident Mailing Packet Set';
+      if(sub) sub.textContent = 'Residents: ' + residents.length + ' • Pages: ' + (residents.length * 5) + ' • Window envelope ready';
+      if(content) content.innerHTML = packetHtml;
+
+      overlay.classList.add('is-open');
+
+      window.__AnnualMeetingsV728ResidentPacketLast = {
+        build: BUILD,
+        community,
+        settings: entry,
+        residents,
+        residentCount: residents.length,
+        missingAddressCount: residents.filter(r => !s(r.street_address) || !s(r.city) || !s(r.state) || !s(r.zip_code)).length,
+        pagesPerResident: 5,
+        totalPages: residents.length * 5,
+        roster,
+        data,
+        html: packetHtml,
+        packetHtml,
+        associationName: data.associationName,
+        meetingDate: data.entry.nextDate,
+        seats: data.seats,
+        generatedAt: Date.now(),
+        generatedAtIso: todayIso()
+      };
+
+      // Preserve the existing approval send path contract.
+      window.__AnnualMeetingsV652PacketLast = window.__AnnualMeetingsV728ResidentPacketLast;
+
+      console.info('[Annual v728] resident mailing packet generated', window.__AnnualMeetingsV728ResidentPacketLast);
+      return window.__AnnualMeetingsV728ResidentPacketLast;
+    }catch(err){
+      console.error('[Annual v728] resident packet preview failed', err);
+      alert('Resident packet preview failed. ' + (err && err.message ? err.message : 'Check the console for details.'));
+      return null;
+    }finally{
+      if(button){ button.disabled = false; button.textContent = originalText || 'Generate / Preview Packet'; }
+    }
+  }
+
+  function bindPacketButton(){
+    const btn = el('packetBtn');
+    if(!btn) return;
+    const clone = btn.cloneNode(true);
+    clone.id = 'packetBtn';
+    clone.type = 'button';
+    clone.__annualResidentPacketV728 = true;
+    clone.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      generateResidentPacketPreview();
+      return false;
+    }, true);
+    btn.parentNode.replaceChild(clone, btn);
+  }
+
+  window.ZummeeAnnualMeetingsResidentMailMerge = {
+    build: BUILD,
+    generate: generateResidentPacketPreview,
+    last: function(){ return window.__AnnualMeetingsV728ResidentPacketLast || null; }
+  };
+
+  window.getAnnualMeetingsResidentPacketStatus = function(){
+    const last = window.__AnnualMeetingsV728ResidentPacketLast || null;
+    return {
+      build: BUILD,
+      packetButtonWired: !!(el('packetBtn') && el('packetBtn').__annualResidentPacketV728),
+      residentCount: last ? last.residentCount : null,
+      missingAddressCount: last ? last.missingAddressCount : null,
+      pagesPerResident: last ? last.pagesPerResident : null,
+      totalPages: last ? last.totalPages : null,
+      generatedAt: last ? last.generatedAtIso : null
+    };
+  };
+
+  function boot(){
+    setTimeout(bindPacketButton, 0);
+    setTimeout(bindPacketButton, 250);
+    setTimeout(bindPacketButton, 1200);
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once:true });
+  else boot();
+  window.addEventListener('pageshow', boot);
+})();
+</script>
+
+</body></html>'
     ].join('');
     w.document.open();
     w.document.write(doc);
@@ -4547,6 +5081,540 @@ window.getAnnualMeetingsApprovalCreateStatus = function(){
   };
 };
 console.info("[Annual Meetings v665] all approval send paths use immutable insert");
+</script>
+
+
+<!-- Zummee v728 resident-personalized annual meeting packet generator -->
+<style id="annual-meetings-v728-resident-mail-merge-style">
+  .am-v728-mail-summary{
+    width:min(850px,100%);
+    margin:0 auto 18px;
+    border:2px solid #b9d8ff;
+    border-radius:22px;
+    background:#f8fbff;
+    padding:16px 18px;
+    color:#123151;
+    box-shadow:0 10px 24px rgba(16,47,79,.08);
+  }
+  .am-v728-mail-summary strong{
+    display:block;
+    font-size:18px;
+    font-weight:950;
+    margin-bottom:8px;
+  }
+  .am-v728-mail-summary span{
+    display:inline-flex;
+    margin:4px 8px 4px 0;
+    padding:8px 11px;
+    border-radius:999px;
+    background:#fff;
+    border:1px solid #d7e6f6;
+    font-weight:900;
+    font-size:13px;
+  }
+  .am-v728-mail-summary .warn{
+    color:#9a5d00;
+    border-color:#efd08a;
+    background:#fff9eb;
+  }
+  .am-v728-resident-break{
+    width:min(850px,100%);
+    margin:18px auto 0;
+    padding:10px 14px;
+    border-radius:999px;
+    background:#17365f;
+    color:#fff;
+    font-size:12px;
+    font-weight:950;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+  }
+  .am-v728-notice-page{
+    position:relative;
+  }
+  .am-v728-window-address{
+    margin:18px 0 24px 0;
+    width:3.85in;
+    min-height:1.05in;
+    border:1.5px dashed #b7c8da;
+    border-radius:10px;
+    background:#fff;
+    padding:.16in .22in;
+    color:#0f2f4f;
+    font-family:Arial, Helvetica, sans-serif;
+    font-size:13pt;
+    line-height:1.23;
+    font-weight:700;
+  }
+  .am-v728-window-address::before{
+    content:"WINDOW ENVELOPE ADDRESS";
+    display:block;
+    font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    font-size:7pt;
+    letter-spacing:.12em;
+    color:#71839a;
+    margin-bottom:.08in;
+    font-weight:950;
+  }
+  .am-v728-window-address.is-missing{
+    border-color:#e4b8b8;
+    background:#fff7f7;
+    color:#8f2626;
+  }
+  .am-v728-resident-note{
+    margin:10px 0 18px;
+    color:#627589;
+    font-size:12px;
+    font-weight:850;
+  }
+  @media print{
+    .am-v728-mail-summary,
+    .am-v728-resident-break{display:none!important}
+    .am-v728-window-address{
+      border-color:transparent!important;
+      background:#fff!important;
+      border-radius:0!important;
+      box-shadow:none!important;
+      page-break-inside:avoid;
+    }
+  }
+</style>
+
+<script id="annual-meetings-v728-resident-mail-merge">
+(function(){
+  'use strict';
+  if(window.__AnnualMeetingsResidentMailMergeV728) return;
+  window.__AnnualMeetingsResidentMailMergeV728 = true;
+
+  const BUILD = '2026-05-10-v728-resident-window-envelope-mail-merge';
+  const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
+
+  function s(v){ return String(v == null ? '' : v).trim(); }
+  function el(id){ return document.getElementById(id); }
+  function esc(v){
+    return s(v).replace(/[&<>"']/g, function(ch){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch];
+    });
+  }
+  function todayIso(){ return new Date().toISOString(); }
+  function parseISODate(value){
+    value = s(value);
+    if(!value) return null;
+    const d = new Date(value + 'T00:00:00');
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  function formatDate(value){
+    if(!value) return '—';
+    const d = parseISODate(value);
+    if(!d) return s(value);
+    return d.toLocaleDateString(undefined, { month:'long', day:'numeric', year:'numeric' });
+  }
+  function isoAddDays(value, days){
+    const d = parseISODate(value);
+    if(!d) return '';
+    d.setDate(d.getDate() + Number(days || 0));
+    return d.toISOString().slice(0,10);
+  }
+  function yearOf(value){
+    const d = parseISODate(value);
+    return d ? String(d.getFullYear()) : '';
+  }
+
+  async function client(){
+    const started = Date.now();
+    while(Date.now() - started < 6000){
+      try{
+        const c = window.supabaseClient ||
+          (window.getSupabase && window.getSupabase()) ||
+          (window.sb && window.sb.from ? window.sb : null);
+        if(c && typeof c.from === 'function') return c;
+      }catch(_e){}
+      try{
+        if(window.supabase && window.supabase.createClient){
+          if(!window.__AnnualMeetingsResidentMailMergeSbV728){
+            window.__AnnualMeetingsResidentMailMergeSbV728 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+          }
+          return window.__AnnualMeetingsResidentMailMergeSbV728;
+        }
+      }catch(_e2){}
+      await new Promise(resolve => setTimeout(resolve, 80));
+    }
+    throw new Error('Supabase client unavailable.');
+  }
+
+  function activeCommunity(){
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const c = window.ZummeeCommunityState.getActiveCommunity();
+        if(c && c.id) return { id:s(c.id), name:s(c.name), source:'ZummeeCommunityState' };
+      }
+    }catch(_e){}
+    const select = el('annualCommunitySelect') || el('communitySelect');
+    if(select && select.value){
+      const opt = select.options && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
+      return { id:s(select.value), name:s(opt && opt.textContent), source:'select' };
+    }
+    try{
+      const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+      const obj = raw ? JSON.parse(raw) : null;
+      if(obj && obj.id) return { id:s(obj.id), name:s(obj.name), source:'storage' };
+    }catch(_e2){}
+    return { id:'', name:'', source:'none' };
+  }
+
+  function collectEntry(){
+    return {
+      lastDate:s(el('lastDate') && el('lastDate').value),
+      nextDate:s(el('nextDate') && el('nextDate').value),
+      associationLegalName:s(el('associationLegalName') && el('associationLegalName').value),
+      quorumPercent:s(el('quorumPercent') && el('quorumPercent').value),
+      seatsOverride:s(el('seatsOverride') && el('seatsOverride').value),
+      meetingTime:s(el('meetingTime') && el('meetingTime').value) || '7:00 PM',
+      meetingFormat:s(el('meetingFormat') && el('meetingFormat').value) || 'in_person',
+      meetingLocation:s(el('meetingLocation') && el('meetingLocation').value),
+      meetingLink:s(el('meetingLink') && el('meetingLink').value),
+      nominationDeadline:s(el('nominationDeadline') && el('nominationDeadline').value),
+      proxyReturnDeadline:s(el('proxyReturnDeadline') && el('proxyReturnDeadline').value)
+    };
+  }
+
+  function logoUrl(){
+    const img = el('annualHeaderCompanyLogo');
+    if(img && img.src && !img.hidden) return img.src;
+    const any = document.querySelector('img[src*="logo"], img[alt*="logo" i]');
+    return any && any.src ? any.src : '';
+  }
+
+  function meetingFormatLabel(value){
+    return ({in_person:'In-Person Meeting', virtual:'Virtual Meeting', hybrid:'Hybrid Meeting', mail_only:'Mail / Proxy Only'})[s(value)] || s(value) || 'Annual Meeting';
+  }
+
+  function meta(label, value){
+    return '<div class="am-v652-meta"><label>' + esc(label) + '</label><div>' + esc(value || '—') + '</div></div>';
+  }
+
+  async function loadRoster(sb, communityId, nextDate){
+    const out = { all:[], seatsUp:[] };
+    if(!communityId) return out;
+    try{
+      const res = await sb.from('BoardMembers')
+        .select('id,name,position,email,term_end,is_active,community_id')
+        .eq('community_id', communityId)
+        .order('position', { ascending:true });
+      const rows = (res && Array.isArray(res.data) ? res.data : [])
+        .filter(row => row && row.is_active !== false)
+        .sort((a,b) => s(a.position).localeCompare(s(b.position)) || s(a.name).localeCompare(s(b.name)));
+      out.all = rows;
+      const y = yearOf(nextDate);
+      out.seatsUp = rows.filter(row => y && yearOf(row.term_end) === y);
+    }catch(err){
+      console.warn('[Annual v728] board roster load failed', err);
+    }
+    return out;
+  }
+
+  async function loadResidents(sb, communityId){
+    if(!communityId) return [];
+    const res = await sb.from('resident_directory')
+      .select('id,community_id,resident_name,unit_number,street_address,city,state,zip_code,email,lease_status,is_active')
+      .eq('community_id', communityId)
+      .eq('is_active', true)
+      .order('resident_name', { ascending:true });
+
+    if(res && res.error) throw res.error;
+
+    const seen = new Set();
+    return (Array.isArray(res && res.data) ? res.data : [])
+      .filter(row => row && row.id && !seen.has(row.id) && seen.add(row.id))
+      .sort((a,b) =>
+        s(a.resident_name).localeCompare(s(b.resident_name)) ||
+        s(a.unit_number).localeCompare(s(b.unit_number))
+      );
+  }
+
+  function boardRows(rows, includeEmail){
+    rows = rows || [];
+    if(!rows.length) return '<tr><td colspan="' + (includeEmail ? '4' : '3') + '">No active board members found for this community.</td></tr>';
+    return rows.map(function(row){
+      return '<tr><td>'+esc(row.name||'—')+'</td><td>'+esc(row.position||'—')+'</td><td>'+esc(formatDate(row.term_end))+'</td>' + (includeEmail ? '<td>'+esc(row.email||'')+'</td>' : '') + '</tr>';
+    }).join('');
+  }
+
+  function seatsRows(rows){
+    rows = rows || [];
+    if(!rows.length) return '<tr><td colspan="3">No board seats were automatically detected for the annual meeting year.</td></tr>';
+    return rows.map(function(row){
+      return '<tr><td>'+esc(row.name||'—')+'</td><td>'+esc(row.position||'—')+'</td><td>'+esc(formatDate(row.term_end))+'</td></tr>';
+    }).join('');
+  }
+
+  function residentName(row){
+    return s(row && row.resident_name) || 'Homeowner';
+  }
+
+  function addressLines(row){
+    row = row || {};
+    const lines = [];
+    const name = residentName(row);
+    const street = s(row.street_address);
+    const unit = s(row.unit_number);
+    const city = s(row.city);
+    const st = s(row.state);
+    const zip = s(row.zip_code);
+    if(name) lines.push(name);
+    if(street) lines.push(street);
+    if(unit) lines.push(/^unit\b/i.test(unit) ? unit : 'Unit ' + unit);
+    const cityLine = [city, st].filter(Boolean).join(', ') + (zip ? (city || st ? ' ' : '') + zip : '');
+    if(cityLine.trim()) lines.push(cityLine.trim());
+    return lines;
+  }
+
+  function mailingBlock(row){
+    const lines = addressLines(row);
+    const missing = lines.length < 3 || !s(row.street_address) || !s(row.city) || !s(row.state) || !s(row.zip_code);
+    return '<div class="am-v728-window-address' + (missing ? ' is-missing' : '') + '">' +
+      lines.map(esc).join('<br>') +
+      (missing ? '<br><strong>Missing mailing address details</strong>' : '') +
+      '</div>';
+  }
+
+  function packetSummary(data){
+    const missing = data.residents.filter(r => !s(r.street_address) || !s(r.city) || !s(r.state) || !s(r.zip_code));
+    const duplicateKey = {};
+    data.residents.forEach(function(r){
+      const key = [s(r.resident_name).toLowerCase(), s(r.unit_number).toLowerCase(), s(r.street_address).toLowerCase()].join('|');
+      duplicateKey[key] = (duplicateKey[key] || 0) + 1;
+    });
+    const duplicateCount = Object.values(duplicateKey).filter(n => n > 1).length;
+    return '<div class="am-v728-mail-summary">' +
+      '<strong>Resident Mailing Packet Set</strong>' +
+      '<span>Residents: ' + esc(data.residents.length) + '</span>' +
+      '<span>Pages per resident: 5</span>' +
+      '<span>Total print pages: ' + esc(data.residents.length * 5) + '</span>' +
+      (missing.length ? '<span class="warn">Missing address warnings: ' + esc(missing.length) + '</span>' : '') +
+      (duplicateCount ? '<span class="warn">Possible duplicate resident rows: ' + esc(duplicateCount) + '</span>' : '') +
+      '</div>';
+  }
+
+  function buildResidentPacket(data, resident, index){
+    const e = data.entry;
+    const logo = data.logo ? '<img class="am-v652-logo" src="' + esc(data.logo) + '" alt="Company logo">' : '';
+    const meetingLink = e.meetingLink ? '<p class="am-v652-p"><strong>Virtual Meeting Link:</strong> ' + esc(e.meetingLink) + '</p>' : '';
+    const residentLabel = residentName(resident) + (s(resident.unit_number) ? ' • Unit ' + s(resident.unit_number) : '');
+
+    return '<div class="am-v728-resident-break">Packet ' + esc(index + 1) + ' of ' + esc(data.residents.length) + ' • ' + esc(residentLabel) + '</div>' +
+
+      '<section class="am-v652-page"><div class="am-v652-page-header"><div><div class="am-v652-kicker">Annual Meeting Packet</div><h1 class="am-v652-h1">'+esc(data.associationName)+'</h1></div>'+logo+'</div>' +
+      '<div class="am-v652-meta-grid">'+
+      meta('Recipient', residentLabel)+meta('Community', data.community.name || data.community.id)+meta('Annual Meeting Date', formatDate(e.nextDate))+meta('Meeting Time', e.meetingTime)+meta('Meeting Format', data.meetingFormat)+meta('Meeting Location', e.meetingLocation || 'To be announced')+meta('Quorum Requirement', e.quorumPercent ? e.quorumPercent + '%' : '—')+meta('Seats Up for Election', data.seats)+
+      '</div><div class="am-v652-box"><h2 class="am-v652-h2">Packet Checklist</h2><ul><li class="am-v652-li">Annual meeting notice with window-envelope mailing address</li><li class="am-v652-li">Agenda</li><li class="am-v652-li">Proxy instructions</li><li class="am-v652-li">Nomination information</li><li class="am-v652-li">Board roster and seats up for election</li></ul></div></section>' +
+
+      '<section class="am-v652-page am-v728-notice-page"><div class="am-v652-page-header"><div><div class="am-v652-kicker">Official Notice</div><h1 class="am-v652-h1">Notice of Annual Meeting</h1></div>'+logo+'</div>' +
+      mailingBlock(resident) +
+      '<p class="am-v728-resident-note">This address block is positioned for a standard window envelope. Verify alignment with your envelope stock before final mailing.</p>' +
+      '<p class="am-v652-p">Dear Homeowner,</p><p class="am-v652-p">Please accept this notice of the Annual Meeting of the Members of <strong>'+esc(data.associationName)+'</strong>.</p>' +
+      '<div class="am-v652-meta-grid">'+meta('Meeting Date', formatDate(e.nextDate))+meta('Meeting Time', e.meetingTime)+meta('Meeting Format', data.meetingFormat)+meta('Location', e.meetingLocation || 'To be announced')+meta('Proxy Return Deadline', formatDate(e.proxyReturnDeadline))+meta('Nomination Deadline', formatDate(e.nominationDeadline))+'</div>' +
+      meetingLink + '<p class="am-v652-p">The purpose of the meeting is to conduct association business, confirm quorum, review annual matters, and hold elections for any seats up for election as applicable.</p><p class="am-v652-p">Sincerely,<br>'+esc(data.companyName || 'Management Team')+'</p></section>' +
+
+      '<section class="am-v652-page"><div class="am-v652-page-header"><div><div class="am-v652-kicker">Agenda</div><h1 class="am-v652-h1">Annual Meeting Agenda</h1></div>'+logo+'</div>' +
+      '<ol><li class="am-v652-li">Call to order</li><li class="am-v652-li">Establish quorum</li><li class="am-v652-li">Proof of notice</li><li class="am-v652-li">Approval of prior annual meeting minutes, if applicable</li><li class="am-v652-li">Board report / management report</li><li class="am-v652-li">Election of board members / announcement of results</li><li class="am-v652-li">Homeowner questions or open forum, as permitted</li><li class="am-v652-li">Adjournment</li></ol>' +
+      '<h2 class="am-v652-h2" style="margin-top:30px;">Seats Up for Election</h2><table class="am-v652-table"><thead><tr><th>Name</th><th>Position</th><th>Term End</th></tr></thead><tbody>'+seatsRows(data.roster.seatsUp)+'</tbody></table></section>' +
+
+      '<section class="am-v652-page"><div class="am-v652-page-header"><div><div class="am-v652-kicker">Proxy / Quorum Form</div><h1 class="am-v652-h1">Limited Proxy / Quorum Form</h1></div>'+logo+'</div>' +
+      '<div class="am-v652-box"><p class="am-v652-p"><strong>Homeowner:</strong> '+esc(residentName(resident))+'</p><p class="am-v652-p"><strong>Unit:</strong> '+esc(s(resident.unit_number) || '—')+'</p></div>' +
+      '<p class="am-v652-p">I appoint the proxy holder designated below to represent my household for quorum purposes and, if applicable, to vote as instructed for the Annual Meeting.</p>' +
+      '<div class="am-v652-kicker" style="margin-top:22px;">Proxy Holder Name</div><div class="am-v652-signature"></div><div class="am-v652-kicker" style="margin-top:22px;">Homeowner Signature</div><div class="am-v652-signature"></div><div class="am-v652-kicker" style="margin-top:22px;">Date</div><div class="am-v652-signature"></div>' +
+      '<p class="am-v652-p" style="margin-top:28px;"><strong>Proxy Return Deadline:</strong> '+esc(formatDate(e.proxyReturnDeadline))+'</p></section>' +
+
+      '<section class="am-v652-page"><div class="am-v652-page-header"><div><div class="am-v652-kicker">Board Information</div><h1 class="am-v652-h1">Board Roster</h1></div>'+logo+'</div><table class="am-v652-table"><thead><tr><th>Name</th><th>Position</th><th>Term End</th><th>Email</th></tr></thead><tbody>'+boardRows(data.roster.all, true)+'</tbody></table><div class="am-v652-box"><h2 class="am-v652-h2">Nomination Information</h2><p class="am-v652-p"><strong>Nomination Deadline:</strong> '+esc(formatDate(e.nominationDeadline))+'</p><p class="am-v652-p">Homeowners interested in serving on the Board should follow the association nomination instructions before the deadline shown above.</p></div></section>';
+  }
+
+  function buildPacketHtml(data){
+    return '<div class="am-v652-pages">' +
+      packetSummary(data) +
+      data.residents.map(function(resident, index){ return buildResidentPacket(data, resident, index); }).join('') +
+      '</div>';
+  }
+
+  function ensureOverlay(){
+    let overlay = el('amV652PacketOverlay');
+    if(overlay) return overlay;
+
+    overlay = document.createElement('div');
+    overlay.id = 'amV652PacketOverlay';
+    overlay.className = 'am-v652-overlay';
+    overlay.innerHTML =
+      '<div class="am-v652-shell"><div class="am-v652-topbar"><div class="am-v652-title"><strong id="amV652PacketTitle">Annual Meeting Packet Preview</strong><span id="amV652PacketSub">Ready</span></div><div class="am-v652-actions"><button class="am-v652-btn" id="amV652OpenBtn" type="button">Open Preview</button><button class="am-v652-btn primary" id="amV652PrintBtn" type="button">Print / Save PDF</button><button class="am-v652-btn primary" id="amV659PreviewSendApproval" type="button">Send for Approval</button><button class="am-v652-btn danger" id="amV652CloseBtn" type="button">Close</button><span id="amV659PreviewSendStatus" class="am-v659-send-status"></span></div></div><div class="am-v652-body"><div id="amV652PacketContent"></div></div></div>';
+    document.body.appendChild(overlay);
+    return overlay;
+  }
+
+  function bindOverlayButtons(){
+    const closeBtn = el('amV652CloseBtn');
+    if(closeBtn && !closeBtn.__v728Bound){
+      closeBtn.__v728Bound = true;
+      closeBtn.addEventListener('click', function(){ const o = el('amV652PacketOverlay'); if(o) o.classList.remove('is-open'); });
+    }
+
+    const printBtn = el('amV652PrintBtn');
+    if(printBtn && !printBtn.__v728Bound){
+      printBtn.__v728Bound = true;
+      printBtn.addEventListener('click', function(){ window.print(); });
+    }
+
+    const openBtn = el('amV652OpenBtn');
+    if(openBtn && !openBtn.__v728Bound){
+      openBtn.__v728Bound = true;
+      openBtn.addEventListener('click', openPreviewWindow);
+    }
+  }
+
+  function openPreviewWindow(){
+    const content = el('amV652PacketContent');
+    if(!content) return;
+    const w = window.open('', '_blank');
+    if(!w) return;
+    const packetCss = document.getElementById('annual-meetings-v652-packet-and-routing-style');
+    const mergeCss = document.getElementById('annual-meetings-v728-resident-mail-merge-style');
+    const doc = [
+      '<!doctype html><html><head><title>Resident Annual Meeting Packets</title>',
+      packetCss ? packetCss.outerHTML : '',
+      mergeCss ? mergeCss.outerHTML : '',
+      '</head><body><div class="am-v652-body">',
+      content.innerHTML,
+      '</div></body></html>'
+    ].join('');
+    w.document.open();
+    w.document.write(doc);
+    w.document.close();
+  }
+
+  async function generateResidentPacketPreview(){
+    const button = el('packetBtn');
+    const originalText = button ? button.textContent : '';
+
+    try{
+      if(button){ button.disabled = true; button.textContent = 'Generating resident packets…'; }
+
+      const sb = await client();
+      const community = activeCommunity();
+      if(!community.id) throw new Error('Select a community before generating the packet.');
+
+      const entry = collectEntry();
+      const residents = await loadResidents(sb, community.id);
+      if(!residents.length) throw new Error('No active residents found in resident_directory for this community.');
+
+      const roster = await loadRoster(sb, community.id, entry.nextDate);
+      const sendDate = isoAddDays(entry.nextDate, -30);
+      const data = {
+        build: BUILD,
+        community,
+        entry,
+        residents,
+        roster,
+        logo: logoUrl(),
+        companyName:'Sixes Management Group',
+        associationName: entry.associationLegalName || (community.name ? community.name + ' Homeowners Association' : 'Homeowners Association'),
+        meetingFormat: meetingFormatLabel(entry.meetingFormat),
+        seats: entry.seatsOverride || String((roster.seatsUp || []).length || '—'),
+        sendDate
+      };
+
+      const overlay = ensureOverlay();
+      bindOverlayButtons();
+
+      const title = el('amV652PacketTitle');
+      const sub = el('amV652PacketSub');
+      const content = el('amV652PacketContent');
+      const packetHtml = buildPacketHtml(data);
+
+      if(title) title.textContent = (community.name || 'Community') + ' Resident Mailing Packet Set';
+      if(sub) sub.textContent = 'Residents: ' + residents.length + ' • Pages: ' + (residents.length * 5) + ' • Window envelope ready';
+      if(content) content.innerHTML = packetHtml;
+
+      overlay.classList.add('is-open');
+
+      window.__AnnualMeetingsV728ResidentPacketLast = {
+        build: BUILD,
+        community,
+        settings: entry,
+        residents,
+        residentCount: residents.length,
+        missingAddressCount: residents.filter(r => !s(r.street_address) || !s(r.city) || !s(r.state) || !s(r.zip_code)).length,
+        pagesPerResident: 5,
+        totalPages: residents.length * 5,
+        roster,
+        data,
+        html: packetHtml,
+        packetHtml,
+        associationName: data.associationName,
+        meetingDate: data.entry.nextDate,
+        seats: data.seats,
+        generatedAt: Date.now(),
+        generatedAtIso: todayIso()
+      };
+
+      // Preserve the existing approval send path contract.
+      window.__AnnualMeetingsV652PacketLast = window.__AnnualMeetingsV728ResidentPacketLast;
+
+      console.info('[Annual v728] resident mailing packet generated', window.__AnnualMeetingsV728ResidentPacketLast);
+      return window.__AnnualMeetingsV728ResidentPacketLast;
+    }catch(err){
+      console.error('[Annual v728] resident packet preview failed', err);
+      alert('Resident packet preview failed. ' + (err && err.message ? err.message : 'Check the console for details.'));
+      return null;
+    }finally{
+      if(button){ button.disabled = false; button.textContent = originalText || 'Generate / Preview Packet'; }
+    }
+  }
+
+  function bindPacketButton(){
+    const btn = el('packetBtn');
+    if(!btn) return;
+    const clone = btn.cloneNode(true);
+    clone.id = 'packetBtn';
+    clone.type = 'button';
+    clone.__annualResidentPacketV728 = true;
+    clone.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      generateResidentPacketPreview();
+      return false;
+    }, true);
+    btn.parentNode.replaceChild(clone, btn);
+  }
+
+  window.ZummeeAnnualMeetingsResidentMailMerge = {
+    build: BUILD,
+    generate: generateResidentPacketPreview,
+    last: function(){ return window.__AnnualMeetingsV728ResidentPacketLast || null; }
+  };
+
+  window.getAnnualMeetingsResidentPacketStatus = function(){
+    const last = window.__AnnualMeetingsV728ResidentPacketLast || null;
+    return {
+      build: BUILD,
+      packetButtonWired: !!(el('packetBtn') && el('packetBtn').__annualResidentPacketV728),
+      residentCount: last ? last.residentCount : null,
+      missingAddressCount: last ? last.missingAddressCount : null,
+      pagesPerResident: last ? last.pagesPerResident : null,
+      totalPages: last ? last.totalPages : null,
+      generatedAt: last ? last.generatedAtIso : null
+    };
+  };
+
+  function boot(){
+    setTimeout(bindPacketButton, 0);
+    setTimeout(bindPacketButton, 250);
+    setTimeout(bindPacketButton, 1200);
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once:true });
+  else boot();
+  window.addEventListener('pageshow', boot);
+})();
 </script>
 
 </body>
