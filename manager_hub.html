@@ -8189,6 +8189,349 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
   };
 })();
 </script>
+
+
+<style id="manager-hub-v635-stable-smart-cards-css">
+  #mh2AlertBoard[data-v635-stable="1"],
+  #mh2AlertActivity[data-v635-stable="1"],
+  #mh2AlertApprovals[data-v635-stable="1"]{
+    transition:none !important;
+  }
+</style>
+
+<script id="manager-hub-v635-stable-smart-cards-single-owner">
+(function(){
+  'use strict';
+  if(window.__ManagerHubV635StableSmartCardsSingleOwner) return;
+  window.__ManagerHubV635StableSmartCardsSingleOwner = true;
+
+  const BUILD = '2026-05-10-v635-stable-smart-cards-single-owner';
+  const SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
+
+  const state = {
+    restoring:false,
+    lastHtml:{},
+    lastClass:{},
+    lastHref:{},
+    summary:null
+  };
+
+  function clean(v){ return String(v == null ? '' : v).trim(); }
+  function uuid(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean(v)); }
+  function byId(id){ return document.getElementById(id); }
+  function esc(v){ return clean(v).replace(/[&<>"']/g,function(ch){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]; }); }
+  function sleep(ms){ return new Promise(function(resolve){ setTimeout(resolve, ms); }); }
+
+  function getCommunity(){
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        const c = window.ZummeeCommunityState.getActiveCommunity();
+        if(c && uuid(c.id)) return { id:clean(c.id), name:clean(c.name), source:'ZummeeCommunityState' };
+      }
+    }catch(_e){}
+
+    const selectors = [
+      'zummeeCommunitySelect',
+      'communitySelect',
+      'managerCommunitySelect',
+      'selectedCommunity'
+    ];
+
+    for(const id of selectors){
+      const sel = byId(id);
+      if(sel && uuid(sel.value)){
+        const opt = sel.options && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+        return { id:clean(sel.value), name:clean(opt && opt.textContent), source:id };
+      }
+    }
+
+    const sel = document.querySelector('select[data-community-select], select[name="community"], select[id*="community" i]');
+    if(sel && uuid(sel.value)){
+      const opt = sel.options && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+      return { id:clean(sel.value), name:clean(opt && opt.textContent), source:'querySelector' };
+    }
+
+    try{
+      const raw = localStorage.getItem('zummee_active_community_v601') || sessionStorage.getItem('zummee_active_community_v601') || '';
+      const obj = raw ? JSON.parse(raw) : null;
+      if(obj && uuid(obj.id)) return { id:clean(obj.id), name:clean(obj.name), source:'storage-v601' };
+    }catch(_e2){}
+
+    try{
+      const keys = ['zummeeActiveCommunityId','activeCommunityId','currentCommunityId','zummee_selected_community_id'];
+      for(const key of keys){
+        const val = localStorage.getItem(key) || sessionStorage.getItem(key);
+        if(uuid(val)) return { id:clean(val), name:clean(localStorage.getItem('currentCommunityName') || localStorage.getItem('zummeeCurrentCommunityName')), source:key };
+      }
+    }catch(_e3){}
+
+    return { id:'', name:'', source:'none' };
+  }
+
+  async function getClient(){
+    const existingNames = ['supabaseClient','sb','ZUMMEE_SUPABASE','__zummeeSupabase','zummeeSupabase'];
+    for(const name of existingNames){
+      try{
+        const c = window[name];
+        if(c && typeof c.from === 'function') return { client:c, source:'window.' + name };
+      }catch(_e){}
+    }
+
+    const fns = ['getSupabase','ensureSupabaseSync','requireSb'];
+    for(const name of fns){
+      try{
+        const fn = window[name];
+        if(typeof fn === 'function'){
+          const c = fn();
+          if(c && typeof c.from === 'function') return { client:c, source:name + '()' };
+        }
+      }catch(_e2){}
+    }
+
+    for(let i=0;i<30;i++){
+      try{
+        if(window.supabase && typeof window.supabase.createClient === 'function'){
+          if(!window.__ManagerHubV635Sb){
+            window.__ManagerHubV635Sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+          }
+          if(window.__ManagerHubV635Sb && typeof window.__ManagerHubV635Sb.from === 'function'){
+            return { client:window.__ManagerHubV635Sb, source:'v635-created-client' };
+          }
+        }
+      }catch(_e3){}
+      await sleep(100);
+    }
+
+    return { client:null, source:'no-client' };
+  }
+
+  function status(row){
+    return clean(row && (row.status || row.approval_status || row.current_step || row.workflow_status || row.state)).toLowerCase();
+  }
+
+  function isClosed(row){
+    const st = status(row);
+    if(row && (row.archived_at || row.completed_at || row.closed_at || row.deleted_at || row.mailed_at)) return true;
+    return ['completed','complete','closed','archived','done','mailed','rejected','cancelled','canceled','inactive','resolved'].includes(st);
+  }
+
+  function isMaintenanceOpen(row){
+    if(!row || isClosed(row)) return false;
+    const st = status(row);
+    return !['draft','void','deleted'].includes(st);
+  }
+
+  function isAnnualActive(row){
+    if(!row) return false;
+    const st = clean(row.current_step || row.approval_status).toLowerCase();
+    if(row.archived_at || row.mailed_at) return false;
+    if(st === 'completed' || st === 'complete' || st === 'closed' || st === 'archived') return false;
+    return true;
+  }
+
+  function annualStageCounts(rows){
+    rows = Array.isArray(rows) ? rows.filter(isAnnualActive) : [];
+    return {
+      total: rows.length,
+      board: rows.filter(r => clean(r.current_step || r.approval_status).toLowerCase() === 'pending_board').length,
+      supervisor: rows.filter(r => clean(r.current_step || r.approval_status).toLowerCase() === 'pending_supervisor').length,
+      admin: rows.filter(r => {
+        const st = clean(r.current_step || r.approval_status).toLowerCase();
+        return st === 'pending_admin_mailing' || st === 'ready_to_mail';
+      }).length
+    };
+  }
+
+  function setCard(id, config){
+    const card = byId(id);
+    if(!card) return;
+
+    const tone = config.tone || 'good';
+    const html =
+      '<div class="mh2-alert-top">' +
+        '<div class="mh2-alert-title">' + esc(config.title) + '</div>' +
+        '<div class="mh2-alert-badge">' + esc(config.badge) + '</div>' +
+      '</div>' +
+      '<div class="mh2-alert-copy">' + esc(config.copy) + '</div>';
+
+    const cls = 'mh2-alert ' + (tone === 'urgent' ? 'is-urgent' : (tone === 'attention' ? 'is-attention' : 'is-good'));
+    state.restoring = true;
+    card.setAttribute('data-v635-stable', '1');
+    card.className = cls;
+    card.innerHTML = html;
+    card.setAttribute('href', config.href || '#');
+    card.style.visibility = 'visible';
+    card.style.opacity = '1';
+    state.lastHtml[id] = html;
+    state.lastClass[id] = cls;
+    state.lastHref[id] = config.href || '#';
+    state.restoring = false;
+  }
+
+  function restoreCard(id){
+    const card = byId(id);
+    if(!card || !state.lastHtml[id] || state.restoring) return;
+    if(card.innerHTML === state.lastHtml[id] && card.className === state.lastClass[id]) return;
+
+    state.restoring = true;
+    card.setAttribute('data-v635-stable', '1');
+    card.className = state.lastClass[id];
+    card.innerHTML = state.lastHtml[id];
+    card.setAttribute('href', state.lastHref[id] || '#');
+    card.style.visibility = 'visible';
+    card.style.opacity = '1';
+    state.restoring = false;
+
+    window.__ManagerHubV635BlockedLegacySmartCardPaints = (window.__ManagerHubV635BlockedLegacySmartCardPaints || 0) + 1;
+  }
+
+  function watchCard(id){
+    const card = byId(id);
+    if(!card || card.__v635SmartCardWatcher) return;
+    card.__v635SmartCardWatcher = true;
+    const mo = new MutationObserver(function(){
+      if(state.restoring) return;
+      requestAnimationFrame(function(){ restoreCard(id); });
+    });
+    mo.observe(card, { childList:true, subtree:true, attributes:true, attributeFilter:['class','href','style'] });
+  }
+
+  async function refresh(){
+    const ctx = getCommunity();
+    const resolved = await getClient();
+    const client = resolved.client;
+
+    const out = {
+      build: BUILD,
+      ok:false,
+      community:ctx,
+      clientSource:resolved.source,
+      board:{ count:0, error:null },
+      maintenance:{ count:0, urgent:0, error:null },
+      annual:{ count:0, board:0, supervisor:0, admin:0, error:null },
+      loadedAt:new Date().toISOString()
+    };
+
+    try{
+      if(!uuid(ctx.id)) throw new Error('No selected community.');
+      if(!client) throw new Error('Supabase client unavailable.');
+
+      const boardRes = await client
+        .from('notification_events')
+        .select('id,community_id,event_type,status,metadata,created_at,updated_at,archived_at,completed_at,deleted_at')
+        .eq('community_id', ctx.id)
+        .eq('event_type','board_item_submitted')
+        .limit(200);
+
+      if(boardRes.error) out.board.error = boardRes.error.message || JSON.stringify(boardRes.error);
+      const boardRows = Array.isArray(boardRes.data) ? boardRes.data.filter(r => !isClosed(r)) : [];
+      out.board.count = boardRows.length;
+
+      const maintenanceRes = await client
+        .from('resident_work_orders')
+        .select('id,community_id,status,approval_status,current_step,priority,severity,created_at,updated_at,archived_at,completed_at,closed_at,deleted_at')
+        .eq('community_id', ctx.id)
+        .limit(200);
+
+      if(maintenanceRes.error) out.maintenance.error = maintenanceRes.error.message || JSON.stringify(maintenanceRes.error);
+      const maintenanceRows = Array.isArray(maintenanceRes.data) ? maintenanceRes.data.filter(isMaintenanceOpen) : [];
+      out.maintenance.count = maintenanceRows.length;
+      out.maintenance.urgent = maintenanceRows.filter(r => /urgent|emergency|high/i.test(clean(r.priority || r.severity))).length;
+
+      const annualRes = await client
+        .from('annual_meeting_approval_requests')
+        .select('id,community_id,current_step,approval_status,archived_at,mailed_at,created_at,updated_at,initiated_at,next_annual_meeting_date')
+        .eq('community_id', ctx.id)
+        .is('archived_at', null)
+        .neq('current_step', 'completed')
+        .neq('approval_status', 'completed')
+        .limit(100);
+
+      if(annualRes.error) out.annual.error = annualRes.error.message || JSON.stringify(annualRes.error);
+      const annualCounts = annualStageCounts(annualRes.data || []);
+      out.annual = Object.assign(out.annual, annualCounts);
+
+      out.ok = true;
+    }catch(err){
+      out.error = err && err.message ? err.message : String(err);
+    }
+
+    setCard('mh2AlertBoard', {
+      tone: out.board.count > 0 ? 'attention' : 'good',
+      title: 'Board review status',
+      badge: out.board.count > 0 ? (out.board.count + ' open') : 'Clear',
+      copy: out.board.count > 0 ? (out.board.count + ' board item' + (out.board.count === 1 ? '' : 's') + ' awaiting review.') : 'No board items need review right now.',
+      href: 'board_member_hub_v2.html'
+    });
+
+    setCard('mh2AlertActivity', {
+      tone: out.maintenance.urgent > 0 ? 'urgent' : (out.maintenance.count > 0 ? 'attention' : 'good'),
+      title: 'Maintenance activity',
+      badge: out.maintenance.urgent > 0 ? (out.maintenance.urgent + ' urgent') : (out.maintenance.count > 0 ? (out.maintenance.count + ' open') : 'Quiet'),
+      copy: out.maintenance.count > 0 ? (out.maintenance.count + ' open maintenance item' + (out.maintenance.count === 1 ? '' : 's') + ' for this community.') : 'No open maintenance activity for this community.',
+      href: 'maintenance_updates.html'
+    });
+
+    let annualCopy = 'No active annual meeting approval workflows.';
+    if(out.annual.total){
+      const bits = [];
+      if(out.annual.board) bits.push(out.annual.board + ' Board');
+      if(out.annual.supervisor) bits.push(out.annual.supervisor + ' Supervisor');
+      if(out.annual.admin) bits.push(out.annual.admin + ' Admin / mailing');
+      annualCopy = out.annual.total + ' active annual meeting workflow' + (out.annual.total === 1 ? '' : 's') + (bits.length ? ': ' + bits.join(' · ') + '.' : '.');
+    }
+
+    setCard('mh2AlertApprovals', {
+      tone: out.annual.total > 0 ? 'attention' : 'good',
+      title: 'Annual meeting approvals',
+      badge: out.annual.total > 0 ? (out.annual.total + ' open') : 'Clear',
+      copy: annualCopy,
+      href: 'board_member_hub_v2.html#annualApprovalRequestsSection'
+    });
+
+    state.summary = out;
+    window.__ManagerHubV635StableSmartCardsStatus = out;
+    window.__ManagerHubAnnualApprovalSmartCardV634Status = {
+      build: BUILD,
+      ok: out.ok,
+      count: out.annual.total,
+      stages: { board:out.annual.board, supervisor:out.annual.supervisor, admin:out.annual.admin },
+      community: ctx,
+      source: 'annual_meeting_approval_requests',
+      loadedAt: out.loadedAt,
+      error: out.annual.error || out.error || null
+    };
+
+    return out;
+  }
+
+  window.refreshManagerHubStableSmartCards = refresh;
+  window.getManagerHubStableSmartCardsStatus = function(){ return window.__ManagerHubV635StableSmartCardsStatus || { build:BUILD, note:'Not loaded yet' }; };
+  window.getManagerHubAnnualApprovalSmartCardStatus = function(){
+    return window.__ManagerHubAnnualApprovalSmartCardV634Status || { build:BUILD, note:'No annual approval summary loaded yet' };
+  };
+
+  function boot(){
+    ['mh2AlertBoard','mh2AlertActivity','mh2AlertApprovals'].forEach(watchCard);
+    refresh();
+    [700, 1800, 3600, 6500, 9500, 12500].forEach(function(ms){
+      setTimeout(refresh, ms);
+    });
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', boot, { once:true });
+  }else{
+    boot();
+  }
+
+  window.addEventListener('pageshow', function(){ setTimeout(boot, 100); });
+  window.addEventListener('focus', function(){ setTimeout(refresh, 100); });
+  window.addEventListener('zummee:community-changed', function(){ setTimeout(refresh, 150); });
+})();
+</script>
+
 </body>
 </html>
 
