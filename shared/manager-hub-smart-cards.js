@@ -18,7 +18,7 @@
   if(window.__ZummeeManagerHubSmartCardsV702Loaded) return;
   window.__ZummeeManagerHubSmartCardsV702Loaded = true;
 
-  var BUILD = '2026-05-11-v702-manager-hub-single-owner-correct-logic';
+  var BUILD = '2026-05-11-v703-manager-hub-visible-correct-logic';
   var SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
   var TIMEOUT_MS = 7000;
@@ -42,10 +42,14 @@
   function setReady(isReady){
     try{
       if(isReady){
+        document.documentElement.setAttribute('data-zummee-smart-cards-v703-ready','1');
         document.documentElement.setAttribute('data-zummee-smart-cards-v702-ready','1');
+        document.documentElement.setAttribute('data-zummee-smart-cards-v701-ready','1');
         document.documentElement.setAttribute('data-zummee-smart-alerts-v426-ready','1');
       }else{
+        document.documentElement.removeAttribute('data-zummee-smart-cards-v703-ready');
         document.documentElement.removeAttribute('data-zummee-smart-cards-v702-ready');
+        document.documentElement.removeAttribute('data-zummee-smart-cards-v701-ready');
         document.documentElement.removeAttribute('data-zummee-smart-alerts-v426-ready');
       }
     }catch(_e){}
@@ -500,7 +504,7 @@
       singleOwner: true,
       loaded: !!window.__ZummeeManagerHubSmartCardsV702Loaded,
       booted: !!window.__ZummeeManagerHubSmartCardsV702Booted,
-      ready: document.documentElement.getAttribute('data-zummee-smart-cards-v702-ready') === '1',
+      ready: document.documentElement.getAttribute('data-zummee-smart-cards-v703-ready') === '1',
       cardOwners: {
         board: $('mh2AlertBoard') && $('mh2AlertBoard').dataset.smartCardOwner || '',
         maintenance: $('mh2AlertActivity') && $('mh2AlertActivity').dataset.smartCardOwner || '',
