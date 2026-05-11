@@ -15,7 +15,7 @@
     </div>
   </div>
 
-<script>window.ZUMMEE_BUILD="2026-05-11-v733-preferred-vendors-save-timeout-render-fix";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-11-v734-preferred-vendors-session-auth-save-fix";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -2785,7 +2785,7 @@ body.dark-mode .mh2-stat-box {
 
   /* v728: Supabase lock. Vendor rows are no longer loaded from or saved to localStorage. */
   var pvLastSupabaseStatus = {
-    build:'2026-05-11-v733-preferred-vendors-save-timeout-render-fix',
+    build:'2026-05-11-v734-preferred-vendors-session-auth-save-fix',
     table:'preferred_vendors_shared',
     mode:'supabase-only',
     ok:false,
@@ -4653,7 +4653,7 @@ body.dark-mode .mh2-stat-box {
 <script id="preferred-vendors-v728-status">
   window.getPreferredVendorsDeploymentStatus = function(){
     return {
-      build:'2026-05-11-v733-preferred-vendors-save-timeout-render-fix',
+      build:'2026-05-11-v734-preferred-vendors-session-auth-save-fix',
       premium:true,
       headerLogoTopRight:true,
       logoUnboxed:true,
@@ -4669,7 +4669,7 @@ body.dark-mode .mh2-stat-box {
   window.testPreferredVendorsContext = async function(){
     var sb = (window.sb || window.supabaseClient || (window.pvCtx && window.pvCtx.sb) || null);
     if(!sb || !sb.auth) return { ok:false, error:'No Supabase client found on page.' };
-    var out = { ok:false, build:'2026-05-11-v733-preferred-vendors-save-timeout-render-fix' };
+    var out = { ok:false, build:'2026-05-11-v734-preferred-vendors-session-auth-save-fix' };
     try{
       var userRes = await sb.auth.getUser();
       var user = userRes && userRes.data ? userRes.data.user : null;
@@ -4696,7 +4696,7 @@ body.dark-mode .mh2-stat-box {
 
   window.getPreferredVendorsSupabaseStatus = function(){
     return window.__pvSupabaseStatus || {
-      build:'2026-05-11-v733-preferred-vendors-save-timeout-render-fix',
+      build:'2026-05-11-v734-preferred-vendors-session-auth-save-fix',
       table:'preferred_vendors_shared',
       mode:'supabase-only',
       ok:false,
@@ -4706,10 +4706,10 @@ body.dark-mode .mh2-stat-box {
 </script>
 
 
-<script id="preferred-vendors-v733-save-timeout-render-fix">
+<script id="preferred-vendors-v734-session-auth-save-fix">
 (function(){
   'use strict';
-  var BUILD = '2026-05-11-v733-preferred-vendors-save-timeout-render-fix';
+  var BUILD = '2026-05-11-v734-preferred-vendors-session-auth-save-fix';
   function $(id){ return document.getElementById(id); }
   function val(id){ var el=$(id); return String(el && el.value || '').trim(); }
   function setVal(id,v){ var el=$(id); if(el) el.value = v || ''; }
@@ -4720,7 +4720,7 @@ body.dark-mode .mh2-stat-box {
       el.style.color = isErr ? '#b91c1c' : '#166534';
       el.style.fontWeight = '900';
     }
-    try{ console[isErr?'warn':'info']('[Preferred Vendors v733]', msg); }catch(_e){}
+    try{ console[isErr?'warn':'info']('[Preferred Vendors v734]', msg); }catch(_e){}
   }
   function phoneDigits(v){ return String(v||'').replace(/\D/g,''); }
   function safeGet(k){ try{ return localStorage.getItem(k) || sessionStorage.getItem(k) || ''; }catch(_e){ return ''; } }
@@ -4731,11 +4731,32 @@ body.dark-mode .mh2-stat-box {
     }
     return null;
   }
+  function patchAuthGetUser(sb){
+    try{
+      if(!sb || !sb.auth || sb.auth.__pvSessionGetUserPatchV734) return sb;
+      if(typeof sb.auth.getSession !== 'function') return sb;
+      sb.auth.__pvOriginalGetUser = sb.auth.getUser;
+      sb.auth.getUser = async function(){
+        var sessionRes = await sb.auth.getSession();
+        var session = sessionRes && sessionRes.data && sessionRes.data.session;
+        var user = session && session.user ? session.user : null;
+        return { data:{ user:user }, error: user ? null : new Error('No active session user') };
+      };
+      sb.auth.__pvSessionGetUserPatchV734 = true;
+    }catch(_e){}
+    return sb;
+  }
+  async function sessionUser(sb){
+    if(!sb || !sb.auth || typeof sb.auth.getSession !== 'function') return null;
+    var sessionRes = await sb.auth.getSession();
+    var session = sessionRes && sessionRes.data && sessionRes.data.session;
+    return session && session.user ? session.user : null;
+  }
   async function getClient(){
-    if(window.getPvClient){ try{ var c=await window.getPvClient(); if(c&&c.from&&c.auth) return c; }catch(_e){} }
-    if(window.sb && window.sb.from && window.sb.auth) return window.sb;
-    if(window.supabaseClient && window.supabaseClient.from && window.supabaseClient.auth) return window.supabaseClient;
-    if(window.ensureSupabase){ try{ var c2=await window.ensureSupabase(); if(c2&&c2.from&&c2.auth) return c2; }catch(_e){} }
+    if(window.getPvClient){ try{ var c=await window.getPvClient(); if(c&&c.from&&c.auth) return patchAuthGetUser(c); }catch(_e){} }
+    if(window.sb && window.sb.from && window.sb.auth) return patchAuthGetUser(window.sb);
+    if(window.supabaseClient && window.supabaseClient.from && window.supabaseClient.auth) return patchAuthGetUser(window.supabaseClient);
+    if(window.ensureSupabase){ try{ var c2=await window.ensureSupabase(); if(c2&&c2.from&&c2.auth) return patchAuthGetUser(c2); }catch(_e){} }
     return null;
   }
   function getStatus(){ return (window.getPreferredVendorsSupabaseStatus && window.getPreferredVendorsSupabaseStatus()) || window.__pvSupabaseStatus || {}; }
@@ -4759,9 +4780,8 @@ body.dark-mode .mh2-stat-box {
   async function context(){
     var sb=await getClient();
     if(!sb) throw new Error('Supabase client is not ready.');
-    var userRes=await sb.auth.getUser();
-    var user=userRes && userRes.data && userRes.data.user;
-    if(!user) throw new Error('No authenticated user. Please log in again.');
+    var user = await sessionUser(sb);
+    if(!user) throw new Error('No authenticated session user. Please log in again.');
     var uid=user.id;
     var st=getStatus();
     var company=String(st.company || (window.getCompany && window.getCompany()) || safeGet('zummee_company') || safeGet('zummee_company_name') || safeGet('company_name') || '').trim();
@@ -4852,11 +4872,11 @@ body.dark-mode .mh2-stat-box {
       var p = window.ZUMMEE_preferredVendorsRender(true);
       if(p && typeof p.then === 'function'){
         withTimeout(p, 8000, 'Vendor list refresh').catch(function(renderErr){
-          console.warn('[Preferred Vendors v733] background refresh timed out/failed', renderErr);
+          console.warn('[Preferred Vendors v734] background refresh timed out/failed', renderErr);
         });
       }
     }catch(renderErr){
-      console.warn('[Preferred Vendors v733] background refresh failed', renderErr);
+      console.warn('[Preferred Vendors v734] background refresh failed', renderErr);
     }
   }
   async function saveVendorNow(){
@@ -4912,6 +4932,7 @@ body.dark-mode .mh2-stat-box {
         company_id:ctx.company_id,
         community_id:ctx.community_id,
         savedAt:new Date().toISOString(),
+        authSource:'session',
         error:''
       });
 
@@ -4928,7 +4949,7 @@ body.dark-mode .mh2-stat-box {
       var msg=err && err.message ? err.message : String(err||'Unknown save error');
       window.__pvSupabaseStatus = Object.assign({}, window.__pvSupabaseStatus || {}, { build:BUILD, ok:false, error:msg, savedAt:null });
       status('Vendor was not saved: '+msg, true);
-      console.error('[Preferred Vendors v733] save failed', err);
+      console.error('[Preferred Vendors v734] save failed', err);
       return false;
     }finally{
       if(btn){ btn.disabled=false; btn.textContent = val('pv_editIndex') ? 'Update Vendor' : 'Save Vendor'; }
