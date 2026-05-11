@@ -1,9 +1,9 @@
 (function(){
   'use strict';
-  if(window.__BoardHubAnnualOpenWorkflowsRemindersV708) return;
-  window.__BoardHubAnnualOpenWorkflowsRemindersV708 = true;
+  if(window.__BoardHubAnnualOpenWorkflowsRemindersV709) return;
+  window.__BoardHubAnnualOpenWorkflowsRemindersV709 = true;
 
-  const BUILD = '2026-05-11-v708-board-hub-open-workflow-dedupe-layout';
+  const BUILD = '2026-05-11-v709-board-hub-open-workflow-clean-layout';
   const ACTIVE_STEPS = new Set([
     'pending_board','board_review','pending_supervisor','board_approved',
     'pending_admin_mailing','ready_to_mail','supervisor_approved','pending_admin',
@@ -143,16 +143,24 @@
     const title=esc(row.association_legal_name || row.association_name || 'Annual Meeting Packet');
     const route=esc(row.approval_route_label || row.approval_route || 'Approval route');
     const meetingDate=esc(dateOnly(row.next_annual_meeting_date));
-    const initiated=row.initiated_at || row.created_at ? ('Initiated '+dateOnly(row.initiated_at || row.created_at)) : 'Initiated date unavailable';
+    const initiated=esc(row.initiated_at || row.created_at ? dateOnly(row.initiated_at || row.created_at) : 'Unavailable');
     const hasBoard=!!w.pendingBoard;
     const primaryReminder=w.info.current==='supervisor' ? 'supervisor' : 'board';
+    const countsLine=esc(workflowCountsLine(w) || 'Open approval workflow');
     return ''+
       '<article class="annualRequestCard '+w.info.cls+'" data-annual-workflow-key="'+id+'" data-annual-approval-id="'+packetId+'">'+
-        '<div>'+
-          '<h3 class="annualRequestTitle">'+title+'</h3>'+
-          '<p class="annualRequestMeta">Route: '+route+' · Meeting date: '+meetingDate+' · '+esc(initiated)+'</p>'+
-          '<div class="annualRequestStatusLine">'+esc(w.info.label)+': '+esc(w.info.line)+'</div>'+
-          '<p class="annualRequestMeta">'+esc(workflowCountsLine(w) || 'Open approval workflow')+'</p>'+
+        '<div class="annualRequestMain">'+
+          '<div class="annualRequestHeader">'+
+            '<h3 class="annualRequestTitle">'+title+'</h3>'+
+            '<span class="annualRequestCurrentBadge">'+esc(w.info.label)+'</span>'+
+          '</div>'+
+          '<div class="annualRequestDetailsGrid">'+
+            '<div class="annualRequestDetailBox"><div class="annualRequestDetailLabel">Route</div><div class="annualRequestDetailValue">'+route+'</div></div>'+
+            '<div class="annualRequestDetailBox"><div class="annualRequestDetailLabel">Meeting date</div><div class="annualRequestDetailValue">'+meetingDate+'</div></div>'+
+            '<div class="annualRequestDetailBox"><div class="annualRequestDetailLabel">Initiated</div><div class="annualRequestDetailValue">'+initiated+'</div></div>'+
+          '</div>'+
+          '<div class="annualRequestStatusLine">'+esc(w.info.line)+'</div>'+
+          '<p class="annualRequestMeta">'+countsLine+'</p>'+
           stepPills(w.info)+
         '</div>'+
         '<div class="annualRequestActions">'+
@@ -212,7 +220,7 @@
       setStatus(state.error, 'err');
     }finally{
       state.loading=false;
-      window.__BoardHubAnnualOpenWorkflowsV708Status = snapshot(); window.__BoardHubAnnualOpenWorkflowsV707Status = window.__BoardHubAnnualOpenWorkflowsV708Status;
+      window.__BoardHubAnnualOpenWorkflowsV709Status = snapshot(); window.__BoardHubAnnualOpenWorkflowsV708Status = window.__BoardHubAnnualOpenWorkflowsV709Status; window.__BoardHubAnnualOpenWorkflowsV707Status = window.__BoardHubAnnualOpenWorkflowsV709Status;
     }
     return state;
   }
@@ -333,7 +341,7 @@
     const w=workflowByKey(key); if(!w) return alert('Packet preview is not available yet. Refresh and try again.');
     const row=w.primary || w.rows[0] || {};
     if(typeof window.previewBoardHubAnnualMeetingPacket === 'function'){
-      try{ window.__BoardHubAnnualOpenWorkflowsV708Status = snapshot(); window.__BoardHubAnnualOpenWorkflowsV707Status = window.__BoardHubAnnualOpenWorkflowsV708Status; window.previewBoardHubAnnualMeetingPacket(row.id); return; }catch(_e){}
+      try{ window.__BoardHubAnnualOpenWorkflowsV709Status = snapshot(); window.__BoardHubAnnualOpenWorkflowsV708Status = window.__BoardHubAnnualOpenWorkflowsV709Status; window.__BoardHubAnnualOpenWorkflowsV707Status = window.__BoardHubAnnualOpenWorkflowsV709Status; window.previewBoardHubAnnualMeetingPacket(row.id); return; }catch(_e){}
     }
     alert('Preview is not available for this packet yet.');
   }
