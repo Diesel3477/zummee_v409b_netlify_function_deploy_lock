@@ -18,7 +18,7 @@
   if(window.__ZummeeManagerHubSmartCardsV702Loaded) return;
   window.__ZummeeManagerHubSmartCardsV702Loaded = true;
 
-  var BUILD = '2026-05-11-v703-manager-hub-visible-correct-logic';
+  var BUILD = '2026-05-11-v704-manager-hub-annual-boardhub-aligned';
   var SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
   var TIMEOUT_MS = 7000;
@@ -42,12 +42,12 @@
   function setReady(isReady){
     try{
       if(isReady){
-        document.documentElement.setAttribute('data-zummee-smart-cards-v703-ready','1');
+        document.documentElement.setAttribute('data-zummee-smart-cards-v704-ready','1');
         document.documentElement.setAttribute('data-zummee-smart-cards-v702-ready','1');
         document.documentElement.setAttribute('data-zummee-smart-cards-v701-ready','1');
         document.documentElement.setAttribute('data-zummee-smart-alerts-v426-ready','1');
       }else{
-        document.documentElement.removeAttribute('data-zummee-smart-cards-v703-ready');
+        document.documentElement.removeAttribute('data-zummee-smart-cards-v704-ready');
         document.documentElement.removeAttribute('data-zummee-smart-cards-v702-ready');
         document.documentElement.removeAttribute('data-zummee-smart-cards-v701-ready');
         document.documentElement.removeAttribute('data-zummee-smart-alerts-v426-ready');
@@ -182,16 +182,18 @@
     return dt.getTime() < today.getTime();
   }
 
+  function annualStep(row){
+    return lower(row && (row.current_step || row.approval_status || row.status || statusOf(row)));
+  }
+
+  // v704: Annual smart card must match Board Member Hub packet-approval queue.
+  // Do NOT count setup records, archived history, mailed records, blank legacy rows,
+  // or rejected/completed rows. Only active workflow steps count.
   function isAnnualActive(row){
     if(!row) return false;
     if(row.archived_at || row.deleted_at || row.completed_at || row.mailed_at || row.sent_for_mailing_at) return false;
-    var st = statusOf(row);
-    if(!st) return true;
-    if(st.indexOf('reject') > -1) return false;
-    if(st.indexOf('archive') > -1) return false;
-    if(st.indexOf('mail') > -1) return false;
-    if(st === 'approved' || st === 'complete' || st === 'completed' || st === 'closed' || st === 'done') return false;
-    return true;
+    var st = annualStep(row);
+    return ['pending_board','pending_supervisor','pending_admin_mailing','ready_to_mail','board_approved','supervisor_approved'].indexOf(st) !== -1;
   }
 
   function isOpenMaintenance(row){
@@ -261,45 +263,53 @@
     return { ok:true, label:'maintenance', source:'resident_work_orders.non_terminal_statuses', clientSource:clientSource, count:rows.length, urgent:urgent, rows:rows, totalRows:raw.length };
   }
 
-  async function queryAnnualTable(client, table, selectCols, community){
-    var q = client.from(table).select(selectCols || '*').limit(500);
-    if(table === 'annual_meeting_approval_requests') q = q.eq('community_id', community.id);
-    var res = await q;
-    if(res && res.error) return { error:res.error };
-    var rows = Array.isArray(res && res.data) ? res.data : [];
-    if(table !== 'annual_meeting_approval_requests'){
-      rows = rows.filter(function(row){ return rowMatchesCommunity(row, community); });
-    }
-    return { data: rows };
+  function annualStepCounts(rows){
+    var out = { board:0, supervisor:0, admin:0, other:0 };
+    (Array.isArray(rows) ? rows : []).forEach(function(row){
+      var st = annualStep(row);
+      if(st === 'pending_board') out.board++;
+      else if(st === 'pending_supervisor') out.supervisor++;
+      else if(st === 'pending_admin_mailing' || st === 'ready_to_mail') out.admin++;
+      else out.other++;
+    });
+    return out;
   }
 
   async function loadAnnual(client, clientSource, community){
     if(!client || !isUuid(community.id)) return { ok:false, label:'annual', source:'none', clientSource:clientSource, count:null, error:'Missing client or community' };
 
-    var attempts = [
-      { table:'annual_meeting_approval_requests', cols:'*' },
-      { table:'annual_meeting_packet_requests', cols:'*' },
-      { table:'annual_meeting_settings', cols:'id,community_id,community_name,next_annual_meeting_date,status,updated_at,created_at,archived_at,completed_at,deleted_at' }
-    ];
+    // v704 source of truth: same table and active workflow concept used by Board Member Hub
+    // Annual Meeting Packet Approvals. This intentionally ignores annual_meeting_settings
+    // and old fallback packet/setup tables because those caused Manager Hub to show 4 when
+    // Board Hub only had 1 active packet workflow.
+    var res = await client.from('annual_meeting_approval_requests')
+      .select('*')
+      .eq('community_id', community.id)
+      .is('archived_at', null)
+      .neq('current_step', 'completed')
+      .neq('approval_status', 'completed')
+      .order('updated_at', { ascending:false })
+      .limit(500);
 
-    var errors = [];
-    for(var i=0;i<attempts.length;i++){
-      var a = attempts[i];
-      try{
-        var res = await queryAnnualTable(client, a.table, a.cols, community);
-        if(res.error){ errors.push(a.table + ': ' + (res.error.message || JSON.stringify(res.error))); continue; }
-        var raw = res.data || [];
-        var rows = raw.filter(function(row){
-          if(a.table === 'annual_meeting_settings') return !!(row && row.next_annual_meeting_date) && !closedStatus(row);
-          return isAnnualActive(row);
-        });
-        return { ok:true, label:'annual', source:a.table + '.active_only', clientSource:clientSource, count:rows.length, overdue:rows.filter(hasRealOverdue).length, rows:rows, totalRows:raw.length };
-      }catch(err){
-        errors.push(a.table + ': ' + (err && err.message ? err.message : String(err)));
-      }
+    if(res && res.error){
+      return { ok:false, label:'annual', source:'annual_meeting_approval_requests.board_hub_aligned', clientSource:clientSource, count:null, error:res.error.message || JSON.stringify(res.error), rows:[], totalRows:0 };
     }
 
-    return { ok:false, label:'annual', source:'annual sources unavailable', clientSource:clientSource, count:null, error:errors.join(' | ') };
+    var raw = Array.isArray(res && res.data) ? res.data : [];
+    var rows = raw.filter(isAnnualActive);
+    var steps = annualStepCounts(rows);
+
+    return {
+      ok:true,
+      label:'annual',
+      source:'annual_meeting_approval_requests.board_hub_aligned_active_steps',
+      clientSource:clientSource,
+      count:rows.length,
+      overdue:0,
+      rows:rows,
+      totalRows:raw.length,
+      stepCounts:steps
+    };
   }
 
   function emptySummary(community, resolved){
@@ -432,8 +442,8 @@
     setCard('mh2AlertApprovals', {
       tone: annualOverdue > 0 ? 'urgent' : (annualCount > 0 ? 'attention' : 'good'),
       title:'Annual meeting approvals',
-      badge: annualOverdue > 0 ? (annualOverdue + ' overdue') : (annualCount > 0 ? (annualCount + ' active') : 'Clear'),
-      copy: annualCount > 0 ? (annualCount + ' annual meeting approval' + (annualCount === 1 ? '' : 's') + ' in progress for this community.') : 'No annual meeting approvals need attention right now.',
+      badge: annualOverdue > 0 ? (annualOverdue + ' overdue') : (annualCount > 0 ? (annualCount + ' pending') : 'Clear'),
+      copy: annualCount > 0 ? (annualCount + ' annual meeting packet approval' + (annualCount === 1 ? '' : 's') + ' active for this community.') : 'No annual meeting packet approvals need attention right now.',
       href:annualHref()
     });
 
@@ -504,7 +514,7 @@
       singleOwner: true,
       loaded: !!window.__ZummeeManagerHubSmartCardsV702Loaded,
       booted: !!window.__ZummeeManagerHubSmartCardsV702Booted,
-      ready: document.documentElement.getAttribute('data-zummee-smart-cards-v703-ready') === '1',
+      ready: document.documentElement.getAttribute('data-zummee-smart-cards-v704-ready') === '1',
       cardOwners: {
         board: $('mh2AlertBoard') && $('mh2AlertBoard').dataset.smartCardOwner || '',
         maintenance: $('mh2AlertActivity') && $('mh2AlertActivity').dataset.smartCardOwner || '',
