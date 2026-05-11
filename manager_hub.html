@@ -3,7 +3,7 @@
 <head>
 
 <script id="manager-hub-v701-stable-build-marker">
-window.ZUMMEE_BUILD = "2026-05-11-v757-manager-hub-smart-card-badge-fit";
+window.ZUMMEE_BUILD = "2026-05-11-v758-manager-hub-smart-cards-title-pill-only";
 window.__MANAGER_HUB_V701_SINGLE_OWNER_SMART_CARDS = true;
 console.info("[Manager Hub v757] smart card badge fit polish", window.ZUMMEE_BUILD);
 </script>
@@ -147,25 +147,42 @@ console.info("[Manager Hub v757] smart card badge fit polish", window.ZUMMEE_BUI
     #smartAlertStrip .mh2-smart-strip{min-height:390px!important;}
   }
 </style>
-<style id="zummee-v757-smart-card-badge-fit-css">
-  /* v757: Smart alert status badges have enough width for counts like "1 PENDING" on iPad.
+<style id="zummee-v758-smart-card-minimal-layout-css">
+  /* v758: simplify Smart Alerts to title + status pill only.
      UI-only: no smart-card data/render logic changed. */
+  #smartAlertStrip .mh2-alert{
+    min-height:96px!important;
+    height:100%!important;
+    padding:18px 20px!important;
+    justify-content:center!important;
+    gap:0!important;
+  }
   #smartAlertStrip .mh2-alert-top{
     display:flex!important;
-    align-items:flex-start!important;
+    align-items:center!important;
     justify-content:space-between!important;
     gap:14px!important;
     width:100%!important;
+    min-height:auto!important;
   }
   #smartAlertStrip .mh2-alert-title{
     flex:1 1 auto!important;
     min-width:0!important;
+    min-height:0!important;
+    line-height:1.16!important;
+    font-size:clamp(15px,2vw,17px)!important;
+  }
+  #smartAlertStrip .mh2-alert-copy{
+    display:none!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:0!important;
   }
   #smartAlertStrip .mh2-alert-badge{
     flex:0 0 auto!important;
     min-width:112px!important;
     max-width:none!important;
-    min-height:34px!important;
+    min-height:40px!important;
     padding:0 14px!important;
     border-radius:999px!important;
     white-space:nowrap!important;
@@ -177,6 +194,7 @@ console.info("[Manager Hub v757] smart card badge fit polish", window.ZUMMEE_BUI
   @media (max-width:860px){
     #smartAlertStrip .mh2-alert-badge{
       min-width:104px!important;
+      min-height:38px!important;
       padding:0 12px!important;
       font-size:11px!important;
       letter-spacing:.10em!important;
@@ -2925,15 +2943,23 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
 </style>
 
 
-<script id="zummee-v757-manager-hub-badge-fit-diagnostic">
+<script id="zummee-v758-manager-hub-smart-card-layout-diagnostic">
 (function(){
-  window.getManagerHubSmartBadgeFitStatus=function(){
+  window.getManagerHubSmartCardLayoutStatus=function(){
     try{
-      var badges=Array.from(document.querySelectorAll('#smartAlertStrip .mh2-alert-badge')).map(function(b){
-        var r=b.getBoundingClientRect();
-        return {text:b.textContent.trim(), width:Math.round(r.width), scrollWidth:b.scrollWidth};
+      var cards=Array.from(document.querySelectorAll('#smartAlertStrip .mh2-alert')).map(function(card){
+        var title=card.querySelector('.mh2-alert-title');
+        var badge=card.querySelector('.mh2-alert-badge');
+        var copy=card.querySelector('.mh2-alert-copy');
+        var style=copy ? window.getComputedStyle(copy) : null;
+        return {
+          title:title ? title.textContent.trim() : '',
+          badge:badge ? badge.textContent.trim() : '',
+          copyHidden:!copy || style.display==='none',
+          cardHeight:Math.round(card.getBoundingClientRect().height)
+        };
       });
-      return {build:window.ZUMMEE_BUILD||'', ok:true, badges:badges};
+      return {build:window.ZUMMEE_BUILD||'', ok:true, cards:cards};
     }catch(e){return {build:window.ZUMMEE_BUILD||'', ok:false, error:String(e&&e.message||e)};}
   };
 })();
