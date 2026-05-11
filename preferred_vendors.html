@@ -2699,10 +2699,25 @@ body.dark-mode .mh2-stat-box {
     await warmPvContext();
     var company = getCompany();
     var cid = getSelectedCommunityId();
-    if(!(company && cid)) return normalized;
+    window.__pvLastSaveResult = {
+      ok:false,
+      pending:true,
+      source:'preferred_vendors_shared',
+      company: String(company||'').trim(),
+      community_id: String(cid||'').trim(),
+      count: normalized.length,
+      saved_at:null,
+      error:''
+    };
+    if(!(company && cid)){
+      window.__pvLastSaveResult.pending = false;
+      window.__pvLastSaveResult.error = 'Missing company or selected community. Vendor saved locally only.';
+      console.warn('[Preferred Vendors] Cloud save skipped:', window.__pvLastSaveResult);
+      return normalized;
+    }
     try{
       var sb = (pvCtx && pvCtx.sb) ? pvCtx.sb : await getPvClient();
-      if(!sb || !sb.from || !sb.auth) return normalized;
+      if(!sb || !sb.from || !sb.auth) throw new Error('Supabase client unavailable. Vendor saved locally only.');
       var gu = await sb.auth.getUser();
       var uid = String(gu && gu.data && gu.data.user && gu.data.user.id || pvCtx.uid || '').trim();
       if(uid) pvCtx.uid = uid;
@@ -2715,20 +2730,59 @@ body.dark-mode .mh2-stat-box {
       };
       var result = await sb.from(sharedVendorTableName()).upsert(payload, { onConflict: 'company,community_id' });
       if(result && result.error) throw result.error;
-      console.log('Preferred Vendors shared cloud save success', { company: company, community_id: cid, count: normalized.length });
+      window.__pvLastSaveResult = {
+        ok:true,
+        pending:false,
+        source:'preferred_vendors_shared',
+        company: payload.company,
+        community_id: payload.community_id,
+        count: normalized.length,
+        saved_at: payload.updated_at,
+        error:''
+      };
+      console.log('Preferred Vendors shared cloud save success', window.__pvLastSaveResult);
     }catch(err){
-      console.error('Preferred Vendors saveRows failed', err);
+      window.__pvLastSaveResult.pending = false;
+      window.__pvLastSaveResult.error = err && err.message ? err.message : String(err);
+      console.error('Preferred Vendors saveRows failed', window.__pvLastSaveResult, err);
+      var status = document.getElementById('pv_manageStatus');
+      if(status){
+        status.textContent = 'Vendor saved locally, but Supabase save failed: ' + window.__pvLastSaveResult.error;
+        status.style.color = '#9b1c1c';
+      }
     }
     return normalized;
   }
 
   async function refreshVendorRows(forceRefresh){
     if(!forceRefresh && Array.isArray(pvRowsCache)) return pvRowsCache.slice();
-    var localRows = loadRowsLocal();
+    var localRows = normalizeVendorRows(loadRowsLocal());
     pvRowsCache = localRows.slice();
     var cloudRows = await readRowsFromCloud();
     if(Array.isArray(cloudRows)){
-      pvRowsCache = saveRowsLocal(cloudRows);
+      var normalizedCloud = normalizeVendorRows(cloudRows);
+      window.__pvLastCloudRead = {
+        ok:true,
+        source:'preferred_vendors_shared',
+        company:getCompany(),
+        community_id:getSelectedCommunityId(),
+        cloudCount: normalizedCloud.length,
+        localCount: localRows.length,
+        migratedLocalToCloud:false,
+        read_at:new Date().toISOString()
+      };
+
+      // Long-term persistence guard:
+      // If Supabase has no vendor row yet but this browser has local vendors, do not wipe them.
+      // Promote the local rows into preferred_vendors_shared so deploys/cache clears do not make records disappear.
+      if(!normalizedCloud.length && localRows.length){
+        pvRowsCache = saveRowsLocal(localRows);
+        await saveRows(pvRowsCache);
+        window.__pvLastCloudRead.migratedLocalToCloud = true;
+        return pvRowsCache.slice();
+      }
+
+      pvRowsCache = saveRowsLocal(normalizedCloud);
       try{
         var localNeedsBackfill = rowsNeedVendorKeyBackfill(localRows, pvRowsCache);
         if(localNeedsBackfill){
@@ -3865,11 +3919,8 @@ body.dark-mode .mh2-stat-box {
     document.getElementById("pv_companyPill").textContent = "Company: " + (company || "—");
     var rows = [];
     if(forceRefresh){
-      var directCloudRows = await readRowsFromCloud();
-      if(Array.isArray(directCloudRows)){
-        rows = saveRowsLocal(directCloudRows);
-        pvRowsCache = rows.slice();
-      }
+      // Use the Supabase-first refresh guard so an empty cloud row cannot wipe local rows before migration.
+      rows = await refreshVendorRows(true);
     }
     if(!rows.length && Array.isArray(window.__pvLastSharedRows) && window.__pvLastSharedRows.length){
       rows = saveRowsLocal(window.__pvLastSharedRows);
@@ -3984,6 +4035,44 @@ body.dark-mode .mh2-stat-box {
   window.getPvClient = getPvClient;
   window.currentRole = window.currentRole || currentRole;
   window.getCompany = window.getCompany || getCompany;
+  window.getPreferredVendorsSupabaseStatus = async function(){
+    await warmPvContext();
+    var company = getCompany();
+    var cid = getSelectedCommunityId();
+    var status = {
+      build: window.ZUMMEE_BUILD || '',
+      table: sharedVendorTableName(),
+      company: String(company||'').trim(),
+      community_id: String(cid||'').trim(),
+      selectedCommunityId: String(cid||'').trim(),
+      renderedCount: Array.isArray(window.__pvRenderedRows) ? window.__pvRenderedRows.length : null,
+      lastSave: window.__pvLastSaveResult || null,
+      lastCloudRead: window.__pvLastCloudRead || null,
+      ok:false,
+      cloudCount:null,
+      row:null,
+      error:''
+    };
+    try{
+      var sb = pvCtx.sb || await getPvClient();
+      if(!(sb && sb.from)) throw new Error('Supabase client unavailable.');
+      var res = await sb.from(sharedVendorTableName())
+        .select('vendors,company,community_id,updated_at')
+        .eq('company', status.company)
+        .eq('community_id', status.community_id)
+        .maybeSingle();
+      if(res && res.error) throw res.error;
+      var vendors = res && res.data ? res.data.vendors : null;
+      var rows = Array.isArray(vendors) ? vendors : (vendors && Array.isArray(vendors.rows) ? vendors.rows : []);
+      status.ok = true;
+      status.cloudCount = normalizeVendorRows(rows).length;
+      status.row = res && res.data ? res.data : null;
+      return status;
+    }catch(err){
+      status.error = err && err.message ? err.message : String(err);
+      return status;
+    }
+  };
 })();
 
 // Modern selector UI that wraps the native <select> (keeps existing behavior & RLS-safe updates)
