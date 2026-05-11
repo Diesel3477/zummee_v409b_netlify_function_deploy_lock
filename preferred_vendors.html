@@ -15,7 +15,7 @@
     </div>
   </div>
 
-<script>window.ZUMMEE_BUILD="2026-05-11-v730-preferred-vendors-clean-deps-context-lock";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-11-v731-preferred-vendors-context-diagnostics";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -29,8 +29,7 @@
       }catch(_e){ document.documentElement.setAttribute('data-theme','light'); }
     })();
   </script>
-  <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
-  <style>
+<style>
   :root{--bg:#f6f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--shadow:0 10px 30px rgba(0,0,0,.08);--r:14px;--brand:#0f2f4a}
   *{box-sizing:border-box}
   body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
@@ -854,8 +853,7 @@ body.dark-mode .mh2-stat-box {
 .mh2-actions .mh2-btn--ghost{display:none !important;}
 </style>
   <link rel="icon" type="image/png" href="zummee_mark_32.png">
-  <link rel="stylesheet" href="shared/header.css?v=2026-03-27-1">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="shared/supabase-client.js?v=2026-04-08-2"></script>
 
   <script id="zummeeStaffGuard">
@@ -1475,8 +1473,8 @@ body.dark-mode .mh2-stat-box {
 </style>
 
 
-<style id="pv-v730-clean-deps-company-context-fix">
-  /* v730: remove dependency on missing shared header/dark-mode JS and keep vendor form controls aligned */
+<style id="pv-v731-clean-deps-company-context-fix">
+  /* v731: remove dependency on missing shared header/dark-mode JS and keep vendor form controls aligned */
   #preferredVendorsPage #pv_vendorType{
     appearance:auto !important;
     -webkit-appearance:menulist !important;
@@ -2638,40 +2636,55 @@ body.dark-mode .mh2-stat-box {
       var companyId = '';
       var companyName = '';
       var source = 'stored';
+      var warnings = [];
 
-      var res = await sb
-        .from('userdirectory')
-        .select('company_id,company_name,company,role,profile_name,profile_email')
-        .eq('auth_user_id', uid)
-        .maybeSingle();
-      if(res && res.error) throw res.error;
-      var row = (res && res.data) ? res.data : null;
+      async function tryMaybeSingle(table, selectCols, matchCol, matchVal){
+        try{
+          var res = await sb.from(table).select(selectCols).eq(matchCol, matchVal).maybeSingle();
+          if(res && res.error){ warnings.push(table + ' ' + selectCols + ': ' + res.error.message); return null; }
+          return res && res.data ? res.data : null;
+        }catch(err){ warnings.push(table + ' ' + selectCols + ': ' + (err && err.message ? err.message : String(err))); return null; }
+      }
+
+      // Use only columns known to exist from the Company Directory flow first.
+      var row = await tryMaybeSingle('userdirectory','auth_user_id,role,company_id,company_name,approved', 'auth_user_id', uid);
+      if(!row){
+        // Fallback for schemas that do not expose company_name.
+        row = await tryMaybeSingle('userdirectory','auth_user_id,role,company_id,approved', 'auth_user_id', uid);
+      }
       if(row){
         companyId = String(row.company_id || '').trim();
-        companyName = String(row.company_name || row.company || '').trim();
+        companyName = String(row.company_name || '').trim();
         if(row.role) document.documentElement.setAttribute('data-staff-role', String(row.role || '').trim());
         source = 'userdirectory';
       }
 
       if(!companyName){
-        try{
-          var prof = await sb.from('profiles').select('company,company_name,company_id').eq('id', uid).maybeSingle();
-          if(prof && !prof.error && prof.data){
-            companyId = companyId || String(prof.data.company_id || '').trim();
-            companyName = String(prof.data.company_name || prof.data.company || '').trim();
-            if(companyName) source = 'profiles';
-          }
-        }catch(_profileErr){}
+        var prof = await tryMaybeSingle('profiles','id,company,company_id,name,email', 'id', uid);
+        if(prof){
+          companyId = companyId || String(prof.company_id || '').trim();
+          companyName = String(prof.company || '').trim();
+          if(companyName) source = 'profiles';
+        }
       }
 
       companyId = String(companyId || getCompanyId() || '').trim();
       companyName = String(companyName || getCompany() || '').trim();
-      if(!companyName && companyId) companyName = companyId;
+
+      // Long-term safety: if the userdirectory row has company_id but no name, use the id as the
+      // Supabase partition key instead of blocking saves. This prevents supervisors from being blocked
+      // by a missing display-name column while still keeping Supabase as the only source of truth.
+      if(!companyName && companyId){
+        companyName = companyId;
+        source = source + ':company_id_as_key';
+      }
+
       if(companyName || companyId){
         setPreferredVendorCompanyContext(companyName, companyId);
-        updatePvSupabaseStatus({ company: companyName, company_id: companyId, companySource:source });
-        return { company: companyName, company_id: companyId, source:source };
+        updatePvSupabaseStatus({ company: companyName, company_id: companyId, companySource:source, companyContextWarnings:warnings });
+        return { company: companyName, company_id: companyId, source:source, warnings:warnings };
       }
+      updatePvSupabaseStatus({ companyContextWarnings:warnings });
     }catch(err){
       console.warn('Preferred Vendors company context lookup failed', err);
       updatePvSupabaseStatus({ companyContextWarning: err && err.message ? err.message : String(err || 'Company lookup failed') });
@@ -2772,7 +2785,7 @@ body.dark-mode .mh2-stat-box {
 
   /* v728: Supabase lock. Vendor rows are no longer loaded from or saved to localStorage. */
   var pvLastSupabaseStatus = {
-    build:'2026-05-11-v730-preferred-vendors-clean-deps-context-lock',
+    build:'2026-05-11-v731-preferred-vendors-context-diagnostics',
     table:'preferred_vendors_shared',
     mode:'supabase-only',
     ok:false,
@@ -4640,7 +4653,7 @@ body.dark-mode .mh2-stat-box {
 <script id="preferred-vendors-v728-status">
   window.getPreferredVendorsDeploymentStatus = function(){
     return {
-      build:'2026-05-11-v730-preferred-vendors-clean-deps-context-lock',
+      build:'2026-05-11-v731-preferred-vendors-context-diagnostics',
       premium:true,
       headerLogoTopRight:true,
       logoUnboxed:true,
@@ -4653,9 +4666,37 @@ body.dark-mode .mh2-stat-box {
       table:'preferred_vendors_shared'
     };
   };
+  window.testPreferredVendorsContext = async function(){
+    var sb = (window.sb || window.supabaseClient || (window.pvCtx && window.pvCtx.sb) || null);
+    if(!sb || !sb.auth) return { ok:false, error:'No Supabase client found on page.' };
+    var out = { ok:false, build:'2026-05-11-v731-preferred-vendors-context-diagnostics' };
+    try{
+      var userRes = await sb.auth.getUser();
+      var user = userRes && userRes.data ? userRes.data.user : null;
+      out.user_id = user && user.id || '';
+      out.email = user && user.email || '';
+      if(!user){ out.error='No authenticated user.'; return out; }
+      async function q(table, cols, col, val){
+        try{
+          var r = await sb.from(table).select(cols).eq(col,val).maybeSingle();
+          return { ok:!(r&&r.error), data:r&&r.data||null, error:r&&r.error ? r.error.message : '' };
+        }catch(e){ return { ok:false, data:null, error:e&&e.message ? e.message : String(e) }; }
+      }
+      out.userdirectory = await q('userdirectory','auth_user_id,role,company_id,company_name,approved', 'auth_user_id', user.id);
+      if(!out.userdirectory.ok){
+        out.userdirectory_fallback = await q('userdirectory','auth_user_id,role,company_id,approved', 'auth_user_id', user.id);
+      }
+      out.profiles = await q('profiles','id,company,company_id,name,email', 'id', user.id);
+      await warmPvContext();
+      out.status = window.getPreferredVendorsSupabaseStatus ? window.getPreferredVendorsSupabaseStatus() : (window.__pvSupabaseStatus || null);
+      out.ok = !!(out.status && out.status.company && out.status.community_id);
+      return out;
+    }catch(err){ out.error = err && err.message ? err.message : String(err); return out; }
+  };
+
   window.getPreferredVendorsSupabaseStatus = function(){
     return window.__pvSupabaseStatus || {
-      build:'2026-05-11-v730-preferred-vendors-clean-deps-context-lock',
+      build:'2026-05-11-v731-preferred-vendors-context-diagnostics',
       table:'preferred_vendors_shared',
       mode:'supabase-only',
       ok:false,
