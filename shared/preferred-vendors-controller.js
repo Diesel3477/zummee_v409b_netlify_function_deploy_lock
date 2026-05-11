@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  var BUILD = '2026-05-11-v736-preferred-vendors-single-controller';
+  var BUILD = '2026-05-11-v738-preferred-vendors-branding-logo-source';
   var SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
   var VENDOR_TABLE = 'preferred_vendors_shared';
@@ -20,7 +20,7 @@
     lastSavedAt: null,
     lastLoadedAt: null
   };
-  window.__PreferredVendorsV736 = state;
+  window.__PreferredVendorsV738 = state;
 
   function $(id){ return document.getElementById(id); }
   function txt(id, value){ var el=$(id); if(el) el.textContent = value || ''; }
@@ -173,6 +173,82 @@
       source: ud ? 'userdirectory' : (profile ? 'profiles' : 'local/session')
     };
     return state.context;
+  }
+
+  function parseCompanyLogoRef(raw){
+    raw = clean(raw);
+    if(!raw) return null;
+    if(/^https?:\/\//i.test(raw)) return { url: raw };
+    return { bucket:'company_logos', path: raw };
+  }
+  function brandLogoCacheKey(companyId){ return 'mh2_brand_logo_v1_' + clean(companyId); }
+  function readBrandLogoCache(companyId){
+    try{
+      var raw = sessionStorage.getItem(brandLogoCacheKey(companyId));
+      if(!raw) return null;
+      var parsed = JSON.parse(raw);
+      return parsed && parsed.url ? parsed : null;
+    }catch(_e){ return null; }
+  }
+  function writeBrandLogoCache(companyId, payload){
+    try{
+      if(!companyId || !payload || !payload.url) return;
+      sessionStorage.setItem(brandLogoCacheKey(companyId), JSON.stringify({
+        url: clean(payload.url),
+        alt: clean(payload.alt) || 'Company logo',
+        isCompany: !!payload.isCompany
+      }));
+    }catch(_e){}
+  }
+  function preloadImage(url){
+    return new Promise(function(resolve, reject){
+      var img = new Image();
+      img.decoding = 'async';
+      img.onload = function(){ resolve(url); };
+      img.onerror = function(){ reject(new Error('Company logo image could not load.')); };
+      img.src = url;
+    });
+  }
+  async function paintCompanyLogo(payload){
+    var logo = $('pvCompanyLogo');
+    if(!logo) return;
+    var url = clean(payload && payload.url);
+    var alt = clean(payload && payload.alt) || 'Company logo';
+    logo.classList.remove('is-visible');
+    if(!url){ logo.removeAttribute('src'); logo.alt = alt; return; }
+    await preloadImage(url);
+    logo.src = url;
+    logo.alt = alt;
+    requestAnimationFrame(function(){ logo.classList.add('is-visible'); });
+  }
+  async function loadCompanyBrandLogo(){
+    var logo = $('pvCompanyLogo');
+    if(!logo) return;
+    var ctx = state.context || await resolveContext(false);
+    var companyId = clean(ctx && ctx.company_id);
+    if(!companyId){ logo.removeAttribute('src'); return; }
+
+    var cached = readBrandLogoCache(companyId);
+    if(cached && cached.url){
+      paintCompanyLogo(cached).catch(function(){ /* ignore stale cached image */ });
+    }
+
+    var sb = getClient();
+    var res = await timeout(sb.from('companies').select('logo_path,name').eq('id', companyId).maybeSingle(), 7000, 'Company logo lookup');
+    if(res && res.error) throw res.error;
+    var row = (res && res.data) || {};
+    var ref = parseCompanyLogoRef(row.logo_path);
+    if(!ref) throw new Error('No company branding logo saved for this company.');
+    var url = clean(ref.url);
+    if(!url && ref.bucket && ref.path && sb.storage && sb.storage.from){
+      var pub = sb.storage.from(ref.bucket).getPublicUrl(ref.path);
+      url = clean(pub && pub.data && pub.data.publicUrl);
+    }
+    if(!url) throw new Error('Company branding logo URL could not be resolved.');
+    var payload = { url:url, alt:clean(row.name) || 'Company logo', isCompany:true };
+    writeBrandLogoCache(companyId, payload);
+    await paintCompanyLogo(payload);
+    return payload;
   }
   function extractVendorArray(value){
     if(Array.isArray(value)) return value;
@@ -393,6 +469,7 @@
     setStatus('Loading preferred vendors…','');
     try{
       await resolveContext(true);
+      loadCompanyBrandLogo().catch(function(err){ console.warn('Preferred Vendors company branding logo unavailable:', err && err.message ? err.message : err); });
       var canManage = isManagerRole();
       if($('pv_manageCard')) $('pv_manageCard').style.display = canManage ? '' : 'none';
       await loadVendors();
@@ -421,7 +498,9 @@
       loadedAt: state.lastLoadedAt,
       savedAt: state.lastSavedAt,
       error: state.lastError || '',
-      sponsorCount: state.sponsors.length
+      sponsorCount: state.sponsors.length,
+      brandingLogoLoaded: !!($('pvCompanyLogo') && $('pvCompanyLogo').classList.contains('is-visible')),
+      logoSource: 'companies.logo_path / company_logos bucket'
     };
   };
   window.testPreferredVendorSaveClick = async function(){ return onSave({preventDefault:function(){}}).then(function(){ return window.getPreferredVendorsSupabaseStatus(); }); };
