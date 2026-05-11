@@ -1,20 +1,24 @@
 /*
-  Zummee Manager Hub Smart Cards v701
-  Long-term stability controller.
+  Zummee Manager Hub Smart Cards v702
+  Long-term stability controller + corrected canonical logic.
 
   Rule: this is the only script allowed to write the three Manager Hub smart cards:
   - #mh2AlertBoard
   - #mh2AlertActivity
   - #mh2AlertApprovals
 
-  The HTML owns layout. This shared controller owns smart-card data and rendering.
+  v702 correction:
+  - Board Review uses active notification_events only: metadata.status/workflow_status/board_status must be open.
+    Legacy notification rows with no explicit open status are treated as history/archive.
+  - Annual approvals only count active approval requests and only mark overdue when a real due/deadline field exists.
+  - Maintenance excludes terminal statuses only and does not convert created_at into an overdue signal.
 */
 (function(){
   'use strict';
-  if(window.__ZummeeManagerHubSmartCardsV701Loaded) return;
-  window.__ZummeeManagerHubSmartCardsV701Loaded = true;
+  if(window.__ZummeeManagerHubSmartCardsV702Loaded) return;
+  window.__ZummeeManagerHubSmartCardsV702Loaded = true;
 
-  var BUILD = '2026-05-11-v701-manager-hub-single-owner-smart-cards';
+  var BUILD = '2026-05-11-v702-manager-hub-single-owner-correct-logic';
   var SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
   var TIMEOUT_MS = 7000;
@@ -31,17 +35,17 @@
 
   function $(id){ return document.getElementById(id); }
   function s(v){ return String(v == null ? '' : v).trim(); }
-  function lower(v){ return s(v).toLowerCase(); }
+  function lower(v){ return s(v).toLowerCase().trim().replace(/[\s-]+/g,'_'); }
   function isUuid(v){ return UUID_RE.test(s(v)); }
   function sleep(ms){ return new Promise(function(resolve){ setTimeout(resolve, ms); }); }
 
   function setReady(isReady){
     try{
       if(isReady){
-        document.documentElement.setAttribute('data-zummee-smart-cards-v701-ready','1');
+        document.documentElement.setAttribute('data-zummee-smart-cards-v702-ready','1');
         document.documentElement.setAttribute('data-zummee-smart-alerts-v426-ready','1');
       }else{
-        document.documentElement.removeAttribute('data-zummee-smart-cards-v701-ready');
+        document.documentElement.removeAttribute('data-zummee-smart-cards-v702-ready');
         document.documentElement.removeAttribute('data-zummee-smart-alerts-v426-ready');
       }
     }catch(_e){}
@@ -118,11 +122,11 @@
     await ensureSupabaseSdk();
     try{
       if(window.supabase && typeof window.supabase.createClient === 'function'){
-        if(!window.__ZummeeManagerSmartCardsSbV701){
-          window.__ZummeeManagerSmartCardsSbV701 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        if(!window.__ZummeeManagerSmartCardsSbV702){
+          window.__ZummeeManagerSmartCardsSbV702 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         }
-        if(window.__ZummeeManagerSmartCardsSbV701 && typeof window.__ZummeeManagerSmartCardsSbV701.from === 'function'){
-          return { client:window.__ZummeeManagerSmartCardsSbV701, source:'v701-created-client' };
+        if(window.__ZummeeManagerSmartCardsSbV702 && typeof window.__ZummeeManagerSmartCardsSbV702.from === 'function'){
+          return { client:window.__ZummeeManagerSmartCardsSbV702, source:'v702-created-client' };
         }
       }
     }catch(err){
@@ -146,11 +150,27 @@
   function closedStatus(row){
     var st = statusOf(row);
     if(row && (row.archived_at || row.completed_at || row.deleted_at || row.closed_at)) return true;
-    return ['completed','complete','closed','archived','approved','rejected','done','mailed','cancelled','canceled','inactive','resolved','void','deleted'].indexOf(st) !== -1;
+    return ['completed','complete','closed','archived','approved','rejected','done','mailed','cancelled','canceled','inactive','resolved','void','deleted','converted','work_order_created'].indexOf(st) !== -1;
   }
 
-  function isOverdue(row){
-    var raw = s(row && (row.due_date || row.deadline || row.review_due_at || row.created_at || row.updated_at)).slice(0,10);
+  // Board has a stricter status rule than generic rows. The Board Hub shared data layer treats
+  // missing metadata.status as legacy/history, not active work.
+  function boardStatus(row){
+    var m = metadata(row);
+    return lower(m.status || m.workflow_status || m.board_status || (row && row.status) || '');
+  }
+  function isActiveBoardReviewItem(row){
+    if(!row) return false;
+    if(row.deleted_at || row.archived_at || row.completed_at || row.closed_at) return false;
+    return boardStatus(row) === 'open';
+  }
+
+  function realDueDate(row){
+    // Do not use created_at/submitted_at/updated_at as overdue signals. Those caused false red cards.
+    return s(row && (row.due_date || row.deadline || row.review_due_at || row.approval_due_at || row.action_due_at || row.response_due_at)).slice(0,10);
+  }
+  function hasRealOverdue(row){
+    var raw = realDueDate(row);
     if(!raw) return false;
     var dt = new Date(raw + 'T00:00:00');
     if(Number.isNaN(dt.getTime())) return false;
@@ -160,21 +180,21 @@
 
   function isAnnualActive(row){
     if(!row) return false;
-    if(row.archived_at || row.deleted_at || row.completed_at || row.mailed_at) return false;
+    if(row.archived_at || row.deleted_at || row.completed_at || row.mailed_at || row.sent_for_mailing_at) return false;
     var st = statusOf(row);
     if(!st) return true;
     if(st.indexOf('reject') > -1) return false;
     if(st.indexOf('archive') > -1) return false;
     if(st.indexOf('mail') > -1) return false;
-    if(st === 'sent_to_admin' || st === 'sent_to_admin_assistant' || st === 'approved_ready_to_send') return false;
-    if(st === 'approved' || st === 'complete' || st === 'completed' || st === 'closed') return false;
+    if(st === 'approved' || st === 'complete' || st === 'completed' || st === 'closed' || st === 'done') return false;
     return true;
   }
 
   function isOpenMaintenance(row){
-    if(closedStatus(row)) return false;
+    if(!row) return false;
+    if(row.archived_at || row.deleted_at || row.completed_at || row.closed_at) return false;
     var st = statusOf(row);
-    return ['draft','void','deleted'].indexOf(st) === -1;
+    return ['draft','void','deleted','cancelled','canceled','rejected','completed','complete','closed','archived','resolved','inactive'].indexOf(st) === -1;
   }
 
   function normalizeCommunityName(v){
@@ -216,10 +236,12 @@
       .select('*')
       .eq('community_id', community.id)
       .eq('event_type','board_item_submitted')
+      .order('created_at', { ascending:false })
       .limit(500);
     if(res && res.error) return { ok:false, label:'board', source:'notification_events.board_item_submitted', clientSource:clientSource, count:null, error:res.error.message || JSON.stringify(res.error) };
-    var rows = (Array.isArray(res && res.data) ? res.data : []).filter(function(row){ return !closedStatus(row); });
-    return { ok:true, label:'board', source:'notification_events.board_item_submitted', clientSource:clientSource, count:rows.length, overdue:rows.filter(isOverdue).length, rows:rows, totalRows:(res.data || []).length };
+    var raw = Array.isArray(res && res.data) ? res.data : [];
+    var rows = raw.filter(isActiveBoardReviewItem);
+    return { ok:true, label:'board', source:'notification_events.board_item_submitted.metadata.status=open', clientSource:clientSource, count:rows.length, overdue:rows.filter(hasRealOverdue).length, rows:rows, totalRows:raw.length };
   }
 
   async function loadMaintenance(client, clientSource, community){
@@ -229,14 +251,14 @@
       .eq('community_id', community.id)
       .limit(500);
     if(res && res.error) return { ok:false, label:'maintenance', source:'resident_work_orders', clientSource:clientSource, count:null, error:res.error.message || JSON.stringify(res.error) };
-    var rows = (Array.isArray(res && res.data) ? res.data : []).filter(isOpenMaintenance);
+    var raw = Array.isArray(res && res.data) ? res.data : [];
+    var rows = raw.filter(isOpenMaintenance);
     var urgent = rows.filter(function(row){ return /urgent|emergency|high/i.test(s(row.priority || row.severity || row.level)); }).length;
-    return { ok:true, label:'maintenance', source:'resident_work_orders', clientSource:clientSource, count:rows.length, urgent:urgent, rows:rows, totalRows:(res.data || []).length };
+    return { ok:true, label:'maintenance', source:'resident_work_orders.non_terminal_statuses', clientSource:clientSource, count:rows.length, urgent:urgent, rows:rows, totalRows:raw.length };
   }
 
   async function queryAnnualTable(client, table, selectCols, community){
     var q = client.from(table).select(selectCols || '*').limit(500);
-    // annual_meeting_approval_requests should support community_id directly. Older packet table may need name filtering.
     if(table === 'annual_meeting_approval_requests') q = q.eq('community_id', community.id);
     var res = await q;
     if(res && res.error) return { error:res.error };
@@ -262,18 +284,12 @@
       try{
         var res = await queryAnnualTable(client, a.table, a.cols, community);
         if(res.error){ errors.push(a.table + ': ' + (res.error.message || JSON.stringify(res.error))); continue; }
-        var rows = (res.data || []).filter(function(row){
+        var raw = res.data || [];
+        var rows = raw.filter(function(row){
           if(a.table === 'annual_meeting_settings') return !!(row && row.next_annual_meeting_date) && !closedStatus(row);
           return isAnnualActive(row);
         });
-        return { ok:true, label:'annual', source:a.table, clientSource:clientSource, count:rows.length, overdue:rows.filter(function(row){
-          var raw = s(row && (row.due_date || row.deadline || row.submitted_at || row.created_at || row.next_annual_meeting_date)).slice(0,10);
-          if(!raw) return false;
-          var dt = new Date(raw + 'T00:00:00');
-          if(Number.isNaN(dt.getTime())) return false;
-          var today = new Date(); today.setHours(0,0,0,0);
-          return dt.getTime() < today.getTime();
-        }).length, rows:rows, totalRows:(res.data || []).length };
+        return { ok:true, label:'annual', source:a.table + '.active_only', clientSource:clientSource, count:rows.length, overdue:rows.filter(hasRealOverdue).length, rows:rows, totalRows:raw.length };
       }catch(err){
         errors.push(a.table + ': ' + (err && err.message ? err.message : String(err)));
       }
@@ -362,7 +378,7 @@
     opts = opts || {};
     var tone = opts.tone || 'good';
 
-    card.dataset.smartCardOwner = 'v701';
+    card.dataset.smartCardOwner = 'v702';
     card.dataset.smartAlertsV633 = 'false';
     card.style.display = '';
     card.style.visibility = 'visible';
@@ -381,7 +397,7 @@
   }
 
   function annualHref(){
-    return 'annual_meeting_approvals.html';
+    return 'board_member_hub_v2.html#annualApprovalRequestsSection';
   }
 
   function render(summary){
@@ -420,9 +436,11 @@
     state.latest = summary;
     state.loadedCommunityId = summary.community && summary.community.id || '';
     state.renderedAt = Date.now();
+    window.__ManagerHubSmartCardsSummaryV702 = summary;
+    // Compatibility for older console checks.
     window.__ManagerHubSmartCardsSummaryV701 = summary;
     setReady(true);
-    try{ console.info('[Manager Hub v701] smart cards rendered', summary); }catch(_e){}
+    try{ console.info('[Manager Hub v702] smart cards rendered', summary); }catch(_e){}
     return true;
   }
 
@@ -442,7 +460,7 @@
       render(summary);
       return summary;
     })().catch(function(err){
-      try{ console.warn('[Manager Hub v701] smart-card refresh failed', err); }catch(_e){}
+      try{ console.warn('[Manager Hub v702] smart-card refresh failed', err); }catch(_e){}
       if(state.latest){ render(state.latest); return state.latest; }
       var fallback = emptySummary(community, { client:null, source:'fatal' });
       fallback.sources = { fatal:err && err.message ? err.message : String(err) };
@@ -456,34 +474,33 @@
   }
 
   function boot(){
-    if(window.__ZummeeManagerHubSmartCardsV701Booted) return;
-    window.__ZummeeManagerHubSmartCardsV701Booted = true;
+    if(window.__ZummeeManagerHubSmartCardsV702Booted) return;
+    window.__ZummeeManagerHubSmartCardsV702Booted = true;
     setReady(false);
     setTimeout(function(){ refresh({ resetReady:false }); }, 80);
   }
 
   function communityChanged(){
-    window.__ZummeeManagerHubSmartCardsV701Booted = false;
+    window.__ZummeeManagerHubSmartCardsV702Booted = false;
     state.seq++;
     state.latest = null;
     setReady(false);
     setTimeout(function(){ boot(); }, 120);
   }
 
-  // Compatibility names used by the Manager Hub community controller. These point to v701 only.
   window.refreshManagerHubCanonicalSmartAlerts = refresh;
   window.refreshManagerHubSmartCardsAuthoritative = refresh;
   window.loadSmartAlerts = refresh;
   window.refreshSmartAlerts = refresh;
   window.refreshAnnualAlert = refresh;
-  window.getManagerHubSmartCardsSummary = function(){ return window.__ManagerHubSmartCardsSummaryV701 || state.latest || null; };
+  window.getManagerHubSmartCardsSummary = function(){ return window.__ManagerHubSmartCardsSummaryV702 || state.latest || null; };
   window.getManagerHubSmartCardsDeploymentStatus = function(){
     return {
       build: BUILD,
       singleOwner: true,
-      loaded: !!window.__ZummeeManagerHubSmartCardsV701Loaded,
-      booted: !!window.__ZummeeManagerHubSmartCardsV701Booted,
-      ready: document.documentElement.getAttribute('data-zummee-smart-cards-v701-ready') === '1',
+      loaded: !!window.__ZummeeManagerHubSmartCardsV702Loaded,
+      booted: !!window.__ZummeeManagerHubSmartCardsV702Booted,
+      ready: document.documentElement.getAttribute('data-zummee-smart-cards-v702-ready') === '1',
       cardOwners: {
         board: $('mh2AlertBoard') && $('mh2AlertBoard').dataset.smartCardOwner || '',
         maintenance: $('mh2AlertActivity') && $('mh2AlertActivity').dataset.smartCardOwner || '',
@@ -500,12 +517,10 @@
   }
 
   window.addEventListener('pageshow', function(){
-    // Do not start a polling loop. Just repaint last good state or do one load if empty.
     if(state.latest) render(state.latest);
     else setTimeout(boot, 80);
   });
   window.addEventListener('focus', function(){
-    // No focus polling. One recovery load only if nothing has ever rendered.
     if(!state.latest) setTimeout(function(){ refresh({ resetReady:false }); }, 120);
   });
   window.addEventListener('zummee:community-changed', communityChanged);
