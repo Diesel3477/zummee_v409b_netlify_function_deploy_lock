@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  var BUILD = '2026-05-11-v741-preferred-vendors-restore-star-ratings';
+  var BUILD = '2026-05-11-v755-preferred-vendors-review-entry';
   var SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
   var VENDOR_TABLE = 'preferred_vendors_shared';
@@ -21,7 +21,9 @@
     reviewTableAvailable: true,
     lastError: '',
     lastSavedAt: null,
-    lastLoadedAt: null
+    lastLoadedAt: null,
+    activeReviewVendorKey: '',
+    activeReviewRating: 0
   };
   window.__PreferredVendorsV738 = state;
 
@@ -178,6 +180,109 @@
       return '<div class="pv-ratingSummary pv-ratingSummaryEmpty"><span class="pv-ratingStars">☆☆☆☆☆</span><span class="pv-ratingText">No ratings yet</span></div>';
     }
     return '<div class="pv-ratingSummary"><span class="pv-ratingStars" aria-label="'+esc(avg.toFixed(1))+' out of 5 stars">'+esc(formatStarString(avg))+'</span><span class="pv-ratingText">'+esc(avg.toFixed(1))+' · '+count+' review'+(count===1?'':'s')+'</span></div>';
+  }
+
+  function setReviewStatus(msg, type){
+    var el = $('pv_reviewStatus');
+    if(!el) return;
+    el.textContent = msg || '';
+    el.className = 'pv-reviewStatus' + (type ? ' ' + type : '');
+  }
+  function setReviewRating(rating){
+    rating = Number(rating || 0);
+    if(rating < 0) rating = 0;
+    if(rating > 5) rating = 5;
+    state.activeReviewRating = rating;
+    if($('pv_reviewRating')) $('pv_reviewRating').value = String(rating);
+    document.querySelectorAll('.pv-reviewStar').forEach(function(btn){
+      var n = Number(btn.getAttribute('data-rating') || 0);
+      btn.classList.toggle('is-selected', n <= rating);
+    });
+  }
+  function closeReviewModal(){
+    var overlay = $('pv_reviewOverlay');
+    if(overlay) overlay.classList.add('pv-hidden');
+    state.activeReviewVendorKey = '';
+    state.activeReviewRating = 0;
+    setReviewRating(0);
+    if($('pv_reviewNote')) $('pv_reviewNote').value = '';
+    setReviewStatus('', '');
+  }
+  function openReviewModal(key){
+    var v = state.vendors.find(function(row){ return row.vendorKey === key; });
+    if(!v) return;
+    state.activeReviewVendorKey = key;
+    if($('pv_reviewVendorKey')) $('pv_reviewVendorKey').value = key;
+    if($('pv_reviewTitle')) $('pv_reviewTitle').textContent = 'Review ' + v.vendorName;
+    if($('pv_reviewNote')) $('pv_reviewNote').value = '';
+    setReviewRating(0);
+    setReviewStatus('', '');
+    var overlay = $('pv_reviewOverlay');
+    if(overlay){
+      overlay.classList.remove('pv-hidden');
+      setTimeout(function(){ var first = document.querySelector('.pv-reviewStar[data-rating="5"]') || $('pv_submitReviewBtn'); if(first) first.focus(); }, 40);
+    }
+  }
+  async function saveReview(){
+    var sb = getClient();
+    var ctx = state.context || await resolveContext(false);
+    var key = clean($('pv_reviewVendorKey') && $('pv_reviewVendorKey').value) || state.activeReviewVendorKey;
+    var vendor = state.vendors.find(function(v){ return v.vendorKey === key; });
+    var rating = Number(($('pv_reviewRating') && $('pv_reviewRating').value) || state.activeReviewRating || 0);
+    var note = clean($('pv_reviewNote') && $('pv_reviewNote').value);
+    if(!vendor) throw new Error('Vendor could not be found.');
+    if(!rating || rating < 1 || rating > 5) throw new Error('Please select a star rating before saving.');
+    if(!ctx || !ctx.company || !ctx.community_id) throw new Error('Company/community context is not ready.');
+    var basePayload = {
+      company: ctx.company,
+      company_id: ctx.company_id || null,
+      community_id: ctx.community_id,
+      vendor_key: vendor.vendorKey,
+      vendor_name: vendor.vendorName,
+      vendor_type: vendor.vendorType || '',
+      rating: rating,
+      note: note,
+      reviewer_user_id: ctx.uid || null,
+      reviewer_name: clean(ctx.email) || clean(ctx.role) || 'Zummee user',
+      reviewer_role: ctx.role || '',
+      is_archived: false,
+      created_at: new Date().toISOString()
+    };
+    var attempts = [
+      basePayload,
+      { company:ctx.company, community_id:ctx.community_id, vendor_key:vendor.vendorKey, vendor_name:vendor.vendorName, rating:rating, note:note, reviewer_name:basePayload.reviewer_name, reviewer_user_id:basePayload.reviewer_user_id, is_archived:false },
+      { company:ctx.company, community_id:ctx.community_id, vendor_key:vendor.vendorKey, vendor_name:vendor.vendorName, rating:rating, note:note }
+    ];
+    var lastError = null;
+    for(var i=0;i<attempts.length;i++){
+      var res = await timeout(sb.from('vendor_reviews').insert(attempts[i]), 9000, 'Vendor review save');
+      if(!res || !res.error){
+        await loadVendorReviewSummaries();
+        renderMarketplace();
+        return true;
+      }
+      lastError = res.error;
+      var msg = String(res.error.message || res.error || '');
+      if(!/column .* does not exist|schema cache|could not find/i.test(msg)) break;
+    }
+    throw lastError || new Error('Vendor review could not be saved.');
+  }
+  async function onSubmitReview(){
+    try{
+      setReviewStatus('Saving review…','');
+      var btn = $('pv_submitReviewBtn');
+      if(btn) btn.disabled = true;
+      await saveReview();
+      setReviewStatus('Review saved.','ok');
+      setStatus('Review saved.','ok');
+      setTimeout(closeReviewModal, 450);
+    }catch(err){
+      setReviewStatus('Review was not saved: ' + (err && err.message ? err.message : String(err)), 'error');
+      console.error('Preferred Vendors review save failed:', err);
+    }finally{
+      var btn2 = $('pv_submitReviewBtn');
+      if(btn2) btn2.disabled = false;
+    }
   }
   async function resolveContext(force){
     if(state.context && !force) return state.context;
@@ -410,7 +515,7 @@
       + '<span class="pv-typePill">'+esc(v.vendorType || 'Other')+'</span>'
       + '<div class="pv-contactGrid">'+phoneBlock+emailBlock+'</div>'
       + renderRatingBadge(v)
-      + (canManage ? '<div class="pv-cardActions"><button class="pv-btn" type="button" data-edit="'+esc(v.vendorKey)+'">Edit</button><button class="pv-btn pv-btnDanger" type="button" data-delete="'+esc(v.vendorKey)+'">Delete</button></div>' : '')
+      + '<div class="pv-cardActions"><button class="pv-btn pv-reviewBtn" type="button" data-review="'+esc(v.vendorKey)+'">Leave Review</button>' + (canManage ? '<button class="pv-btn" type="button" data-edit="'+esc(v.vendorKey)+'">Edit</button><button class="pv-btn pv-btnDanger" type="button" data-delete="'+esc(v.vendorKey)+'">Delete</button>' : '') + '</div>'
       + (v.notes ? '<div class="pv-notesBox"><strong>Notes</strong> '+esc(v.notes)+'</div>' : '')
       + '</article>';
   }
@@ -521,9 +626,18 @@
     var search = $('pv_search'); if(search && !search.__pv736){ search.__pv736 = true; search.addEventListener('input', renderMarketplace); }
     var reset = $('pv_resetFormBtn'); if(reset && !reset.__pv736){ reset.__pv736 = true; reset.addEventListener('click', resetForm); }
     var cancel = $('pv_cancelBtn'); if(cancel && !cancel.__pv736){ cancel.__pv736 = true; cancel.addEventListener('click', resetForm); }
+    var reviewClose = $('pv_reviewClose'); if(reviewClose && !reviewClose.__pv755){ reviewClose.__pv755 = true; reviewClose.addEventListener('click', closeReviewModal); }
+    var reviewCancel = $('pv_cancelReviewBtn'); if(reviewCancel && !reviewCancel.__pv755){ reviewCancel.__pv755 = true; reviewCancel.addEventListener('click', closeReviewModal); }
+    var reviewSubmit = $('pv_submitReviewBtn'); if(reviewSubmit && !reviewSubmit.__pv755){ reviewSubmit.__pv755 = true; reviewSubmit.addEventListener('click', onSubmitReview); }
+    var reviewOverlay = $('pv_reviewOverlay'); if(reviewOverlay && !reviewOverlay.__pv755){ reviewOverlay.__pv755 = true; reviewOverlay.addEventListener('click', function(e){ if(e.target === reviewOverlay) closeReviewModal(); }); }
+    document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && $('pv_reviewOverlay') && !$('pv_reviewOverlay').classList.contains('pv-hidden')) closeReviewModal(); });
     document.addEventListener('click', function(e){
       var t = e.target;
       if(!t) return;
+      var review = t.closest && t.closest('[data-review]');
+      if(review){ openReviewModal(review.getAttribute('data-review')); return; }
+      var star = t.closest && t.closest('.pv-reviewStar');
+      if(star){ setReviewRating(Number(star.getAttribute('data-rating') || 0)); return; }
       var edit = t.closest && t.closest('[data-edit]');
       if(edit){ fillForm(state.vendors.find(function(v){ return v.vendorKey === edit.getAttribute('data-edit'); })); return; }
       var del = t.closest && t.closest('[data-delete]');
@@ -571,12 +685,15 @@
       ratingsLoaded: !!Object.keys(state.reviewSummary || {}).length,
       ratingsTableAvailable: state.reviewTableAvailable,
       reviewSummaryCount: Object.keys(state.reviewSummary || {}).length,
+      reviewEntryAvailable: !!$('pv_reviewOverlay'),
       sponsorCount: state.sponsors.length,
       brandingLogoLoaded: !!($('pvCompanyLogo') && $('pvCompanyLogo').classList.contains('is-visible')),
       logoSource: 'companies.logo_path / company_logos bucket'
     };
   };
   window.testPreferredVendorSaveClick = async function(){ return onSave({preventDefault:function(){}}).then(function(){ return window.getPreferredVendorsSupabaseStatus(); }); };
+  window.openPreferredVendorReview = function(key){ openReviewModal(key); return true; };
+  window.testPreferredVendorReviewSave = async function(key, rating, note){ openReviewModal(key || (state.vendors[0] && state.vendors[0].vendorKey)); setReviewRating(rating || 5); if($('pv_reviewNote')) $('pv_reviewNote').value = note || 'Test review'; await saveReview(); closeReviewModal(); return window.getPreferredVendorsSupabaseStatus(); };
   window.reloadPreferredVendors = async function(){ state.lastError=''; await loadVendors(); renderMarketplace(); return window.getPreferredVendorsSupabaseStatus(); };
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true}); else boot();
 })();
