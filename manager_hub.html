@@ -3,9 +3,9 @@
 <head>
 
 <script id="manager-hub-v701-stable-build-marker">
-window.ZUMMEE_BUILD = "2026-05-11-v743-manager-hub-live-activity-unified-stream";
+window.ZUMMEE_BUILD = "2026-05-11-v744-manager-hub-live-activity-source-fallbacks";
 window.__MANAGER_HUB_V701_SINGLE_OWNER_SMART_CARDS = true;
-console.info("[Manager Hub v743] live activity unified stream", window.ZUMMEE_BUILD);
+console.info("[Manager Hub v744] live activity source fallbacks", window.ZUMMEE_BUILD);
 </script>
 <style id="zummee-manager-smooth-return-css-v611">
   /*
@@ -2879,7 +2879,7 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
 
 
 <style id="zummee-v743-live-activity-unified-stream-css">
-  /* v743: Live Activity is the unified stream for work orders, supervisor communications, board items, annual meetings, and notification events. */
+  /* v744: Live Activity is the unified stream for work orders, supervisor communications, board items, annual meetings, and notification events. */
   #activityFeedList{max-height:520px;overflow:auto;scroll-behavior:smooth;}
   #activityFeedList .mh2-feed-item{animation:mh2LiveRowIn .28s ease both;}
   @keyframes mh2LiveRowIn{from{opacity:.72;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
@@ -3873,9 +3873,9 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
         var communityName = ctx.name || getSelectedCommunityName() || 'Selected community';
         var cacheKey = 'mh2_live_activity_cache_v743:' + String(communityId || 'global');
         var stateKey = String(communityId || 'global');
-        window.__mh2LiveActivityState = window.__mh2LiveActivityState || { loading:false, token:0, signatures:{}, build:'2026-05-11-v743-live-activity-unified-stream' };
+        window.__mh2LiveActivityState = window.__mh2LiveActivityState || { loading:false, token:0, signatures:{}, build:'2026-05-11-v744-live-activity-source-fallbacks' };
         var liveState = window.__mh2LiveActivityState;
-        liveState.build = '2026-05-11-v743-live-activity-unified-stream';
+        liveState.build = '2026-05-11-v744-live-activity-source-fallbacks';
 
         if(!liveState.pollBound){
           liveState.pollBound = true;
@@ -4083,46 +4083,88 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
           var sb = await requireSb();
           var allEvents = [];
           var queries = [];
+          liveState.lastErrors = [];
 
-          var notifQ = sb.from('notification_events').select('id,created_at,updated_at,event_type,priority,title,message,link_url,community_id,source_table,source_id,metadata').order('created_at', { ascending:false }).limit(40);
-          if(communityId) notifQ = notifQ.eq('community_id', communityId);
-          queries.push(withTimeout(notifQ, 7000, 'notification_events').then(function(res){
-            if(res && !res.error) (normalizeNotificationRows(res.data || [])).forEach(function(e){ pushEvent(allEvents, e); });
-          }));
-
-          var woQ = sb.from('resident_work_orders').select('*').order('updated_at', { ascending:false }).limit(24);
-          if(communityId) woQ = woQ.eq('community_id', communityId);
-          queries.push(withTimeout(woQ, 7000, 'resident_work_orders').then(function(res){
-            if(res && !res.error) (normalizeWorkOrders(res.data || [])).forEach(function(e){ pushEvent(allEvents, e); });
-          }));
-
-          var annualQ = sb.from('annual_meeting_approval_requests').select('*').order('updated_at', { ascending:false }).limit(24);
-          if(communityId) annualQ = annualQ.eq('community_id', communityId);
-          queries.push(withTimeout(annualQ, 7000, 'annual_meeting_approval_requests').then(function(res){
-            if(res && !res.error) (normalizeAnnualRows(res.data || [], 'annual_meeting_approval_requests')).forEach(function(e){ pushEvent(allEvents, e); });
-          }));
-
-          var packetQ = sb.from('annual_meeting_packet_requests').select('*').limit(24);
-          queries.push(withTimeout(packetQ, 7000, 'annual_meeting_packet_requests').then(function(res){
-            if(res && !res.error){
-              var rows = (res.data || []).filter(function(row){ return !communityId || annualApprovalMatchesCurrentCommunity(row, communityId, communityName); });
-              (normalizeAnnualRows(rows, 'annual_meeting_packet_requests')).forEach(function(e){ pushEvent(allEvents, e); });
+          function rememberSource(name, count){
+            liveState.rawSources = liveState.rawSources || {};
+            liveState.rawSources[name] = Number(count || 0);
+          }
+          function rememberError(name, err){
+            try{
+              liveState.lastErrors.push({ source:name, message:String((err && (err.message || err.details || err.hint || err.code)) || err || 'unknown') });
+            }catch(_e){}
+          }
+          async function tryTable(name, variants, normalizer){
+            for(var i=0;i<variants.length;i++){
+              try{
+                var built = variants[i]();
+                var res = await withTimeout(built.query, built.timeout || 6500, name + ':' + i);
+                if(res && res.error){ rememberError(name, res.error); continue; }
+                var rows = Array.isArray(res && res.data) ? res.data : [];
+                rememberSource(name, rows.length);
+                (normalizer(rows) || []).forEach(function(e){ pushEvent(allEvents, e); });
+                return rows;
+              }catch(err){
+                rememberError(name, err);
+              }
             }
+            rememberSource(name, 0);
+            return [];
+          }
+          function orderedQuery(table, limit, orderCol, useCommunityFilter){
+            var q = sb.from(table).select('*');
+            if(useCommunityFilter && communityId) q = q.eq('community_id', communityId);
+            if(orderCol) q = q.order(orderCol, { ascending:false });
+            return q.limit(limit || 24);
+          }
+
+          queries.push(tryTable('notification_events', [
+            function(){ return { query: orderedQuery('notification_events', 40, 'created_at', true), timeout:6500 }; },
+            function(){ return { query: orderedQuery('notification_events', 40, 'updated_at', true), timeout:6500 }; },
+            function(){ return { query: orderedQuery('notification_events', 40, null, true), timeout:6500 }; },
+            function(){ return { query: orderedQuery('notification_events', 40, 'created_at', false), timeout:6500 }; }
+          ], function(rows){ return normalizeNotificationRows(rows || []); }));
+
+          queries.push(tryTable('resident_work_orders', [
+            function(){ return { query: orderedQuery('resident_work_orders', 24, 'updated_at', true), timeout:6500 }; },
+            function(){ return { query: orderedQuery('resident_work_orders', 24, 'created_at', true), timeout:6500 }; },
+            function(){ return { query: orderedQuery('resident_work_orders', 24, null, true), timeout:6500 }; },
+            function(){ return { query: orderedQuery('resident_work_orders', 24, 'updated_at', false), timeout:6500 }; }
+          ], function(rows){ return normalizeWorkOrders(rows || []); }));
+
+          queries.push(tryTable('annual_meeting_approval_requests', [
+            function(){ return { query: orderedQuery('annual_meeting_approval_requests', 24, 'updated_at', true), timeout:6500 }; },
+            function(){ return { query: orderedQuery('annual_meeting_approval_requests', 24, 'created_at', true), timeout:6500 }; },
+            function(){ return { query: orderedQuery('annual_meeting_approval_requests', 24, null, true), timeout:6500 }; },
+            function(){ return { query: orderedQuery('annual_meeting_approval_requests', 24, 'updated_at', false), timeout:6500 }; }
+          ], function(rows){ return normalizeAnnualRows(rows || [], 'annual_meeting_approval_requests'); }));
+
+          queries.push(tryTable('annual_meeting_packet_requests', [
+            function(){ return { query: orderedQuery('annual_meeting_packet_requests', 24, 'updated_at', true), timeout:6500 }; },
+            function(){ return { query: orderedQuery('annual_meeting_packet_requests', 24, 'created_at', true), timeout:6500 }; },
+            function(){ return { query: orderedQuery('annual_meeting_packet_requests', 24, null, true), timeout:6500 }; },
+            function(){ return { query: orderedQuery('annual_meeting_packet_requests', 24, 'updated_at', false), timeout:6500 }; }
+          ], function(rows){
+            rows = (rows || []).filter(function(row){ return !communityId || annualApprovalMatchesCurrentCommunity(row, communityId, communityName); });
+            return normalizeAnnualRows(rows, 'annual_meeting_packet_requests');
           }));
 
-          var supQ = sb.from('supervisor_communications').select('*').order('updated_at', { ascending:false }).limit(16);
-          if(communityId) supQ = supQ.eq('community_id', communityId);
-          queries.push(withTimeout(supQ, 5500, 'supervisor_communications').then(function(res){
-            if(res && !res.error) (normalizeSupervisorRows(res.data || [])).forEach(function(e){ pushEvent(allEvents, e); });
-          }));
+          queries.push(tryTable('supervisor_communications', [
+            function(){ return { query: orderedQuery('supervisor_communications', 16, 'updated_at', true), timeout:5500 }; },
+            function(){ return { query: orderedQuery('supervisor_communications', 16, 'created_at', true), timeout:5500 }; },
+            function(){ return { query: orderedQuery('supervisor_communications', 16, null, true), timeout:5500 }; },
+            function(){ return { query: orderedQuery('supervisor_communications', 16, 'updated_at', false), timeout:5500 }; }
+          ], function(rows){ return normalizeSupervisorRows(rows || []); }));
 
           queries.push((async function(){
             try{
               if(window.ZummeeBoardData && typeof window.ZummeeBoardData.getBoardReviewItems === 'function'){
                 var boardResult = await withTimeout(window.ZummeeBoardData.getBoardReviewItems(communityId), 5500, 'board data');
-                (normalizeBoardRows(Array.isArray(boardResult && boardResult.rows) ? boardResult.rows : [])).forEach(function(e){ pushEvent(allEvents, e); });
+                var rows = Array.isArray(boardResult && boardResult.rows) ? boardResult.rows : [];
+                rememberSource('board_data_layer', rows.length);
+                (normalizeBoardRows(rows)).forEach(function(e){ pushEvent(allEvents, e); });
               }
-            }catch(_boardErr){}
+            }catch(boardErr){ rememberError('board_data_layer', boardErr); }
           })());
 
           await Promise.allSettled(queries);
@@ -4132,7 +4174,7 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
           try{ localStorage.setItem(cacheKey, JSON.stringify(events)); }catch(_storeErr){}
           renderStable(events, { force:!liveState.signatures[stateKey] });
         }catch(err){
-          console.warn('[ManagerHub v743] Unified Live Activity load failed', err);
+          console.warn('[ManagerHub v744] Unified Live Activity load failed', err);
           if(!liveState.signatures[stateKey]){
             list.innerHTML = '<div class="mh2-placeholder">Unable to load live activity.</div>';
             setText('mh2LiveActivityCount', '0');
@@ -4145,10 +4187,12 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
       window.getManagerHubLiveActivityStatus = function(){
         var s = window.__mh2LiveActivityState || {};
         return {
-          build:'2026-05-11-v743-live-activity-unified-stream',
+          build:'2026-05-11-v744-live-activity-source-fallbacks',
           count:Number(s.lastCount || 0),
           loadedAt:s.lastLoadedAt || null,
           sources:s.lastSources || [],
+          rawSources:s.rawSources || {},
+          errors:s.lastErrors || [],
           cached:Array.isArray(window.__mh2LiveEvents) ? window.__mh2LiveEvents.length : 0
         };
       };
