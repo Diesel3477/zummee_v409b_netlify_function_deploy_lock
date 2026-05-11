@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Board Member Hub V2</title>
-  <!-- v714: Needs Attention premium layout restored; annual packet approvals remain canonical. -->
+  <!-- v715: Needs Attention refined premium rows; annual packet approvals remain canonical. -->
   <!-- v520: Annual meeting approval archive workflow lock. -->
   <!-- v518: board_member_hub.html retired; v2 is canonical. -->
   <!-- v523: Annual approval archive action removes cards in place without scroll jump. -->
@@ -1090,21 +1090,52 @@
 
 
 
-<style id="board-hub-needs-attention-layout-restore-v714">
-  /* v714: lock Needs Your Attention card layout after v713 section cleanup.
-     Status stays inside the text column on desktop/iPad instead of falling into a second row. */
+<style id="board-hub-needs-attention-refined-rows-v715">
+  /* v715: refined premium Needs Your Attention rows.
+     Goal: compact, balanced iPad layout with no drifting OPEN pill or excess blank space. */
+  #attentionList{
+    gap:14px !important;
+  }
   #attentionList .premium-board-item{
+    position:relative !important;
+    display:grid !important;
     grid-template-columns:64px minmax(0,1fr) 42px !important;
     grid-template-areas:"num main arrow" !important;
     align-items:center !important;
-    min-height:118px !important;
-    padding:20px 22px 20px 24px !important;
-    gap:18px !important;
+    min-height:104px !important;
+    padding:16px 18px 16px 22px !important;
+    gap:16px !important;
+    border-radius:26px !important;
+    border:1.75px solid rgba(166,199,255,.95) !important;
+    background:
+      linear-gradient(90deg, rgba(255,246,202,.78) 0%, rgba(255,250,224,.46) 16%, rgba(255,255,255,.98) 38%, rgba(247,251,255,.98) 100%) !important;
+    box-shadow:
+      0 12px 28px rgba(23,54,95,.075),
+      inset 0 1px 0 rgba(255,255,255,.96) !important;
+    overflow:hidden !important;
+  }
+  #attentionList .premium-board-item::before{
+    left:0 !important;
+    top:14px !important;
+    bottom:14px !important;
+    width:5px !important;
+    border-radius:0 999px 999px 0 !important;
+    background:linear-gradient(180deg,#f7d96c,#d8a62a) !important;
+  }
+  #attentionList .premium-board-item::after{
+    background:radial-gradient(circle at 12% 50%, rgba(255,223,117,.18), transparent 34%) !important;
   }
   #attentionList .premium-board-item .n{
     grid-area:num !important;
+    width:52px !important;
+    height:52px !important;
     align-self:center !important;
     justify-self:center !important;
+    border-radius:17px !important;
+    font-size:17px !important;
+    background:linear-gradient(180deg,#fff4b7,#f7d967) !important;
+    border:1px solid rgba(209,160,26,.55) !important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.78), 0 8px 18px rgba(216,170,42,.12) !important;
   }
   #attentionList .premium-board-item .boardItemMain{
     grid-area:main !important;
@@ -1115,8 +1146,8 @@
       "title status"
       "copy status"
       "meta status" !important;
-    column-gap:16px !important;
-    row-gap:8px !important;
+    column-gap:18px !important;
+    row-gap:5px !important;
     align-items:center !important;
   }
   #attentionList .premium-board-item .boardItemTop{
@@ -1124,53 +1155,128 @@
   }
   #attentionList .premium-board-item h3{
     grid-area:title !important;
+    margin:0 !important;
     align-self:end !important;
     min-width:0 !important;
-    margin:0 !important;
+    color:#17365f !important;
+    font-size:22px !important;
+    line-height:1.08 !important;
+    font-weight:950 !important;
+    letter-spacing:-.025em !important;
+    white-space:nowrap !important;
     overflow:hidden !important;
     text-overflow:ellipsis !important;
-    white-space:nowrap !important;
   }
   #attentionList .premium-board-item .boardItemCopy{
     grid-area:copy !important;
-    min-width:0 !important;
     margin:0 !important;
+    min-width:0 !important;
     max-width:100% !important;
+    color:#62748d !important;
+    font-size:15.5px !important;
+    line-height:1.25 !important;
+    font-weight:850 !important;
+    display:-webkit-box !important;
+    -webkit-line-clamp:1 !important;
+    -webkit-box-orient:vertical !important;
+    overflow:hidden !important;
   }
   #attentionList .premium-board-item .boardItemMetaRow{
     grid-area:meta !important;
-    margin-top:0 !important;
+    display:flex !important;
+    align-items:center !important;
+    flex-wrap:wrap !important;
+    gap:8px !important;
+    margin-top:2px !important;
+  }
+  #attentionList .premium-board-item .boardDatePill,
+  #attentionList .premium-board-item .photoBadge{
+    min-height:28px !important;
+    padding:0 12px !important;
+    border-radius:999px !important;
+    background:rgba(255,255,255,.92) !important;
+    border:1px solid rgba(196,215,244,.96) !important;
+    color:#64748b !important;
+    font-size:12.5px !important;
+    font-weight:950 !important;
+    box-shadow:0 4px 10px rgba(23,54,95,.035) !important;
+  }
+  #attentionList .premium-board-item .photoBadge{
+    color:#17365f !important;
   }
   #attentionList .premium-board-item .boardStatusPill{
     grid-area:status !important;
     align-self:center !important;
     justify-self:end !important;
-    min-width:96px !important;
+    min-width:104px !important;
+    min-height:36px !important;
+    padding:0 16px !important;
     margin:0 !important;
+    border-radius:999px !important;
+    background:#fff !important;
+    border:1.5px solid rgba(166,199,255,.95) !important;
+    color:#17365f !important;
+    box-shadow:0 8px 18px rgba(23,54,95,.055), inset 0 1px 0 rgba(255,255,255,.92) !important;
+    font-size:11px !important;
+    line-height:34px !important;
+    font-weight:950 !important;
+    letter-spacing:.12em !important;
+    text-align:center !important;
   }
   #attentionList .premium-board-item .chev{
     grid-area:arrow !important;
     align-self:center !important;
     justify-self:end !important;
+    width:38px !important;
+    height:38px !important;
+    border-radius:999px !important;
+    display:grid !important;
+    place-items:center !important;
+    color:#7e9ab9 !important;
+    background:#fff !important;
+    border:1px solid rgba(216,229,246,.96) !important;
+    box-shadow:0 8px 18px rgba(23,54,95,.045) !important;
+    font-size:27px !important;
+  }
+  @media (hover:hover){
+    #attentionList .premium-board-item:hover{
+      transform:translateY(-1px) !important;
+      border-color:rgba(102,151,235,.9) !important;
+      box-shadow:0 18px 38px rgba(23,54,95,.11), inset 0 1px 0 rgba(255,255,255,1) !important;
+    }
+    #attentionList .premium-board-item:hover .chev{
+      transform:translateX(2px) !important;
+      color:#17365f !important;
+    }
   }
 
   @media(max-width:760px){
+    #attentionList{gap:12px !important;}
     #attentionList .premium-board-item{
-      grid-template-columns:58px minmax(0,1fr) 36px !important;
+      grid-template-columns:56px minmax(0,1fr) 36px !important;
       grid-template-areas:"num main arrow" !important;
-      min-height:116px !important;
-      padding:17px 16px 17px 20px !important;
-      gap:14px !important;
+      min-height:100px !important;
+      padding:15px 14px 15px 18px !important;
+      gap:12px !important;
+      border-radius:24px !important;
+    }
+    #attentionList .premium-board-item .n{
+      width:48px !important;
+      height:48px !important;
+      border-radius:16px !important;
     }
     #attentionList .premium-board-item .boardItemMain{
       grid-template-columns:minmax(0,1fr) !important;
       grid-template-areas:"title" "copy" "meta" !important;
-      row-gap:7px !important;
+      row-gap:5px !important;
     }
     #attentionList .premium-board-item h3{
-      white-space:nowrap !important;
-      overflow:hidden !important;
-      text-overflow:ellipsis !important;
+      font-size:20px !important;
+    }
+    #attentionList .premium-board-item .boardItemCopy{
+      font-size:14px !important;
+      line-height:1.25 !important;
+      -webkit-line-clamp:2 !important;
     }
     #attentionList .premium-board-item .boardStatusPill{
       display:none !important;
@@ -1178,6 +1284,7 @@
     #attentionList .premium-board-item .chev{
       width:34px !important;
       height:34px !important;
+      font-size:24px !important;
     }
   }
 </style>
@@ -2855,8 +2962,8 @@
 </style>
 
 
-<script src="shared/board-hub-annual-open-workflows-reminders.js?v=2026-05-11-v714"></script>
-<script>window.ZUMMEE_BOARD_HUB_BUILD='2026-05-11-v714-board-hub-needs-attention-layout-restore';</script>
+<script src="shared/board-hub-annual-open-workflows-reminders.js?v=2026-05-11-v715"></script>
+<script>window.ZUMMEE_BOARD_HUB_BUILD='2026-05-11-v715-board-hub-needs-attention-refined-rows';</script>
 
 </body>
 </html>
