@@ -1,9 +1,9 @@
 (function(){
   'use strict';
-  if(window.__BoardHubAnnualOpenWorkflowsRemindersV710) return;
-  window.__BoardHubAnnualOpenWorkflowsRemindersV710 = true;
+  if(window.__BoardHubAnnualOpenWorkflowsRemindersV711) return;
+  window.__BoardHubAnnualOpenWorkflowsRemindersV711 = true;
 
-  const BUILD = '2026-05-11-v710-board-hub-annual-premium-card-layout';
+  const BUILD = '2026-05-11-v711-board-hub-annual-single-status-layout';
   const ACTIVE_STEPS = new Set([
     'pending_board','board_review','pending_supervisor','board_approved',
     'pending_admin_mailing','ready_to_mail','supervisor_approved','pending_admin',
@@ -82,11 +82,21 @@
       const st=step(r); const rank=stageRank(st);
       if(rank===1) counts.board++; else if(rank===2) counts.supervisor++; else if(rank===3) counts.admin++; else counts.other++;
     });
+
+    // v711: show ONE workflow status, not every approval-step row.
+    // The current step is the earliest unfinished step in the approval path.
+    // Example: if supervisor rows and admin rows both exist, the workflow is still
+    // in Supervisor Review until the supervisor step is complete.
     let current='board', cls='is-board', label='Board Review', line='Waiting for Board approval.';
-    if(counts.admin){ current='admin'; cls='is-admin'; label='Admin / Mailing'; line='Board and Supervisor steps are active/complete. Waiting for mailing completion.'; }
-    else if(counts.supervisor){ current='supervisor'; cls='is-supervisor'; label='Supervisor Review'; line='Board approval is complete. Waiting for Supervisor approval.'; }
-    else if(counts.board){ current='board'; cls='is-board'; label='Board Review'; line='Waiting for Board approval.'; }
-    else { current='board'; cls='is-supervisor'; label='In Progress'; line='Annual meeting approval is still open.'; }
+    if(counts.board){
+      current='board'; cls='is-board'; label='Board Review'; line='Waiting for Board approval.';
+    }else if(counts.supervisor){
+      current='supervisor'; cls='is-supervisor'; label='Supervisor Review'; line='Waiting for Supervisor approval.';
+    }else if(counts.admin){
+      current='admin'; cls='is-admin'; label='Admin / Mailing'; line='Waiting for mailing completion.';
+    }else{
+      current='board'; cls='is-supervisor'; label='In Progress'; line='Annual meeting approval is still open.';
+    }
     return { current, cls, label, line, counts };
   }
   function choosePrimary(rows){
@@ -129,12 +139,7 @@
     return '<div class="annualRequestWorkflow">'+pill('board','Board Review')+pill('supervisor','Supervisor')+pill('admin','Admin / Mailing')+'</div>';
   }
   function workflowCountsLine(w){
-    const c=w.info.counts; const bits=[];
-    if(c.board) bits.push(c.board+' Board step'+(c.board===1?'':'s'));
-    if(c.supervisor) bits.push(c.supervisor+' Supervisor step'+(c.supervisor===1?'':'s'));
-    if(c.admin) bits.push(c.admin+' Admin/mailing step'+(c.admin===1?'':'s'));
-    if(c.other) bits.push(c.other+' other active step'+(c.other===1?'':'s'));
-    return bits.join(' · ');
+    return '1 open packet workflow';
   }
   function card(w,idx){
     const row=w.primary || {};
@@ -187,12 +192,7 @@
       return;
     }
     list.innerHTML=workflows.map(card).join('');
-    const totals=workflows.reduce((acc,w)=>{ acc.board+=w.info.counts.board?1:0; acc.supervisor+=w.info.counts.supervisor?1:0; acc.admin+=w.info.counts.admin?1:0; return acc; }, {board:0,supervisor:0,admin:0});
-    const bits=[];
-    if(totals.board) bits.push(totals.board+' workflow'+(totals.board===1?'':'s')+' needing Board review');
-    if(totals.supervisor) bits.push(totals.supervisor+' needing Supervisor review');
-    if(totals.admin) bits.push(totals.admin+' in Admin / mailing');
-    setStatus(bits.join(' · ') || (workflows.length+' open workflow'+(workflows.length===1?'':'s')+'.'), 'ok');
+    setStatus(workflows.length + ' open annual meeting packet workflow' + (workflows.length===1 ? '.' : 's.'), 'ok');
   }
 
   async function load(){
@@ -222,7 +222,7 @@
       setStatus(state.error, 'err');
     }finally{
       state.loading=false;
-      window.__BoardHubAnnualOpenWorkflowsV710Status = snapshot(); window.__BoardHubAnnualOpenWorkflowsV708Status = window.__BoardHubAnnualOpenWorkflowsV710Status; window.__BoardHubAnnualOpenWorkflowsV707Status = window.__BoardHubAnnualOpenWorkflowsV710Status;
+      window.__BoardHubAnnualOpenWorkflowsV711Status = snapshot(); window.__BoardHubAnnualOpenWorkflowsV708Status = window.__BoardHubAnnualOpenWorkflowsV711Status; window.__BoardHubAnnualOpenWorkflowsV707Status = window.__BoardHubAnnualOpenWorkflowsV711Status;
     }
     return state;
   }
@@ -343,7 +343,7 @@
     const w=workflowByKey(key); if(!w) return alert('Packet preview is not available yet. Refresh and try again.');
     const row=w.primary || w.rows[0] || {};
     if(typeof window.previewBoardHubAnnualMeetingPacket === 'function'){
-      try{ window.__BoardHubAnnualOpenWorkflowsV710Status = snapshot(); window.__BoardHubAnnualOpenWorkflowsV708Status = window.__BoardHubAnnualOpenWorkflowsV710Status; window.__BoardHubAnnualOpenWorkflowsV707Status = window.__BoardHubAnnualOpenWorkflowsV710Status; window.previewBoardHubAnnualMeetingPacket(row.id); return; }catch(_e){}
+      try{ window.__BoardHubAnnualOpenWorkflowsV711Status = snapshot(); window.__BoardHubAnnualOpenWorkflowsV708Status = window.__BoardHubAnnualOpenWorkflowsV711Status; window.__BoardHubAnnualOpenWorkflowsV707Status = window.__BoardHubAnnualOpenWorkflowsV711Status; window.previewBoardHubAnnualMeetingPacket(row.id); return; }catch(_e){}
     }
     alert('Preview is not available for this packet yet.');
   }
