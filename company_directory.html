@@ -1153,7 +1153,7 @@ async function loadCompanyRoster(companyName){
     });
 
     window.__companyDirectoryCommunitySearch = {
-      build:'2026-05-11-v722-company-directory-community-search',
+      build:'2026-05-11-v723-company-directory-premium-employee-cards',
       assignmentRows:Array.isArray(assignments) ? assignments.length : 0,
       enrichedRows:enriched.filter(function(r){ return (r.assigned_communities||[]).length; }).length
     };
@@ -1171,39 +1171,46 @@ function deptClass(dept){
 
   function renderCommunityChips(row){
     var names = (row && Array.isArray(row.assigned_communities)) ? row.assigned_communities : [];
-    if(!names.length) return '';
-    var visible = names.slice(0,3);
-    var extra = names.length - visible.length;
-    var html = '<div class="cd-community-chips">' + visible.map(function(name){
+    if(!names.length){
+      return '<div class="cd-community-empty">No assigned communities listed</div>';
+    }
+    var html = '<div class="cd-community-chips" aria-label="Assigned communities">' + names.map(function(name){
       return '<span class="cd-community-chip">' + esc(name) + '</span>';
-    }).join('') + (extra > 0 ? '<span class="cd-community-chip cd-community-chip-more">+' + extra + '</span>' : '') + '</div>';
+    }).join('') + '</div>';
     return html;
   }
 
   function render(rows){
-    var tbody = document.getElementById("dirTbody");
+    var list = document.getElementById("dirTbody");
     var pill = document.getElementById("countPill");
     pill.textContent = rows.length + " employee" + (rows.length===1?"":"s");
 
     if(!rows.length){
-      tbody.innerHTML = '<tr><td colspan="3" class="muted">No employees found for this company.</td></tr>';
+      list.innerHTML = '<div class="cd-empty-state">No employees found for this company.</div>';
       return;
     }
 
-    tbody.innerHTML = rows.map(function(r){
+    list.innerHTML = rows.map(function(r){
       var name = r.name || "";
       var email = r.email || "";
       var phoneRaw = r.phone || "";
       var phoneDigits = String(phoneRaw).replace(/\D/g,"");
       var phoneDisp = formatPhoneUS(phoneRaw);
-      var phoneCell = phoneDigits ? ('<a class="linkish" href="tel:' + phoneDigits + '">' + esc(phoneDisp || phoneRaw) + '</a>') : '<span class="muted">—</span>';
-      var emailCell = email ? ('<a class="linkish" href="mailto:' + encodeURIComponent(email) + '">' + esc(email) + '</a>') : '<span class="muted">—</span>';
+      var initials = String(name || '?').trim().split(/\s+/).slice(0,2).map(function(part){ return part.charAt(0).toUpperCase(); }).join('') || '?';
+      var role = String(r.role || r.department || '').trim();
+      var phoneCell = phoneDigits ? ('<a class="cd-contact-link" href="tel:' + phoneDigits + '"><span class="cd-contact-label">Phone</span><strong>' + esc(phoneDisp || phoneRaw) + '</strong></a>') : '<div class="cd-contact-link is-empty"><span class="cd-contact-label">Phone</span><strong>—</strong></div>';
+      var emailCell = email ? ('<a class="cd-contact-link" href="mailto:' + encodeURIComponent(email) + '"><span class="cd-contact-label">Email</span><strong>' + esc(email) + '</strong></a>') : '<div class="cd-contact-link is-empty"><span class="cd-contact-label">Email</span><strong>—</strong></div>';
 
-      return '<tr>' +
-        '<td><div style="font-weight:950">' + esc(name) + '</div>' + renderCommunityChips(r) + '</td>' + 
-        '<td>' + (phoneDigits ? ('<a class="linkish" href="tel:' + phoneDigits + '">' + esc(phoneDisp||phone) + '</a>') : '<span class="muted">—</span>') + '</td>' +
-        '<td>' + emailCell + '</td>' +
-      '</tr>';
+      return '<article class="cd-employee-card">' +
+        '<div class="cd-employee-avatar">' + esc(initials) + '</div>' +
+        '<div class="cd-employee-main">' +
+          '<div class="cd-employee-topline">' +
+            '<div><h3>' + esc(name || 'Employee') + '</h3>' + (role ? '<div class="cd-employee-role">' + esc(role) + '</div>' : '') + '</div>' +
+          '</div>' +
+          '<div class="cd-employee-communities"><div class="cd-mini-label">Assigned communities</div>' + renderCommunityChips(r) + '</div>' +
+        '</div>' +
+        '<div class="cd-employee-contact">' + phoneCell + emailCell + '</div>' +
+      '</article>';
     }).join("");
   }
 
@@ -3215,19 +3222,8 @@ body.dark-mode .mh2-stat-box {
       <span class="cd-count-pill" id="countPill">0 employees</span>
     </div>
 
-    <div class="cd-table-shell">
-      <table>
-        <thead>
-          <tr>
-            <th style="width:36%">Name</th>
-            <th style="width:24%">Phone</th>
-            <th style="width:40%">Email</th>
-          </tr>
-        </thead>
-        <tbody id="dirTbody">
-          <tr><td colspan="3" class="muted">Loading…</td></tr>
-        </tbody>
-      </table>
+    <div class="cd-employee-list" id="dirTbody">
+      <div class="cd-empty-state">Loading…</div>
     </div>
   </section>
 </div>
@@ -3714,10 +3710,151 @@ body.dark-mode .mh2-stat-box {
   }
 </style>
 
-<script id="company-directory-v722-diagnostics">
+
+
+<style id="company-directory-v723-premium-employee-card-style">
+  /* v723: Employee records are premium cards, not table rows. Phone/email stay clickable. */
+  .cd-employee-list{
+    display:grid!important;
+    gap:14px!important;
+    margin-top:4px!important;
+  }
+  .cd-employee-card{
+    display:grid!important;
+    grid-template-columns:64px minmax(0,1fr) minmax(260px,.78fr)!important;
+    gap:18px!important;
+    align-items:center!important;
+    padding:18px 20px!important;
+    border:1.5px solid #d8e5f6!important;
+    border-radius:24px!important;
+    background:linear-gradient(180deg,#ffffff,#f7fbff)!important;
+    box-shadow:0 10px 24px rgba(23,54,95,.055), inset 0 1px 0 rgba(255,255,255,.9)!important;
+  }
+  .cd-employee-avatar{
+    width:58px!important;
+    height:58px!important;
+    border-radius:18px!important;
+    display:grid!important;
+    place-items:center!important;
+    background:linear-gradient(135deg,#fff9d8,#f7d96c)!important;
+    border:1px solid #efcf5b!important;
+    color:#17365f!important;
+    font-size:18px!important;
+    font-weight:950!important;
+    letter-spacing:.04em!important;
+    box-shadow:0 8px 18px rgba(216,170,42,.14), inset 0 1px 0 rgba(255,255,255,.82)!important;
+  }
+  .cd-employee-main{min-width:0!important;display:grid!important;gap:10px!important;}
+  .cd-employee-topline{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:12px!important;}
+  .cd-employee-topline h3{
+    margin:0!important;
+    color:#17365f!important;
+    font-size:22px!important;
+    line-height:1.08!important;
+    font-weight:950!important;
+    letter-spacing:-.025em!important;
+  }
+  .cd-employee-role{
+    margin-top:4px!important;
+    color:#64748b!important;
+    font-size:13px!important;
+    font-weight:850!important;
+  }
+  .cd-employee-communities{display:grid!important;gap:6px!important;}
+  .cd-mini-label{
+    color:#60758a!important;
+    font-size:10px!important;
+    font-weight:950!important;
+    letter-spacing:.12em!important;
+    text-transform:uppercase!important;
+  }
+  .cd-community-chips{
+    margin-top:0!important;
+    display:flex!important;
+    flex-wrap:wrap!important;
+    gap:7px!important;
+  }
+  .cd-community-chip{
+    min-height:28px!important;
+    padding:0 11px!important;
+    border-radius:999px!important;
+    border:1px solid #d8e5f6!important;
+    background:#ffffff!important;
+    color:#52677f!important;
+    font-size:12px!important;
+    line-height:26px!important;
+    font-weight:950!important;
+    letter-spacing:.02em!important;
+    white-space:nowrap!important;
+    box-shadow:0 3px 8px rgba(23,54,95,.035)!important;
+  }
+  .cd-community-empty{
+    color:#94a3b8!important;
+    font-size:13px!important;
+    font-weight:850!important;
+  }
+  .cd-employee-contact{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:8px!important;
+    min-width:0!important;
+  }
+  .cd-contact-link{
+    min-height:50px!important;
+    border-radius:18px!important;
+    border:1.5px solid #d8e5f6!important;
+    background:#ffffff!important;
+    text-decoration:none!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:12px!important;
+    padding:9px 13px!important;
+    color:#1d5fd1!important;
+    box-shadow:0 5px 13px rgba(23,54,95,.04)!important;
+  }
+  .cd-contact-link strong{
+    color:#1d5fd1!important;
+    font-size:15px!important;
+    font-weight:950!important;
+    overflow-wrap:anywhere!important;
+    text-align:right!important;
+  }
+  .cd-contact-link.is-empty strong{color:#94a3b8!important;}
+  .cd-contact-label{
+    color:#60758a!important;
+    font-size:10px!important;
+    font-weight:950!important;
+    letter-spacing:.12em!important;
+    text-transform:uppercase!important;
+    flex:0 0 auto!important;
+  }
+  .cd-empty-state{
+    border:1.5px dashed #bad3ff!important;
+    border-radius:22px!important;
+    background:#fbfdff!important;
+    color:#64748b!important;
+    font-weight:850!important;
+    padding:20px!important;
+  }
+  .cd-table-shell{display:none!important;}
+  @media(max-width:860px){
+    .cd-employee-card{grid-template-columns:58px minmax(0,1fr)!important;align-items:start!important;}
+    .cd-employee-contact{grid-column:1 / -1!important;grid-template-columns:1fr 1fr!important;}
+  }
+  @media(max-width:620px){
+    .cd-employee-card{grid-template-columns:1fr!important;padding:16px!important;}
+    .cd-employee-avatar{width:52px!important;height:52px!important;border-radius:16px!important;}
+    .cd-employee-contact{grid-template-columns:1fr!important;}
+    .cd-contact-link{align-items:flex-start!important;flex-direction:column!important;gap:4px!important;}
+    .cd-contact-link strong{text-align:left!important;}
+  }
+</style>
+
+<script id="company-directory-v723-diagnostics">
   window.getCompanyDirectoryDeploymentStatus = function(){
     return {
-      build: window.ZUMMEE_BUILD || '2026-05-11-v722-company-directory-community-search',
+      build: window.ZUMMEE_BUILD || '2026-05-11-v723-company-directory-premium-employee-cards',
       redesigned: true,
       communitySearch: true,
       header: !!document.querySelector('.cd-header-card'),
