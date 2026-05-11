@@ -11,7 +11,7 @@
   if (window.__ZUMMEE_COMMUNITY_ASSIGNMENT_RESOLVER_V746__) return;
   window.__ZUMMEE_COMMUNITY_ASSIGNMENT_RESOLVER_V746__ = true;
 
-  var BUILD = '2026-05-11-v746-community-assignment-resolver-clean-400s';
+  var BUILD = '2026-05-11-v747-community-assignment-resolver-no-email-select';
   var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   var state = {
     build: BUILD,
@@ -104,10 +104,10 @@
     var uid = ctx.userId;
     if(!isUuid(uid)) return ctx;
 
-    // userdirectory is the most useful on this app because it has the staff role/company.
+    // userdirectory is the most useful on this app because it has the staff role/company. Do not select email here; some deployments do not have userdirectory.email.
     try{
       var ud = await sb.from('userdirectory')
-        .select('auth_user_id,role,company_id,company_name,approved,email')
+        .select('auth_user_id,role,company_id,company_name,approved')
         .eq('auth_user_id', uid)
         .maybeSingle();
       if(ud && ud.error) throw ud.error;
@@ -115,7 +115,6 @@
         ctx.role = s(ud.data.role) || ctx.role;
         ctx.company_id = s(ud.data.company_id) || ctx.company_id;
         ctx.company = s(ud.data.company_name) || ctx.company;
-        ctx.email = lower(ud.data.email) || ctx.email;
       }
     }catch(err){ pushError('userdirectory context lookup failed', err); }
 
