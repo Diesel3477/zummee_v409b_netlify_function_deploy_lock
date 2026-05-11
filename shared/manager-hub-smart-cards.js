@@ -1,5 +1,5 @@
 /*
-  Zummee Manager Hub Smart Cards v702
+  Zummee Manager Hub Smart Cards v705
   Long-term stability controller + corrected canonical logic.
 
   Rule: this is the only script allowed to write the three Manager Hub smart cards:
@@ -15,10 +15,10 @@
 */
 (function(){
   'use strict';
-  if(window.__ZummeeManagerHubSmartCardsV702Loaded) return;
-  window.__ZummeeManagerHubSmartCardsV702Loaded = true;
+  if(window.__ZummeeManagerHubSmartCardsV705Loaded) return;
+  window.__ZummeeManagerHubSmartCardsV705Loaded = true;
 
-  var BUILD = '2026-05-11-v704-manager-hub-annual-boardhub-aligned';
+  var BUILD = '2026-05-11-v705-manager-hub-annual-workflow-dedupe';
   var SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
   var TIMEOUT_MS = 7000;
@@ -42,11 +42,13 @@
   function setReady(isReady){
     try{
       if(isReady){
+        document.documentElement.setAttribute('data-zummee-smart-cards-v705-ready','1');
         document.documentElement.setAttribute('data-zummee-smart-cards-v704-ready','1');
         document.documentElement.setAttribute('data-zummee-smart-cards-v702-ready','1');
         document.documentElement.setAttribute('data-zummee-smart-cards-v701-ready','1');
         document.documentElement.setAttribute('data-zummee-smart-alerts-v426-ready','1');
       }else{
+        document.documentElement.removeAttribute('data-zummee-smart-cards-v705-ready');
         document.documentElement.removeAttribute('data-zummee-smart-cards-v704-ready');
         document.documentElement.removeAttribute('data-zummee-smart-cards-v702-ready');
         document.documentElement.removeAttribute('data-zummee-smart-cards-v701-ready');
@@ -275,13 +277,96 @@
     return out;
   }
 
+  function annualWorkflowKey(row){
+    if(!row) return '';
+    // v705: Manager Hub annual card counts workflows/packets, not approval-step rows.
+    // The Board Member Hub groups packet approvals by annual_meeting_settings_id. Rows with
+    // no workflow/settings/packet id are legacy or orphaned rows and should not drive the hub card.
+    var candidates = [
+      row.annual_meeting_settings_id,
+      row.packet_id,
+      row.workflow_id,
+      row.request_id,
+      row.annual_meeting_id,
+      row.packet_request_id
+    ];
+    for(var i=0;i<candidates.length;i++){
+      var val = s(candidates[i]);
+      if(isUuid(val)) return val;
+    }
+    return '';
+  }
+
+  function annualStageRank(step){
+    step = lower(step);
+    if(step === 'pending_board') return 1;
+    if(step === 'pending_supervisor' || step === 'board_approved') return 2;
+    if(step === 'pending_admin_mailing' || step === 'ready_to_mail' || step === 'supervisor_approved') return 3;
+    return 9;
+  }
+
+  function annualWorkflowStage(rows){
+    var best = '';
+    var bestRank = 99;
+    (Array.isArray(rows) ? rows : []).forEach(function(row){
+      var step = annualStep(row);
+      var rank = annualStageRank(step);
+      if(rank < bestRank){ bestRank = rank; best = step; }
+    });
+    return best || 'active';
+  }
+
+  function collapseAnnualRowsToWorkflows(rows){
+    var groups = {};
+    (Array.isArray(rows) ? rows : []).forEach(function(row){
+      var key = annualWorkflowKey(row);
+      if(!key) return;
+      if(!groups[key]) groups[key] = [];
+      groups[key].push(row);
+    });
+
+    return Object.keys(groups).map(function(key){
+      var groupRows = groups[key] || [];
+      var newest = groupRows.slice().sort(function(a,b){
+        var at = Date.parse(s(a && (a.updated_at || a.created_at)) || '1970-01-01');
+        var bt = Date.parse(s(b && (b.updated_at || b.created_at)) || '1970-01-01');
+        return bt - at;
+      })[0] || {};
+      var stage = annualWorkflowStage(groupRows);
+      return {
+        workflow_key:key,
+        annual_meeting_settings_id:s(newest.annual_meeting_settings_id || key),
+        community_id:s(newest.community_id),
+        association_legal_name:s(newest.association_legal_name),
+        current_step:stage,
+        status:stage,
+        row_count:groupRows.length,
+        latest_row_id:s(newest.id),
+        updated_at:newest.updated_at || newest.created_at || null,
+        rows:groupRows
+      };
+    });
+  }
+
+  function annualWorkflowStepCounts(workflows){
+    var out = { board:0, supervisor:0, admin:0, other:0 };
+    (Array.isArray(workflows) ? workflows : []).forEach(function(w){
+      var st = lower(w && (w.current_step || w.status));
+      var rank = annualStageRank(st);
+      if(rank === 1) out.board++;
+      else if(rank === 2) out.supervisor++;
+      else if(rank === 3) out.admin++;
+      else out.other++;
+    });
+    return out;
+  }
+
   async function loadAnnual(client, clientSource, community){
     if(!client || !isUuid(community.id)) return { ok:false, label:'annual', source:'none', clientSource:clientSource, count:null, error:'Missing client or community' };
 
-    // v704 source of truth: same table and active workflow concept used by Board Member Hub
-    // Annual Meeting Packet Approvals. This intentionally ignores annual_meeting_settings
-    // and old fallback packet/setup tables because those caused Manager Hub to show 4 when
-    // Board Hub only had 1 active packet workflow.
+    // v705 source of truth: annual_meeting_approval_requests, collapsed to one active
+    // workflow per annual_meeting_settings_id/packet id. This matches the Board Member Hub
+    // packet queue and prevents one packet with multiple step rows from showing as 6 approvals.
     var res = await client.from('annual_meeting_approval_requests')
       .select('*')
       .eq('community_id', community.id)
@@ -292,22 +377,26 @@
       .limit(500);
 
     if(res && res.error){
-      return { ok:false, label:'annual', source:'annual_meeting_approval_requests.board_hub_aligned', clientSource:clientSource, count:null, error:res.error.message || JSON.stringify(res.error), rows:[], totalRows:0 };
+      return { ok:false, label:'annual', source:'annual_meeting_approval_requests.workflow_dedupe', clientSource:clientSource, count:null, error:res.error.message || JSON.stringify(res.error), rows:[], totalRows:0 };
     }
 
     var raw = Array.isArray(res && res.data) ? res.data : [];
-    var rows = raw.filter(isAnnualActive);
-    var steps = annualStepCounts(rows);
+    var activeRows = raw.filter(isAnnualActive).filter(function(row){ return !!annualWorkflowKey(row); });
+    var workflows = collapseAnnualRowsToWorkflows(activeRows);
+    var steps = annualWorkflowStepCounts(workflows);
 
     return {
       ok:true,
       label:'annual',
-      source:'annual_meeting_approval_requests.board_hub_aligned_active_steps',
+      source:'annual_meeting_approval_requests.workflow_dedupe',
       clientSource:clientSource,
-      count:rows.length,
+      count:workflows.length,
       overdue:0,
-      rows:rows,
+      rows:workflows,
+      rawRows:activeRows,
       totalRows:raw.length,
+      activeStepRows:activeRows.length,
+      ignoredRows:raw.length - activeRows.length,
       stepCounts:steps
     };
   }
@@ -392,7 +481,7 @@
     opts = opts || {};
     var tone = opts.tone || 'good';
 
-    card.dataset.smartCardOwner = 'v702';
+    card.dataset.smartCardOwner = 'v705';
     card.dataset.smartAlertsV633 = 'false';
     card.style.display = '';
     card.style.visibility = 'visible';
@@ -450,11 +539,12 @@
     state.latest = summary;
     state.loadedCommunityId = summary.community && summary.community.id || '';
     state.renderedAt = Date.now();
+    window.__ManagerHubSmartCardsSummaryV705 = summary;
     window.__ManagerHubSmartCardsSummaryV702 = summary;
     // Compatibility for older console checks.
     window.__ManagerHubSmartCardsSummaryV701 = summary;
     setReady(true);
-    try{ console.info('[Manager Hub v702] smart cards rendered', summary); }catch(_e){}
+    try{ console.info('[Manager Hub v705] smart cards rendered', summary); }catch(_e){}
     return true;
   }
 
@@ -488,14 +578,14 @@
   }
 
   function boot(){
-    if(window.__ZummeeManagerHubSmartCardsV702Booted) return;
-    window.__ZummeeManagerHubSmartCardsV702Booted = true;
+    if(window.__ZummeeManagerHubSmartCardsV705Booted) return;
+    window.__ZummeeManagerHubSmartCardsV705Booted = true;
     setReady(false);
     setTimeout(function(){ refresh({ resetReady:false }); }, 80);
   }
 
   function communityChanged(){
-    window.__ZummeeManagerHubSmartCardsV702Booted = false;
+    window.__ZummeeManagerHubSmartCardsV705Booted = false;
     state.seq++;
     state.latest = null;
     setReady(false);
@@ -512,9 +602,9 @@
     return {
       build: BUILD,
       singleOwner: true,
-      loaded: !!window.__ZummeeManagerHubSmartCardsV702Loaded,
-      booted: !!window.__ZummeeManagerHubSmartCardsV702Booted,
-      ready: document.documentElement.getAttribute('data-zummee-smart-cards-v704-ready') === '1',
+      loaded: !!window.__ZummeeManagerHubSmartCardsV705Loaded,
+      booted: !!window.__ZummeeManagerHubSmartCardsV705Booted,
+      ready: document.documentElement.getAttribute('data-zummee-smart-cards-v705-ready') === '1',
       cardOwners: {
         board: $('mh2AlertBoard') && $('mh2AlertBoard').dataset.smartCardOwner || '',
         maintenance: $('mh2AlertActivity') && $('mh2AlertActivity').dataset.smartCardOwner || '',
