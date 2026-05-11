@@ -3,9 +3,9 @@
 <head>
 
 <script id="manager-hub-v701-stable-build-marker">
-window.ZUMMEE_BUILD = "2026-05-11-v719-manager-hub-button-row-spacing";
+window.ZUMMEE_BUILD = "2026-05-11-v742-manager-hub-live-activity-pulse-dot";
 window.__MANAGER_HUB_V701_SINGLE_OWNER_SMART_CARDS = true;
-console.info("[Manager Hub v719] button row spacing tightened", window.ZUMMEE_BUILD);
+console.info("[Manager Hub v742] live activity pulse dot", window.ZUMMEE_BUILD);
 </script>
 <style id="zummee-manager-smooth-return-css-v611">
   /*
@@ -2877,6 +2877,51 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
 
 
 
+
+<style id="zummee-manager-v742-live-activity-pulse-dot">
+  /* v742: Live Activity feels live with a subtle pulsing green signal. Layout-only. */
+  #liveActivityTitleWrapper{
+    display:flex !important;
+    align-items:center !important;
+    gap:12px !important;
+    min-width:0 !important;
+  }
+
+  #mh2LiveActivityPulseDot{
+    width:15px;
+    height:15px;
+    border-radius:999px;
+    background:#22c55e;
+    box-shadow:0 0 0 0 rgba(34,197,94,.42), 0 0 0 6px rgba(34,197,94,.10);
+    flex:0 0 auto;
+    transform:translateY(3px);
+    animation:mh2LiveActivityPulseDot 1.55s ease-in-out infinite;
+  }
+
+  #mh2LiveActivityPulseDot::after{
+    content:"";
+    position:absolute;
+    inset:3px;
+    border-radius:inherit;
+    background:#ffffff;
+    opacity:.28;
+  }
+
+  @keyframes mh2LiveActivityPulseDot{
+    0%,100%{
+      box-shadow:0 0 0 0 rgba(34,197,94,.42), 0 0 0 6px rgba(34,197,94,.10);
+      transform:translateY(3px) scale(1);
+    }
+    50%{
+      box-shadow:0 0 0 10px rgba(34,197,94,0), 0 0 0 6px rgba(34,197,94,.08);
+      transform:translateY(3px) scale(1.08);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    #mh2LiveActivityPulseDot{animation:none;}
+  }
+</style>
 </head>
 <body class="manager-hub-page">
   <main class="mh2-page">
@@ -2968,6 +3013,7 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
       <section id="activityFeedCard" class="mh2-card mh2-live-primary" aria-label="Live activity shell">
           <div id="activityFeedHeader" class="mh2-section-head mh2-live-compact-head">
             <div id="liveActivityTitleWrapper" class="mh2-live-title-wrap">
+              <span id="mh2LiveActivityPulseDot" aria-hidden="true"></span>
               <h2 id="liveActivityTitle" class="mh2-section-title">Live Activity</h2>
             </div>
             <div class="mh2-actions mh2-live-compact-actions">
