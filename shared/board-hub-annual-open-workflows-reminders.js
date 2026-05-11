@@ -1,9 +1,9 @@
 (function(){
   'use strict';
-  if(window.__BoardHubAnnualOpenWorkflowsRemindersV709) return;
-  window.__BoardHubAnnualOpenWorkflowsRemindersV709 = true;
+  if(window.__BoardHubAnnualOpenWorkflowsRemindersV710) return;
+  window.__BoardHubAnnualOpenWorkflowsRemindersV710 = true;
 
-  const BUILD = '2026-05-11-v709-board-hub-open-workflow-clean-layout';
+  const BUILD = '2026-05-11-v710-board-hub-annual-premium-card-layout';
   const ACTIVE_STEPS = new Set([
     'pending_board','board_review','pending_supervisor','board_approved',
     'pending_admin_mailing','ready_to_mail','supervisor_approved','pending_admin',
@@ -148,28 +148,30 @@
     const primaryReminder=w.info.current==='supervisor' ? 'supervisor' : 'board';
     const countsLine=esc(workflowCountsLine(w) || 'Open approval workflow');
     return ''+
-      '<article class="annualRequestCard '+w.info.cls+'" data-annual-workflow-key="'+id+'" data-annual-approval-id="'+packetId+'">'+
+      '<article class="annualRequestCard '+w.info.cls+' premiumAnnualWorkflowCard" data-annual-workflow-key="'+id+'" data-annual-approval-id="'+packetId+'">'+
         '<div class="annualRequestMain">'+
           '<div class="annualRequestHeader">'+
-            '<h3 class="annualRequestTitle">'+title+'</h3>'+
-            '<span class="annualRequestCurrentBadge">'+esc(w.info.label)+'</span>'+
-          '</div>'+
-          '<div class="annualRequestDetailsGrid">'+
-            '<div class="annualRequestDetailBox"><div class="annualRequestDetailLabel">Route</div><div class="annualRequestDetailValue">'+route+'</div></div>'+
-            '<div class="annualRequestDetailBox"><div class="annualRequestDetailLabel">Meeting date</div><div class="annualRequestDetailValue">'+meetingDate+'</div></div>'+
-            '<div class="annualRequestDetailBox"><div class="annualRequestDetailLabel">Initiated</div><div class="annualRequestDetailValue">'+initiated+'</div></div>'+
-          '</div>'+
-          '<div class="annualRequestStatusLine">'+esc(w.info.line)+'</div>'+
-          '<p class="annualRequestMeta">'+countsLine+'</p>'+
-          stepPills(w.info)+
-        '</div>'+
+            '<div class="annualRequestTitleBlock"><h3 class="annualRequestTitle">'+title+'</h3><p class="annualRequestSubline">Annual meeting packet workflow</p></div>'+ 
+            '<span class="annualRequestCurrentBadge">'+esc(w.info.label)+'</span>'+ 
+          '</div>'+ 
+          '<div class="annualRequestMetaChips" aria-label="Annual meeting packet details">'+
+            '<span><strong>Route</strong>'+route+'</span>'+ 
+            '<span><strong>Meeting</strong>'+meetingDate+'</span>'+ 
+            '<span><strong>Started</strong>'+initiated+'</span>'+ 
+          '</div>'+ 
+          '<div class="annualRequestProgressRow">'+
+            stepPills(w.info)+
+            '<span class="annualRequestCountText">'+countsLine+'</span>'+ 
+          '</div>'+ 
+          '<div class="annualRequestStatusLine"><strong>'+esc(w.info.label)+':</strong> '+esc(w.info.line)+'</div>'+ 
+        '</div>'+ 
         '<div class="annualRequestActions">'+
-          '<button type="button" class="preview" data-annual-v707-action="preview" data-key="'+id+'">Preview Packet</button>'+
-          '<button type="button" class="reminder '+(primaryReminder==='board'?'primaryReminder':'')+'" data-annual-v707-action="remind-board" data-key="'+id+'">Email Board Reminder</button>'+
-          '<button type="button" class="reminder '+(primaryReminder==='supervisor'?'primaryReminder':'')+'" data-annual-v707-action="remind-supervisor" data-key="'+id+'">Email Supervisors Reminder</button>'+
+          '<button type="button" class="preview" data-annual-v707-action="preview" data-key="'+id+'">Preview Packet</button>'+ 
+          '<button type="button" class="reminder '+(primaryReminder==='board'?'primaryReminder':'')+'" data-annual-v707-action="remind-board" data-key="'+id+'">Email Board Reminder</button>'+ 
+          '<button type="button" class="reminder '+(primaryReminder==='supervisor'?'primaryReminder':'')+'" data-annual-v707-action="remind-supervisor" data-key="'+id+'">Email Supervisors Reminder</button>'+ 
           (hasBoard ? '<button type="button" class="reject" data-annual-v707-action="toggle-reject" data-key="'+id+'">Reject</button><button type="button" class="approve" data-annual-v707-action="approve" data-key="'+id+'">Approve Packet</button>' : '')+
-        '</div>'+
-        (hasBoard ? '<div class="annualRequestRejectBox" id="annualRejectBoxV707_'+id+'"><textarea id="annualRejectNoteV707_'+id+'" placeholder="Add the reason this packet needs changes before approval."></textarea><div class="annualRequestActions" style="margin-top:10px;justify-content:flex-start"><button type="button" class="reject" data-annual-v707-action="confirm-reject" data-key="'+id+'">Submit Rejection</button></div></div>' : '')+
+        '</div>'+ 
+        (hasBoard ? '<div class="annualRequestRejectBox" id="annualRejectBoxV707_'+id+'"><textarea id="annualRejectNoteV707_'+id+'" placeholder="Add the reason this packet needs changes before approval."></textarea><div class="annualRequestActions rejectActions"><button type="button" class="reject" data-annual-v707-action="confirm-reject" data-key="'+id+'">Submit Rejection</button></div></div>' : '')+
       '</article>';
   }
 
@@ -220,7 +222,7 @@
       setStatus(state.error, 'err');
     }finally{
       state.loading=false;
-      window.__BoardHubAnnualOpenWorkflowsV709Status = snapshot(); window.__BoardHubAnnualOpenWorkflowsV708Status = window.__BoardHubAnnualOpenWorkflowsV709Status; window.__BoardHubAnnualOpenWorkflowsV707Status = window.__BoardHubAnnualOpenWorkflowsV709Status;
+      window.__BoardHubAnnualOpenWorkflowsV710Status = snapshot(); window.__BoardHubAnnualOpenWorkflowsV708Status = window.__BoardHubAnnualOpenWorkflowsV710Status; window.__BoardHubAnnualOpenWorkflowsV707Status = window.__BoardHubAnnualOpenWorkflowsV710Status;
     }
     return state;
   }
@@ -341,7 +343,7 @@
     const w=workflowByKey(key); if(!w) return alert('Packet preview is not available yet. Refresh and try again.');
     const row=w.primary || w.rows[0] || {};
     if(typeof window.previewBoardHubAnnualMeetingPacket === 'function'){
-      try{ window.__BoardHubAnnualOpenWorkflowsV709Status = snapshot(); window.__BoardHubAnnualOpenWorkflowsV708Status = window.__BoardHubAnnualOpenWorkflowsV709Status; window.__BoardHubAnnualOpenWorkflowsV707Status = window.__BoardHubAnnualOpenWorkflowsV709Status; window.previewBoardHubAnnualMeetingPacket(row.id); return; }catch(_e){}
+      try{ window.__BoardHubAnnualOpenWorkflowsV710Status = snapshot(); window.__BoardHubAnnualOpenWorkflowsV708Status = window.__BoardHubAnnualOpenWorkflowsV710Status; window.__BoardHubAnnualOpenWorkflowsV707Status = window.__BoardHubAnnualOpenWorkflowsV710Status; window.previewBoardHubAnnualMeetingPacket(row.id); return; }catch(_e){}
     }
     alert('Preview is not available for this packet yet.');
   }
