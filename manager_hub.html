@@ -3,9 +3,9 @@
 <head>
 
 <script id="manager-hub-v701-stable-build-marker">
-window.ZUMMEE_BUILD = "2026-05-11-v748-manager-hub-live-activity-single-controller";
+window.ZUMMEE_BUILD = "2026-05-11-v757-manager-hub-smart-card-badge-fit";
 window.__MANAGER_HUB_V701_SINGLE_OWNER_SMART_CARDS = true;
-console.info("[Manager Hub v747] userdirectory email 400 fixed", window.ZUMMEE_BUILD);
+console.info("[Manager Hub v757] smart card badge fit polish", window.ZUMMEE_BUILD);
 </script>
 <style id="zummee-manager-smooth-return-css-v611">
   /*
@@ -145,6 +145,42 @@ console.info("[Manager Hub v747] userdirectory email 400 fixed", window.ZUMMEE_B
   @media (max-width:760px){
     #smartAlertStrip{min-height:510px!important;}
     #smartAlertStrip .mh2-smart-strip{min-height:390px!important;}
+  }
+</style>
+<style id="zummee-v757-smart-card-badge-fit-css">
+  /* v757: Smart alert status badges have enough width for counts like "1 PENDING" on iPad.
+     UI-only: no smart-card data/render logic changed. */
+  #smartAlertStrip .mh2-alert-top{
+    display:flex!important;
+    align-items:flex-start!important;
+    justify-content:space-between!important;
+    gap:14px!important;
+    width:100%!important;
+  }
+  #smartAlertStrip .mh2-alert-title{
+    flex:1 1 auto!important;
+    min-width:0!important;
+  }
+  #smartAlertStrip .mh2-alert-badge{
+    flex:0 0 auto!important;
+    min-width:112px!important;
+    max-width:none!important;
+    min-height:34px!important;
+    padding:0 14px!important;
+    border-radius:999px!important;
+    white-space:nowrap!important;
+    text-align:center!important;
+    font-size:12px!important;
+    line-height:1!important;
+    letter-spacing:.12em!important;
+  }
+  @media (max-width:860px){
+    #smartAlertStrip .mh2-alert-badge{
+      min-width:104px!important;
+      padding:0 12px!important;
+      font-size:11px!important;
+      letter-spacing:.10em!important;
+    }
   }
 </style>
 
@@ -2887,6 +2923,21 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
   .mh2-live-title-wrap::before{content:"";width:14px;height:14px;border-radius:999px;background:#16a34a;box-shadow:0 0 0 0 rgba(22,163,74,.38);margin-right:12px;flex:0 0 auto;animation:mh2LiveTitlePulse 1.45s ease-in-out infinite;}
   @keyframes mh2LiveTitlePulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(22,163,74,.38)}50%{transform:scale(1.08);box-shadow:0 0 0 9px rgba(22,163,74,0)}}
 </style>
+
+
+<script id="zummee-v757-manager-hub-badge-fit-diagnostic">
+(function(){
+  window.getManagerHubSmartBadgeFitStatus=function(){
+    try{
+      var badges=Array.from(document.querySelectorAll('#smartAlertStrip .mh2-alert-badge')).map(function(b){
+        var r=b.getBoundingClientRect();
+        return {text:b.textContent.trim(), width:Math.round(r.width), scrollWidth:b.scrollWidth};
+      });
+      return {build:window.ZUMMEE_BUILD||'', ok:true, badges:badges};
+    }catch(e){return {build:window.ZUMMEE_BUILD||'', ok:false, error:String(e&&e.message||e)};}
+  };
+})();
+</script>
 
 </head>
 <body class="manager-hub-page">
