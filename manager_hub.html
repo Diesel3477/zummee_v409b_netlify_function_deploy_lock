@@ -4140,15 +4140,9 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
             function(){ return { query: orderedQuery('annual_meeting_approval_requests', 24, 'updated_at', false), timeout:6500 }; }
           ], function(rows){ return normalizeAnnualRows(rows || [], 'annual_meeting_approval_requests'); }));
 
-          queries.push(tryTable('annual_meeting_packet_requests', [
-            function(){ return { query: orderedQuery('annual_meeting_packet_requests', 24, 'updated_at', true), timeout:6500 }; },
-            function(){ return { query: orderedQuery('annual_meeting_packet_requests', 24, 'created_at', true), timeout:6500 }; },
-            function(){ return { query: orderedQuery('annual_meeting_packet_requests', 24, null, true), timeout:6500 }; },
-            function(){ return { query: orderedQuery('annual_meeting_packet_requests', 24, 'updated_at', false), timeout:6500 }; }
-          ], function(rows){
-            rows = (rows || []).filter(function(row){ return !communityId || annualApprovalMatchesCurrentCommunity(row, communityId, communityName); });
-            return normalizeAnnualRows(rows, 'annual_meeting_packet_requests');
-          }));
+          // v746: annual_meeting_packet_requests removed from Manager Hub live stream.
+          // Annual meeting activity is sourced from annual_meeting_approval_requests to avoid noisy 400s
+          // on older deployments where packet_requests has a different schema/RLS shape.
 
           queries.push(tryTable('supervisor_communications', [
             function(){ return { query: orderedQuery('supervisor_communications', 16, 'updated_at', true), timeout:5500 }; },
