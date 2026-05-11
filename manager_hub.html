@@ -3,7 +3,7 @@
 <head>
 
 <script id="manager-hub-v701-stable-build-marker">
-window.ZUMMEE_BUILD = "2026-05-11-v758-manager-hub-smart-cards-title-pill-only";
+window.ZUMMEE_BUILD = "2026-05-11-v759-manager-hub-smart-cards-clean-compact";
 window.__MANAGER_HUB_V701_SINGLE_OWNER_SMART_CARDS = true;
 console.info("[Manager Hub v757] smart card badge fit polish", window.ZUMMEE_BUILD);
 </script>
@@ -147,30 +147,38 @@ console.info("[Manager Hub v757] smart card badge fit polish", window.ZUMMEE_BUI
     #smartAlertStrip .mh2-smart-strip{min-height:390px!important;}
   }
 </style>
-<style id="zummee-v758-smart-card-minimal-layout-css">
-  /* v758: simplify Smart Alerts to title + status pill only.
+<style id="zummee-v759-smart-card-clean-compact-css">
+  /* v759: Smart Alerts title + pill only, with fixed non-overlap layout.
      UI-only: no smart-card data/render logic changed. */
+  #smartAlertStrip .mh2-smart-strip{
+    align-items:stretch!important;
+  }
   #smartAlertStrip .mh2-alert{
-    min-height:96px!important;
+    min-height:112px!important;
     height:100%!important;
-    padding:18px 20px!important;
+    padding:22px 22px!important;
     justify-content:center!important;
     gap:0!important;
+    overflow:hidden!important;
   }
   #smartAlertStrip .mh2-alert-top{
-    display:flex!important;
+    display:grid!important;
+    grid-template-columns:minmax(0, 1fr) auto!important;
     align-items:center!important;
-    justify-content:space-between!important;
-    gap:14px!important;
+    justify-content:stretch!important;
+    gap:18px!important;
     width:100%!important;
     min-height:auto!important;
   }
   #smartAlertStrip .mh2-alert-title{
-    flex:1 1 auto!important;
     min-width:0!important;
+    max-width:100%!important;
     min-height:0!important;
-    line-height:1.16!important;
-    font-size:clamp(15px,2vw,17px)!important;
+    line-height:1.12!important;
+    font-size:clamp(18px,2.2vw,24px)!important;
+    font-weight:950!important;
+    overflow:visible!important;
+    text-wrap:balance!important;
   }
   #smartAlertStrip .mh2-alert-copy{
     display:none!important;
@@ -179,26 +187,31 @@ console.info("[Manager Hub v757] smart card badge fit polish", window.ZUMMEE_BUI
     padding:0!important;
   }
   #smartAlertStrip .mh2-alert-badge{
-    flex:0 0 auto!important;
-    min-width:112px!important;
-    max-width:none!important;
-    min-height:40px!important;
-    padding:0 14px!important;
+    justify-self:end!important;
+    flex:none!important;
+    width:auto!important;
+    min-width:134px!important;
+    max-width:160px!important;
+    min-height:46px!important;
+    padding:0 18px!important;
     border-radius:999px!important;
     white-space:nowrap!important;
     text-align:center!important;
     font-size:12px!important;
     line-height:1!important;
-    letter-spacing:.12em!important;
+    letter-spacing:.14em!important;
+    overflow:hidden!important;
+    text-overflow:clip!important;
+  }
+  @media (max-width:1080px){
+    #smartAlertStrip .mh2-alert{padding:20px 20px!important;}
+    #smartAlertStrip .mh2-alert-top{gap:14px!important;}
+    #smartAlertStrip .mh2-alert-title{font-size:clamp(17px,2vw,21px)!important;}
+    #smartAlertStrip .mh2-alert-badge{min-width:124px!important;max-width:146px!important;min-height:44px!important;padding:0 14px!important;font-size:11px!important;letter-spacing:.11em!important;}
   }
   @media (max-width:860px){
-    #smartAlertStrip .mh2-alert-badge{
-      min-width:104px!important;
-      min-height:38px!important;
-      padding:0 12px!important;
-      font-size:11px!important;
-      letter-spacing:.10em!important;
-    }
+    #smartAlertStrip .mh2-alert-top{grid-template-columns:1fr!important;gap:14px!important;}
+    #smartAlertStrip .mh2-alert-badge{justify-self:start!important;}
   }
 </style>
 
@@ -2943,7 +2956,9 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
 </style>
 
 
-<script id="zummee-v758-manager-hub-smart-card-layout-diagnostic">
+
+
+<script id="zummee-v759-manager-hub-smart-card-layout-diagnostic">
 (function(){
   window.getManagerHubSmartCardLayoutStatus=function(){
     try{
@@ -2951,11 +2966,14 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
         var title=card.querySelector('.mh2-alert-title');
         var badge=card.querySelector('.mh2-alert-badge');
         var copy=card.querySelector('.mh2-alert-copy');
+        var titleRect=title ? title.getBoundingClientRect() : {right:0};
+        var badgeRect=badge ? badge.getBoundingClientRect() : {left:0};
         var style=copy ? window.getComputedStyle(copy) : null;
         return {
           title:title ? title.textContent.trim() : '',
           badge:badge ? badge.textContent.trim() : '',
           copyHidden:!copy || style.display==='none',
+          noOverlap:!title || !badge || titleRect.right <= badgeRect.left,
           cardHeight:Math.round(card.getBoundingClientRect().height)
         };
       });
@@ -2964,7 +2982,6 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
   };
 })();
 </script>
-
 </head>
 <body class="manager-hub-page">
   <main class="mh2-page">
