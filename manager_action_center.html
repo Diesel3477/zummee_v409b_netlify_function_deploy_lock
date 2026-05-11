@@ -190,7 +190,6 @@ function initCollapsibleSections(){
 }
 function renderTools(){
   const tools=[
-    ['Daily Ops','ops.html','Daily operating notes, reminders, access codes, and community records.','gold','ops'],
     ['Board Member Hub','board_member_hub.html','Board-submitted items, calendar, agenda workflow, photos, and work orders.','gold','board'],
     ['Resident Work Orders','resident_work_orders.html','Resident and employee-submitted work-order management.','','workorders'],
     ['Live Maintenance Updates','maintenance_updates.html','Active vendor and maintenance status stream.','','maintenance'],
@@ -483,6 +482,25 @@ document.addEventListener('DOMContentLoaded',async()=>{try{initCollapsibleSectio
       build: window.ZUMMEE_ACTION_CENTER_BUILD || 'unknown',
       communityInspectionsHref: link ? link.getAttribute('href') : '',
       ok: !!(link && /community_inspections\.html/.test(link.getAttribute('href') || ''))
+    };
+  };
+})();
+</script>
+
+
+<script id="zummee-v756-action-center-remove-daily-ops-card">
+(function(){
+  window.ZUMMEE_ACTION_CENTER_BUILD = '2026-05-11-v756-action-center-remove-daily-ops-card';
+  window.getManagerActionCenterDeploymentStatus = function(){
+    var dailyOps = Array.from(document.querySelectorAll('.tool strong')).some(function(el){ return (el.textContent||'').trim() === 'Daily Ops'; });
+    var operationsPortal = Array.from(document.querySelectorAll('.tool strong')).some(function(el){ return (el.textContent||'').trim() === 'Operations Portal'; });
+    var inspections = Array.from(document.querySelectorAll('.tool')).filter(function(a){ return /Community Inspections/i.test(a.textContent||''); }).map(function(a){ return a.getAttribute('href') || ''; });
+    return {
+      ok: !dailyOps && operationsPortal,
+      build: window.ZUMMEE_ACTION_CENTER_BUILD,
+      dailyOpsCardPresent: dailyOps,
+      operationsPortalCardPresent: operationsPortal,
+      communityInspectionsHref: inspections[0] || ''
     };
   };
 })();
