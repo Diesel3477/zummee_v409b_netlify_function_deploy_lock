@@ -1047,6 +1047,8 @@ async function loadCompanyRoster(companyName){
       };
     });
 
+    rows = await attachAssignedCommunities(rows, companyId);
+
     // Alphabetical sort (case-insensitive)
     rows.sort(function(a,b){
       var an = String(a.name||"").toLowerCase();
@@ -1056,7 +1058,106 @@ async function loadCompanyRoster(companyName){
       return 0;
     });
 
+
     return rows;
+  }
+
+  function cleanDirectoryName(v){ return String(v||'').trim(); }
+  function rowUserKey(row){
+    return cleanDirectoryName(row && (row.auth_user_id || row.user_id || row.employee_id || row.profile_id || row.assigned_user_id || row.staff_user_id || row.id));
+  }
+  function assignmentCommunityId(row){
+    return cleanDirectoryName(row && (row.community_id || row.property_community_id || row.assigned_community_id));
+  }
+  function assignmentCommunityName(row){
+    return cleanDirectoryName(row && (row.community_name || row.property_community_name || row.community || row.name));
+  }
+  async function safeDirectoryRead(table, selectExpr, mutate){
+    try{
+      var q = window.sb.from(table).select(selectExpr || '*').limit(2000);
+      if(typeof mutate === 'function') q = mutate(q);
+      var res = await q;
+      if(res && !res.error && Array.isArray(res.data)) return res.data;
+      if(res && res.error) console.warn('[Company Directory v722] read skipped:', table, res.error.message || res.error);
+    }catch(err){
+      console.warn('[Company Directory v722] read failed:', table, err && err.message ? err.message : err);
+    }
+    return [];
+  }
+  async function loadCommunityNameMap(communityIds){
+    var ids = Array.from(new Set((communityIds||[]).map(cleanDirectoryName).filter(Boolean)));
+    var map = {};
+    if(!ids.length) return map;
+    async function pull(table){
+      try{
+        var res = await window.sb.from(table).select('*').in('id', ids).limit(2000);
+        if(res && !res.error && Array.isArray(res.data)){
+          res.data.forEach(function(c){
+            var id = cleanDirectoryName(c && c.id);
+            var name = cleanDirectoryName(c && (c.name || c.community_name || c.title || c.legal_name));
+            if(id && name) map[id] = name;
+          });
+        }else if(res && res.error){
+          console.warn('[Company Directory v722] community name read skipped:', table, res.error.message || res.error);
+        }
+      }catch(err){
+        console.warn('[Company Directory v722] community name read failed:', table, err && err.message ? err.message : err);
+      }
+    }
+    await pull('communities');
+    await pull('PropertyCommunities');
+    await pull('property_communities');
+    return map;
+  }
+  async function attachAssignedCommunities(rows, companyId){
+    rows = Array.isArray(rows) ? rows : [];
+    var userIds = rows.map(function(r){ return cleanDirectoryName(r && r.id); }).filter(Boolean);
+    var userSet = new Set(userIds);
+    if(!userIds.length) return rows;
+
+    // Single-source directory enrichment: community_assignments. We read broadly and filter client-side
+    // to avoid brittle column assumptions across older Zummee builds.
+    var assignments = await safeDirectoryRead('community_assignments', '*');
+    if(!assignments.length){
+      assignments = assignments.concat(await safeDirectoryRead('CommunityAssignments', '*'));
+    }
+
+    var byUser = {};
+    var communityIds = [];
+    assignments.forEach(function(a){
+      var uid = rowUserKey(a);
+      if(!uid || !userSet.has(uid)) return;
+      var cid = assignmentCommunityId(a);
+      var cname = assignmentCommunityName(a);
+      if(cid) communityIds.push(cid);
+      if(!byUser[uid]) byUser[uid] = [];
+      byUser[uid].push({ id:cid, name:cname });
+    });
+
+    var nameMap = await loadCommunityNameMap(communityIds);
+
+    var enriched = rows.map(function(r){
+      var matches = byUser[cleanDirectoryName(r && r.id)] || [];
+      var seen = new Set();
+      var names = [];
+      matches.forEach(function(m){
+        var label = cleanDirectoryName(m.name || nameMap[m.id] || m.id);
+        if(!label || seen.has(label.toLowerCase())) return;
+        seen.add(label.toLowerCase());
+        names.push(label);
+      });
+      return Object.assign({}, r, {
+        assigned_communities: names,
+        assigned_communities_search: names.join(' | ')
+      });
+    });
+
+    window.__companyDirectoryCommunitySearch = {
+      build:'2026-05-11-v722-company-directory-community-search',
+      assignmentRows:Array.isArray(assignments) ? assignments.length : 0,
+      enrichedRows:enriched.filter(function(r){ return (r.assigned_communities||[]).length; }).length
+    };
+    return enriched;
   }
 function deptClass(dept){
     var d = String(dept||"").trim().toLowerCase();
@@ -1067,6 +1168,17 @@ function deptClass(dept){
   }
 
   function esc(s){ return String(s||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
+
+  function renderCommunityChips(row){
+    var names = (row && Array.isArray(row.assigned_communities)) ? row.assigned_communities : [];
+    if(!names.length) return '';
+    var visible = names.slice(0,3);
+    var extra = names.length - visible.length;
+    var html = '<div class="cd-community-chips">' + visible.map(function(name){
+      return '<span class="cd-community-chip">' + esc(name) + '</span>';
+    }).join('') + (extra > 0 ? '<span class="cd-community-chip cd-community-chip-more">+' + extra + '</span>' : '') + '</div>';
+    return html;
+  }
 
   function render(rows){
     var tbody = document.getElementById("dirTbody");
@@ -1088,7 +1200,7 @@ function deptClass(dept){
       var emailCell = email ? ('<a class="linkish" href="mailto:' + encodeURIComponent(email) + '">' + esc(email) + '</a>') : '<span class="muted">—</span>';
 
       return '<tr>' +
-        '<td><div style="font-weight:950">' + esc(name) + '</div></td>' + 
+        '<td><div style="font-weight:950">' + esc(name) + '</div>' + renderCommunityChips(r) + '</td>' + 
         '<td>' + (phoneDigits ? ('<a class="linkish" href="tel:' + phoneDigits + '">' + esc(phoneDisp||phone) + '</a>') : '<span class="muted">—</span>') + '</td>' +
         '<td>' + emailCell + '</td>' +
       '</tr>';
@@ -1099,7 +1211,7 @@ function deptClass(dept){
     var q = (document.getElementById("q").value || "").trim().toLowerCase();
     if(!q) return allRows;
     return allRows.filter(function(r){
-      var hay = [r.name, r.phone, r.email, r.title].map(function(x){return String(x||"").toLowerCase();}).join(" | ");
+      var hay = [r.name, r.phone, r.email, r.title, r.role, r.department, r.assigned_communities_search, (Array.isArray(r.assigned_communities) ? r.assigned_communities.join(' | ') : '')].map(function(x){return String(x||"").toLowerCase();}).join(" | ");
       return hay.indexOf(q) !== -1;
     });
   }
@@ -3086,7 +3198,7 @@ body.dark-mode .mh2-stat-box {
     <div class="cd-search-actions">
       <div class="cd-search-wrap">
         <span aria-hidden="true">⌕</span>
-        <input id="q" type="text" placeholder="Search employees by name, phone, or email…" />
+        <input id="q" type="text" placeholder="Search employees by name, phone, email, or community…" />
       </div>
       <button class="cd-btn cd-btn-secondary" id="refreshBtn" type="button">Refresh</button>
       <a class="cd-btn cd-btn-primary" id="goProfile" href="profile.html" style="display:none">Open Profile</a>
@@ -3570,13 +3682,47 @@ body.dark-mode .mh2-stat-box {
   }
 </style>
 
-<script id="company-directory-v721-diagnostics">
+
+
+<style id="company-directory-v722-community-search-style">
+  .cd-community-chips{
+    margin-top:8px!important;
+    display:flex!important;
+    flex-wrap:wrap!important;
+    gap:6px!important;
+  }
+  .cd-community-chip{
+    min-height:24px!important;
+    padding:0 9px!important;
+    border-radius:999px!important;
+    border:1px solid #d8e5f6!important;
+    background:#f7fbff!important;
+    color:#60758a!important;
+    font-size:11px!important;
+    line-height:22px!important;
+    font-weight:950!important;
+    letter-spacing:.02em!important;
+    white-space:nowrap!important;
+  }
+  .cd-community-chip-more{
+    background:#fff9d8!important;
+    border-color:#efcf5b!important;
+    color:#17365f!important;
+  }
+  @media(max-width:620px){
+    .cd-community-chip{font-size:10px!important;padding:0 8px!important;}
+  }
+</style>
+
+<script id="company-directory-v722-diagnostics">
   window.getCompanyDirectoryDeploymentStatus = function(){
     return {
-      build: window.ZUMMEE_BUILD || '2026-05-11-v721-company-directory-logo-top-right',
+      build: window.ZUMMEE_BUILD || '2026-05-11-v722-company-directory-community-search',
       redesigned: true,
+      communitySearch: true,
       header: !!document.querySelector('.cd-header-card'),
-      rowCount: Array.isArray(window.__allCompanyRows) ? window.__allCompanyRows.length : null
+      rowCount: Array.isArray(window.__allCompanyRows) ? window.__allCompanyRows.length : null,
+      communitySearchStatus: window.__companyDirectoryCommunitySearch || null
     };
   };
 </script>
