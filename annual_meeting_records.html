@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Annual Meeting Records</title>
-<script id="annual-records-build-marker">window.ZUMMEE_BUILD="2026-05-11-v750-annual-records-header-logo-title-fix";console.info("[Annual Records]",window.ZUMMEE_BUILD);</script>
+<script id="annual-records-build-marker">window.ZUMMEE_BUILD="2026-05-11-v751-annual-records-shared-community-resolver";console.info("[Annual Records]",window.ZUMMEE_BUILD);</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 
@@ -256,6 +256,7 @@
   </div>
 
 
+<script src="shared/community-assignment-resolver.js?v=2026-05-11-v751"></script>
 <script>
 (function(){
   const DEFAULT_SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
@@ -273,6 +274,12 @@
         }
       })
     : null;
+  try{
+    if(sb){
+      window.supabaseClient = window.supabaseClient || sb;
+      window.sb = window.sb || sb;
+    }
+  }catch(_eExposeClient){}
 
   const els = {
     pageLede: document.getElementById('pageLede'),
@@ -306,7 +313,7 @@
     archives: [],
     visibleArchives: []
   };
-  const BUILD = '2026-05-11-v750-annual-records-header-logo-title-fix';
+  const BUILD = '2026-05-11-v751-annual-records-shared-community-resolver';
   window.__AnnualMeetingRecordsStatus = {
     build: BUILD,
     loadedAt: null,
@@ -316,6 +323,8 @@
     role: '',
     communityCount: 0,
     archiveCount: 0,
+    assignmentSource: '',
+    assignedCommunities: [],
     logoLoaded: false,
     error: ''
   };
@@ -466,59 +475,72 @@
   async function loadAssignments(){
     const uid = safe(state.authUser && state.authUser.id);
     const email = lower(state.authUser && state.authUser.email);
-    let rows = [];
-    async function tryAssignments(mode){
-      try{
-        let q = sb.from('community_assignments').select('*').order('community_name', { ascending:true });
-        if(mode === 'company_id' && state.companyId) q = q.eq('company_id', state.companyId);
-        if(mode === 'company_name' && state.companyName) q = q.eq('company_name', state.companyName);
-        const res = await q;
-        if(res && !res.error && Array.isArray(res.data)) return res.data;
-      }catch(_e){}
-      return [];
+
+    async function useSharedResolver(){
+      const resolver = window.ZummeeCommunityAssignmentResolver;
+      const fn = resolver && typeof resolver.getAssignedCommunities === 'function'
+        ? resolver.getAssignedCommunities
+        : (typeof window.getZummeeAssignedCommunities === 'function' ? window.getZummeeAssignedCommunities : null);
+      if(!fn) return null;
+      const list = await fn({ client: sb, userId: uid, email: email, source: 'annual-meeting-records' });
+      if(!Array.isArray(list)) return null;
+      return list.map(function(c){
+        return {
+          id: safe(c.id || c.community_id),
+          name: safe(c.name || c.community_name)
+        };
+      }).filter(function(c){ return c.id || c.name; });
     }
 
-    if(state.companyId) rows = rows.concat(await tryAssignments('company_id'));
-    if(state.companyName && !rows.length) rows = rows.concat(await tryAssignments('company_name'));
-    if(!rows.length){
-      const allRows = await tryAssignments('all');
-      rows = allRows.filter(row => {
-        const rowCompanyId = safe(row.company_id);
-        const rowCompanyName = lower(row.company_name || row.company);
-        return (state.companyId && rowCompanyId === state.companyId) || (state.companyName && rowCompanyName === lower(state.companyName));
-      });
+    try{
+      const resolved = await useSharedResolver();
+      if(resolved && resolved.length){
+        state.assignedCommunities = resolved.slice();
+        state.accessibleCommunities = resolved.slice();
+        window.__AnnualMeetingRecordsStatus.assignmentSource = 'shared/community-assignment-resolver.js';
+        window.__AnnualMeetingRecordsStatus.assignedCommunities = resolved.map(function(c){ return c.name || c.id; });
+        return;
+      }
+    }catch(err){
+      console.warn('[Annual Records v751] shared assignment resolver failed; using safe fallback', err);
+      window.__AnnualMeetingRecordsStatus.assignmentSource = 'fallback_after_shared_resolver_error';
+      window.__AnnualMeetingRecordsStatus.error = safe(err && err.message) || window.__AnnualMeetingRecordsStatus.error;
     }
+
+    // Fallback only: keep this bounded and assignment-only so this page never invents communities.
+    let rows = [];
+    async function addAssignmentQuery(label, col, value){
+      value = safe(value);
+      if(!value) return;
+      try{
+        const res = await sb.from('community_assignments')
+          .select('id,community_id,community_name,company_id,employee_id,employee_name,employee_email,assistant_name,assistant_email')
+          .eq(col, value)
+          .order('community_name', { ascending:true });
+        if(res && res.error) throw res.error;
+        if(Array.isArray(res && res.data)) rows = rows.concat(res.data);
+      }catch(err){
+        console.warn('[Annual Records v751] assignment fallback '+label+' failed', err);
+      }
+    }
+
+    await addAssignmentQuery('employee_id', 'employee_id', uid);
+    await addAssignmentQuery('employee_email', 'employee_email', email);
 
     const seen = new Set();
-    rows = rows.filter(row => {
-      const key = safe(row.id) || [safe(row.company_id), safe(row.community_id), safe(row.community_name)].join('|');
-      if(seen.has(key)) return false;
+    const assigned = rows.map(function(row){
+      return { id: safe(row.community_id), name: safe(row.community_name) };
+    }).filter(function(c){
+      const key = c.id || c.name;
+      if(!key || seen.has(key)) return false;
       seen.add(key);
       return true;
     });
 
-    const sup = isSupervisorRole(state.role);
-    if(sup){
-      state.accessibleCommunities = rows.map(row => ({ id: safe(row.community_id), name: safe(row.community_name) })).filter(x => x.id || x.name);
-      state.assignedCommunities = state.accessibleCommunities.slice();
-      return;
-    }
-
-    const assigned = rows.filter(row => {
-      const employeeId = lower(row.employee_id);
-      const employeeEmail = lower(row.employee_email);
-      return (uid && employeeId === lower(uid)) || (email && employeeEmail === email);
-    }).map(row => ({ id: safe(row.community_id), name: safe(row.community_name) }));
-
-    if(!assigned.length){
-      const selectedCommunityId = safe(localStorage.getItem('selectedCommunityId') || localStorage.getItem('zummee_selected_community_id'));
-      const selectedCommunityName = safe(localStorage.getItem('selectedCommunityName') || localStorage.getItem('zummee_selected_community_name'));
-      if(selectedCommunityId || selectedCommunityName){
-        assigned.push({ id:selectedCommunityId, name:selectedCommunityName });
-      }
-    }
     state.assignedCommunities = assigned;
     state.accessibleCommunities = assigned.slice();
+    window.__AnnualMeetingRecordsStatus.assignmentSource = 'community_assignments.employee_id_or_email_fallback';
+    window.__AnnualMeetingRecordsStatus.assignedCommunities = assigned.map(function(c){ return c.name || c.id; });
   }
 
   async function loadArchives(){
@@ -711,6 +733,16 @@
     els.statPacketsSub.textContent = state.archives.length ? 'Stored by community and year.' : 'No mailed packets have been archived yet.';
     els.statLatest.textContent = latest ? fmtDate(latest.mailed_at || latest.created_at) : '—';
     els.statLatestSub.textContent = latest ? ((latest.community_name || 'Community') + ' • ' + (latest.meeting_year || '')) : 'Latest mailed packet on record.';
+    try{
+      window.__AnnualMeetingRecordsStatus.ok = true;
+      window.__AnnualMeetingRecordsStatus.loadedAt = new Date().toISOString();
+      window.__AnnualMeetingRecordsStatus.companyId = state.companyId || '';
+      window.__AnnualMeetingRecordsStatus.companyName = state.companyName || '';
+      window.__AnnualMeetingRecordsStatus.role = state.role || '';
+      window.__AnnualMeetingRecordsStatus.communityCount = communities.length || 0;
+      window.__AnnualMeetingRecordsStatus.archiveCount = state.archives.length || 0;
+      window.__AnnualMeetingRecordsStatus.assignedCommunities = communities.slice();
+    }catch(_eStatus){}
     updateCompletionPill();
   }
 
