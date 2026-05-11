@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  var BUILD = '2026-05-11-v739-preferred-vendors-user-friendly-status';
+  var BUILD = '2026-05-11-v740-preferred-vendors-compact-records-dropdown';
   var SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
   var VENDOR_TABLE = 'preferred_vendors_shared';
@@ -339,10 +339,11 @@
     var emailBlock = v.email ? '<a class="pv-contactBlock" href="mailto:'+esc(v.email)+'"><span class="pv-contactLabel">Email</span><span class="pv-contactValue">'+esc(v.email)+'</span></a>' : '<div class="pv-contactBlock"><span class="pv-contactLabel">Email</span><span class="pv-contactValue">—</span></div>';
     var canManage = isManagerRole();
     return '<article class="pv-vendorCard" data-key="'+esc(v.vendorKey)+'">'
-      + '<div class="pv-vendorTop"><div><div class="pv-vendorName">'+esc(v.vendorName)+'</div>'+(v.contactName ? '<div class="pv-vendorContact">Company Contact: '+esc(v.contactName)+'</div>' : '')+'</div><span class="pv-typePill">'+esc(v.vendorType || 'Other')+'</span></div>'
+      + '<div class="pv-vendorTop"><div class="pv-vendorName">'+esc(v.vendorName)+'</div>'+(v.contactName ? '<div class="pv-vendorContact">Company Contact: '+esc(v.contactName)+'</div>' : '')+'</div>'
+      + '<span class="pv-typePill">'+esc(v.vendorType || 'Other')+'</span>'
       + '<div class="pv-contactGrid">'+phoneBlock+emailBlock+'</div>'
-      + (v.notes ? '<div class="pv-notesBox"><strong>Manager Notes</strong><br>'+esc(v.notes)+'</div>' : '')
       + (canManage ? '<div class="pv-cardActions"><button class="pv-btn" type="button" data-edit="'+esc(v.vendorKey)+'">Edit</button><button class="pv-btn pv-btnDanger" type="button" data-delete="'+esc(v.vendorKey)+'">Delete</button></div>' : '')
+      + (v.notes ? '<div class="pv-notesBox"><strong>Notes</strong> '+esc(v.notes)+'</div>' : '')
       + '</article>';
   }
   function filteredVendors(){
