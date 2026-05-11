@@ -15,7 +15,7 @@
     </div>
   </div>
 
-<script>window.ZUMMEE_BUILD="2026-05-11-v731-preferred-vendors-context-diagnostics";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-11-v732-preferred-vendors-save-action-lock";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -2785,7 +2785,7 @@ body.dark-mode .mh2-stat-box {
 
   /* v728: Supabase lock. Vendor rows are no longer loaded from or saved to localStorage. */
   var pvLastSupabaseStatus = {
-    build:'2026-05-11-v731-preferred-vendors-context-diagnostics',
+    build:'2026-05-11-v732-preferred-vendors-save-action-lock',
     table:'preferred_vendors_shared',
     mode:'supabase-only',
     ok:false,
@@ -4653,7 +4653,7 @@ body.dark-mode .mh2-stat-box {
 <script id="preferred-vendors-v728-status">
   window.getPreferredVendorsDeploymentStatus = function(){
     return {
-      build:'2026-05-11-v731-preferred-vendors-context-diagnostics',
+      build:'2026-05-11-v732-preferred-vendors-save-action-lock',
       premium:true,
       headerLogoTopRight:true,
       logoUnboxed:true,
@@ -4669,7 +4669,7 @@ body.dark-mode .mh2-stat-box {
   window.testPreferredVendorsContext = async function(){
     var sb = (window.sb || window.supabaseClient || (window.pvCtx && window.pvCtx.sb) || null);
     if(!sb || !sb.auth) return { ok:false, error:'No Supabase client found on page.' };
-    var out = { ok:false, build:'2026-05-11-v731-preferred-vendors-context-diagnostics' };
+    var out = { ok:false, build:'2026-05-11-v732-preferred-vendors-save-action-lock' };
     try{
       var userRes = await sb.auth.getUser();
       var user = userRes && userRes.data ? userRes.data.user : null;
@@ -4696,7 +4696,7 @@ body.dark-mode .mh2-stat-box {
 
   window.getPreferredVendorsSupabaseStatus = function(){
     return window.__pvSupabaseStatus || {
-      build:'2026-05-11-v731-preferred-vendors-context-diagnostics',
+      build:'2026-05-11-v732-preferred-vendors-save-action-lock',
       table:'preferred_vendors_shared',
       mode:'supabase-only',
       ok:false,
@@ -4704,5 +4704,214 @@ body.dark-mode .mh2-stat-box {
     };
   };
 </script>
+
+
+<script id="preferred-vendors-v732-save-action-lock">
+(function(){
+  'use strict';
+  var BUILD = '2026-05-11-v732-preferred-vendors-save-action-lock';
+  function $(id){ return document.getElementById(id); }
+  function val(id){ var el=$(id); return String(el && el.value || '').trim(); }
+  function setVal(id,v){ var el=$(id); if(el) el.value = v || ''; }
+  function status(msg, isErr){
+    var el = $('pv_manageStatus');
+    if(el){
+      el.textContent = msg || '';
+      el.style.color = isErr ? '#b91c1c' : '#166534';
+      el.style.fontWeight = '900';
+    }
+    try{ console[isErr?'warn':'info']('[Preferred Vendors v732]', msg); }catch(_e){}
+  }
+  function phoneDigits(v){ return String(v||'').replace(/\D/g,''); }
+  function safeGet(k){ try{ return localStorage.getItem(k) || sessionStorage.getItem(k) || ''; }catch(_e){ return ''; } }
+  function safeSet(k,v){ try{ if(v){ localStorage.setItem(k,v); sessionStorage.setItem(k,v); } }catch(_e){} }
+  function readJsonStore(keys){
+    for(var i=0;i<keys.length;i++){
+      try{ var raw=safeGet(keys[i]); if(raw){ var obj=JSON.parse(raw); if(obj) return obj; } }catch(_e){}
+    }
+    return null;
+  }
+  async function getClient(){
+    if(window.getPvClient){ try{ var c=await window.getPvClient(); if(c&&c.from&&c.auth) return c; }catch(_e){} }
+    if(window.sb && window.sb.from && window.sb.auth) return window.sb;
+    if(window.supabaseClient && window.supabaseClient.from && window.supabaseClient.auth) return window.supabaseClient;
+    if(window.ensureSupabase){ try{ var c2=await window.ensureSupabase(); if(c2&&c2.from&&c2.auth) return c2; }catch(_e){} }
+    return null;
+  }
+  function getStatus(){ return (window.getPreferredVendorsSupabaseStatus && window.getPreferredVendorsSupabaseStatus()) || window.__pvSupabaseStatus || {}; }
+  function currentCommunityId(){
+    var st=getStatus();
+    var candidates=[st.community_id, window.__pvSelectedCommunityId, window.selectedCommunityId, safeGet('zummee_selected_community_id'), safeGet('selectedCommunityId'), safeGet('community_id')];
+    try{
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity==='function'){
+        var active=window.ZummeeCommunityState.getActiveCommunity();
+        candidates.unshift(active && (active.id || active.community_id));
+      }
+    }catch(_e){}
+    var obj=readJsonStore(['zummee_active_community_v601','zummee_active_community','active_community','selected_community']);
+    if(obj) candidates.unshift(obj.id || obj.community_id || obj.value);
+    for(var i=0;i<candidates.length;i++){
+      var v=String(candidates[i]||'').trim();
+      if(v && v !== 'null' && v !== 'undefined') return v;
+    }
+    return '';
+  }
+  async function context(){
+    var sb=await getClient();
+    if(!sb) throw new Error('Supabase client is not ready.');
+    var userRes=await sb.auth.getUser();
+    var user=userRes && userRes.data && userRes.data.user;
+    if(!user) throw new Error('No authenticated user. Please log in again.');
+    var uid=user.id;
+    var st=getStatus();
+    var company=String(st.company || (window.getCompany && window.getCompany()) || safeGet('zummee_company') || safeGet('zummee_company_name') || safeGet('company_name') || '').trim();
+    var companyId=String(st.company_id || safeGet('zummee_company_id') || safeGet('company_id') || '').trim();
+    var role=String(document.documentElement.getAttribute('data-staff-role') || '').trim();
+    try{
+      var ud=await sb.from('userdirectory').select('auth_user_id,role,company_id,company_name,approved').eq('auth_user_id',uid).maybeSingle();
+      if(ud && ud.data){
+        companyId = String(ud.data.company_id || companyId || '').trim();
+        company = String(ud.data.company_name || company || '').trim();
+        role = String(ud.data.role || role || '').trim();
+      }else{
+        var udf=await sb.from('userdirectory').select('auth_user_id,role,company_id,approved').eq('auth_user_id',uid).maybeSingle();
+        if(udf && udf.data){
+          companyId = String(udf.data.company_id || companyId || '').trim();
+          role = String(udf.data.role || role || '').trim();
+        }
+      }
+    }catch(_e){}
+    if(!company){
+      try{
+        var pr=await sb.from('profiles').select('id,company,company_id,name,email').eq('id',uid).maybeSingle();
+        if(pr && pr.data){
+          company = String(pr.data.company || company || '').trim();
+          companyId = String(pr.data.company_id || companyId || '').trim();
+        }
+      }catch(_e){}
+    }
+    if(!company && companyId) company = companyId;
+    var cid=currentCommunityId();
+    if(!cid){
+      try{
+        var ca=await sb.from('community_assignments').select('community_id').eq('user_id',uid).limit(1);
+        if(ca && ca.data && ca.data[0]) cid=String(ca.data[0].community_id||'').trim();
+      }catch(_e1){
+        try{
+          var ca2=await sb.from('community_assignments').select('community_id').eq('auth_user_id',uid).limit(1);
+          if(ca2 && ca2.data && ca2.data[0]) cid=String(ca2.data[0].community_id||'').trim();
+        }catch(_e2){}
+      }
+    }
+    if(company){ safeSet('zummee_company', company); safeSet('zummee_company_name', company); safeSet('company_name', company); }
+    if(companyId){ safeSet('zummee_company_id', companyId); safeSet('company_id', companyId); }
+    if(role) document.documentElement.setAttribute('data-staff-role', role);
+    var roleLow=String(role||'').toLowerCase();
+    var canSave=roleLow.includes('supervisor') || roleLow.includes('admin') || roleLow.includes('companyadmin');
+    return { ok:!!(company&&cid), sb:sb, user:user, role:role, canSave:canSave, company:company, company_id:companyId, community_id:cid };
+  }
+  function normalizeRows(rows){
+    return (Array.isArray(rows)?rows:[]).filter(Boolean).map(function(r){
+      return {
+        vendorKey: String(r.vendorKey || r.vendor_key || ('pvk_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8))).trim(),
+        vendorName: String(r.vendorName || '').trim(),
+        vendorType: String(r.vendorType || '').trim(),
+        contactName: String(r.contactName || '').trim(),
+        phone: String(r.phone || '').trim(),
+        email: String(r.email || '').trim(),
+        notes: String(r.notes || '').trim()
+      };
+    }).filter(function(r){ return !!r.vendorName; });
+  }
+  function makeVendorKey(row){
+    var raw=[row.vendorName,row.vendorType,row.contactName,phoneDigits(row.phone),String(row.email||'').toLowerCase()].join('|').toLowerCase();
+    var h=2166136261;
+    for(var i=0;i<raw.length;i++){ h^=raw.charCodeAt(i); h += (h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24); }
+    return 'pvk_' + (h>>>0).toString(36);
+  }
+  async function saveVendorNow(){
+    var btn=$('pv_saveBtn');
+    var vendorName=val('pv_vendorName');
+    if(!vendorName){ status('Vendor name is required.', true); return false; }
+    try{
+      if(btn){ btn.disabled=true; btn.textContent='Saving…'; }
+      status('Saving vendor to Supabase…');
+      var ctx=await context();
+      if(!ctx.ok) throw new Error('Missing company or community context. company='+(ctx.company||'blank')+', community_id='+(ctx.community_id||'blank'));
+      if(!ctx.canSave) throw new Error('Only supervisors and admins can save preferred vendors. Current role: '+(ctx.role||'blank'));
+      var payload={
+        vendorName: vendorName,
+        vendorType: val('pv_vendorType'),
+        contactName: val('pv_contactName'),
+        phone: val('pv_phone'),
+        email: val('pv_email'),
+        notes: val('pv_notes')
+      };
+      payload.vendorKey = makeVendorKey(payload);
+      var rows=normalizeRows(window.__pvRenderedRows || []);
+      var editIndex=val('pv_editIndex');
+      if(editIndex !== '' && rows[Number(editIndex)]){
+        payload.vendorKey = rows[Number(editIndex)].vendorKey || payload.vendorKey;
+        rows[Number(editIndex)] = Object.assign({}, rows[Number(editIndex)], payload);
+      }else{
+        rows.unshift(payload);
+      }
+      var res=await ctx.sb.from('preferred_vendors_shared').upsert({
+        company: ctx.company,
+        community_id: ctx.community_id,
+        vendors: rows,
+        updated_at: new Date().toISOString()
+      }, { onConflict:'company,community_id' }).select('company,community_id,updated_at,vendors').maybeSingle();
+      if(res && res.error) throw res.error;
+      window.__pvRenderedRows = rows.slice();
+      window.__pvSupabaseStatus = Object.assign({}, window.__pvSupabaseStatus || {}, {
+        build: BUILD,
+        ok:true,
+        mode:'supabase-only',
+        table:'preferred_vendors_shared',
+        cloudCount:rows.length,
+        company:ctx.company,
+        company_id:ctx.company_id,
+        community_id:ctx.community_id,
+        savedAt:new Date().toISOString(),
+        error:''
+      });
+      setVal('pv_vendorName',''); setVal('pv_contactName',''); setVal('pv_phone',''); setVal('pv_email',''); setVal('pv_notes',''); setVal('pv_editIndex','');
+      status('Vendor saved to Supabase.');
+      try{ if(window.ZUMMEE_preferredVendorsRender) await window.ZUMMEE_preferredVendorsRender(true); }catch(renderErr){ console.warn('[Preferred Vendors v732] render after save failed', renderErr); }
+      return true;
+    }catch(err){
+      var msg=err && err.message ? err.message : String(err||'Unknown save error');
+      window.__pvSupabaseStatus = Object.assign({}, window.__pvSupabaseStatus || {}, { build:BUILD, ok:false, error:msg, savedAt:null });
+      status('Vendor was not saved: '+msg, true);
+      console.error('[Preferred Vendors v732] save failed', err);
+      return false;
+    }finally{
+      if(btn){ btn.disabled=false; btn.textContent = val('pv_editIndex') ? 'Update Vendor' : 'Save Vendor'; }
+    }
+  }
+  function bind(){
+    var form=$('pv_form');
+    var btn=$('pv_saveBtn');
+    if(form && !form.__pvV732Bound){
+      form.__pvV732Bound=true;
+      form.addEventListener('submit', function(e){ e.preventDefault(); e.stopImmediatePropagation(); saveVendorNow(); }, true);
+    }
+    if(btn && !btn.__pvV732Bound){
+      btn.__pvV732Bound=true;
+      btn.addEventListener('click', function(e){ e.preventDefault(); e.stopImmediatePropagation(); saveVendorNow(); }, true);
+    }
+  }
+  window.getPreferredVendorsSupabaseStatus = function(){
+    return window.__pvSupabaseStatus || { build:BUILD, table:'preferred_vendors_shared', mode:'supabase-only', ok:false, error:'Preferred vendors have not loaded yet.' };
+  };
+  window.testPreferredVendorsContext = context;
+  window.testPreferredVendorSaveClick = saveVendorNow;
+  window.addEventListener('DOMContentLoaded', bind);
+  setTimeout(bind, 250);
+  setTimeout(bind, 1000);
+})();
+</script>
+
 </body>
 </html>
