@@ -3,6 +3,10 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Manager Action Center</title>
+  <script id="manager-action-center-v754-build-marker">
+    window.ZUMMEE_ACTION_CENTER_BUILD = "2026-05-11-v754-action-center-community-inspections-route";
+    console.info("[Manager Action Center v754] Community Inspections route updated", window.ZUMMEE_ACTION_CENTER_BUILD);
+  </script>
   <link rel="stylesheet" href="dark-mode.css?v=2026-04-27-v266">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="shared/supabase-client.js?v=2026-04-29-v327"></script>
@@ -191,7 +195,7 @@ function renderTools(){
     ['Resident Work Orders','resident_work_orders.html','Resident and employee-submitted work-order management.','','workorders'],
     ['Live Maintenance Updates','maintenance_updates.html','Active vendor and maintenance status stream.','','maintenance'],
     ['Mileage Tracker','mileage.html','Mileage submission, compliance, reporting, and reimbursements.','',''],
-    ['Community Inspections','inspections.html','Inspection logging and follow-up work orders.','',''],
+    ['Community Inspections','community_inspections.html','Inspection logging and follow-up work orders.','',''],
     ['Annual Meetings','annual_meetings.html','Packet generation, approvals, mailed records, and presentation workflow.','','annual'],
     ['Preferred Vendors','preferred_vendors.html','Approved vendor directory and routing support.','',''],
     ['Reminders','inspections.html#reminders','Due-soon and overdue reminders tied to daily operations.','','reminders'],
@@ -466,6 +470,21 @@ document.addEventListener('DOMContentLoaded',async()=>{try{initCollapsibleSectio
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',schedule,{once:true}); else schedule();
   window.addEventListener('pageshow',schedule);
   document.addEventListener('change',function(e){if(e.target&&e.target.id==='communitySelect') schedule();},true);
+})();
+</script>
+
+<script id="zummee-v754-action-center-route-diagnostics">
+(function(){
+  window.getManagerActionCenterDeploymentStatus = function(){
+    var link = Array.from(document.querySelectorAll('.tool')).find(function(a){
+      return /Community Inspections/i.test(a.textContent || '');
+    });
+    return {
+      build: window.ZUMMEE_ACTION_CENTER_BUILD || 'unknown',
+      communityInspectionsHref: link ? link.getAttribute('href') : '',
+      ok: !!(link && /community_inspections\.html/.test(link.getAttribute('href') || ''))
+    };
+  };
 })();
 </script>
 
