@@ -1,17 +1,17 @@
 /*
-  Zummee Community Assignment Resolver v745
+  Zummee Community Assignment Resolver v746
   Long-term Manager Hub guard:
   - community_assignments uses employee_id / employee_email only
-  - rewrites legacy user_id/auth_user_id filters for this page before Supabase sends them
+  - rewrites legacy user_id/auth_user_id filters for this page before Supabase sends them; avoids missing userdirectory columns
   - resolves assigned communities once and publishes one canonical list/state
   - exposes diagnostics for Manager Hub testing
 */
 (function(){
   'use strict';
-  if (window.__ZUMMEE_COMMUNITY_ASSIGNMENT_RESOLVER_V745__) return;
-  window.__ZUMMEE_COMMUNITY_ASSIGNMENT_RESOLVER_V745__ = true;
+  if (window.__ZUMMEE_COMMUNITY_ASSIGNMENT_RESOLVER_V746__) return;
+  window.__ZUMMEE_COMMUNITY_ASSIGNMENT_RESOLVER_V746__ = true;
 
-  var BUILD = '2026-05-11-v745-community-assignment-resolver';
+  var BUILD = '2026-05-11-v746-community-assignment-resolver-clean-400s';
   var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   var state = {
     build: BUILD,
@@ -46,8 +46,8 @@
   // community_assignments with user_id/auth_user_id. The real production columns are
   // employee_id and employee_email.
   (function patchFetchForLegacyAssignmentColumns(){
-    if (window.__ZUMMEE_COMMUNITY_ASSIGNMENT_FETCH_PATCH_V745__) return;
-    window.__ZUMMEE_COMMUNITY_ASSIGNMENT_FETCH_PATCH_V745__ = true;
+    if (window.__ZUMMEE_COMMUNITY_ASSIGNMENT_FETCH_PATCH_V746__) return;
+    window.__ZUMMEE_COMMUNITY_ASSIGNMENT_FETCH_PATCH_V746__ = true;
     var originalFetch = window.fetch;
     if (typeof originalFetch !== 'function') return;
     window.fetch = function(input, init){
@@ -107,14 +107,14 @@
     // userdirectory is the most useful on this app because it has the staff role/company.
     try{
       var ud = await sb.from('userdirectory')
-        .select('auth_user_id,role,company_id,company_name,company,approved,email')
+        .select('auth_user_id,role,company_id,company_name,approved,email')
         .eq('auth_user_id', uid)
         .maybeSingle();
       if(ud && ud.error) throw ud.error;
       if(ud && ud.data){
         ctx.role = s(ud.data.role) || ctx.role;
         ctx.company_id = s(ud.data.company_id) || ctx.company_id;
-        ctx.company = s(ud.data.company_name || ud.data.company) || ctx.company;
+        ctx.company = s(ud.data.company_name) || ctx.company;
         ctx.email = lower(ud.data.email) || ctx.email;
       }
     }catch(err){ pushError('userdirectory context lookup failed', err); }
