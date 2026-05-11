@@ -3,9 +3,9 @@
 <head>
 
 <script id="manager-hub-v701-stable-build-marker">
-window.ZUMMEE_BUILD = "2026-05-11-v742-manager-hub-live-activity-pulse-dot";
+window.ZUMMEE_BUILD = "2026-05-11-v743-manager-hub-live-activity-unified-stream";
 window.__MANAGER_HUB_V701_SINGLE_OWNER_SMART_CARDS = true;
-console.info("[Manager Hub v742] live activity pulse dot", window.ZUMMEE_BUILD);
+console.info("[Manager Hub v743] live activity unified stream", window.ZUMMEE_BUILD);
 </script>
 <style id="zummee-manager-smooth-return-css-v611">
   /*
@@ -2878,50 +2878,15 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
 
 
 
-<style id="zummee-manager-v742-live-activity-pulse-dot">
-  /* v742: Live Activity feels live with a subtle pulsing green signal. Layout-only. */
-  #liveActivityTitleWrapper{
-    display:flex !important;
-    align-items:center !important;
-    gap:12px !important;
-    min-width:0 !important;
-  }
-
-  #mh2LiveActivityPulseDot{
-    width:15px;
-    height:15px;
-    border-radius:999px;
-    background:#22c55e;
-    box-shadow:0 0 0 0 rgba(34,197,94,.42), 0 0 0 6px rgba(34,197,94,.10);
-    flex:0 0 auto;
-    transform:translateY(3px);
-    animation:mh2LiveActivityPulseDot 1.55s ease-in-out infinite;
-  }
-
-  #mh2LiveActivityPulseDot::after{
-    content:"";
-    position:absolute;
-    inset:3px;
-    border-radius:inherit;
-    background:#ffffff;
-    opacity:.28;
-  }
-
-  @keyframes mh2LiveActivityPulseDot{
-    0%,100%{
-      box-shadow:0 0 0 0 rgba(34,197,94,.42), 0 0 0 6px rgba(34,197,94,.10);
-      transform:translateY(3px) scale(1);
-    }
-    50%{
-      box-shadow:0 0 0 10px rgba(34,197,94,0), 0 0 0 6px rgba(34,197,94,.08);
-      transform:translateY(3px) scale(1.08);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce){
-    #mh2LiveActivityPulseDot{animation:none;}
-  }
+<style id="zummee-v743-live-activity-unified-stream-css">
+  /* v743: Live Activity is the unified stream for work orders, supervisor communications, board items, annual meetings, and notification events. */
+  #activityFeedList{max-height:520px;overflow:auto;scroll-behavior:smooth;}
+  #activityFeedList .mh2-feed-item{animation:mh2LiveRowIn .28s ease both;}
+  @keyframes mh2LiveRowIn{from{opacity:.72;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+  .mh2-live-title-wrap::before{content:"";width:14px;height:14px;border-radius:999px;background:#16a34a;box-shadow:0 0 0 0 rgba(22,163,74,.38);margin-right:12px;flex:0 0 auto;animation:mh2LiveTitlePulse 1.45s ease-in-out infinite;}
+  @keyframes mh2LiveTitlePulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(22,163,74,.38)}50%{transform:scale(1.08);box-shadow:0 0 0 9px rgba(22,163,74,0)}}
 </style>
+
 </head>
 <body class="manager-hub-page">
   <main class="mh2-page">
@@ -3013,7 +2978,6 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
       <section id="activityFeedCard" class="mh2-card mh2-live-primary" aria-label="Live activity shell">
           <div id="activityFeedHeader" class="mh2-section-head mh2-live-compact-head">
             <div id="liveActivityTitleWrapper" class="mh2-live-title-wrap">
-              <span id="mh2LiveActivityPulseDot" aria-hidden="true"></span>
               <h2 id="liveActivityTitle" class="mh2-section-title">Live Activity</h2>
             </div>
             <div class="mh2-actions mh2-live-compact-actions">
@@ -3907,73 +3871,164 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
         var ctx = await getActiveCommunityContext();
         var communityId = ctx.id;
         var communityName = ctx.name || getSelectedCommunityName() || 'Selected community';
-        var cacheKey = 'mh2_live_activity_cache_v441:' + String(communityId || 'global');
+        var cacheKey = 'mh2_live_activity_cache_v743:' + String(communityId || 'global');
         var stateKey = String(communityId || 'global');
-        window.__mh2LiveActivityState = window.__mh2LiveActivityState || { loading:false, token:0, signatures:{} };
+        window.__mh2LiveActivityState = window.__mh2LiveActivityState || { loading:false, token:0, signatures:{}, build:'2026-05-11-v743-live-activity-unified-stream' };
         var liveState = window.__mh2LiveActivityState;
+        liveState.build = '2026-05-11-v743-live-activity-unified-stream';
 
-        function normalizePriority(row){
-          var p = String((row && row.priority) || '').toLowerCase();
-          var t = String((row && row.event_type) || '').toLowerCase();
-          var msg = String((row && (row.message || row.title)) || '').toLowerCase();
-          if(p === 'urgent' || msg.indexOf('urgent') !== -1 || msg.indexOf('overdue') !== -1) return 'urgent';
-          if(p === 'attention' || t.indexOf('approval') !== -1 || msg.indexOf('submitted') !== -1 || msg.indexOf('approval') !== -1 || msg.indexOf('review') !== -1) return 'attention';
-          if(msg.indexOf('completed') !== -1 || msg.indexOf('accepted') !== -1 || msg.indexOf('active') !== -1 || msg.indexOf('scheduled') !== -1) return 'active';
-          return 'attention';
+        if(!liveState.pollBound){
+          liveState.pollBound = true;
+          try{
+            window.setInterval(function(){
+              try{
+                if(document.hidden) return;
+                if(typeof loadLiveActivity === 'function') loadLiveActivity();
+              }catch(_pollErr){}
+            }, 45000);
+          }catch(_pollBindErr){}
         }
-        function normalizeHref(row){
+
+        function compact(v){ return String(v == null ? '' : v).trim(); }
+        function toTime(row){ return compact(row && (row.updated_at || row.created_at || row.submitted_at || row.sent_at || row.completed_at || row.approved_at || row.event_date)) || new Date().toISOString(); }
+        function activeStatus(row){ return compact(row && (row.status || row.workflow_status || row.approval_status || row.current_status || row.state)).toLowerCase(); }
+        function isClosedStatus(st){ return /^(closed|archived|complete|completed|deleted|cancelled|canceled|mailed|sent|done)$/i.test(compact(st)); }
+        function short(v, fallback){
+          v = compact(v || fallback || 'Activity update');
+          return v.length > 96 ? (v.slice(0,93) + '…') : v;
+        }
+        function normalizePriorityText(text, fallback){
+          var s = compact(text).toLowerCase();
+          if(/urgent|emergency|overdue|failed|rejected|late/.test(s)) return 'urgent';
+          if(/completed|complete|accepted|active|sent to vendor|in progress|resolved|approved|ready/.test(s)) return 'active';
+          if(/submitted|pending|review|approval|waiting|needs|new/.test(s)) return 'attention';
+          return fallback || 'neutral';
+        }
+        function pushEvent(bucket, ev){
+          if(!ev) return;
+          ev.id = compact(ev.id || (ev.source + ':' + ev.title + ':' + ev.time));
+          ev.title = short(ev.title || 'Activity update');
+          ev.copy = short(ev.copy || communityName || 'Selected community');
+          ev.time = ev.time || new Date().toISOString();
+          ev.priority = ev.priority || normalizePriorityText(ev.title + ' ' + ev.copy, 'neutral');
+          if(!ev.id || !ev.title) return;
+          bucket.push(ev);
+        }
+        function withTimeout(promise, ms, label){
+          var timer;
+          return Promise.race([
+            promise,
+            new Promise(function(resolve){ timer = setTimeout(function(){ resolve({ error:{ message:(label || 'Live source') + ' timed out' }, data:[] }); }, ms || 7000); })
+          ]).then(function(v){ clearTimeout(timer); return v; }, function(err){ clearTimeout(timer); return { error:err, data:[] }; });
+        }
+        function hrefForNotification(row){
+          var type = compact(row && (row.event_type || row.type)).toLowerCase();
           var md = row && row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
           if(row && row.link_url) return row.link_url;
-          if(md.work_order_id || md.request_id) return 'maintenance_updates.html';
-          if(md.board_item_id || String((row && row.event_type) || '').toLowerCase().indexOf('board') !== -1) return 'board_member_hub_v2.html';
-          if(String((row && row.event_type) || '').toLowerCase().indexOf('annual') !== -1) return 'annual_meeting_status.html';
-          return 'maintenance_updates.html';
+          if(/work_order|maintenance|vendor/.test(type)) return 'resident_work_orders.html';
+          if(/board/.test(type) || md.board_item_id) return 'board_member_hub_v2.html';
+          if(/annual/.test(type) || md.annual_meeting_id || md.annual_meeting_settings_id) return 'annual_meetings.html';
+          if(/supervisor|communication|daily_task/.test(type)) return 'supervisor_communications.html';
+          if(/message/.test(type)) return 'property_manager_messages.html';
+          if(/vendor/.test(type)) return 'preferred_vendors.html';
+          return null;
         }
-        function isLegacyBoardNotification(row){
-          var md = row && row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
-          var type = String((row && row.event_type) || '').toLowerCase();
-          var source = String((row && row.source_table) || md.source_table || '').toLowerCase();
-          var title = String((row && (row.title || row.message)) || '').toLowerCase();
-          if(source.indexOf('board') !== -1) return true;
-          if(type.indexOf('board') !== -1) return true;
-          if(md.board_item_id || md.board_notification_id) return true;
-          if(title.indexOf('board item') !== -1 && (title.indexOf('submitted') !== -1 || title.indexOf('review') !== -1)) return true;
-          return false;
+        function normalizeNotificationRows(rows){
+          return (rows || []).map(function(row){
+            var type = compact(row && (row.event_type || row.type || row.source_table)).replace(/_/g,' ');
+            var title = compact(row && (row.message || row.title)) || (type ? ('New ' + type + ' update') : 'Activity update');
+            var priority = normalizePriorityText((row && row.priority) + ' ' + title, 'attention');
+            return {
+              id:'notify:' + compact(row && row.id),
+              source:'notification_events',
+              time:toTime(row),
+              title:title,
+              copy:type ? type.replace(/\b\w/g, function(m){ return m.toUpperCase(); }) : (communityName || 'Selected community'),
+              priority:priority,
+              href:hrefForNotification(row),
+              community_id:(row && row.community_id) || communityId || null
+            };
+          });
+        }
+        function normalizeWorkOrders(rows){
+          return (rows || []).map(function(row){
+            var st = compact(row && (row.status || row.work_order_status || row.stage)) || 'open';
+            var titleBase = compact(row && (row.subject || row.title || row.category || row.issue_type)) || 'Work order update';
+            var resident = compact(row && (row.resident_name || row.owner_name || row.submitted_by));
+            var vendor = compact(row && (row.vendor_name || row.assigned_vendor_name));
+            var copy = [resident, vendor ? ('Vendor: ' + vendor) : '', st.replace(/_/g,' ')].filter(Boolean).join(' • ');
+            return {
+              id:'work_order:' + compact(row && row.id),
+              source:'resident_work_orders',
+              time:toTime(row),
+              title:short('Work order: ' + titleBase),
+              copy:copy || 'Maintenance activity',
+              priority:normalizePriorityText((row && row.priority) + ' ' + st + ' ' + titleBase, 'attention'),
+              href:'resident_work_orders.html' + (row && row.id ? ('?open_work_order_id=' + encodeURIComponent(String(row.id))) : ''),
+              community_id:(row && row.community_id) || communityId || null
+            };
+          });
         }
         function normalizeBoardRows(rows){
           return (rows || []).map(function(row){
+            var title = compact(row && (row.title || row.subject || row.message)) || 'A new board item was submitted and needs review.';
             return {
-              id:'board:' + String((row && row.id) || '').trim(),
-              time:(row && (row.created_at || row.updated_at || row.due_date)) || new Date().toISOString(),
-              title:'A new board item was submitted and needs review.',
+              id:'board:' + compact(row && row.id),
+              source:'board_items',
+              time:toTime(row),
+              title:title,
+              copy:'Board item submitted for review',
               priority:'attention',
               href:'board_member_hub_v2.html',
               community_id:(row && row.community_id) || communityId || null
             };
-          }).filter(function(ev){ return !!ev.id && !!ev.time; });
+          });
         }
-        function normalizeRows(rows){
-          var seen = new Set();
+        function normalizeAnnualRows(rows, sourceName){
           return (rows || []).filter(function(row){
-            // v441: Live Activity no longer renders legacy board notification history.
-            // Current board activity is supplied separately from notification_events rows.
-            return !isLegacyBoardNotification(row);
+            var st = activeStatus(row);
+            if(isClosedStatus(st)) return false;
+            if(row && (row.archived_at || row.completed_at || row.mailed_at || row.deleted_at)) return false;
+            return true;
           }).map(function(row){
-            var md = row && row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
-            var title = String((row && (row.message || row.title)) || 'Activity update').trim();
-            var id = String((row && row.id) || md.id || title + ':' + ((row && row.created_at) || '')).trim();
+            var st = compact(row && (row.workflow_status || row.approval_status || row.status || row.current_step)) || 'pending';
+            var assoc = compact(row && (row.association_legal_name || row.community_name || row.annual_meeting_name));
             return {
-              id:id,
-              time:(row && row.created_at) || md.created_at || new Date().toISOString(),
-              title:title,
-              priority:normalizePriority(row),
-              href:normalizeHref(row),
+              id:'annual:' + sourceName + ':' + compact((row && (row.annual_meeting_settings_id || row.packet_id || row.request_id || row.id)) || ''),
+              source:sourceName,
+              time:toTime(row),
+              title:'Annual meeting update',
+              copy:short((assoc ? assoc + ' • ' : '') + st.replace(/_/g,' ')),
+              priority:normalizePriorityText(st, 'attention'),
+              href:'annual_meetings.html',
               community_id:(row && row.community_id) || communityId || null
             };
-          }).filter(function(ev){
-            if(!ev.time || !ev.title) return false;
-            if(seen.has(ev.id)) return false;
-            seen.add(ev.id);
+          });
+        }
+        function normalizeSupervisorRows(rows){
+          return (rows || []).map(function(row){
+            var title = compact(row && (row.title || row.subject || row.message || row.directive)) || 'Supervisor communication';
+            var st = compact(row && (row.status || row.priority || row.type));
+            return {
+              id:'supervisor_comm:' + compact(row && row.id),
+              source:'supervisor_communications',
+              time:toTime(row),
+              title:short(title),
+              copy:short(st ? ('Supervisor communication • ' + st.replace(/_/g,' ')) : 'Supervisor communication'),
+              priority:normalizePriorityText(st + ' ' + title, 'attention'),
+              href:'supervisor_communications.html',
+              community_id:(row && row.community_id) || communityId || null
+            };
+          });
+        }
+        function normalizeRows(items){
+          var seen = new Set();
+          return (items || []).filter(function(ev){
+            if(!ev) return false;
+            if(communityId && ev.community_id && String(ev.community_id) !== String(communityId)) return false;
+            var key = compact(ev.id || ev.title + ':' + ev.time);
+            if(!key || seen.has(key)) return false;
+            seen.add(key);
             return true;
           }).sort(function(a,b){
             var dt = new Date(b.time).getTime() - new Date(a.time).getTime();
@@ -3982,23 +4037,26 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
           }).slice(0,8);
         }
         function signature(items){
-          return (items || []).map(function(e){ return [e.id, e.time, e.title, e.priority].join('|'); }).join('||');
+          return (items || []).map(function(e){ return [e.id, e.time, e.title, e.copy, e.priority].join('|'); }).join('||');
         }
-        function renderStable(items, options){
+        function renderStable(rawItems, options){
           options = options || {};
-          items = normalizeRows(items || []);
+          var items = normalizeRows(rawItems || []);
           var sig = signature(items);
           if(!options.force && liveState.signatures[stateKey] === sig) return;
           liveState.signatures[stateKey] = sig;
           try{ window.__mh2LiveEvents = items.slice(); }catch(_e){}
+          liveState.lastCount = items.length;
+          liveState.lastLoadedAt = new Date().toISOString();
+          liveState.lastSources = Array.from(new Set(items.map(function(e){ return e.source || 'activity'; })));
           setText('mh2LiveActivityCount', String(items.length));
-          setText('mh2LiveActivityNote', items.length ? ('Showing the latest ' + String(items.length) + ' event' + (items.length===1?'':'s') + (communityName ? ' for ' + communityName : '') + '.') : ('Connected, but no recent events were found' + (communityName ? ' for ' + communityName : '') + '.'));
+          setText('mh2LiveActivityNote', items.length ? ('Showing the latest ' + String(items.length) + ' live updates' + (communityName ? ' for ' + communityName : '') + '.') : ('Connected, but no recent updates were found' + (communityName ? ' for ' + communityName : '') + '.'));
           if(!items.length){
             list.innerHTML = '<div class="mh2-placeholder">No recent activity for this community.</div>';
             return;
           }
           list.innerHTML = items.map(function(event){
-            var priority = String(event.priority || '').toLowerCase();
+            var priority = compact(event.priority).toLowerCase();
             var ageMs = Math.max(0, Date.now() - new Date(event.time).getTime());
             var rowClass = priority === 'urgent' ? 'mh2-feed-item is-urgent' : (priority === 'attention' ? 'mh2-feed-item is-attention' : (priority === 'active' ? 'mh2-feed-item is-active' : 'mh2-feed-item'));
             var dot = priority === 'urgent' ? 'mh2-dot mh2-dot--urgent' : (priority === 'attention' ? 'mh2-dot mh2-dot--gold' : (priority === 'active' ? 'mh2-dot mh2-dot--green' : 'mh2-dot'));
@@ -4006,14 +4064,13 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
             var tagClass = ageMs <= 60 * 60 * 1000 ? 'mh2-item-tag is-recent' : (ageMs <= 24 * 60 * 60 * 1000 ? 'mh2-item-tag is-fresh' : 'mh2-item-tag is-stale');
             var inner = '<article class="' + rowClass + '">' +
               '<div class="' + dot + '"></div>' +
-              '<div><div class="mh2-item-title">' + esc(event.title || 'Activity update') + '</div><div class="mh2-item-copy">' + esc(communityName || 'Selected community') + '</div></div>' +
+              '<div><div class="mh2-item-title">' + esc(event.title || 'Activity update') + '</div><div class="mh2-item-copy">' + esc(event.copy || communityName || 'Selected community') + '</div></div>' +
               '<div class="' + tagClass + '">' + esc(fmtAgo(event.time)) + '</div>' +
             '</article>';
             return event.href ? '<a href="' + esc(event.href) + '" style="text-decoration:none;color:inherit;display:block">' + inner + '</a>' : inner;
           }).join('');
         }
 
-        // Instant stable paint from the last known good list for this community.
         try{
           var cached = JSON.parse(localStorage.getItem(cacheKey) || '[]');
           if(Array.isArray(cached) && cached.length) renderStable(cached, { force:true });
@@ -4024,51 +4081,58 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
         liveState.loading = true;
         try{
           var sb = await requireSb();
-          var query = sb
-            .from('notification_events')
-            .select('id,created_at,event_type,priority,title,message,link_url,community_id,source_table,source_id,metadata')
-            .order('created_at', { ascending:false })
-            .order('id', { ascending:false })
-            .limit(40);
-          if(communityId) query = query.eq('community_id', communityId);
-          var res = await query;
-          if(token !== liveState.token) return;
-          if(res && res.error) throw res.error;
+          var allEvents = [];
+          var queries = [];
 
-          var notificationEvents = normalizeRows(Array.isArray(res && res.data) ? res.data : []);
-          var boardEvents = [];
+          var notifQ = sb.from('notification_events').select('id,created_at,updated_at,event_type,priority,title,message,link_url,community_id,source_table,source_id,metadata').order('created_at', { ascending:false }).limit(40);
+          if(communityId) notifQ = notifQ.eq('community_id', communityId);
+          queries.push(withTimeout(notifQ, 7000, 'notification_events').then(function(res){
+            if(res && !res.error) (normalizeNotificationRows(res.data || [])).forEach(function(e){ pushEvent(allEvents, e); });
+          }));
 
-          // v441: Board activity comes from the same canonical source as Board Hub.
-          // Use rows only (active/open queue), never raw/archive/history.
-          try{
-            if(window.ZummeeBoardData && typeof window.ZummeeBoardData.getBoardReviewItems === 'function'){
-              var boardResult = await window.ZummeeBoardData.getBoardReviewItems(communityId);
-              boardEvents = normalizeBoardRows(Array.isArray(boardResult && boardResult.rows) ? boardResult.rows : []);
+          var woQ = sb.from('resident_work_orders').select('*').order('updated_at', { ascending:false }).limit(24);
+          if(communityId) woQ = woQ.eq('community_id', communityId);
+          queries.push(withTimeout(woQ, 7000, 'resident_work_orders').then(function(res){
+            if(res && !res.error) (normalizeWorkOrders(res.data || [])).forEach(function(e){ pushEvent(allEvents, e); });
+          }));
+
+          var annualQ = sb.from('annual_meeting_approval_requests').select('*').order('updated_at', { ascending:false }).limit(24);
+          if(communityId) annualQ = annualQ.eq('community_id', communityId);
+          queries.push(withTimeout(annualQ, 7000, 'annual_meeting_approval_requests').then(function(res){
+            if(res && !res.error) (normalizeAnnualRows(res.data || [], 'annual_meeting_approval_requests')).forEach(function(e){ pushEvent(allEvents, e); });
+          }));
+
+          var packetQ = sb.from('annual_meeting_packet_requests').select('*').limit(24);
+          queries.push(withTimeout(packetQ, 7000, 'annual_meeting_packet_requests').then(function(res){
+            if(res && !res.error){
+              var rows = (res.data || []).filter(function(row){ return !communityId || annualApprovalMatchesCurrentCommunity(row, communityId, communityName); });
+              (normalizeAnnualRows(rows, 'annual_meeting_packet_requests')).forEach(function(e){ pushEvent(allEvents, e); });
             }
-          }catch(boardErr){
-            console.warn('[ManagerHub v441] canonical board live activity load failed; using direct fallback', boardErr);
-          }
-          if(!boardEvents.length && communityId){
-            try{
-              var boardFallback = await sb.from('notification_events')
-                .select('id,title,message,metadata,created_at,event_type,community_id')
-                .eq('community_id', communityId)
-                .eq('event_type','board_item_submitted')
-                .order('created_at', { ascending:false })
-                .limit(20);
-              if(boardFallback && !boardFallback.error) boardEvents = normalizeBoardRows((boardFallback.data || []).filter(boardRowIsCurrent));
-            }catch(fallbackErr){ console.warn('[ManagerHub v461] notification_events board live activity fallback failed', fallbackErr); }
-          }
+          }));
 
-          var events = boardEvents.concat(notificationEvents).sort(function(a,b){
-            var dt = new Date(b.time).getTime() - new Date(a.time).getTime();
-            if(dt) return dt;
-            return String(b.id || '').localeCompare(String(a.id || ''));
-          }).slice(0,8);
+          var supQ = sb.from('supervisor_communications').select('*').order('updated_at', { ascending:false }).limit(16);
+          if(communityId) supQ = supQ.eq('community_id', communityId);
+          queries.push(withTimeout(supQ, 5500, 'supervisor_communications').then(function(res){
+            if(res && !res.error) (normalizeSupervisorRows(res.data || [])).forEach(function(e){ pushEvent(allEvents, e); });
+          }));
+
+          queries.push((async function(){
+            try{
+              if(window.ZummeeBoardData && typeof window.ZummeeBoardData.getBoardReviewItems === 'function'){
+                var boardResult = await withTimeout(window.ZummeeBoardData.getBoardReviewItems(communityId), 5500, 'board data');
+                (normalizeBoardRows(Array.isArray(boardResult && boardResult.rows) ? boardResult.rows : [])).forEach(function(e){ pushEvent(allEvents, e); });
+              }
+            }catch(_boardErr){}
+          })());
+
+          await Promise.allSettled(queries);
+          if(token !== liveState.token) return;
+
+          var events = normalizeRows(allEvents);
           try{ localStorage.setItem(cacheKey, JSON.stringify(events)); }catch(_storeErr){}
           renderStable(events, { force:!liveState.signatures[stateKey] });
         }catch(err){
-          console.warn('[ManagerHub] Stable Live Activity load failed', err);
+          console.warn('[ManagerHub v743] Unified Live Activity load failed', err);
           if(!liveState.signatures[stateKey]){
             list.innerHTML = '<div class="mh2-placeholder">Unable to load live activity.</div>';
             setText('mh2LiveActivityCount', '0');
@@ -4078,6 +4142,16 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
           if(token === liveState.token) liveState.loading = false;
         }
       }
+      window.getManagerHubLiveActivityStatus = function(){
+        var s = window.__mh2LiveActivityState || {};
+        return {
+          build:'2026-05-11-v743-live-activity-unified-stream',
+          count:Number(s.lastCount || 0),
+          loadedAt:s.lastLoadedAt || null,
+          sources:s.lastSources || [],
+          cached:Array.isArray(window.__mh2LiveEvents) ? window.__mh2LiveEvents.length : 0
+        };
+      };
       function approvalStatusLabel(status){
         return String(status || 'pending').replace(/_/g,' ').replace(/(^|\s)\w/g, function(ch){ return ch.toUpperCase(); });
       }
