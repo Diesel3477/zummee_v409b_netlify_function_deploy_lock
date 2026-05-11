@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-03-27-1";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-11-v720-company-directory-standard-zummee-header";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 
 
@@ -3059,50 +3059,65 @@ body.dark-mode .mh2-stat-box {
 
 </style>
 
-<div class="wrap zummee-unified-layout">
-  <div id="profileNotice" class="card" style="display:none;border-left:6px solid rgba(37,99,235,.6);background:rgba(37,99,235,.06)">
-    <div style="font-weight:950;margin-bottom:6px">Profile setup required</div>
-    <div id="profileNoticeText" class="sub" style="margin:0">Please complete your profile.</div>
-  </div>
-  <h1>Company Directory</h1>
-  <div class="sub">Shows all employees in <b id="myCompany">—</b>. Your info is pulled from your Profile.</div>
-
-  <div class="card zummee-section-card company-directory-top-card">
-    <div class="zummee-section-header company-directory-header">
-      <div class="company-directory-user zummee-user-meta">
-        <div class="zummee-user-meta__title">You</div>
-        <div class="muted zummee-user-meta__sub" style="font-size:13px;margin-top:4px">
-          <span id="myName">—</span> <span id="myEmail">—</span>
-        </div>
-      </div>
-      <div class="zummee-section-tools company-directory-controls">
-        <input id="q" type="text" placeholder="Search employees…" style="min-width:260px;flex:1"/>
-        <button class="btn" id="refreshBtn" type="button">Refresh</button>
-        <a class="btn primary" id="goProfile" href="profile.html" style="display:none">Open Profile</a>
-      </div>
+<div class="cd-page-wrap">
+  <section class="cd-header-card">
+    <div class="cd-header-left">
+      <div class="cd-eyebrow">Company Resource</div>
+      <h1>Company Directory</h1>
+      <p>Employees for <strong id="myCompany">—</strong>. Contact information is pulled from approved staff profiles.</p>
     </div>
-    <div id="status" class="muted company-directory-status" style="margin-top:10px;"></div>
+    <div class="cd-header-right">
+      <img id="companyLogo" class="cd-logo" alt="Company logo" />
+      <a class="cd-hub-btn" href="manager_hub.html">Back to Hub</a>
+    </div>
+  </section>
+
+  <div id="profileNotice" class="cd-notice" style="display:none">
+    <div class="cd-notice-title">Profile setup required</div>
+    <div id="profileNoticeText">Please complete your profile.</div>
   </div>
 
-  <div class="card zummee-section-card" style="overflow:auto">
-    <div class="zummee-section-header company-directory-list-header">
-      <div style="font-weight:950">Employees</div>
-      <span class="pill" id="countPill">0 employees</span>
+  <section class="cd-toolbar-card">
+    <div class="cd-user-block">
+      <div class="cd-label">You</div>
+      <div class="cd-user-name" id="myName">—</div>
+      <div class="cd-user-email" id="myEmail">—</div>
+    </div>
+    <div class="cd-search-actions">
+      <div class="cd-search-wrap">
+        <span aria-hidden="true">⌕</span>
+        <input id="q" type="text" placeholder="Search employees by name, phone, or email…" />
+      </div>
+      <button class="cd-btn cd-btn-secondary" id="refreshBtn" type="button">Refresh</button>
+      <a class="cd-btn cd-btn-primary" id="goProfile" href="profile.html" style="display:none">Open Profile</a>
+    </div>
+    <div id="status" class="cd-status"></div>
+  </section>
+
+  <section class="cd-list-card">
+    <div class="cd-list-head">
+      <div>
+        <div class="cd-eyebrow">Directory</div>
+        <h2>Employees</h2>
+      </div>
+      <span class="cd-count-pill" id="countPill">0 employees</span>
     </div>
 
-    <table style="margin-top:12px">
-      <thead>
-        <tr>
-          <th style="width:36%">Name</th>
-          <th style="width:24%">Phone</th>
-          <th style="width:40%">Email</th>
-        </tr>
-      </thead>
-      <tbody id="dirTbody">
-        <tr><td colspan="3" class="muted">Loading…</td></tr>
-      </tbody>
-    </table>
-  </div>
+    <div class="cd-table-shell">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:36%">Name</th>
+            <th style="width:24%">Phone</th>
+            <th style="width:40%">Email</th>
+          </tr>
+        </thead>
+        <tbody id="dirTbody">
+          <tr><td colspan="3" class="muted">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 </div>
 
 <script>
@@ -3420,5 +3435,88 @@ body.dark-mode .mh2-stat-box {
 <script src="company_logo_sync.js"></script>
 
   <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
+
+<style id="company-directory-v720-standard-zummee-layout">
+  #zummeeHeaderMount{display:none!important;}
+  html,body{margin:0!important;padding:0!important;min-height:100%!important;}
+  body{
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+    color:#17324d!important;
+    background:linear-gradient(180deg,#f7fbff 0%,#edf3f8 100%)!important;
+  }
+  .cd-page-wrap{max-width:1180px;margin:0 auto;padding:28px 28px 64px;display:grid;gap:26px;}
+  .cd-header-card,.cd-toolbar-card,.cd-list-card,.cd-notice{
+    background:rgba(255,255,255,.96)!important;
+    border:3px solid #a9c8ff!important;
+    border-radius:34px!important;
+    box-shadow:0 18px 44px rgba(30,75,140,.08)!important;
+  }
+  .cd-header-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:center;padding:30px 34px;}
+  .cd-eyebrow{font-size:13px;line-height:1;font-weight:950;letter-spacing:.18em;text-transform:uppercase;color:#17365f;margin-bottom:12px;}
+  .cd-header-card h1{margin:0!important;color:#17365f!important;font-size:46px!important;line-height:.98!important;letter-spacing:-.045em!important;font-weight:950!important;}
+  .cd-header-card p{margin:12px 0 0!important;max-width:720px;color:#60758a!important;font-size:18px!important;line-height:1.35!important;font-weight:750!important;}
+  .cd-header-right{display:flex;flex-direction:column;align-items:flex-end;gap:16px;}
+  .cd-logo{width:250px;max-width:32vw;height:110px;object-fit:contain;background:rgba(255,255,255,.9);border-radius:24px;padding:12px 18px;box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 12px 28px rgba(23,54,95,.08);opacity:1!important;}
+  .cd-hub-btn,.cd-btn{min-height:58px;border-radius:24px;text-decoration:none!important;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:17px;font-weight:950;padding:0 26px;cursor:pointer;white-space:nowrap;}
+  .cd-hub-btn,.cd-btn-primary{background:#17365f!important;color:#fff!important;border:2px solid #17365f!important;box-shadow:0 14px 26px rgba(23,54,95,.18)!important;}
+  .cd-btn-secondary{background:#fff!important;color:#17365f!important;border:2px solid #a9c8ff!important;box-shadow:0 10px 22px rgba(23,54,95,.045)!important;}
+  .cd-toolbar-card{display:grid;grid-template-columns:minmax(220px,.55fr) minmax(360px,1.45fr);gap:22px;align-items:center;padding:24px 30px;}
+  .cd-user-block{background:linear-gradient(180deg,#fbfdff,#f4f9ff);border:1.5px solid #d8e5f6;border-radius:24px;padding:18px 20px;min-height:118px;display:flex;flex-direction:column;justify-content:center;}
+  .cd-label{font-size:12px;font-weight:950;letter-spacing:.12em;text-transform:uppercase;color:#60758a;margin-bottom:8px;}
+  .cd-user-name{font-size:21px;color:#17365f;font-weight:950;line-height:1.12;}
+  .cd-user-email{margin-top:6px;color:#60758a;font-size:15px;font-weight:800;overflow-wrap:anywhere;}
+  .cd-search-actions{display:flex;gap:12px;align-items:center;justify-content:flex-end;flex-wrap:wrap;}
+  .cd-search-wrap{flex:1 1 360px;min-width:280px;min-height:58px;border:1.5px solid #d8e5f6;border-radius:24px;background:#fff;display:flex;align-items:center;gap:10px;padding:0 18px;box-shadow:inset 0 1px 0 rgba(255,255,255,.9);}
+  .cd-search-wrap span{font-size:22px;color:#60758a;font-weight:900;line-height:1;}
+  #q{border:0!important;box-shadow:none!important;outline:none!important;min-height:54px!important;height:54px!important;border-radius:0!important;padding:0!important;background:transparent!important;font-size:17px!important;font-weight:800!important;color:#17365f!important;flex:1!important;width:100%!important;}
+  #q::placeholder{color:#93a4b8!important;font-weight:750!important;}
+  .cd-status{grid-column:1/-1;min-height:18px;color:#60758a;font-size:14px;font-weight:800;}
+  .cd-list-card{padding:28px 30px 30px;overflow:hidden;}
+  .cd-list-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px;}
+  .cd-list-head h2{margin:0!important;color:#17365f!important;font-size:32px!important;line-height:1!important;font-weight:950!important;letter-spacing:-.035em!important;}
+  .cd-count-pill{min-height:44px;min-width:44px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;padding:0 16px;background:#fff9d8;border:1.5px solid #efcf5b;color:#17365f;font-size:15px;font-weight:950;white-space:nowrap;}
+  .cd-table-shell{overflow:auto;border:1.5px solid #d8e5f6;border-radius:24px;background:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.9);}
+  table{width:100%!important;border-collapse:separate!important;border-spacing:0!important;background:transparent!important;}
+  th{background:linear-gradient(180deg,#f7fbff,#eef6ff)!important;color:#17365f!important;font-size:13px!important;letter-spacing:.1em;text-transform:uppercase;font-weight:950!important;padding:16px 18px!important;border-bottom:1.5px solid #d8e5f6!important;}
+  td{padding:18px!important;color:#17365f!important;border-bottom:1px solid #e4edf8!important;font-size:16px!important;font-weight:850!important;vertical-align:middle!important;}
+  tbody tr:last-child td{border-bottom:0!important;}
+  .linkish{color:#1d5fd1!important;text-decoration:none!important;font-weight:950!important;}
+  .linkish:hover{text-decoration:underline!important;}
+  .muted{color:#64748b!important;font-weight:800!important;}
+  .pill:not(.cd-count-pill){background:#fff!important;border:1px solid #d8e5f6!important;color:#17365f!important;}
+  .cd-notice{padding:18px 22px;border-left:8px solid #efcf5b!important;background:linear-gradient(180deg,#fffdf2,#fff8dc)!important;}
+  .cd-notice-title{font-weight:950;color:#17365f;margin-bottom:6px;}
+  @media(max-width:860px){
+    .cd-page-wrap{padding:22px 18px 54px;gap:22px;}
+    .cd-header-card{grid-template-columns:1fr;padding:24px;border-radius:28px!important;}
+    .cd-header-card h1{font-size:38px!important;}
+    .cd-header-card p{font-size:16px!important;}
+    .cd-header-right{align-items:flex-start;flex-direction:row;justify-content:space-between;}
+    .cd-logo{width:190px;max-width:52vw;height:90px;}
+    .cd-toolbar-card{grid-template-columns:1fr;padding:22px;border-radius:28px!important;}
+    .cd-search-actions{justify-content:flex-start;}
+    .cd-search-wrap{flex-basis:100%;min-width:0;}
+    .cd-btn,.cd-hub-btn{flex:1 1 auto;}
+    .cd-list-card{padding:22px;border-radius:28px!important;}
+    th,td{padding:14px 12px!important;font-size:14px!important;}
+  }
+  @media(max-width:620px){
+    .cd-header-right{flex-direction:column;align-items:flex-start;}
+    .cd-logo{width:170px;max-width:72vw;}
+    .cd-list-head{align-items:flex-start;flex-direction:column;}
+    .cd-count-pill{align-self:flex-start;}
+  }
+</style>
+<script id="company-directory-v720-diagnostics">
+  window.getCompanyDirectoryDeploymentStatus = function(){
+    return {
+      build: window.ZUMMEE_BUILD || '2026-05-11-v720-company-directory-standard-zummee-header',
+      redesigned: true,
+      header: !!document.querySelector('.cd-header-card'),
+      rowCount: Array.isArray(window.__allCompanyRows) ? window.__allCompanyRows.length : null
+    };
+  };
+</script>
+
 </body>
 </html>
