@@ -15,7 +15,7 @@
     </div>
   </div>
 
-<script>window.ZUMMEE_BUILD="2026-05-11-v729-preferred-vendors-company-context-lock";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-11-v730-preferred-vendors-clean-deps-context-lock";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -1473,10 +1473,29 @@ body.dark-mode .mh2-stat-box {
     #pv_saveBtn,#pv_cancelBtn{grid-column:1 !important;}
   }
 </style>
+
+
+<style id="pv-v730-clean-deps-company-context-fix">
+  /* v730: remove dependency on missing shared header/dark-mode JS and keep vendor form controls aligned */
+  #preferredVendorsPage #pv_vendorType{
+    appearance:auto !important;
+    -webkit-appearance:menulist !important;
+    height:58px !important;
+    line-height:58px !important;
+    padding:0 18px !important;
+  }
+  #preferredVendorsPage #pv_form input,
+  #preferredVendorsPage #pv_form select{
+    min-height:58px !important;
+    height:58px !important;
+  }
+  #preferredVendorsPage #pv_manageStatus{
+    min-height:20px !important;
+  }
+</style>
 </head>
 <body id="preferredVendorsPage" data-header-mode="simple" class="pv-premium-page">
 <div id="zummeeHeaderMount"></div>
-<script src="shared/header.js?v=2026-04-08-2"></script>
 <style id="zummeeSubpageHeaderForce">
   /* Force readable community dropdown text on all subpages */
   #zummeeCommunitySelect, #zummeeCommunitySelect *{ color:#0f2f4a !important; }
@@ -2616,6 +2635,10 @@ body.dark-mode .mh2-stat-box {
   async function hydratePreferredVendorCompanyContext(sb, uid){
     try{
       if(!sb || !sb.from || !uid) return { company:getCompany(), company_id:getCompanyId(), source:'stored' };
+      var companyId = '';
+      var companyName = '';
+      var source = 'stored';
+
       var res = await sb
         .from('userdirectory')
         .select('company_id,company_name,company,role,profile_name,profile_email')
@@ -2624,13 +2647,30 @@ body.dark-mode .mh2-stat-box {
       if(res && res.error) throw res.error;
       var row = (res && res.data) ? res.data : null;
       if(row){
-        var companyId = String(row.company_id || getCompanyId() || '').trim();
-        var companyName = String(row.company_name || row.company || getCompany() || '').trim();
-        if(!companyName && companyId) companyName = companyId;
-        setPreferredVendorCompanyContext(companyName, companyId);
+        companyId = String(row.company_id || '').trim();
+        companyName = String(row.company_name || row.company || '').trim();
         if(row.role) document.documentElement.setAttribute('data-staff-role', String(row.role || '').trim());
-        updatePvSupabaseStatus({ company: companyName, company_id: companyId, companySource:'userdirectory' });
-        return { company: companyName, company_id: companyId, source:'userdirectory' };
+        source = 'userdirectory';
+      }
+
+      if(!companyName){
+        try{
+          var prof = await sb.from('profiles').select('company,company_name,company_id').eq('id', uid).maybeSingle();
+          if(prof && !prof.error && prof.data){
+            companyId = companyId || String(prof.data.company_id || '').trim();
+            companyName = String(prof.data.company_name || prof.data.company || '').trim();
+            if(companyName) source = 'profiles';
+          }
+        }catch(_profileErr){}
+      }
+
+      companyId = String(companyId || getCompanyId() || '').trim();
+      companyName = String(companyName || getCompany() || '').trim();
+      if(!companyName && companyId) companyName = companyId;
+      if(companyName || companyId){
+        setPreferredVendorCompanyContext(companyName, companyId);
+        updatePvSupabaseStatus({ company: companyName, company_id: companyId, companySource:source });
+        return { company: companyName, company_id: companyId, source:source };
       }
     }catch(err){
       console.warn('Preferred Vendors company context lookup failed', err);
@@ -2732,7 +2772,7 @@ body.dark-mode .mh2-stat-box {
 
   /* v728: Supabase lock. Vendor rows are no longer loaded from or saved to localStorage. */
   var pvLastSupabaseStatus = {
-    build:'2026-05-11-v729-preferred-vendors-company-context-lock',
+    build:'2026-05-11-v730-preferred-vendors-clean-deps-context-lock',
     table:'preferred_vendors_shared',
     mode:'supabase-only',
     ok:false,
@@ -2772,7 +2812,7 @@ body.dark-mode .mh2-stat-box {
   async function readRowsFromCloud(){
     await warmPvContext();
     var company = String(getCompany() || '').trim();
-    var cid = String(getSelectedCommunityId() || '').trim();
+    var cid = String((pvCtx && pvCtx.cid) || getSelectedCommunityId() || '').trim();
     updatePvSupabaseStatus({ company:company, company_id:getCompanyId(), community_id:cid, loadedAt:new Date().toISOString() });
 
     if(!(pvCtx.sb && pvCtx.sb.from)){
@@ -2823,10 +2863,10 @@ body.dark-mode .mh2-stat-box {
     var normalized = normalizeVendorRows(rows || []);
     await warmPvContext();
     var company = String(getCompany() || '').trim();
-    var cid = String(getSelectedCommunityId() || '').trim();
+    var cid = String((pvCtx && pvCtx.cid) || getSelectedCommunityId() || '').trim();
 
     if(!(company && cid)){
-      var contextErr = new Error('Cannot save vendor: missing company or community context.');
+      var contextErr = new Error('Cannot save vendor: missing company/community context. Refresh the page once, then check window.getPreferredVendorsSupabaseStatus().');
       updatePvSupabaseStatus({ ok:false, error:contextErr.message, company:company, company_id:getCompanyId(), community_id:cid });
       throw contextErr;
     }
@@ -2928,14 +2968,80 @@ body.dark-mode .mh2-stat-box {
   }
 
   function getSelectedCommunityId(){
+    function clean(v){
+      v = String(v || '').trim();
+      if(v && v !== 'null' && v !== 'undefined') return v;
+      return '';
+    }
+    function fromJson(raw){
+      try{
+        var obj = JSON.parse(String(raw || ''));
+        if(!obj || typeof obj !== 'object') return '';
+        return clean(obj.id || obj.community_id || obj.selectedCommunityId || obj.activeCommunityId || obj.value);
+      }catch(_e){ return ''; }
+    }
     try{
-      return String(
-        localStorage.getItem('zummee_selected_community_id') ||
-        localStorage.getItem('activeCommunityId') ||
-        localStorage.getItem('zummee_community_id') ||
-        ''
-      ).trim();
-    }catch(_e){ return ''; }
+      if(window.ZummeeCommunityState && typeof window.ZummeeCommunityState.getActiveCommunity === 'function'){
+        var active = window.ZummeeCommunityState.getActiveCommunity();
+        var fromState = clean(active && (active.id || active.community_id));
+        if(fromState) return fromState;
+      }
+    }catch(_e0){}
+    try{
+      var directKeys = [
+        'zummee_selected_community_id',
+        'activeCommunityId',
+        'zummee_community_id',
+        'zummee_active_community_id',
+        'selectedCommunityId',
+        'community_id'
+      ];
+      for(var i=0;i<directKeys.length;i++){
+        var v = clean(localStorage.getItem(directKeys[i]) || sessionStorage.getItem(directKeys[i]));
+        if(v) return v;
+      }
+      var jsonKeys = [
+        'zummee_active_community_v601',
+        'zummee_active_community_v614',
+        'zummee_active_community',
+        'activeCommunity',
+        'selectedCommunity',
+        'zummee_selected_community'
+      ];
+      for(var j=0;j<jsonKeys.length;j++){
+        var raw = localStorage.getItem(jsonKeys[j]) || sessionStorage.getItem(jsonKeys[j]);
+        var parsed = fromJson(raw);
+        if(parsed) return parsed;
+      }
+    }catch(_e1){}
+    return '';
+  }
+
+  async function resolveCommunityFromAssignments(sb, uid){
+    try{
+      var existing = getSelectedCommunityId();
+      if(existing) return existing;
+      if(!sb || !sb.from || !uid) return '';
+      var res = await sb
+        .from('community_assignments')
+        .select('community_id')
+        .eq('user_id', uid)
+        .limit(1);
+      if(res && res.error) throw res.error;
+      var row = res && res.data && res.data[0] ? res.data[0] : null;
+      var cid = String(row && row.community_id || '').trim();
+      if(cid){
+        try{
+          localStorage.setItem('zummee_selected_community_id', cid);
+          sessionStorage.setItem('zummee_selected_community_id', cid);
+        }catch(_e){}
+      }
+      return cid;
+    }catch(err){
+      console.warn('Preferred Vendors community assignment lookup failed', err);
+      updatePvSupabaseStatus({ communityContextWarning: err && err.message ? err.message : String(err || 'Community lookup failed') });
+      return getSelectedCommunityId();
+    }
   }
 
   async function warmPvContext(){
@@ -2960,6 +3066,7 @@ body.dark-mode .mh2-stat-box {
       if(!pvCtx.reviewerName) pvCtx.reviewerName = deriveReviewerName(pvCtx.user);
       if(sb && pvCtx.uid){
         await hydratePreferredVendorCompanyContext(sb, pvCtx.uid);
+        pvCtx.cid = await resolveCommunityFromAssignments(sb, pvCtx.uid);
       }
     }catch(_e){}
     return pvCtx;
@@ -3956,7 +4063,6 @@ body.dark-mode .mh2-stat-box {
         if(!isPrivilegedRole()) return;
         await warmPvContext();
         var company = getCompany();
-        if(!company){ setManageStatus('Company context is still loading. Wait a moment and try Save Vendor again.', true); return; }
         var vendorName = String(document.getElementById('pv_vendorName').value || '').trim();
         if(!vendorName){ setManageStatus('Vendor name is required.', true); return; }
         var rows = getCurrentRows();
@@ -4409,8 +4515,6 @@ function initModernCommunityPicker(select){
   });
 
 </script>
-
-  <script src="shared/dark-mode.js?v=2026-04-27-v266"></script>
 </html>
 <script>
 // Force picker colors to match Manager Hub (some inline styles may be set by JS)
@@ -4536,20 +4640,22 @@ body.dark-mode .mh2-stat-box {
 <script id="preferred-vendors-v728-status">
   window.getPreferredVendorsDeploymentStatus = function(){
     return {
-      build:'2026-05-11-v729-preferred-vendors-company-context-lock',
+      build:'2026-05-11-v730-preferred-vendors-clean-deps-context-lock',
       premium:true,
       headerLogoTopRight:true,
       logoUnboxed:true,
       titleReduced:true,
       supabaseOnly:true,
       companyContextLocked:true,
+      cleanSharedDependencies:true,
+      assignmentCommunityFallback:true,
       vendorTypeSized:true,
       table:'preferred_vendors_shared'
     };
   };
   window.getPreferredVendorsSupabaseStatus = function(){
     return window.__pvSupabaseStatus || {
-      build:'2026-05-11-v729-preferred-vendors-company-context-lock',
+      build:'2026-05-11-v730-preferred-vendors-clean-deps-context-lock',
       table:'preferred_vendors_shared',
       mode:'supabase-only',
       ok:false,
