@@ -1,5 +1,5 @@
 /*
-  Zummee Community Assignment Resolver v746
+  Zummee Community Assignment Resolver v751
   Long-term Manager Hub guard:
   - community_assignments uses employee_id / employee_email only
   - rewrites legacy user_id/auth_user_id filters for this page before Supabase sends them; avoids missing userdirectory columns
@@ -8,10 +8,10 @@
 */
 (function(){
   'use strict';
-  if (window.__ZUMMEE_COMMUNITY_ASSIGNMENT_RESOLVER_V746__) return;
-  window.__ZUMMEE_COMMUNITY_ASSIGNMENT_RESOLVER_V746__ = true;
+  if (window.__ZUMMEE_COMMUNITY_ASSIGNMENT_RESOLVER_V751__) return;
+  window.__ZUMMEE_COMMUNITY_ASSIGNMENT_RESOLVER_V751__ = true;
 
-  var BUILD = '2026-05-11-v747-community-assignment-resolver-no-email-select';
+  var BUILD = '2026-05-11-v751-community-assignment-resolver-shared-archive';
   var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   var state = {
     build: BUILD,
@@ -46,8 +46,8 @@
   // community_assignments with user_id/auth_user_id. The real production columns are
   // employee_id and employee_email.
   (function patchFetchForLegacyAssignmentColumns(){
-    if (window.__ZUMMEE_COMMUNITY_ASSIGNMENT_FETCH_PATCH_V746__) return;
-    window.__ZUMMEE_COMMUNITY_ASSIGNMENT_FETCH_PATCH_V746__ = true;
+    if (window.__ZUMMEE_COMMUNITY_ASSIGNMENT_FETCH_PATCH_V751__) return;
+    window.__ZUMMEE_COMMUNITY_ASSIGNMENT_FETCH_PATCH_V751__ = true;
     var originalFetch = window.fetch;
     if (typeof originalFetch !== 'function') return;
     window.fetch = function(input, init){
@@ -243,7 +243,7 @@
       ['zummee_active_community_id','zummee_selected_community_id','zummeeActiveCommunityId','activeCommunityId','currentCommunityId','zummee_community_id','zummee_selected_community_v1'].forEach(function(k){ write(k, first.id); });
       ['zummee_active_community_name','zummeeCurrentCommunityName','currentCommunityName','activeCommunityName','zummee_community','zummee_selected_community_name'].forEach(function(k){ write(k, first.name); });
       try{
-        var canonical = { id:first.id, name:first.name, updatedAt:Date.now(), source:'community-assignment-resolver-v745' };
+        var canonical = { id:first.id, name:first.name, updatedAt:Date.now(), source:'community-assignment-resolver-v751' };
         localStorage.setItem('zummee_active_community_v601', JSON.stringify(canonical));
         sessionStorage.setItem('zummee_active_community_v601', JSON.stringify(canonical));
       }catch(_e){}
