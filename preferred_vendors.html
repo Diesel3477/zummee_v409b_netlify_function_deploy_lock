@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <script>window.ZUMMEE_BUILD="2026-05-11-v741-preferred-vendors-restore-star-ratings";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+  <script>window.ZUMMEE_BUILD="2026-05-11-v755-preferred-vendors-review-entry";console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Preferred Vendors</title>
@@ -257,6 +257,26 @@
       .pv-ratingSummary{white-space:normal;align-self:flex-start;}
     }
 
+
+    /* v755: employee review modal */
+    .pv-reviewBtn{border-color:rgba(242,202,75,.72)!important;background:#fff9df!important;color:var(--z-navy)!important;}
+    .pv-reviewOverlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(15,47,74,.36);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
+    .pv-reviewOverlay.pv-hidden{display:none!important;}
+    .pv-reviewModal{width:min(680px,100%);border:4px solid var(--z-blue);border-radius:30px;background:#fff;box-shadow:0 28px 70px rgba(15,47,74,.24);padding:26px;color:var(--z-navy);}
+    .pv-reviewTop{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:16px;}
+    .pv-reviewEyebrow{font-size:12px;font-weight:950;letter-spacing:.22em;text-transform:uppercase;color:var(--z-muted);margin-bottom:8px;}
+    .pv-reviewTitle{font-size:30px;line-height:1.05;font-weight:950;color:var(--z-navy-2);letter-spacing:-.035em;}
+    .pv-reviewClose{appearance:none;border:2px solid var(--z-line);background:#fff;border-radius:999px;width:44px;height:44px;font-size:24px;font-weight:950;color:var(--z-navy);cursor:pointer;}
+    .pv-reviewStars{display:flex;gap:8px;margin:18px 0 16px;}
+    .pv-reviewStar{appearance:none;border:2px solid rgba(242,202,75,.72);background:#fff9df;border-radius:18px;width:60px;height:56px;font-size:30px;line-height:1;color:#c9d6e8;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 18px rgba(15,47,74,.06);}
+    .pv-reviewStar.is-selected{color:#d49b00;background:#fff4c7;border-color:#f2ca4b;}
+    .pv-reviewTextarea{width:100%;min-height:130px;border:3px solid var(--z-line);border-radius:24px;background:#f8fbff;color:var(--z-navy);font-size:18px;font-weight:750;padding:16px;outline:none;resize:vertical;}
+    .pv-reviewActions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:18px;}
+    .pv-reviewActions .pv-btn{min-height:56px;font-size:17px;border-radius:20px;}
+    .pv-reviewStatus{font-size:15px;font-weight:850;color:var(--z-muted);min-height:22px;margin-top:12px;}
+    .pv-reviewStatus.error{color:#a32525}.pv-reviewStatus.ok{color:var(--z-green)}
+    @media(max-width:620px){.pv-reviewModal{padding:20px;border-radius:26px}.pv-reviewTitle{font-size:24px}.pv-reviewStar{width:50px;height:50px;font-size:26px}.pv-reviewActions .pv-btn{width:100%;}}
+
 </style>
 </head>
 <body>
@@ -304,6 +324,35 @@
       <div class="pv-footerStatus" id="pv_count"></div>
     </section>
   </main>
-  <script src="shared/preferred-vendors-controller.js?v=2026-05-11-v737"></script>
+
+
+  <div class="pv-reviewOverlay pv-hidden" id="pv_reviewOverlay" role="dialog" aria-modal="true" aria-labelledby="pv_reviewTitle">
+    <div class="pv-reviewModal">
+      <div class="pv-reviewTop">
+        <div>
+          <div class="pv-reviewEyebrow">Preferred vendor review</div>
+          <div class="pv-reviewTitle" id="pv_reviewTitle">Review vendor</div>
+        </div>
+        <button class="pv-reviewClose" type="button" id="pv_reviewClose" aria-label="Close review">×</button>
+      </div>
+      <input type="hidden" id="pv_reviewVendorKey" value="" />
+      <input type="hidden" id="pv_reviewRating" value="0" />
+      <div class="pv-reviewStars" id="pv_reviewStars" aria-label="Select rating">
+        <button class="pv-reviewStar" type="button" data-rating="1" aria-label="1 star">★</button>
+        <button class="pv-reviewStar" type="button" data-rating="2" aria-label="2 stars">★</button>
+        <button class="pv-reviewStar" type="button" data-rating="3" aria-label="3 stars">★</button>
+        <button class="pv-reviewStar" type="button" data-rating="4" aria-label="4 stars">★</button>
+        <button class="pv-reviewStar" type="button" data-rating="5" aria-label="5 stars">★</button>
+      </div>
+      <textarea class="pv-reviewTextarea" id="pv_reviewNote" placeholder="Optional notes about your experience with this vendor..."></textarea>
+      <div class="pv-reviewActions">
+        <button class="pv-btn pv-btnPrimary" id="pv_submitReviewBtn" type="button">Save Review</button>
+        <button class="pv-btn" id="pv_cancelReviewBtn" type="button">Cancel</button>
+      </div>
+      <div class="pv-reviewStatus" id="pv_reviewStatus"></div>
+    </div>
+  </div>
+
+  <script src="shared/preferred-vendors-controller.js?v=2026-05-11-v755"></script>
 </body>
 </html>
