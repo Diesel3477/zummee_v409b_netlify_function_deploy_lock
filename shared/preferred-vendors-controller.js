@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  var BUILD = '2026-05-11-v738-preferred-vendors-branding-logo-source';
+  var BUILD = '2026-05-11-v739-preferred-vendors-user-friendly-status';
   var SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
   var VENDOR_TABLE = 'preferred_vendors_shared';
@@ -364,7 +364,7 @@
       return ia === ib ? a.localeCompare(b) : ia - ib;
     });
     if(!categories.length){
-      box.innerHTML = '<div class="pv-empty"><strong>No preferred vendors saved yet.</strong><br>Add your first vendor above. Vendors will save directly to Supabase.</div>';
+      box.innerHTML = '<div class="pv-empty"><strong>No preferred vendors saved yet.</strong><br>Add your first vendor above. Add your first vendor above.</div>';
       txt('pv_count','0 vendors saved for this community');
       return;
     }
@@ -401,7 +401,7 @@
     if(e) e.preventDefault();
     if(state.saving) return;
     try{
-      setSaving(true); setStatus('Saving vendor to Supabase…','');
+      setSaving(true); setStatus('Saving vendor…','');
       if(!isManagerRole()) throw new Error('Your role cannot manage preferred vendors.');
       var name = clean($('pv_vendorName').value);
       if(!name) throw new Error('Vendor name is required.');
@@ -426,7 +426,7 @@
       await saveVendorRows(rows);
       resetForm();
       renderMarketplace();
-      setStatus('Vendor saved to Supabase.','ok');
+      setStatus('Vendor saved.','ok');
     }catch(err){
       state.lastError = String(err && err.message || err);
       setStatus('Vendor was not saved: ' + state.lastError, 'error');
@@ -440,11 +440,11 @@
     if(!v) return;
     if(!confirm('Remove ' + v.vendorName + ' from preferred vendors?')) return;
     try{
-      setStatus('Removing vendor from Supabase…','');
+      setStatus('Removing vendor…','');
       var rows = state.vendors.filter(function(row){ return row.vendorKey !== key; });
       await saveVendorRows(rows);
       renderMarketplace();
-      setStatus('Vendor removed from Supabase.','ok');
+      setStatus('Vendor removed.','ok');
     }catch(err){ setStatus('Vendor was not removed: ' + (err && err.message ? err.message : String(err)), 'error'); }
   }
   function bindEvents(){
@@ -474,7 +474,7 @@
       if($('pv_manageCard')) $('pv_manageCard').style.display = canManage ? '' : 'none';
       await loadVendors();
       renderMarketplace();
-      setStatus('Ready. Preferred vendors are loaded from Supabase.','ok');
+      setStatus('Ready.','ok');
       setTimeout(loadSponsorsDeferred, 50);
     }catch(err){
       state.lastError = String(err && err.message || err);
