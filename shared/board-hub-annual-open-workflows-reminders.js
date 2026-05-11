@@ -1,9 +1,9 @@
 (function(){
   'use strict';
-  if(window.__BoardHubAnnualOpenWorkflowsRemindersV707) return;
-  window.__BoardHubAnnualOpenWorkflowsRemindersV707 = true;
+  if(window.__BoardHubAnnualOpenWorkflowsRemindersV708) return;
+  window.__BoardHubAnnualOpenWorkflowsRemindersV708 = true;
 
-  const BUILD = '2026-05-11-v707-board-hub-open-annual-workflows-reminders';
+  const BUILD = '2026-05-11-v708-board-hub-open-workflow-dedupe-layout';
   const ACTIVE_STEPS = new Set([
     'pending_board','board_review','pending_supervisor','board_approved',
     'pending_admin_mailing','ready_to_mail','supervisor_approved','pending_admin',
@@ -13,7 +13,7 @@
     'completed','complete','closed','archived','mailed','mailing_complete',
     'cancelled','canceled','deleted','void','inactive','rejected_final'
   ]);
-  const state = { loading:false, rows:[], workflows:[], loadedAt:null, error:null, community:null };
+  const state = { loading:false, rows:[], ignoredRows:[], workflows:[], loadedAt:null, error:null, community:null };
 
   function byId(id){ return document.getElementById(id); }
   function clean(v){ return String(v == null ? '' : v).trim(); }
@@ -98,9 +98,16 @@
   }
   function groupWorkflows(rows){
     const map=new Map();
-    (Array.isArray(rows)?rows:[]).filter(isOpen).forEach(row=>{
-      const key=fallbackWorkflowId(row);
-      if(!key) return;
+    state.ignoredRows = [];
+    (Array.isArray(rows)?rows:[]).forEach(row=>{
+      const key=workflowId(row);
+      // Long-term rule: one visible packet workflow must have a stable workflow key.
+      // Do not promote orphan approval-step rows into their own visible cards.
+      if(!key){
+        if(isOpen(row)) state.ignoredRows.push(Object.assign({__ignoredReason:'missing workflow id'}, row));
+        return;
+      }
+      if(!isOpen(row)) return;
       if(!map.has(key)) map.set(key, []);
       map.get(key).push(row);
     });
@@ -205,11 +212,11 @@
       setStatus(state.error, 'err');
     }finally{
       state.loading=false;
-      window.__BoardHubAnnualOpenWorkflowsV707Status = snapshot();
+      window.__BoardHubAnnualOpenWorkflowsV708Status = snapshot(); window.__BoardHubAnnualOpenWorkflowsV707Status = window.__BoardHubAnnualOpenWorkflowsV708Status;
     }
     return state;
   }
-  function snapshot(){ return { build:BUILD, ok:!state.error, community:state.community, rows:state.rows, workflows:state.workflows, workflowCount:state.workflows.length, loadedAt:state.loadedAt, error:state.error }; }
+  function snapshot(){ return { build:BUILD, ok:!state.error, community:state.community, rows:state.rows, ignoredRows:state.ignoredRows || [], workflows:state.workflows, workflowCount:state.workflows.length, loadedAt:state.loadedAt, error:state.error }; }
   function workflowByKey(key){ return state.workflows.find(w=>clean(w.key)===clean(key)) || null; }
   function setBusy(key,busy){ const card=document.querySelector('[data-annual-workflow-key="'+CSS.escape(key)+'"]'); if(card) card.querySelectorAll('button,textarea').forEach(el=>el.disabled=!!busy); }
   async function currentUserId(client){
@@ -326,7 +333,7 @@
     const w=workflowByKey(key); if(!w) return alert('Packet preview is not available yet. Refresh and try again.');
     const row=w.primary || w.rows[0] || {};
     if(typeof window.previewBoardHubAnnualMeetingPacket === 'function'){
-      try{ window.__BoardHubAnnualOpenWorkflowsV707Status = snapshot(); window.previewBoardHubAnnualMeetingPacket(row.id); return; }catch(_e){}
+      try{ window.__BoardHubAnnualOpenWorkflowsV708Status = snapshot(); window.__BoardHubAnnualOpenWorkflowsV707Status = window.__BoardHubAnnualOpenWorkflowsV708Status; window.previewBoardHubAnnualMeetingPacket(row.id); return; }catch(_e){}
     }
     alert('Preview is not available for this packet yet.');
   }
