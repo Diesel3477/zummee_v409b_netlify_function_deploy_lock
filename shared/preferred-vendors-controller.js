@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  var BUILD = '2026-05-11-v740-preferred-vendors-compact-records-dropdown';
+  var BUILD = '2026-05-11-v741-preferred-vendors-restore-star-ratings';
   var SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_DqOtjzlLWph7-bFjKlFN0w_kSpPI864';
   var VENDOR_TABLE = 'preferred_vendors_shared';
@@ -16,6 +16,9 @@
     context: null,
     vendors: [],
     sponsors: [],
+    reviewSummary: {},
+    reviewRowsByVendor: {},
+    reviewTableAvailable: true,
     lastError: '',
     lastSavedAt: null,
     lastLoadedAt: null
@@ -111,6 +114,70 @@
     var d = phoneDigits(v);
     if(d.length === 10) return '(' + d.slice(0,3) + ') ' + d.slice(3,6) + '-' + d.slice(6);
     return clean(v) || '—';
+  }
+
+  function formatStarString(rating){
+    var rounded = Math.round(Number(rating || 0));
+    if(rounded < 0) rounded = 0;
+    if(rounded > 5) rounded = 5;
+    return '★★★★★'.slice(0, rounded) + '☆☆☆☆☆'.slice(0, 5 - rounded);
+  }
+  function reviewSummaryForVendor(vendorKey){
+    return state.reviewSummary[String(vendorKey || '')] || { average:0, count:0, text:'No ratings yet' };
+  }
+  async function loadVendorReviewSummaries(){
+    var sb = getClient();
+    var ctx = await resolveContext(false);
+    state.reviewSummary = {};
+    state.reviewRowsByVendor = {};
+    state.reviewTableAvailable = true;
+    if(!sb || !sb.from || !ctx || !ctx.company || !ctx.community_id) return state.reviewSummary;
+    try{
+      var res = await timeout(
+        sb.from('vendor_reviews')
+          .select('vendor_key,vendor_name,rating,note,reviewer_name,reviewer_user_id,created_at,is_archived')
+          .eq('company', ctx.company)
+          .eq('community_id', ctx.community_id)
+          .order('created_at', { ascending:false }),
+        7000,
+        'Vendor ratings load'
+      );
+      if(res && res.error) throw res.error;
+      var rows = Array.isArray(res && res.data) ? res.data : [];
+      var sums = {};
+      rows.forEach(function(row){
+        if(row && row.is_archived) return;
+        var key = clean(row && row.vendor_key);
+        if(!key) return;
+        if(!state.reviewRowsByVendor[key]) state.reviewRowsByVendor[key] = [];
+        state.reviewRowsByVendor[key].push(row);
+        if(!sums[key]) sums[key] = { total:0, count:0 };
+        var rating = Number(row && row.rating || 0);
+        if(rating > 0){ sums[key].total += rating; sums[key].count += 1; }
+      });
+      Object.keys(sums).forEach(function(key){
+        var count = sums[key].count || 0;
+        var avg = count ? (sums[key].total / count) : 0;
+        state.reviewSummary[key] = {
+          average: avg,
+          count: count,
+          text: count ? (avg.toFixed(1) + ' · ' + count + ' review' + (count === 1 ? '' : 's')) : 'No ratings yet'
+        };
+      });
+    }catch(err){
+      state.reviewTableAvailable = false;
+      console.warn('Preferred Vendors ratings unavailable:', err && err.message ? err.message : err);
+    }
+    return state.reviewSummary;
+  }
+  function renderRatingBadge(v){
+    var summary = reviewSummaryForVendor(v && v.vendorKey);
+    var count = Number(summary && summary.count || 0);
+    var avg = Number(summary && summary.average || 0);
+    if(!count){
+      return '<div class="pv-ratingSummary pv-ratingSummaryEmpty"><span class="pv-ratingStars">☆☆☆☆☆</span><span class="pv-ratingText">No ratings yet</span></div>';
+    }
+    return '<div class="pv-ratingSummary"><span class="pv-ratingStars" aria-label="'+esc(avg.toFixed(1))+' out of 5 stars">'+esc(formatStarString(avg))+'</span><span class="pv-ratingText">'+esc(avg.toFixed(1))+' · '+count+' review'+(count===1?'':'s')+'</span></div>';
   }
   async function resolveContext(force){
     if(state.context && !force) return state.context;
@@ -342,6 +409,7 @@
       + '<div class="pv-vendorTop"><div class="pv-vendorName">'+esc(v.vendorName)+'</div>'+(v.contactName ? '<div class="pv-vendorContact">Company Contact: '+esc(v.contactName)+'</div>' : '')+'</div>'
       + '<span class="pv-typePill">'+esc(v.vendorType || 'Other')+'</span>'
       + '<div class="pv-contactGrid">'+phoneBlock+emailBlock+'</div>'
+      + renderRatingBadge(v)
       + (canManage ? '<div class="pv-cardActions"><button class="pv-btn" type="button" data-edit="'+esc(v.vendorKey)+'">Edit</button><button class="pv-btn pv-btnDanger" type="button" data-delete="'+esc(v.vendorKey)+'">Delete</button></div>' : '')
       + (v.notes ? '<div class="pv-notesBox"><strong>Notes</strong> '+esc(v.notes)+'</div>' : '')
       + '</article>';
@@ -474,6 +542,7 @@
       var canManage = isManagerRole();
       if($('pv_manageCard')) $('pv_manageCard').style.display = canManage ? '' : 'none';
       await loadVendors();
+      await loadVendorReviewSummaries();
       renderMarketplace();
       setStatus('Ready.','ok');
       setTimeout(loadSponsorsDeferred, 50);
@@ -499,6 +568,9 @@
       loadedAt: state.lastLoadedAt,
       savedAt: state.lastSavedAt,
       error: state.lastError || '',
+      ratingsLoaded: !!Object.keys(state.reviewSummary || {}).length,
+      ratingsTableAvailable: state.reviewTableAvailable,
+      reviewSummaryCount: Object.keys(state.reviewSummary || {}).length,
       sponsorCount: state.sponsors.length,
       brandingLogoLoaded: !!($('pvCompanyLogo') && $('pvCompanyLogo').classList.contains('is-visible')),
       logoSource: 'companies.logo_path / company_logos bucket'
