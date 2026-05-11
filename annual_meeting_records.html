@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Annual Meeting Records</title>
-<script id="annual-records-build-marker">window.ZUMMEE_BUILD="2026-05-11-v751-annual-records-shared-community-resolver";console.info("[Annual Records]",window.ZUMMEE_BUILD);</script>
+<script id="annual-records-build-marker">window.ZUMMEE_BUILD="2026-05-11-v752-annual-records-no-access-scope";console.info("[Annual Records]",window.ZUMMEE_BUILD);</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 
@@ -206,18 +206,6 @@
       </div>
     </header>
 
-    <section class="panel access-panel">
-      <div>
-        <div class="eyebrow">Access scope</div>
-        <h2 class="access-title" id="scopeTitle">Loading access…</h2>
-        <p class="access-copy" id="scopeText">Checking whether you should see all company communities or just the communities assigned to you.</p>
-      </div>
-      <div class="access-pills">
-        <div class="scope-pill"><span>Role</span><strong id="scopeRole">—</strong></div>
-        <div class="scope-pill"><span>Filter</span><strong id="scopeFilter">All</strong></div>
-      </div>
-    </section>
-
     <section class="panel records-card">
       <div class="records-head">
         <div>
@@ -256,7 +244,7 @@
   </div>
 
 
-<script src="shared/community-assignment-resolver.js?v=2026-05-11-v751"></script>
+<script src="shared/community-assignment-resolver.js?v=2026-05-11-v752"></script>
 <script>
 (function(){
   const DEFAULT_SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
@@ -313,7 +301,7 @@
     archives: [],
     visibleArchives: []
   };
-  const BUILD = '2026-05-11-v751-annual-records-shared-community-resolver';
+  const BUILD = '2026-05-11-v752-annual-records-no-access-scope';
   window.__AnnualMeetingRecordsStatus = {
     build: BUILD,
     loadedAt: null,
@@ -502,7 +490,7 @@
         return;
       }
     }catch(err){
-      console.warn('[Annual Records v751] shared assignment resolver failed; using safe fallback', err);
+      console.warn('[Annual Records v752] shared assignment resolver failed; using safe fallback', err);
       window.__AnnualMeetingRecordsStatus.assignmentSource = 'fallback_after_shared_resolver_error';
       window.__AnnualMeetingRecordsStatus.error = safe(err && err.message) || window.__AnnualMeetingRecordsStatus.error;
     }
@@ -520,7 +508,7 @@
         if(res && res.error) throw res.error;
         if(Array.isArray(res && res.data)) rows = rows.concat(res.data);
       }catch(err){
-        console.warn('[Annual Records v751] assignment fallback '+label+' failed', err);
+        console.warn('[Annual Records v752] assignment fallback '+label+' failed', err);
       }
     }
 
@@ -718,12 +706,12 @@
     const sup = isSupervisorRole(state.role);
     const communities = uniq(state.accessibleCommunities.map(c => c.name || c.id).filter(Boolean));
     const latest = state.archives[0] || null;
-    els.scopeRole.textContent = state.role ? state.role.charAt(0).toUpperCase() + state.role.slice(1) : 'Employee';
-    els.scopeTitle.textContent = sup ? 'Company-wide archive access' : 'Assigned community archive access';
-    els.scopeText.textContent = sup
+    if(els.scopeRole) els.scopeRole.textContent = state.role ? state.role.charAt(0).toUpperCase() + state.role.slice(1) : 'Employee';
+    if(els.scopeTitle) els.scopeTitle.textContent = sup ? 'Company-wide archive access' : 'Assigned community archive access';
+    if(els.scopeText) els.scopeText.textContent = sup
       ? 'You can review mailed annual meeting packets for every community tied to your company.'
       : 'You can review mailed annual meeting packets for the communities assigned to you.';
-    els.scopeFilter.textContent = els.communityFilter.value ? 'Filtered' : 'All';
+    if(els.scopeFilter) els.scopeFilter.textContent = els.communityFilter.value ? 'Filtered' : 'All';
     els.pageLede.textContent = sup
       ? 'Review what was mailed for every community in your company and pull up the exact packet record by year.'
       : 'Review mailed annual meeting packets for your assigned communities and pull up the exact packet record by year.';
