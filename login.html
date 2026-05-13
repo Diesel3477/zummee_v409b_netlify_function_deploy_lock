@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-13-v770-login-header-nav-buttons";window.ZUMMEE_STATIC_LOGIN_LOGO=true;window.ZUMMEE_DISABLE_COMPANY_LOGO_SYNC_ON_LOGIN=true;console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-13-v771-login-bottom-safe-layout";window.ZUMMEE_STATIC_LOGIN_LOGO=true;window.ZUMMEE_DISABLE_COMPANY_LOGO_SYNC_ON_LOGIN=true;console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <script>
 
@@ -1058,7 +1058,7 @@ body.dark-mode .mh2-stat-box {
 </style>
 <script id="zummee-v769-login-static-logo-guard">
 (function(){
-  var STATIC_SRC='assets/login/zummee-login-logo.png?v=2026-05-13-v770';
+  var STATIC_SRC='assets/login/zummee-login-logo.png?v=2026-05-13-v771';
   function lockLogo(){
     try{
       var img=document.querySelector('.z-login-logo');
@@ -1190,12 +1190,60 @@ body.dark-mode .mh2-stat-box {
   };
 })();
 </script>
+
+<style id="zummee-v771-login-bottom-safe-layout-css">
+  /* v771: prevent the lower login section/card from being clipped on iPad/Safari. Visual-only. */
+  .z-hero{
+    min-height:100svh !important;
+    height:auto !important;
+    overflow:visible !important;
+    align-items:flex-start !important;
+    padding-bottom:max(80px, env(safe-area-inset-bottom)) !important;
+  }
+  .z-hero__bg, .z-hero__overlay{
+    position:fixed !important;
+  }
+  .z-hero__content{
+    width:100% !important;
+    padding-bottom:96px !important;
+  }
+  .z-card{
+    margin-bottom:40px !important;
+  }
+  @media(max-width:980px){
+    .z-hero{
+      padding-bottom:max(120px, env(safe-area-inset-bottom)) !important;
+    }
+    .z-hero__content{
+      padding-bottom:130px !important;
+    }
+    .z-card{
+      margin-bottom:70px !important;
+    }
+  }
+</style>
+<script id="zummee-v771-login-bottom-safe-diagnostic">
+(function(){
+  window.getLoginBottomSafeLayoutStatus=function(){
+    var hero=document.querySelector('.z-hero');
+    var card=document.getElementById('z_loginCard');
+    var hs=hero?getComputedStyle(hero):null;
+    return {
+      ok:!!hero&&!!card,
+      build:window.ZUMMEE_BUILD||'',
+      heroOverflow:hs?hs.overflow:'',
+      cardBottom:card?Math.round(card.getBoundingClientRect().bottom):null,
+      viewportHeight:window.innerHeight
+    };
+  };
+})();
+</script>
 </head>
 <body data-header-mode="simple">
   <header class="z-topbar">
     <div class="z-topbar__inner">
       <div class="z-brand">
-        <img src="assets/login/zummee-login-logo.png?v=2026-05-13-v770" alt="Zummee Professional Property Management Software" class="z-login-logo">
+        <img src="assets/login/zummee-login-logo.png?v=2026-05-13-v771" alt="Zummee Professional Property Management Software" class="z-login-logo">
 </div>
       <nav class="z-nav z-login-header-nav" aria-label="Primary">
         <a href="#" onclick="return false;">Solutions</a>
