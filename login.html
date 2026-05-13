@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-13-v774-login-hero-copy-centered";window.ZUMMEE_STATIC_LOGIN_LOGO=true;window.ZUMMEE_DISABLE_COMPANY_LOGO_SYNC_ON_LOGIN=true;console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-13-v775-login-resident-access-section";window.ZUMMEE_STATIC_LOGIN_LOGO=true;window.ZUMMEE_DISABLE_COMPANY_LOGO_SYNC_ON_LOGIN=true;console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <script>
 
@@ -1268,6 +1268,51 @@ body.dark-mode .mh2-stat-box {
   };
 })();
 </script>
+
+<style id="zummee-v775-resident-login-section-css">
+  /* v775: resident-facing presentation on the same stable Supabase login engine. */
+  .z-tabs.z-tabs--three{
+    display:grid !important;
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+    gap:6px !important;
+  }
+  .z-tabs.z-tabs--three .z-tab{
+    min-width:0 !important;
+    padding-left:8px !important;
+    padding-right:8px !important;
+    font-size:12px !important;
+    line-height:1.1 !important;
+  }
+  .z-login-mode-note{
+    margin:-4px 0 14px !important;
+    padding:11px 13px !important;
+    border-radius:16px !important;
+    background:linear-gradient(180deg,#f7fbff,#eef6ff) !important;
+    border:1px solid rgba(37,99,235,.18) !important;
+    color:rgba(15,47,74,.76) !important;
+    font-size:13px !important;
+    line-height:1.35 !important;
+    font-weight:800 !important;
+  }
+  @media(max-width:620px){
+    .z-tabs.z-tabs--three{grid-template-columns:1fr !important;border-radius:18px !important;}
+    .z-tabs.z-tabs--three .z-tab{font-size:13px !important;}
+  }
+</style>
+<script id="zummee-v775-login-resident-diagnostic">
+(function(){
+  window.getLoginResidentAccessStatus=function(){
+    return {
+      ok:true,
+      build:window.ZUMMEE_BUILD||'',
+      managementTab:!!document.getElementById('z_tab_signin'),
+      residentTab:!!document.getElementById('z_tab_resident'),
+      createTab:!!document.getElementById('z_tab_create'),
+      sameAuthEngine:!!(document.getElementById('li_username')&&document.getElementById('li_password')&&document.getElementById('btnLogin'))
+    };
+  };
+})();
+</script>
 </head>
 <body data-header-mode="simple">
   <header class="z-topbar">
@@ -1300,10 +1345,12 @@ body.dark-mode .mh2-stat-box {
         <h2>Welcome back</h2>
         <p>Sign in to access your company hub. New here? Create an account in seconds.</p>
 
-        <div class="z-tabs" role="tablist" aria-label="Authentication">
-          <button class="z-tab" id="z_tab_signin" role="tab" aria-selected="true" type="button">Sign in</button>
-          <button class="z-tab" id="z_tab_create" role="tab" aria-selected="false" type="button">Create account</button>
+        <div class="z-tabs z-tabs--three" role="tablist" aria-label="Authentication">
+          <button class="z-tab" id="z_tab_signin" role="tab" aria-selected="true" type="button">Management Login</button>
+          <button class="z-tab" id="z_tab_resident" role="tab" aria-selected="false" type="button">Resident Login</button>
+          <button class="z-tab" id="z_tab_create" role="tab" aria-selected="false" type="button">Create Account</button>
         </div>
+        <div id="z_loginModeNote" class="z-login-mode-note">Management access for property managers, supervisors, admins, and board workflows.</div>
 
         <div id="z_panel_signin" role="tabpanel">
           <div class="z-field">
@@ -1414,33 +1461,56 @@ body.dark-mode .mh2-stat-box {
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script>
-  // Simple tab switcher (keeps existing input IDs, only changes visibility)
+  // Login mode switcher. Resident access uses the same stable Supabase sign-in engine.
   (function(){
     function qs(id){ return document.getElementById(id); }
     var tabIn = qs('z_tab_signin');
+    var tabResident = qs('z_tab_resident');
     var tabCr = qs('z_tab_create');
     var pIn = qs('z_panel_signin');
     var pCr = qs('z_panel_create');
+    var modeNote = qs('z_loginModeNote');
+    var card = qs('z_loginCard');
+    var cardTitle = card ? card.querySelector('h2') : null;
+    var cardSub = card ? card.querySelector('p') : null;
     function setTab(which){
-      var isIn = which==='in';
+      var isCreate = which==='cr';
+      var isResident = which==='resident';
       var pInvite = qs('z_panel_invitepw');
-      if(tabIn) tabIn.setAttribute('aria-selected', isIn ? 'true' : 'false');
-      if(tabCr) tabCr.setAttribute('aria-selected', isIn ? 'false' : 'true');
-      if(pIn) pIn.style.display = isIn ? '' : 'none';
-      if(pCr) pCr.style.display = isIn ? 'none' : '';
+      if(tabIn) tabIn.setAttribute('aria-selected', (!isCreate && !isResident) ? 'true' : 'false');
+      if(tabResident) tabResident.setAttribute('aria-selected', isResident ? 'true' : 'false');
+      if(tabCr) tabCr.setAttribute('aria-selected', isCreate ? 'true' : 'false');
+      if(pIn) pIn.style.display = isCreate ? 'none' : '';
+      if(pCr) pCr.style.display = isCreate ? '' : 'none';
       if(pInvite) pInvite.style.display = 'none';
-      try{ (isIn ? qs('li_username') : qs('su_name'))?.focus?.(); }catch(e){}
+      try{ sessionStorage.setItem('zummee_login_mode', isResident ? 'resident' : (isCreate ? 'create' : 'management')); }catch(_e){}
+      if(cardTitle) cardTitle.textContent = isCreate ? 'Create your account' : (isResident ? 'Resident access' : 'Welcome back');
+      if(cardSub) cardSub.textContent = isCreate
+        ? 'Create your Zummee account. New employee accounts require company approval before access is enabled.'
+        : (isResident
+          ? 'Sign in to view community updates, submit work orders, access resident tools, and manage your community experience.'
+          : 'Sign in to access your company hub. New here? Create an account in seconds.');
+      if(modeNote){
+        modeNote.style.display = isCreate ? 'none' : '';
+        modeNote.textContent = isResident
+          ? 'Resident access for work orders, community updates, documents, and resident services.'
+          : 'Management access for property managers, supervisors, admins, and board workflows.';
+      }
+      var loginBtn = qs('btnLogin');
+      if(loginBtn) loginBtn.textContent = isResident ? 'Resident Sign In' : 'Sign in';
+      try{ (isCreate ? qs('su_name') : qs('li_username'))?.focus?.(); }catch(e){}
     }
     tabIn && tabIn.addEventListener('click', function(){ setTab('in'); });
+    tabResident && tabResident.addEventListener('click', function(){ setTab('resident'); });
     tabCr && tabCr.addEventListener('click', function(){ setTab('cr'); });
     var go = qs('z_goSignin');
     go && go.addEventListener('click', function(){ setTab('in'); });
     var cta = qs('z_focusLogin');
-    var card = qs('z_loginCard');
     cta && card && cta.addEventListener('click', function(){
       card.scrollIntoView({behavior:'smooth', block:'center'});
       setTab('in');
     });
+    window.ZummeeLoginModeTabs = { set:setTab };
   })();
 </script>
 
