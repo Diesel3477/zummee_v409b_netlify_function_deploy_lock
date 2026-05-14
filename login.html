@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-14-v785-login-full-page-scroll-header";window.ZUMMEE_STATIC_LOGIN_LOGO=true;window.ZUMMEE_DISABLE_COMPANY_LOGO_SYNC_ON_LOGIN=true;console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-14-v786-login-ios-keyboard-reset-no-header-lock";window.ZUMMEE_STATIC_LOGIN_LOGO=true;window.ZUMMEE_DISABLE_COMPANY_LOGO_SYNC_ON_LOGIN=true;console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <script>
 
@@ -1602,6 +1602,125 @@ body.dark-mode .mh2-stat-box {
     padding-bottom:calc(96px + env(safe-area-inset-bottom, 0px)) !important;
   }
 </style>
+
+
+<style id="zummee-v786-login-ios-keyboard-reset-no-header-lock-css">
+  /* v786: prevent iPad Safari keyboard-close blank space without locking the header.
+     Header remains in normal document flow; the page scrolls normally. */
+  html,
+  body{
+    height:auto !important;
+    min-height:100% !important;
+    overflow-x:hidden !important;
+    overflow-y:auto !important;
+    position:static !important;
+    background:#123d5c !important;
+  }
+  .z-topbar{
+    position:relative !important;
+    top:auto !important;
+    left:auto !important;
+    right:auto !important;
+    transform:none !important;
+  }
+  .z-hero{
+    position:relative !important;
+    height:auto !important;
+    max-height:none !important;
+    min-height:calc(var(--zummee-stable-vh, 100vh) - var(--zummee-login-header-h, 0px)) !important;
+    overflow:visible !important;
+    background:linear-gradient(135deg, rgba(15,47,74,.96) 0%, rgba(28,78,118,.86) 46%, rgba(237,244,251,.88) 100%) !important;
+  }
+  .z-hero__bg,
+  .z-hero__overlay{
+    position:absolute !important;
+    inset:0 !important;
+    min-height:100% !important;
+    height:100% !important;
+  }
+  .z-hero__content{
+    min-height:calc(var(--zummee-stable-vh, 100vh) - var(--zummee-login-header-h, 0px)) !important;
+    box-sizing:border-box !important;
+  }
+</style>
+<script id="zummee-v786-login-ios-keyboard-reset-no-header-lock-js">
+(function(){
+  var lastStableHeight = window.innerHeight || 0;
+  var keyboardLikelyOpen = false;
+  var activeTextInput = false;
+
+  function isTextControl(el){
+    if(!el) return false;
+    var tag=(el.tagName||'').toLowerCase();
+    return tag === 'input' || tag === 'textarea' || el.isContentEditable;
+  }
+
+  function setVars(){
+    try{
+      var root=document.documentElement;
+      var header=document.querySelector('.z-topbar');
+      var headerH=header ? Math.ceil(header.getBoundingClientRect().height) : 0;
+      var vh = Math.max(window.innerHeight || 0, 500);
+      if(!keyboardLikelyOpen && vh) lastStableHeight = vh;
+      root.style.setProperty('--zummee-stable-vh', (lastStableHeight || vh) + 'px');
+      root.style.setProperty('--zummee-login-header-h', headerH + 'px');
+    }catch(_e){}
+  }
+
+  function detectKeyboard(){
+    try{
+      var vv=window.visualViewport;
+      var h=vv && vv.height ? vv.height : window.innerHeight;
+      var full=window.innerHeight || h;
+      activeTextInput=isTextControl(document.activeElement);
+      keyboardLikelyOpen=!!(activeTextInput && h < full - 120);
+      if(!keyboardLikelyOpen && full) lastStableHeight=Math.max(full,lastStableHeight||0);
+      setVars();
+    }catch(_e){setVars();}
+  }
+
+  function resetAfterKeyboardClose(){
+    setVars();
+    var active=isTextControl(document.activeElement);
+    if(active) return;
+    // iPad Safari sometimes leaves the document scrolled into phantom space after the keyboard closes.
+    // Keep full-page scrolling, but snap out of the phantom space after editing fields.
+    requestAnimationFrame(function(){
+      try{ window.scrollTo({ top:0, left:0, behavior:'auto' }); }catch(_e){ try{ window.scrollTo(0,0); }catch(_e2){} }
+      setVars();
+    });
+    setTimeout(function(){ try{ window.scrollTo(0,0); }catch(_e){} setVars(); },120);
+    setTimeout(function(){ try{ window.scrollTo(0,0); }catch(_e){} setVars(); },360);
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){ setVars(); setTimeout(setVars,250); });
+  window.addEventListener('load', function(){ setVars(); setTimeout(setVars,250); });
+  window.addEventListener('resize', detectKeyboard);
+  window.addEventListener('orientationchange', function(){ setTimeout(setVars,250); setTimeout(resetAfterKeyboardClose,700); });
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', detectKeyboard);
+    window.visualViewport.addEventListener('scroll', detectKeyboard);
+  }
+  document.addEventListener('focusin', function(e){ if(isTextControl(e.target)){ activeTextInput=true; detectKeyboard(); } }, true);
+  document.addEventListener('focusout', function(e){ if(isTextControl(e.target)){ activeTextInput=false; keyboardLikelyOpen=false; setTimeout(resetAfterKeyboardClose,80); setTimeout(resetAfterKeyboardClose,420); } }, true);
+
+  window.getLoginKeyboardGapStatus=function(){
+    var header=document.querySelector('.z-topbar');
+    var hero=document.querySelector('.z-hero');
+    return {
+      ok:!!hero,
+      build:window.ZUMMEE_BUILD||'',
+      headerLocked:false,
+      headerPosition:header ? getComputedStyle(header).position : '',
+      pageScrolls:getComputedStyle(document.body).overflowY,
+      stableVh:getComputedStyle(document.documentElement).getPropertyValue('--zummee-stable-vh').trim(),
+      scrollY:window.scrollY||0,
+      keyboardLikelyOpen:keyboardLikelyOpen
+    };
+  };
+})();
+</script>
+
 </head>
 <body data-header-mode="simple">
   <header class="z-topbar">
