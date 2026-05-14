@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-14-v781-public-blue-buttons-remove-gray-bars";window.ZUMMEE_STATIC_LOGIN_LOGO=true;window.ZUMMEE_DISABLE_COMPANY_LOGO_SYNC_ON_LOGIN=true;console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-14-v782-login-ios-keyboard-gap-fix";window.ZUMMEE_STATIC_LOGIN_LOGO=true;window.ZUMMEE_DISABLE_COMPANY_LOGO_SYNC_ON_LOGIN=true;console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <script>
 
@@ -1364,6 +1364,80 @@ body.dark-mode .mh2-stat-box {
   };
 })();
 </script>
+
+
+<style id="zummee-v782-login-ios-keyboard-gap-fix-css">
+  /* v782: iPad/Safari keyboard recovery. Keep the hero background covering the viewport after the keyboard closes. */
+  html,
+  body{
+    background:#173f5f !important;
+    min-height:100% !important;
+  }
+  body{
+    min-height:var(--zummee-login-vvh, 100vh) !important;
+    background:
+      linear-gradient(135deg, rgba(15,47,74,.96), rgba(28,78,118,.86) 46%, rgba(237,244,251,.88) 100%) !important;
+  }
+  .z-hero{
+    min-height:calc(var(--zummee-login-vvh, 100vh) - var(--zummee-login-header-h, 0px)) !important;
+    background:
+      linear-gradient(135deg, rgba(15,47,74,.96), rgba(28,78,118,.86) 46%, rgba(237,244,251,.88) 100%) !important;
+  }
+  .z-hero::after{
+    content:"";
+    position:absolute;
+    left:0;
+    right:0;
+    bottom:-2px;
+    height:4px;
+    background:inherit;
+    pointer-events:none;
+  }
+</style>
+<script id="zummee-v782-login-ios-keyboard-gap-fix-js">
+(function(){
+  function setViewportVars(){
+    try{
+      var root=document.documentElement;
+      var vv=window.visualViewport;
+      var viewportH=Math.max(window.innerHeight || 0, vv && vv.height ? vv.height : 0);
+      var header=document.querySelector('.z-topbar');
+      var headerH=header ? Math.ceil(header.getBoundingClientRect().height) : 0;
+      root.style.setProperty('--zummee-login-vvh', viewportH + 'px');
+      root.style.setProperty('--zummee-login-header-h', headerH + 'px');
+      document.body && document.body.style.setProperty('--zummee-login-vvh', viewportH + 'px');
+    }catch(_e){}
+  }
+  function recoverAfterKeyboard(){
+    setViewportVars();
+    setTimeout(setViewportVars, 80);
+    setTimeout(setViewportVars, 260);
+    setTimeout(setViewportVars, 650);
+  }
+  document.addEventListener('DOMContentLoaded', recoverAfterKeyboard);
+  window.addEventListener('load', recoverAfterKeyboard);
+  window.addEventListener('resize', recoverAfterKeyboard);
+  window.addEventListener('orientationchange', recoverAfterKeyboard);
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', recoverAfterKeyboard);
+    window.visualViewport.addEventListener('scroll', recoverAfterKeyboard);
+  }
+  document.addEventListener('focusout', recoverAfterKeyboard, true);
+  window.getLoginKeyboardGapStatus=function(){
+    var cs=getComputedStyle(document.documentElement);
+    var hero=document.querySelector('.z-hero');
+    return {
+      ok:!!hero,
+      build:window.ZUMMEE_BUILD||'',
+      viewportVar:cs.getPropertyValue('--zummee-login-vvh').trim(),
+      headerVar:cs.getPropertyValue('--zummee-login-header-h').trim(),
+      bodyBackground:getComputedStyle(document.body).backgroundImage !== 'none',
+      heroMinHeight:hero ? getComputedStyle(hero).minHeight : ''
+    };
+  };
+})();
+</script>
+
 </head>
 <body data-header-mode="simple">
   <header class="z-topbar">
