@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-14-v786-login-ios-keyboard-reset-no-header-lock";window.ZUMMEE_STATIC_LOGIN_LOGO=true;window.ZUMMEE_DISABLE_COMPANY_LOGO_SYNC_ON_LOGIN=true;console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-14-v787-login-ios-keyboard-scroll-restore";window.ZUMMEE_STATIC_LOGIN_LOGO=true;window.ZUMMEE_DISABLE_COMPANY_LOGO_SYNC_ON_LOGIN=true;console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <script>
 
@@ -1716,6 +1716,145 @@ body.dark-mode .mh2-stat-box {
       stableVh:getComputedStyle(document.documentElement).getPropertyValue('--zummee-stable-vh').trim(),
       scrollY:window.scrollY||0,
       keyboardLikelyOpen:keyboardLikelyOpen
+    };
+  };
+})();
+</script>
+
+
+<style id="zummee-v787-login-ios-scroll-restore-css">
+  /* v787: premium iPad Safari keyboard handling without locking the header.
+     The document remains scrollable; when the keyboard closes we restore the scroll
+     position that existed before the input was focused. */
+  :root{
+    --zummee-login-bg:linear-gradient(135deg, rgba(15,47,74,.96) 0%, rgba(28,78,118,.86) 46%, rgba(237,244,251,.88) 100%);
+  }
+  html,
+  body{
+    height:auto !important;
+    min-height:100% !important;
+    overflow-x:hidden !important;
+    overflow-y:auto !important;
+    position:static !important;
+    overscroll-behavior-y:none !important;
+    background:var(--zummee-login-bg) !important;
+  }
+  body::before{display:none !important;content:none !important;}
+  .z-topbar{
+    position:relative !important;
+    top:auto !important;
+    left:auto !important;
+    right:auto !important;
+    transform:none !important;
+    z-index:10 !important;
+  }
+  .z-hero{
+    position:relative !important;
+    height:auto !important;
+    max-height:none !important;
+    min-height:calc(var(--zummee-login-vh, 100svh) - var(--zummee-login-header-h, 0px)) !important;
+    overflow:visible !important;
+    background:var(--zummee-login-bg) !important;
+  }
+  .z-hero__bg,
+  .z-hero__overlay{
+    position:absolute !important;
+    inset:0 !important;
+    min-height:100% !important;
+    height:100% !important;
+  }
+  .z-hero__content{
+    min-height:auto !important;
+    padding-top:44px !important;
+    padding-bottom:calc(96px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+</style>
+<script id="zummee-v787-login-ios-scroll-restore-js">
+(function(){
+  var savedScrollY = 0;
+  var keyboardWasOpen = false;
+  var restoreTimer = null;
+
+  function isTextControl(el){
+    if(!el) return false;
+    var tag=(el.tagName||'').toLowerCase();
+    return tag === 'input' || tag === 'textarea' || el.isContentEditable;
+  }
+  function setViewportVars(){
+    try{
+      var root=document.documentElement;
+      var header=document.querySelector('.z-topbar');
+      var headerH=header ? Math.ceil(header.getBoundingClientRect().height) : 0;
+      var vh = (window.visualViewport && window.visualViewport.height) ? window.visualViewport.height : window.innerHeight;
+      root.style.setProperty('--zummee-login-vh', Math.max(500, Math.round(vh || window.innerHeight || 800)) + 'px');
+      root.style.setProperty('--zummee-login-header-h', headerH + 'px');
+    }catch(_e){}
+  }
+  function keyboardIsOpen(){
+    try{
+      var vv=window.visualViewport;
+      if(!vv) return false;
+      return vv.height < (window.innerHeight - 130);
+    }catch(_e){return false;}
+  }
+  function scheduleRestore(){
+    clearTimeout(restoreTimer);
+    function run(){
+      if(isTextControl(document.activeElement)) return;
+      if(keyboardIsOpen()) return;
+      setViewportVars();
+      var y=Math.max(0, savedScrollY || 0);
+      try{ window.scrollTo({top:y,left:0,behavior:'auto'}); }catch(_e){ try{ window.scrollTo(0,y); }catch(_e2){} }
+    }
+    requestAnimationFrame(run);
+    restoreTimer=setTimeout(run,90);
+    setTimeout(run,220);
+    setTimeout(run,520);
+  }
+  function handleViewportChange(){
+    setViewportVars();
+    var open=keyboardIsOpen();
+    if(keyboardWasOpen && !open) scheduleRestore();
+    keyboardWasOpen=open;
+  }
+
+  document.addEventListener('focusin', function(e){
+    if(isTextControl(e.target)){
+      savedScrollY = window.scrollY || window.pageYOffset || 0;
+      keyboardWasOpen = true;
+      setViewportVars();
+    }
+  }, true);
+  document.addEventListener('focusout', function(e){
+    if(isTextControl(e.target)){
+      keyboardWasOpen = true;
+      setTimeout(scheduleRestore, 80);
+      setTimeout(scheduleRestore, 300);
+      setTimeout(scheduleRestore, 700);
+    }
+  }, true);
+
+  window.addEventListener('load', setViewportVars);
+  window.addEventListener('resize', handleViewportChange);
+  window.addEventListener('orientationchange', function(){setTimeout(setViewportVars,250);setTimeout(scheduleRestore,700);});
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', handleViewportChange);
+    window.visualViewport.addEventListener('scroll', handleViewportChange);
+  }
+  setViewportVars();
+
+  window.getLoginKeyboardGapStatus=function(){
+    var header=document.querySelector('.z-topbar');
+    return {
+      ok:true,
+      build:window.ZUMMEE_BUILD||'',
+      headerLocked:false,
+      headerPosition:header ? getComputedStyle(header).position : '',
+      pageScrolls:document.body ? getComputedStyle(document.body).overflowY : '',
+      savedScrollY:savedScrollY,
+      currentScrollY:window.scrollY||0,
+      keyboardOpen:keyboardIsOpen(),
+      strategy:'restore-pre-focus-scroll-without-header-lock'
     };
   };
 })();
