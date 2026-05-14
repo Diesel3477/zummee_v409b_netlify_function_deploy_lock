@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-14-v782-login-ios-keyboard-gap-fix";window.ZUMMEE_STATIC_LOGIN_LOGO=true;window.ZUMMEE_DISABLE_COMPANY_LOGO_SYNC_ON_LOGIN=true;console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-14-v783-login-ios-document-scroll-lock";window.ZUMMEE_STATIC_LOGIN_LOGO=true;window.ZUMMEE_DISABLE_COMPANY_LOGO_SYNC_ON_LOGIN=true;console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <script>
 
@@ -1433,6 +1433,98 @@ body.dark-mode .mh2-stat-box {
       headerVar:cs.getPropertyValue('--zummee-login-header-h').trim(),
       bodyBackground:getComputedStyle(document.body).backgroundImage !== 'none',
       heroMinHeight:hero ? getComputedStyle(hero).minHeight : ''
+    };
+  };
+})();
+</script>
+
+
+
+<style id="zummee-v783-login-ios-document-scroll-lock-css">
+  /* v783: prevent iPad Safari from leaving a document-level gap after keyboard closes.
+     The page itself no longer scrolls; the hero/login area is the only scroll container. */
+  html,
+  body{
+    height:100% !important;
+    width:100% !important;
+    overflow:hidden !important;
+    overscroll-behavior:none !important;
+    background:#173f5f !important;
+  }
+  body{
+    position:fixed !important;
+    inset:0 !important;
+    min-height:0 !important;
+  }
+  .z-topbar{
+    flex:0 0 auto !important;
+  }
+  .z-hero{
+    height:calc(var(--zummee-login-vvh, 100vh) - var(--zummee-login-header-h, 0px)) !important;
+    min-height:0 !important;
+    max-height:calc(var(--zummee-login-vvh, 100vh) - var(--zummee-login-header-h, 0px)) !important;
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+    -webkit-overflow-scrolling:touch !important;
+    overscroll-behavior:contain !important;
+  }
+  .z-hero__content{
+    min-height:100% !important;
+    box-sizing:border-box !important;
+  }
+</style>
+<script id="zummee-v783-login-ios-document-scroll-lock-js">
+(function(){
+  function setVars(){
+    try{
+      var root=document.documentElement;
+      var vv=window.visualViewport;
+      var h=Math.round(vv && vv.height ? vv.height : window.innerHeight || document.documentElement.clientHeight || 0);
+      var header=document.querySelector('.z-topbar');
+      var headerH=header ? Math.ceil(header.getBoundingClientRect().height) : 0;
+      root.style.setProperty('--zummee-login-vvh', h + 'px');
+      root.style.setProperty('--zummee-login-header-h', headerH + 'px');
+      if(document.body){
+        document.body.style.setProperty('--zummee-login-vvh', h + 'px');
+        document.body.style.setProperty('--zummee-login-header-h', headerH + 'px');
+      }
+    }catch(_e){}
+  }
+  function clearDocumentScroll(){
+    try{
+      setVars();
+      window.scrollTo(0,0);
+      document.documentElement.scrollTop=0;
+      if(document.body) document.body.scrollTop=0;
+    }catch(_e){}
+  }
+  function recover(){
+    clearDocumentScroll();
+    setTimeout(clearDocumentScroll,80);
+    setTimeout(clearDocumentScroll,260);
+    setTimeout(clearDocumentScroll,700);
+  }
+  document.addEventListener('DOMContentLoaded', recover);
+  window.addEventListener('load', recover);
+  window.addEventListener('resize', recover);
+  window.addEventListener('orientationchange', recover);
+  document.addEventListener('focusout', recover, true);
+  document.addEventListener('blur', recover, true);
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', recover);
+    window.visualViewport.addEventListener('scroll', recover);
+  }
+  window.getLoginKeyboardGapStatus=function(){
+    var hero=document.querySelector('.z-hero');
+    return {
+      ok:!!hero,
+      build:window.ZUMMEE_BUILD||'',
+      documentOverflow:document.body ? getComputedStyle(document.body).overflow : '',
+      bodyPosition:document.body ? getComputedStyle(document.body).position : '',
+      heroOverflow:hero ? getComputedStyle(hero).overflowY : '',
+      heroHeight:hero ? getComputedStyle(hero).height : '',
+      scrollY:window.scrollY || 0,
+      docScrollTop:document.documentElement.scrollTop || 0
     };
   };
 })();
