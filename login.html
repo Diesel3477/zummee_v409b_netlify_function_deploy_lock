@@ -1366,10 +1366,366 @@ body.dark-mode .mh2-stat-box {
 </script>
 
 
+<style id="zummee-v782-login-ios-keyboard-gap-fix-css">
+  /* v782: iPad/Safari keyboard recovery. Keep the hero background covering the viewport after the keyboard closes. */
+  html,
+  body{
+    background:#173f5f !important;
+    min-height:100% !important;
+  }
+  body{
+    min-height:var(--zummee-login-vvh, 100vh) !important;
+    background:
+      linear-gradient(135deg, rgba(15,47,74,.96), rgba(28,78,118,.86) 46%, rgba(237,244,251,.88) 100%) !important;
+  }
+  .z-hero{
+    min-height:calc(var(--zummee-login-vvh, 100vh) - var(--zummee-login-header-h, 0px)) !important;
+    background:
+      linear-gradient(135deg, rgba(15,47,74,.96), rgba(28,78,118,.86) 46%, rgba(237,244,251,.88) 100%) !important;
+  }
+  .z-hero::after{
+    content:"";
+    position:absolute;
+    left:0;
+    right:0;
+    bottom:-2px;
+    height:4px;
+    background:inherit;
+    pointer-events:none;
+  }
+</style>
+<script id="zummee-v782-login-ios-keyboard-gap-fix-js">
+(function(){
+  function setViewportVars(){
+    try{
+      var root=document.documentElement;
+      var vv=window.visualViewport;
+      var viewportH=Math.max(window.innerHeight || 0, vv && vv.height ? vv.height : 0);
+      var header=document.querySelector('.z-topbar');
+      var headerH=header ? Math.ceil(header.getBoundingClientRect().height) : 0;
+      root.style.setProperty('--zummee-login-vvh', viewportH + 'px');
+      root.style.setProperty('--zummee-login-header-h', headerH + 'px');
+      document.body && document.body.style.setProperty('--zummee-login-vvh', viewportH + 'px');
+    }catch(_e){}
+  }
+  function recoverAfterKeyboard(){
+    setViewportVars();
+    setTimeout(setViewportVars, 80);
+    setTimeout(setViewportVars, 260);
+    setTimeout(setViewportVars, 650);
+  }
+  document.addEventListener('DOMContentLoaded', recoverAfterKeyboard);
+  window.addEventListener('load', recoverAfterKeyboard);
+  window.addEventListener('resize', recoverAfterKeyboard);
+  window.addEventListener('orientationchange', recoverAfterKeyboard);
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', recoverAfterKeyboard);
+    window.visualViewport.addEventListener('scroll', recoverAfterKeyboard);
+  }
+  document.addEventListener('focusout', recoverAfterKeyboard, true);
+  window.getLoginKeyboardGapStatus=function(){
+    var cs=getComputedStyle(document.documentElement);
+    var hero=document.querySelector('.z-hero');
+    return {
+      ok:!!hero,
+      build:window.ZUMMEE_BUILD||'',
+      viewportVar:cs.getPropertyValue('--zummee-login-vvh').trim(),
+      headerVar:cs.getPropertyValue('--zummee-login-header-h').trim(),
+      bodyBackground:getComputedStyle(document.body).backgroundImage !== 'none',
+      heroMinHeight:hero ? getComputedStyle(hero).minHeight : ''
+    };
+  };
+})();
+</script>
 
-<style id="zummee-v791-login-ios-focus-stability-css">
-  /* v791: remove keyboard scroll handlers and prevent iPad Safari focus zoom/jump.
-     Header remains normal page flow; the full page scrolls naturally. */
+
+
+<style id="zummee-v783-login-ios-document-scroll-lock-css">
+  /* v783: prevent iPad Safari from leaving a document-level gap after keyboard closes.
+     The page itself no longer scrolls; the hero/login area is the only scroll container. */
+  html,
+  body{
+    height:100% !important;
+    width:100% !important;
+    overflow:hidden !important;
+    overscroll-behavior:none !important;
+    background:#173f5f !important;
+  }
+  body{
+    position:fixed !important;
+    inset:0 !important;
+    min-height:0 !important;
+  }
+  .z-topbar{
+    flex:0 0 auto !important;
+  }
+  .z-hero{
+    height:calc(var(--zummee-login-vvh, 100vh) - var(--zummee-login-header-h, 0px)) !important;
+    min-height:0 !important;
+    max-height:calc(var(--zummee-login-vvh, 100vh) - var(--zummee-login-header-h, 0px)) !important;
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+    -webkit-overflow-scrolling:touch !important;
+    overscroll-behavior:contain !important;
+  }
+  .z-hero__content{
+    min-height:100% !important;
+    box-sizing:border-box !important;
+  }
+</style>
+<script id="zummee-v785-login-full-page-scroll-js">
+(function(){
+  window.getLoginKeyboardGapStatus=function(){
+    var hero=document.querySelector('.z-hero');
+    var header=document.querySelector('.z-topbar');
+    return {
+      ok:!!hero,
+      build:window.ZUMMEE_BUILD||'',
+      fullPageScroll:true,
+      headerPosition:header ? getComputedStyle(header).position : '',
+      bodyOverflow:document.body ? getComputedStyle(document.body).overflowY : '',
+      heroOverflow:hero ? getComputedStyle(hero).overflowY : '',
+      scrollY:window.scrollY || 0
+    };
+  };
+})();
+</script>
+
+
+
+<style id="zummee-v784-login-unified-gradient-lock-css">
+  /* v784: one fixed background layer for iPad/Safari so the bottom area cannot show a mismatched gradient after keyboard recovery. */
+  :root{
+    --zummee-login-bg:linear-gradient(135deg, rgba(15,47,74,.96) 0%, rgba(28,78,118,.86) 46%, rgba(237,244,251,.88) 100%);
+  }
+  html,
+  body{
+    background:var(--zummee-login-bg) !important;
+  }
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    z-index:-2;
+    pointer-events:none;
+    background:var(--zummee-login-bg) !important;
+  }
+  .z-hero{
+    background:transparent !important;
+  }
+  .z-hero__bg{
+    position:fixed !important;
+    top:var(--zummee-login-header-h, 0px) !important;
+    right:0 !important;
+    bottom:0 !important;
+    left:0 !important;
+    min-height:0 !important;
+    height:auto !important;
+    background:var(--zummee-login-bg) !important;
+    transform:translateZ(0);
+  }
+  .z-hero__overlay{
+    position:fixed !important;
+    top:var(--zummee-login-header-h, 0px) !important;
+    right:0 !important;
+    bottom:0 !important;
+    left:0 !important;
+    min-height:0 !important;
+    height:auto !important;
+  }
+  .z-hero__bg::after{
+    bottom:0 !important;
+  }
+</style>
+<script id="zummee-v784-login-unified-gradient-lock-js">
+(function(){
+  var previous=window.getLoginKeyboardGapStatus;
+  window.getLoginKeyboardGapStatus=function(){
+    var base=previous ? previous() : {};
+    base.unifiedGradient=true;
+    base.build=window.ZUMMEE_BUILD||base.build||'';
+    return base;
+  };
+})();
+</script>
+
+
+
+<style id="zummee-v785-login-full-page-scroll-header-css">
+  /* v785: restore normal full-page scrolling. Header scrolls with page; no document/body lock. */
+  html,
+  body{
+    height:auto !important;
+    min-height:100% !important;
+    width:100% !important;
+    overflow-x:hidden !important;
+    overflow-y:auto !important;
+    position:static !important;
+    inset:auto !important;
+    overscroll-behavior:auto !important;
+    background:var(--zummee-login-bg, linear-gradient(135deg, rgba(15,47,74,.96) 0%, rgba(28,78,118,.86) 46%, rgba(237,244,251,.88) 100%)) !important;
+  }
+  body::before{
+    display:none !important;
+    content:none !important;
+  }
+  .z-topbar{
+    position:relative !important;
+    top:auto !important;
+    left:auto !important;
+    right:auto !important;
+    z-index:10 !important;
+  }
+  .z-hero{
+    height:auto !important;
+    max-height:none !important;
+    min-height:auto !important;
+    overflow:visible !important;
+    overscroll-behavior:auto !important;
+    position:relative !important;
+    background:var(--zummee-login-bg, linear-gradient(135deg, rgba(15,47,74,.96) 0%, rgba(28,78,118,.86) 46%, rgba(237,244,251,.88) 100%)) !important;
+  }
+  .z-hero__bg,
+  .z-hero__overlay{
+    position:absolute !important;
+    inset:0 !important;
+    top:0 !important;
+    left:0 !important;
+    right:0 !important;
+    bottom:0 !important;
+    height:auto !important;
+    min-height:0 !important;
+  }
+  .z-hero__content{
+    min-height:auto !important;
+    padding-top:44px !important;
+    padding-bottom:calc(96px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+</style>
+
+
+<style id="zummee-v786-login-ios-keyboard-reset-no-header-lock-css">
+  /* v786: prevent iPad Safari keyboard-close blank space without locking the header.
+     Header remains in normal document flow; the page scrolls normally. */
+  html,
+  body{
+    height:auto !important;
+    min-height:100% !important;
+    overflow-x:hidden !important;
+    overflow-y:auto !important;
+    position:static !important;
+    background:#123d5c !important;
+  }
+  .z-topbar{
+    position:relative !important;
+    top:auto !important;
+    left:auto !important;
+    right:auto !important;
+    transform:none !important;
+  }
+  .z-hero{
+    position:relative !important;
+    height:auto !important;
+    max-height:none !important;
+    min-height:calc(var(--zummee-stable-vh, 100vh) - var(--zummee-login-header-h, 0px)) !important;
+    overflow:visible !important;
+    background:linear-gradient(135deg, rgba(15,47,74,.96) 0%, rgba(28,78,118,.86) 46%, rgba(237,244,251,.88) 100%) !important;
+  }
+  .z-hero__bg,
+  .z-hero__overlay{
+    position:absolute !important;
+    inset:0 !important;
+    min-height:100% !important;
+    height:100% !important;
+  }
+  .z-hero__content{
+    min-height:calc(var(--zummee-stable-vh, 100vh) - var(--zummee-login-header-h, 0px)) !important;
+    box-sizing:border-box !important;
+  }
+</style>
+<script id="zummee-v786-login-ios-keyboard-reset-no-header-lock-js">
+(function(){
+  var lastStableHeight = window.innerHeight || 0;
+  var keyboardLikelyOpen = false;
+  var activeTextInput = false;
+
+  function isTextControl(el){
+    if(!el) return false;
+    var tag=(el.tagName||'').toLowerCase();
+    return tag === 'input' || tag === 'textarea' || el.isContentEditable;
+  }
+
+  function setVars(){
+    try{
+      var root=document.documentElement;
+      var header=document.querySelector('.z-topbar');
+      var headerH=header ? Math.ceil(header.getBoundingClientRect().height) : 0;
+      var vh = Math.max(window.innerHeight || 0, 500);
+      if(!keyboardLikelyOpen && vh) lastStableHeight = vh;
+      root.style.setProperty('--zummee-stable-vh', (lastStableHeight || vh) + 'px');
+      root.style.setProperty('--zummee-login-header-h', headerH + 'px');
+    }catch(_e){}
+  }
+
+  function detectKeyboard(){
+    try{
+      var vv=window.visualViewport;
+      var h=vv && vv.height ? vv.height : window.innerHeight;
+      var full=window.innerHeight || h;
+      activeTextInput=isTextControl(document.activeElement);
+      keyboardLikelyOpen=!!(activeTextInput && h < full - 120);
+      if(!keyboardLikelyOpen && full) lastStableHeight=Math.max(full,lastStableHeight||0);
+      setVars();
+    }catch(_e){setVars();}
+  }
+
+  function resetAfterKeyboardClose(){
+    setVars();
+    var active=isTextControl(document.activeElement);
+    if(active) return;
+    // iPad Safari sometimes leaves the document scrolled into phantom space after the keyboard closes.
+    // Keep full-page scrolling, but snap out of the phantom space after editing fields.
+    requestAnimationFrame(function(){
+      try{ window.scrollTo({ top:0, left:0, behavior:'auto' }); }catch(_e){ try{ window.scrollTo(0,0); }catch(_e2){} }
+      setVars();
+    });
+    setTimeout(function(){ try{ window.scrollTo(0,0); }catch(_e){} setVars(); },120);
+    setTimeout(function(){ try{ window.scrollTo(0,0); }catch(_e){} setVars(); },360);
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){ setVars(); setTimeout(setVars,250); });
+  window.addEventListener('load', function(){ setVars(); setTimeout(setVars,250); });
+  window.addEventListener('resize', detectKeyboard);
+  window.addEventListener('orientationchange', function(){ setTimeout(setVars,250); setTimeout(resetAfterKeyboardClose,700); });
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', detectKeyboard);
+    window.visualViewport.addEventListener('scroll', detectKeyboard);
+  }
+  document.addEventListener('focusin', function(e){ if(isTextControl(e.target)){ activeTextInput=true; detectKeyboard(); } }, true);
+  document.addEventListener('focusout', function(e){ if(isTextControl(e.target)){ activeTextInput=false; keyboardLikelyOpen=false; setTimeout(resetAfterKeyboardClose,80); setTimeout(resetAfterKeyboardClose,420); } }, true);
+
+  window.getLoginKeyboardGapStatus=function(){
+    var header=document.querySelector('.z-topbar');
+    var hero=document.querySelector('.z-hero');
+    return {
+      ok:!!hero,
+      build:window.ZUMMEE_BUILD||'',
+      headerLocked:false,
+      headerPosition:header ? getComputedStyle(header).position : '',
+      pageScrolls:getComputedStyle(document.body).overflowY,
+      stableVh:getComputedStyle(document.documentElement).getPropertyValue('--zummee-stable-vh').trim(),
+      scrollY:window.scrollY||0,
+      keyboardLikelyOpen:keyboardLikelyOpen
+    };
+  };
+})();
+</script>
+
+
+<style id="zummee-v787-login-ios-scroll-restore-css">
+  /* v787: premium iPad Safari keyboard handling without locking the header.
+     The document remains scrollable; when the keyboard closes we restore the scroll
+     position that existed before the input was focused. */
   :root{
     --zummee-login-bg:linear-gradient(135deg, rgba(15,47,74,.96) 0%, rgba(28,78,118,.86) 46%, rgba(237,244,251,.88) 100%);
   }
@@ -1380,10 +1736,10 @@ body.dark-mode .mh2-stat-box {
     overflow-x:hidden !important;
     overflow-y:auto !important;
     position:static !important;
+    overscroll-behavior-y:none !important;
     background:var(--zummee-login-bg) !important;
-    -webkit-text-size-adjust:100% !important;
-    text-size-adjust:100% !important;
   }
+  body::before{display:none !important;content:none !important;}
   .z-topbar{
     position:relative !important;
     top:auto !important;
@@ -1396,7 +1752,7 @@ body.dark-mode .mh2-stat-box {
     position:relative !important;
     height:auto !important;
     max-height:none !important;
-    min-height:calc(100dvh - 190px) !important;
+    min-height:calc(var(--zummee-login-vh, 100svh) - var(--zummee-login-header-h, 0px)) !important;
     overflow:visible !important;
     background:var(--zummee-login-bg) !important;
   }
@@ -1410,36 +1766,95 @@ body.dark-mode .mh2-stat-box {
   .z-hero__content{
     min-height:auto !important;
     padding-top:44px !important;
-    padding-bottom:calc(120px + env(safe-area-inset-bottom, 0px)) !important;
-  }
-  .z-field input,
-  .z-card input,
-  input,
-  select,
-  textarea{
-    font-size:16px !important;
-  }
-  .z-card{
-    transform:none !important;
-    will-change:auto !important;
-  }
-  @supports not (height:100dvh){
-    .z-hero{min-height:calc(100vh - 190px) !important;}
+    padding-bottom:calc(96px + env(safe-area-inset-bottom, 0px)) !important;
   }
 </style>
-<script id="zummee-v791-login-ios-focus-stability-status">
+<script id="zummee-v787-login-ios-scroll-restore-js">
 (function(){
+  var savedScrollY = 0;
+  var keyboardWasOpen = false;
+  var restoreTimer = null;
+
+  function isTextControl(el){
+    if(!el) return false;
+    var tag=(el.tagName||'').toLowerCase();
+    return tag === 'input' || tag === 'textarea' || el.isContentEditable;
+  }
+  function setViewportVars(){
+    try{
+      var root=document.documentElement;
+      var header=document.querySelector('.z-topbar');
+      var headerH=header ? Math.ceil(header.getBoundingClientRect().height) : 0;
+      var vh = (window.visualViewport && window.visualViewport.height) ? window.visualViewport.height : window.innerHeight;
+      root.style.setProperty('--zummee-login-vh', Math.max(500, Math.round(vh || window.innerHeight || 800)) + 'px');
+      root.style.setProperty('--zummee-login-header-h', headerH + 'px');
+    }catch(_e){}
+  }
+  function keyboardIsOpen(){
+    try{
+      var vv=window.visualViewport;
+      if(!vv) return false;
+      return vv.height < (window.innerHeight - 130);
+    }catch(_e){return false;}
+  }
+  function scheduleRestore(){
+    clearTimeout(restoreTimer);
+    function run(){
+      if(isTextControl(document.activeElement)) return;
+      if(keyboardIsOpen()) return;
+      setViewportVars();
+      var y=Math.max(0, savedScrollY || 0);
+      try{ window.scrollTo({top:y,left:0,behavior:'auto'}); }catch(_e){ try{ window.scrollTo(0,y); }catch(_e2){} }
+    }
+    requestAnimationFrame(run);
+    restoreTimer=setTimeout(run,90);
+    setTimeout(run,220);
+    setTimeout(run,520);
+  }
+  function handleViewportChange(){
+    setViewportVars();
+    var open=keyboardIsOpen();
+    if(keyboardWasOpen && !open) scheduleRestore();
+    keyboardWasOpen=open;
+  }
+
+  document.addEventListener('focusin', function(e){
+    if(isTextControl(e.target)){
+      savedScrollY = window.scrollY || window.pageYOffset || 0;
+      keyboardWasOpen = true;
+      setViewportVars();
+    }
+  }, true);
+  document.addEventListener('focusout', function(e){
+    if(isTextControl(e.target)){
+      keyboardWasOpen = true;
+      setTimeout(scheduleRestore, 80);
+      setTimeout(scheduleRestore, 300);
+      setTimeout(scheduleRestore, 700);
+    }
+  }, true);
+
+  window.addEventListener('load', setViewportVars);
+  window.addEventListener('resize', handleViewportChange);
+  window.addEventListener('orientationchange', function(){setTimeout(setViewportVars,250);setTimeout(scheduleRestore,700);});
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', handleViewportChange);
+    window.visualViewport.addEventListener('scroll', handleViewportChange);
+  }
+  setViewportVars();
+
   window.getLoginKeyboardGapStatus=function(){
     var header=document.querySelector('.z-topbar');
-    var input=document.querySelector('.z-field input, .z-card input');
     return {
       ok:true,
       build:window.ZUMMEE_BUILD||'',
       headerLocked:false,
       headerPosition:header ? getComputedStyle(header).position : '',
       pageScrolls:document.body ? getComputedStyle(document.body).overflowY : '',
-      inputFontSize:input ? getComputedStyle(input).fontSize : '',
-      strategy:'no-keyboard-scroll-handlers-ios-16px-inputs'
+      savedScrollY:savedScrollY,
+      currentScrollY:window.scrollY||0,
+      keyboardOpen:keyboardIsOpen(),
+      strategy:'restore-pre-focus-scroll-without-header-lock'
     };
   };
 })();
