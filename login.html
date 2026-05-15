@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-<script>window.ZUMMEE_BUILD="2026-05-14-v789-login-logo-text-correct-35-larger";window.ZUMMEE_STATIC_LOGIN_LOGO=true;window.ZUMMEE_DISABLE_COMPANY_LOGO_SYNC_ON_LOGIN=true;console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
+<script>window.ZUMMEE_BUILD="2026-05-15-v793-login-contact-support-mailto";window.ZUMMEE_STATIC_LOGIN_LOGO=true;window.ZUMMEE_DISABLE_COMPANY_LOGO_SYNC_ON_LOGIN=true;console.log("Zummee build:",window.ZUMMEE_BUILD);</script>
 
 <script>
 
@@ -1999,7 +1999,7 @@ body.dark-mode .mh2-stat-box {
 
         <div class="z-foot">
           <span class="z-muted">Having trouble?</span>
-          <a href="#" onclick="return false;">Contact support</a>
+          <a id="z_contactSupportLink" href="mailto:support@zummee.net?subject=Zummee%20Login%20Support&body=Hello%20Zummee%20Support%2C%0A%0AI%20need%20help%20logging%20in.%0A%0AName%3A%20%0ACompany%2FCommunity%3A%20%0AEmail%20used%20to%20log%20in%3A%20%0AIssue%3A%20%0A%0AThank%20you." aria-label="Contact Zummee support by email">Contact support</a>
         </div>
       </aside>
     </div>
@@ -3165,5 +3165,20 @@ document.addEventListener("DOMContentLoaded", function(){
 </script>
 
 
+
+<script id="zummee-v793-contact-support-status">
+(function(){
+  window.getLoginContactSupportStatus=function(){
+    var link=document.getElementById('z_contactSupportLink');
+    return {
+      build:window.ZUMMEE_BUILD||'',
+      ok:!!link,
+      href:link ? link.getAttribute('href') : '',
+      opensMail:!!(link && /^mailto:/i.test(link.getAttribute('href')||'')),
+      targetEmail:'support@zummee.net'
+    };
+  };
+})();
+</script>
 </body>
 </html>
