@@ -6,6 +6,7 @@
 window.ZUMMEE_BUILD = "2026-05-11-v760-manager-hub-smart-cards-centered";
 window.__MANAGER_HUB_V701_SINGLE_OWNER_SMART_CARDS = true;
 console.info("[Manager Hub v757] smart card badge fit polish", window.ZUMMEE_BUILD);
+window.__MANAGER_HUB_V761_WEATHER_ZIP_SUPABASE_LOCK = true;
 </script>
 <style id="zummee-manager-smooth-return-css-v611">
   /*
@@ -3578,20 +3579,76 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
         return 'mh2-weather-zip:' + String(id || '').trim();
       }
       function getPersistedWeatherZip(id, fallback){
-        fallback = String(fallback || '').trim();
+        // v761 long-term weather ZIP fix:
+        // Supabase/community fallback wins first. Local browser cache is only a backup.
+        // This prevents an old or blank mh2-weather-zip value from erasing the real ZIP after refresh.
+        fallback = normalizeZipValue(fallback);
+        if(fallback) return fallback;
         try{
           var key = weatherZipStorageKey(id);
-          var stored = localStorage.getItem(key);
-          if(stored !== null) return String(stored || '').trim();
-          return fallback;
-        }catch(_e){ return fallback; }
+          var stored = normalizeZipValue(localStorage.getItem(key));
+          if(stored) return stored;
+          var last = normalizeZipValue(localStorage.getItem('mh2-last-weather-zip'));
+          return last || '';
+        }catch(_e){ return fallback || ''; }
       }
-      function persistWeatherZipForCommunity(id, zip){
+      function cacheWeatherZipForCommunity(id, zip){
         id = String(id || '').trim();
-        zip = String(zip || '').replace(/\D+/g,'').slice(0,10);
-        if(!id) return;
+        zip = normalizeZipValue(zip);
+        if(!id || !zip) return;
         try{ localStorage.setItem(weatherZipStorageKey(id), zip); }catch(_e){}
         try{ localStorage.setItem('mh2-last-weather-zip', zip); }catch(_e){}
+      }
+      function persistWeatherZipForCommunity(id, zip){
+        // Kept for older callers; now it only caches valid ZIPs and never saves blanks.
+        cacheWeatherZipForCommunity(id, zip);
+      }
+      async function saveWeatherZipForCommunity(id, zip){
+        id = String(id || '').trim();
+        zip = normalizeZipValue(zip);
+        if(!id || zip.length !== 5) return { ok:false, error:'Missing community or invalid ZIP' };
+
+        cacheWeatherZipForCommunity(id, zip);
+
+        try{
+          var sb = await requireSb();
+          var up = await sb.from('PropertyCommunities').update({ weather_zip:zip }).eq('id', id);
+          if(up && up.error){
+            var msg = String(up.error.message || up.error.details || up.error.hint || up.error || '');
+            if(/weather_zip|column|schema/i.test(msg)){
+              var upZip = await sb.from('PropertyCommunities').update({ zip:zip }).eq('id', id);
+              if(upZip && upZip.error) throw upZip.error;
+            }else{
+              throw up.error;
+            }
+          }
+
+          // Update the in-memory community cache and selected option so later refreshes use the same source.
+          try{
+            mh2CommunityListCache = (mh2CommunityListCache || []).map(function(row){
+              if(String(row && row.id || '').trim() === id){
+                return Object.assign({}, row, { zip:zip, weather_zip:zip });
+              }
+              return row;
+            });
+          }catch(_e){}
+          try{
+            var sel = $('zummeeCommunitySelect');
+            if(sel){
+              for(var i=0;i<sel.options.length;i++){
+                if(String(sel.options[i].value || '').trim() === id){
+                  sel.options[i].setAttribute('data-zip', zip);
+                  break;
+                }
+              }
+            }
+          }catch(_e){}
+          if(ctxCache && String(ctxCache.id || '').trim() === id) ctxCache.zip = zip;
+          return { ok:true, zip:zip };
+        }catch(err){
+          console.warn('[MH2] weather ZIP Supabase save failed; local cache retained', err);
+          return { ok:false, zip:zip, error:err };
+        }
       }
       function preloadWeatherContextFromBoot(){
         observeWeatherRiskBadge();
@@ -3744,17 +3801,21 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
               zipInput.classList.remove('mh2-is-ready');
             }
           });
-          zipInput.addEventListener('change', function(){
-            var digits = String(zipInput.value || '').replace(/\D+/g,'').slice(0,5);
+          zipInput.addEventListener('change', async function(){
+            var digits = normalizeZipValue(zipInput.value);
             zipInput.value = digits;
-            persistWeatherZipForCommunity(String(select.value || '').trim(), digits);
+            if(digits.length === 5){
+              await saveWeatherZipForCommunity(String(select.value || '').trim(), digits);
+            }
             applyWeatherContext(getActiveCommunityContext());
             loadWeatherHub(true);
           });
-          zipInput.addEventListener('blur', function(){
-            var digits = String(zipInput.value || '').replace(/\D+/g,'').slice(0,5);
+          zipInput.addEventListener('blur', async function(){
+            var digits = normalizeZipValue(zipInput.value);
             zipInput.value = digits;
-            persistWeatherZipForCommunity(String(select.value || '').trim(), digits);
+            if(digits.length === 5){
+              await saveWeatherZipForCommunity(String(select.value || '').trim(), digits);
+            }
             applyWeatherContext(getActiveCommunityContext());
             loadWeatherHub(true);
           });
