@@ -3,10 +3,10 @@
 <head>
 
 <script id="manager-hub-v701-stable-build-marker">
-window.ZUMMEE_BUILD = "2026-05-11-v760-manager-hub-smart-cards-centered";
+window.ZUMMEE_BUILD = "2026-05-19-v762-manager-hub-weather-zip-per-community-lock";
 window.__MANAGER_HUB_V701_SINGLE_OWNER_SMART_CARDS = true;
 console.info("[Manager Hub v757] smart card badge fit polish", window.ZUMMEE_BUILD);
-window.__MANAGER_HUB_V761_WEATHER_ZIP_SUPABASE_LOCK = true;
+window.__MANAGER_HUB_V762_WEATHER_ZIP_PER_COMMUNITY_LOCK = true;
 </script>
 <style id="zummee-manager-smooth-return-css-v611">
   /*
@@ -3579,17 +3579,19 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
         return 'mh2-weather-zip:' + String(id || '').trim();
       }
       function getPersistedWeatherZip(id, fallback){
-        // v761 long-term weather ZIP fix:
-        // Supabase/community fallback wins first. Local browser cache is only a backup.
-        // This prevents an old or blank mh2-weather-zip value from erasing the real ZIP after refresh.
+        /* v762: ZIP must be per-community only.
+           Use the current community row first, then that community's own cache.
+           Never let mh2-last-weather-zip bleed into a different community. */
         fallback = normalizeZipValue(fallback);
+        id = String(id || '').trim();
         if(fallback) return fallback;
         try{
-          var key = weatherZipStorageKey(id);
-          var stored = normalizeZipValue(localStorage.getItem(key));
-          if(stored) return stored;
-          var last = normalizeZipValue(localStorage.getItem('mh2-last-weather-zip'));
-          return last || '';
+          if(id){
+            var key = weatherZipStorageKey(id);
+            var stored = normalizeZipValue(localStorage.getItem(key));
+            if(stored) return stored;
+          }
+          return '';
         }catch(_e){ return fallback || ''; }
       }
       function cacheWeatherZipForCommunity(id, zip){
@@ -3805,7 +3807,11 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
             var digits = normalizeZipValue(zipInput.value);
             zipInput.value = digits;
             if(digits.length === 5){
-              await saveWeatherZipForCommunity(String(select.value || '').trim(), digits);
+              var saveId = String(select && select.value || '').trim();
+              var saveOpt = select && select.options ? select.options[select.selectedIndex] : null;
+              await saveWeatherZipForCommunity(saveId, digits);
+              if(saveOpt){ saveOpt.setAttribute('data-zip', digits); }
+              syncCommunityGlobals({ id:saveId, name:String(saveOpt && saveOpt.textContent || getSelectedCommunityName() || '').trim(), zip:digits, raw:saveId });
             }
             applyWeatherContext(getActiveCommunityContext());
             loadWeatherHub(true);
@@ -3814,7 +3820,11 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
             var digits = normalizeZipValue(zipInput.value);
             zipInput.value = digits;
             if(digits.length === 5){
-              await saveWeatherZipForCommunity(String(select.value || '').trim(), digits);
+              var saveId = String(select && select.value || '').trim();
+              var saveOpt = select && select.options ? select.options[select.selectedIndex] : null;
+              await saveWeatherZipForCommunity(saveId, digits);
+              if(saveOpt){ saveOpt.setAttribute('data-zip', digits); }
+              syncCommunityGlobals({ id:saveId, name:String(saveOpt && saveOpt.textContent || getSelectedCommunityName() || '').trim(), zip:digits, raw:saveId });
             }
             applyWeatherContext(getActiveCommunityContext());
             loadWeatherHub(true);
@@ -5785,6 +5795,123 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
     // Manager Hub production shell with live panels, smart alerts,
     // branded actions, and saved favorites/order behavior.
   </script>
+
+<script id="manager-hub-v762-weather-zip-selected-community-guard">
+/*
+  v762: Final weather ZIP guard.
+  The dropdown-selected community is the only valid save target.
+  This prevents page-lock/cache scripts from applying Biltmore's ZIP to other communities.
+*/
+(function(){
+  if(window.__ManagerHubWeatherZipSelectedCommunityGuardV762) return;
+  window.__ManagerHubWeatherZipSelectedCommunityGuardV762 = true;
+
+  var SUPABASE_URL = 'https://slcwuuwyrgnmlmxpcaim.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_DqOtjzILWph7-bFjKIFN0w_kSpPI864';
+  function s(v){ return String(v == null ? '' : v).trim(); }
+  function zip(v){ return s(v).replace(/\D+/g,'').slice(0,5); }
+  function uuidish(v){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s(v)); }
+  function $(id){ return document.getElementById(id); }
+  function selected(){
+    var sel = $('zummeeCommunitySelect');
+    if(!sel || !uuidish(sel.value)) return { id:'', name:'', option:null, select:sel || null };
+    var opt = sel.options && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+    return { id:s(sel.value), name:s(opt && opt.textContent), option:opt, select:sel };
+  }
+  async function client(){
+    try{ if(window.supabaseClient && window.supabaseClient.from) return window.supabaseClient; }catch(_e){}
+    try{ if(window.sb && window.sb.from) return window.sb; }catch(_e){}
+    try{ if(window.getSupabase){ var c=window.getSupabase(); if(c && c.from) return c; } }catch(_e){}
+    try{ if(window.ensureSupabaseSync){ var c2=window.ensureSupabaseSync(); if(c2 && c2.from) return c2; } }catch(_e){}
+    try{
+      if(window.supabase && window.supabase.createClient){
+        if(!window.__ManagerHubWeatherZipSbV762){ window.__ManagerHubWeatherZipSbV762 = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); }
+        return window.__ManagerHubWeatherZipSbV762;
+      }
+    }catch(_e){}
+    return null;
+  }
+  function cache(ctx, z){
+    if(!ctx || !uuidish(ctx.id) || !z) return;
+    try{ localStorage.setItem('mh2-weather-zip:' + ctx.id, z); }catch(_e){}
+    try{ localStorage.setItem('mh2-last-weather-zip', z); }catch(_e){}
+    if(ctx.option) ctx.option.setAttribute('data-zip', z);
+    try{
+      window.currentCommunityId = ctx.id;
+      window.activeCommunityId = ctx.id;
+      window.selectedCommunityId = ctx.id;
+      window.zummeeSelectedCommunityId = ctx.id;
+      window.currentCommunityName = ctx.name || '';
+    }catch(_e){}
+    try{
+      var canonical = { id:ctx.id, name:ctx.name || '', updatedAt:Date.now(), source:'weather-zip-v762-selected-community-save' };
+      localStorage.setItem('zummee_active_community_v601', JSON.stringify(canonical));
+      sessionStorage.setItem('zummee_active_community_v601', JSON.stringify(canonical));
+      localStorage.setItem('zummee_active_community_id', ctx.id);
+      localStorage.setItem('zummee_selected_community_id', ctx.id);
+      localStorage.setItem('zummeeActiveCommunityId', ctx.id);
+      localStorage.setItem('activeCommunityId', ctx.id);
+      localStorage.setItem('currentCommunityId', ctx.id);
+      localStorage.setItem('currentCommunityName', ctx.name || '');
+      localStorage.setItem('zummeeCurrentCommunityName', ctx.name || '');
+    }catch(_e){}
+  }
+  async function saveSelectedWeatherZip(reason){
+    var input = $('weatherZipInput');
+    var ctx = selected();
+    var z = zip(input && input.value);
+    if(input && input.value !== z) input.value = z;
+    if(!uuidish(ctx.id) || z.length !== 5) return;
+    cache(ctx, z);
+    try{
+      var sb = await client();
+      if(!sb) return;
+      var up = await sb.from('PropertyCommunities').update({ weather_zip:z }).eq('id', ctx.id);
+      if(up && up.error){
+        var msg = String(up.error.message || up.error.details || up.error.hint || up.error || '');
+        if(/weather_zip|column|schema/i.test(msg)){
+          var up2 = await sb.from('PropertyCommunities').update({ zip:z }).eq('id', ctx.id);
+          if(up2 && up2.error) throw up2.error;
+        }else{
+          throw up.error;
+        }
+      }
+      cache(ctx, z);
+      try{ console.info('[Manager Hub v762] weather ZIP saved for selected community', ctx.name, ctx.id, z, reason || ''); }catch(_e){}
+    }catch(err){
+      console.warn('[Manager Hub v762] weather ZIP save failed for selected community', ctx, err);
+    }
+  }
+  function loadSelectedZipIntoInput(){
+    var input = $('weatherZipInput');
+    var ctx = selected();
+    if(!input || !uuidish(ctx.id)) return;
+    var z = '';
+    try{ z = zip(localStorage.getItem('mh2-weather-zip:' + ctx.id)); }catch(_e){}
+    if(!z && ctx.option) z = zip(ctx.option.getAttribute('data-zip'));
+    if(z){ input.value = z; input.classList.add('mh2-is-ready'); }
+  }
+  function wire(){
+    var input = $('weatherZipInput');
+    var sel = $('zummeeCommunitySelect');
+    if(input && !input.__weatherZipV762Wired){
+      input.__weatherZipV762Wired = true;
+      input.addEventListener('input', function(){ var z = zip(input.value); if(input.value !== z) input.value = z; }, true);
+      input.addEventListener('change', function(){ saveSelectedWeatherZip('change'); }, true);
+      input.addEventListener('blur', function(){ saveSelectedWeatherZip('blur'); }, true);
+    }
+    if(sel && !sel.__weatherZipV762Wired){
+      sel.__weatherZipV762Wired = true;
+      sel.addEventListener('change', function(){ setTimeout(loadSelectedZipIntoInput, 35); setTimeout(loadSelectedZipIntoInput, 350); }, true);
+    }
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ wire(); loadSelectedZipIntoInput(); }, { once:true });
+  else { wire(); loadSelectedZipIntoInput(); }
+  setTimeout(function(){ wire(); loadSelectedZipIntoInput(); }, 400);
+  setTimeout(function(){ wire(); loadSelectedZipIntoInput(); }, 1400);
+})();
+</script>
+
 <!-- v466: removed legacy debug Close pill / debug panel remnants. -->
 
   <script id="zummee-v5-page-lock-manager">
