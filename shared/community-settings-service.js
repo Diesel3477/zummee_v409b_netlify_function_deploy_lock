@@ -1,5 +1,5 @@
 /*
-  Zummee Community Settings Service v770
+  Zummee Community Settings Service v771
   Long-term owner for community-level settings.
 
   Source of truth:
@@ -12,9 +12,9 @@
     - Manager Hub pages call this service instead of owning ZIP persistence.
 */
 (function(){
-  if(window.ZummeeCommunitySettings && window.ZummeeCommunitySettings.__version === 'v770') return;
+  if(window.ZummeeCommunitySettings && window.ZummeeCommunitySettings.__version === 'v771') return;
 
-  var CACHE_PREFIX = 'zummee-community-settings:v770:';
+  var CACHE_PREFIX = 'zummee-community-settings:v771:';
   var LEGACY_ZIP_PREFIX = 'mh2-weather-zip:';
 
   function s(v){ return String(v == null ? '' : v).trim(); }
@@ -72,10 +72,10 @@
       return { ok:false, id:id, cached:true, settings:cached, error:'supabase-client-unavailable' };
     }
     try{
-      var res = await sb.from('PropertyCommunities').select('id,name,weather_zip,zip,zipcode,zip_code,postal_code,updated_at').eq('id', id).maybeSingle();
+      var res = await sb.from('PropertyCommunities').select('id,name,weather_zip').eq('id', id).maybeSingle();
       if(res.error) throw res.error;
       var row = res.data || {};
-      var weatherZip = z(row.weather_zip || row.zip || row.zipcode || row.zip_code || row.postal_code || cached.weather_zip);
+      var weatherZip = z(row.weather_zip || cached.weather_zip);
       var settings = writeCache(id, {
         name:s(row.name || cached.name),
         weather_zip:weatherZip,
@@ -107,7 +107,7 @@
       writeCache(id, { weather_zip:savedZip, pending:false, savedAt:Date.now(), source:'supabase' });
       return { ok:true, id:id, zip:savedZip, row:res.data || null };
     }catch(err){
-      console.warn('[ZummeeCommunitySettings v770] weather_zip update blocked or failed', { id:id, zip:zip, error:err });
+      console.warn('[ZummeeCommunitySettings v771] weather_zip update blocked or failed', { id:id, zip:zip, error:err });
       writeCache(id, { weather_zip:zip, pending:true, lastError:String(err && (err.message || err.details || err.code) || err) });
       return { ok:false, cached:true, id:id, zip:zip, error:err };
     }
@@ -137,13 +137,32 @@
     return rows;
   }
 
+
+
+  async function probeWeatherZip(id){
+    id = s(id || (document.getElementById('zummeeCommunitySelect') && document.getElementById('zummeeCommunitySelect').value) || '');
+    var sb = getSupabaseClient();
+    if(!uuidish(id)) return { ok:false, id:id, error:'invalid-community-id' };
+    if(!sb) return { ok:false, id:id, error:'supabase-client-unavailable' };
+    try{
+      var res = await sb.from('PropertyCommunities').select('id,name,weather_zip').eq('id', id).maybeSingle();
+      if(res.error) throw res.error;
+      console.log('[ZummeeCommunitySettings v771] probeWeatherZip', res.data);
+      return { ok:true, id:id, data:res.data };
+    }catch(err){
+      console.warn('[ZummeeCommunitySettings v771] probeWeatherZip failed', err);
+      return { ok:false, id:id, error:err };
+    }
+  }
+
   window.ZummeeCommunitySettings = {
-    __version:'v770',
+    __version:'v771',
     get:get,
     updateWeatherZip:updateWeatherZip,
     getCachedWeatherZip:getCachedWeatherZip,
     writeCache:writeCache,
     readCache:readCache,
-    debugWeatherZip:debugWeatherZip
+    debugWeatherZip:debugWeatherZip,
+    probeWeatherZip:probeWeatherZip
   };
 })();
