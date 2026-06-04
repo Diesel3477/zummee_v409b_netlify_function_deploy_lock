@@ -1,5 +1,12 @@
-// Zummee Weather Forecast Proxy — v773
-// Keeps browser code off third-party weather APIs to avoid CORS/502 failures.
+// Zummee Weather Forecast Proxy — v774
+// Server-side weather proxy with safe fallback responses.
+// Goals:
+// - Keep browser code off third-party APIs.
+// - Avoid CORS failures.
+// - Avoid Weather Hub breaking when a third-party API returns 5xx.
+// - Return a usable model even during upstream outages.
+
+const https = require('https');
 
 const JSON_HEADERS = {
   'Content-Type': 'application/json; charset=utf-8',
@@ -7,6 +14,35 @@ const JSON_HEADERS = {
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   'Cache-Control': 'public, max-age=300, s-maxage=600'
+};
+
+const ZIP_COORDS = {
+  // Atlanta / north-metro defaults used by current Zummee test communities.
+  '30303': { lat: 33.7529, lon: -84.3880, place: 'Atlanta, GA' },
+  '30305': { lat: 33.8317, lon: -84.3857, place: 'Atlanta, GA' },
+  '30306': { lat: 33.7869, lon: -84.3515, place: 'Atlanta, GA' },
+  '30307': { lat: 33.7693, lon: -84.3360, place: 'Atlanta, GA' },
+  '30308': { lat: 33.7718, lon: -84.3757, place: 'Atlanta, GA' },
+  '30309': { lat: 33.7984, lon: -84.3883, place: 'Atlanta, GA' },
+  '30318': { lat: 33.7865, lon: -84.4454, place: 'Atlanta, GA' },
+  '30324': { lat: 33.8191, lon: -84.3549, place: 'Atlanta, GA' },
+  '30326': { lat: 33.8497, lon: -84.3600, place: 'Atlanta, GA' },
+  '30327': { lat: 33.8680, lon: -84.4190, place: 'Atlanta, GA' },
+  '30328': { lat: 33.9360, lon: -84.3774, place: 'Sandy Springs, GA' },
+  '30339': { lat: 33.8714, lon: -84.4635, place: 'Atlanta, GA' },
+  '30004': { lat: 34.1438, lon: -84.3009, place: 'Alpharetta, GA' },
+  '30022': { lat: 34.0268, lon: -84.2422, place: 'Alpharetta, GA' },
+  '30024': { lat: 34.0479, lon: -84.0957, place: 'Suwanee, GA' },
+  '30040': { lat: 34.2212, lon: -84.1488, place: 'Cumming, GA' },
+  '30041': { lat: 34.1901, lon: -84.0907, place: 'Cumming, GA' },
+  '30062': { lat: 34.0020, lon: -84.4635, place: 'Marietta, GA' },
+  '30066': { lat: 34.0385, lon: -84.5038, place: 'Marietta, GA' },
+  '30114': { lat: 34.2385, lon: -84.4891, place: 'Canton, GA' },
+  '30115': { lat: 34.2147, lon: -84.4238, place: 'Canton, GA' },
+  '30188': { lat: 34.1177, lon: -84.5096, place: 'Woodstock, GA' },
+  '30189': { lat: 34.1283, lon: -84.5711, place: 'Woodstock, GA' },
+  '30101': { lat: 34.0754, lon: -84.6477, place: 'Acworth, GA' },
+  '30102': { lat: 34.0897, lon: -84.6044, place: 'Acworth, GA' }
 };
 
 function json(statusCode, body){
@@ -26,6 +62,61 @@ function miles(meters){
   const n = toNumber(meters, 0);
   if(!n) return '--';
   return Math.max(0, Math.round((n / 1609.344) * 10) / 10);
+}
+
+function httpsJson(url, timeoutMs = 6500){
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, {
+      timeout: timeoutMs,
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'ZummeeWeatherProxy/1.1 (+https://zummee.net)'
+      }
+    }, (res) => {
+      let raw = '';
+      res.setEncoding('utf8');
+      res.on('data', (chunk) => { raw += chunk; });
+      res.on('end', () => {
+        if(res.statusCode < 200 || res.statusCode >= 300){
+          const e = new Error('upstream-status-' + res.statusCode);
+          e.status = res.statusCode;
+          e.body = raw.slice(0, 300);
+          reject(e);
+          return;
+        }
+        try{ resolve(JSON.parse(raw)); }
+        catch(parseErr){
+          parseErr.status = res.statusCode;
+          parseErr.body = raw.slice(0, 300);
+          reject(parseErr);
+        }
+      });
+    });
+    req.on('timeout', () => {
+      req.destroy(new Error('upstream-timeout'));
+    });
+    req.on('error', reject);
+  });
+}
+
+async function resolveZip(zip){
+  if(ZIP_COORDS[zip]) return ZIP_COORDS[zip];
+  try{
+    const locJson = await httpsJson(`https://api.zippopotam.us/us/${encodeURIComponent(zip)}`, 5000);
+    const place = (locJson.places && locJson.places[0]) || {};
+    const lat = Number(place.latitude);
+    const lon = Number(place.longitude);
+    if(Number.isFinite(lat) && Number.isFinite(lon)){
+      return {
+        lat,
+        lon,
+        place: [place['place name'], place['state abbreviation']].filter(Boolean).join(', ') || `ZIP ${zip}`
+      };
+    }
+  }catch(err){
+    return { lat: 33.7488, lon: -84.3883, place: `ZIP ${zip}`, degraded: true, zipLookupError: String(err && err.message || err) };
+  }
+  return { lat: 33.7488, lon: -84.3883, place: `ZIP ${zip}`, degraded: true, zipLookupError: 'coordinates-unavailable' };
 }
 
 function weatherCodeSummary(code){
@@ -64,28 +155,51 @@ function evaluateWeatherRisk(base){
   return { level:'low', text:'Low risk' };
 }
 
+function fallbackModel(zip, communityName, placeLabel, message){
+  const locationLabel = communityName ? `${communityName}${placeLabel ? ' • ' + placeLabel : ''}` : (placeLabel || `ZIP ${zip}`);
+  return {
+    zip,
+    communityName,
+    locationLabel,
+    tempDisplay: '--',
+    feelsLikeDisplay: '--',
+    rainChanceDisplay: '--',
+    windDisplay: '--',
+    humidityDisplay: '--',
+    visibilityDisplay: '--',
+    summary: message || 'Forecast temporarily unavailable',
+    sunrise: '',
+    sunset: '',
+    weatherCode: 0,
+    rainChance: 0,
+    windMph: 0,
+    gustMph: 0,
+    risk: { level:'low', text:'Low risk' },
+    nowSub: 'Unavailable',
+    laterLabel: 'Later',
+    laterTempDisplay: '--',
+    laterSub: 'Unavailable',
+    tonightTempDisplay: '--',
+    tonightSub: 'Unavailable',
+    degraded: true
+  };
+}
+
 exports.handler = async function(event){
   if(event.httpMethod === 'OPTIONS') return { statusCode:204, headers:JSON_HEADERS, body:'' };
   if(event.httpMethod !== 'GET') return json(405, { ok:false, error:'method-not-allowed' });
 
+  const params = event.queryStringParameters || {};
+  const zip = digitsZip(params.zip);
+  const communityName = String(params.community || '').trim();
+  if(zip.length !== 5) return json(400, { ok:false, error:'invalid-zip' });
+
+  const loc = await resolveZip(zip);
+
   try{
-    const params = event.queryStringParameters || {};
-    const zip = digitsZip(params.zip);
-    const communityName = String(params.community || '').trim();
-    if(zip.length !== 5) return json(400, { ok:false, error:'invalid-zip' });
-
-    const locUrl = `https://api.zippopotam.us/us/${encodeURIComponent(zip)}`;
-    const locRes = await fetch(locUrl, { headers:{ 'Accept':'application/json', 'User-Agent':'ZummeeWeatherProxy/1.0' } });
-    if(!locRes.ok) return json(502, { ok:false, error:'zip-lookup-failed', status:locRes.status });
-    const locJson = await locRes.json();
-    const place = (locJson.places && locJson.places[0]) || {};
-    const lat = Number(place.latitude);
-    const lon = Number(place.longitude);
-    if(!Number.isFinite(lat) || !Number.isFinite(lon)) return json(502, { ok:false, error:'weather-coordinates-unavailable' });
-
     const weatherUrl = 'https://api.open-meteo.com/v1/forecast?' + new URLSearchParams({
-      latitude: String(lat),
-      longitude: String(lon),
+      latitude: String(loc.lat),
+      longitude: String(loc.lon),
       current: 'temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_gusts_10m,visibility',
       hourly: 'temperature_2m,precipitation_probability,weather_code',
       daily: 'sunrise,sunset,temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code',
@@ -96,10 +210,7 @@ exports.handler = async function(event){
       timezone: 'auto'
     }).toString();
 
-    const wxRes = await fetch(weatherUrl, { headers:{ 'Accept':'application/json', 'User-Agent':'ZummeeWeatherProxy/1.0' } });
-    if(!wxRes.ok) return json(502, { ok:false, error:'forecast-fetch-failed', status:wxRes.status });
-    const wx = await wxRes.json();
-
+    const wx = await httpsJson(weatherUrl, 7000);
     const current = wx.current || {};
     const hourly = wx.hourly || {};
     const times = hourly.time || [];
@@ -115,10 +226,7 @@ exports.handler = async function(event){
       windMph: toNumber(current.wind_speed_10m, 0),
       gustMph: toNumber(current.wind_gusts_10m, 0)
     });
-
-    const placeName = [place['place name'], place['state abbreviation']].filter(Boolean).join(', ');
-    const locationLabel = communityName ? `${communityName}${placeName ? ' • ' + placeName : ''}` : (placeName || `ZIP ${zip}`);
-
+    const locationLabel = communityName ? `${communityName}${loc.place ? ' • ' + loc.place : ''}` : (loc.place || `ZIP ${zip}`);
     const model = {
       zip,
       communityName,
@@ -142,11 +250,21 @@ exports.handler = async function(event){
       laterTempDisplay: temps[idxLater] != null ? `${Math.round(toNumber(temps[idxLater], 0))}°` : '--',
       laterSub: weatherCodeShort(codes[idxLater] || current.weather_code || 0),
       tonightTempDisplay: temps[idxTonight] != null ? `${Math.round(toNumber(temps[idxTonight], 0))}°` : '--',
-      tonightSub: weatherCodeShort(codes[idxTonight] || current.weather_code || 0)
+      tonightSub: weatherCodeShort(codes[idxTonight] || current.weather_code || 0),
+      degraded: !!loc.degraded
     };
-
-    return json(200, { ok:true, source:'zummee-weather-proxy-v773', model });
+    return json(200, { ok:true, source:'zummee-weather-proxy-v774', model, diagnostics:{ zip, coords:{ lat:loc.lat, lon:loc.lon }, place:loc.place, degraded:!!loc.degraded } });
   }catch(err){
-    return json(500, { ok:false, error:'weather-proxy-error', message:String(err && err.message || err) });
+    // Do not break the Manager Hub just because the upstream weather API is unavailable.
+    const message = String(err && err.message || err);
+    return json(200, {
+      ok:true,
+      source:'zummee-weather-proxy-v774-fallback',
+      degraded:true,
+      upstreamError: message,
+      model: fallbackModel(zip, communityName, loc.place || `ZIP ${zip}`, 'Forecast temporarily unavailable'),
+      diagnostics:{ zip, coords:{ lat:loc.lat, lon:loc.lon }, place:loc.place, degraded:true, upstreamError:message }
+    });
   }
 };
+
