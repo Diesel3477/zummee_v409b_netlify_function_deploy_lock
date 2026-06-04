@@ -1,5 +1,5 @@
 /*
-  Zummee Community Settings Service v771
+  Zummee Community Settings Service v772
   Long-term owner for community-level settings.
 
   Source of truth:
@@ -12,9 +12,9 @@
     - Manager Hub pages call this service instead of owning ZIP persistence.
 */
 (function(){
-  if(window.ZummeeCommunitySettings && window.ZummeeCommunitySettings.__version === 'v771') return;
+  if(window.ZummeeCommunitySettings && window.ZummeeCommunitySettings.__version === 'v772') return;
 
-  var CACHE_PREFIX = 'zummee-community-settings:v771:';
+  var CACHE_PREFIX = 'zummee-community-settings:v772:';
   var LEGACY_ZIP_PREFIX = 'mh2-weather-zip:';
 
   function s(v){ return String(v == null ? '' : v).trim(); }
@@ -107,7 +107,7 @@
       writeCache(id, { weather_zip:savedZip, pending:false, savedAt:Date.now(), source:'supabase' });
       return { ok:true, id:id, zip:savedZip, row:res.data || null };
     }catch(err){
-      console.warn('[ZummeeCommunitySettings v771] weather_zip update blocked or failed', { id:id, zip:zip, error:err });
+      console.warn('[ZummeeCommunitySettings v772] weather_zip update blocked or failed', { id:id, zip:zip, error:err });
       writeCache(id, { weather_zip:zip, pending:true, lastError:String(err && (err.message || err.details || err.code) || err) });
       return { ok:false, cached:true, id:id, zip:zip, error:err };
     }
@@ -147,22 +147,32 @@
     try{
       var res = await sb.from('PropertyCommunities').select('id,name,weather_zip').eq('id', id).maybeSingle();
       if(res.error) throw res.error;
-      console.log('[ZummeeCommunitySettings v771] probeWeatherZip', res.data);
+      console.log('[ZummeeCommunitySettings v772] probeWeatherZip', res.data);
       return { ok:true, id:id, data:res.data };
     }catch(err){
-      console.warn('[ZummeeCommunitySettings v771] probeWeatherZip failed', err);
+      console.warn('[ZummeeCommunitySettings v772] probeWeatherZip failed', err);
       return { ok:false, id:id, error:err };
     }
   }
 
+
+  async function saveAndProbeWeatherZip(id, zip){
+    var save = await updateWeatherZip(id, zip, { source:'saveAndProbeWeatherZip' });
+    var probe = await probeWeatherZip(id);
+    var result = { ok:!!(save && save.ok) && !!(probe && probe.ok), save:save, probe:probe };
+    console.log('[ZummeeCommunitySettings v772] saveAndProbeWeatherZip', result);
+    return result;
+  }
+
   window.ZummeeCommunitySettings = {
-    __version:'v771',
+    __version:'v772',
     get:get,
     updateWeatherZip:updateWeatherZip,
     getCachedWeatherZip:getCachedWeatherZip,
     writeCache:writeCache,
     readCache:readCache,
     debugWeatherZip:debugWeatherZip,
-    probeWeatherZip:probeWeatherZip
+    probeWeatherZip:probeWeatherZip,
+    saveAndProbeWeatherZip:saveAndProbeWeatherZip
   };
 })();
