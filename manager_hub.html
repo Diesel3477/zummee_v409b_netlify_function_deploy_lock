@@ -3,10 +3,10 @@
 <head>
 
 <script id="manager-hub-v701-stable-build-marker">
-window.ZUMMEE_BUILD = "2026-06-04-v773-manager-hub-weather-proxy";
+window.ZUMMEE_BUILD = "2026-06-04-v774-manager-hub-weather-proxy-safe-fallback";
 window.__MANAGER_HUB_V770_COMMUNITY_SETTINGS_SERVICE = true;
 window.__MANAGER_HUB_V701_SINGLE_OWNER_SMART_CARDS = true;
-console.info("[Manager Hub v773] weather proxy + zip persistence", window.ZUMMEE_BUILD);
+console.info("[Manager Hub v774] weather proxy safe fallback + zip persistence", window.ZUMMEE_BUILD);
 </script>
 <style id="zummee-manager-smooth-return-css-v611">
   /*
@@ -7405,17 +7405,18 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
 </script>
 
 
-<script id="manager-hub-v773-weather-proxy-diagnostics">
+<script id="manager-hub-v774-weather-proxy-diagnostics">
 (function(){
-  window.ZummeeWeatherProxyV773Test = async function(zip, community){
+  window.ZummeeWeatherProxyV774Test = async function(zip, community){
     zip = String(zip || (document.getElementById('weatherZipInput') && document.getElementById('weatherZipInput').value) || '').replace(/\D+/g,'').slice(0,5);
     community = String(community || (window.currentCommunityName || '') || '').trim();
     var url = '/.netlify/functions/weather-forecast?zip=' + encodeURIComponent(zip) + (community ? '&community=' + encodeURIComponent(community) : '');
     var res = await fetch(url, { headers:{Accept:'application/json'}, cache:'no-store' });
     var json = await res.json().catch(function(){ return null; });
-    console.log('[v773 weather proxy test]', { status:res.status, ok:res.ok, url:url, response:json });
+    console.log('[v774 weather proxy test]', { status:res.status, ok:res.ok, url:url, response:json });
     return { status:res.status, ok:res.ok, url:url, response:json };
   };
+  window.ZummeeWeatherProxyV773Test = window.ZummeeWeatherProxyV774Test;
 })();
 </script>
 </body>
