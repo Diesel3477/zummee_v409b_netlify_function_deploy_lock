@@ -3,10 +3,10 @@
 <head>
 
 <script id="manager-hub-v701-stable-build-marker">
-window.ZUMMEE_BUILD = "2026-06-04-v772-manager-hub-weather-zip-ui-lock";
+window.ZUMMEE_BUILD = "2026-06-04-v773-manager-hub-weather-proxy";
 window.__MANAGER_HUB_V770_COMMUNITY_SETTINGS_SERVICE = true;
 window.__MANAGER_HUB_V701_SINGLE_OWNER_SMART_CARDS = true;
-console.info("[Manager Hub v757] smart card badge fit polish", window.ZUMMEE_BUILD);
+console.info("[Manager Hub v773] weather proxy + zip persistence", window.ZUMMEE_BUILD);
 </script>
 <style id="zummee-manager-smooth-return-css-v611">
   /*
@@ -5223,66 +5223,32 @@ html[data-theme="dark"] #mh2OpsPortalPillStable.is-due{background:linear-gradien
       }
       async function fetchWeatherByZip(zip, communityName){
         zip = String(zip || '').replace(/\D+/g,'').slice(0,5);
+        communityName = String(communityName || '').trim();
         if(!zip) return null;
-        var locRes = await fetch('https://api.zippopotam.us/us/' + encodeURIComponent(zip));
-        if(!locRes.ok) throw new Error('Unable to resolve weather ZIP');
-        var locJson = await locRes.json();
-        var place = (locJson.places && locJson.places[0]) || {};
-        var lat = Number(place.latitude || (place.latitude === 0 ? 0 : NaN));
-        var lon = Number(place.longitude || (place.longitude === 0 ? 0 : NaN));
-        if(!isFinite(lat) || !isFinite(lon)) throw new Error('Weather coordinates unavailable');
-        var weatherUrl = 'https://api.open-meteo.com/v1/forecast?latitude=' + encodeURIComponent(lat) +
-          '&longitude=' + encodeURIComponent(lon) +
-          '&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_gusts_10m,visibility' +
-          '&hourly=temperature_2m,precipitation_probability,weather_code' +
-          '&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code' +
-          '&forecast_days=2&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto';
-        var wxRes = await fetch(weatherUrl);
-        if(!wxRes.ok) throw new Error('Unable to load weather forecast');
-        var wx = await wxRes.json();
-        var current = wx.current || {};
-        var hourly = wx.hourly || {};
-        var times = hourly.time || [];
-        var temps = hourly.temperature_2m || [];
-        var probs = hourly.precipitation_probability || [];
-        var codes = hourly.weather_code || [];
-        var idxLater = Math.min(4, Math.max(1, times.length - 1));
-        var idxTonight = Math.min(11, Math.max(0, times.length - 1));
-        var baseRain = Number((wx.daily && wx.daily.precipitation_probability_max && wx.daily.precipitation_probability_max[0]) || probs[0] || 0);
-        var riskBase = {
-          weatherCode: Number(current.weather_code || 0),
-          rainChance: baseRain,
-          windMph: Number(current.wind_speed_10m || 0),
-          gustMph: Number(current.wind_gusts_10m || 0)
-        };
-        var risk = evaluateWeatherRisk(riskBase);
-        var placeName = [place['place name'], place['state abbreviation']].filter(Boolean).join(', ');
-        var locationLabel = communityName ? (String(communityName) + (placeName ? ' • ' + placeName : '')) : (placeName || ('ZIP ' + zip));
-        return {
-          zip: zip,
-          communityName: String(communityName || ''),
-          locationLabel: locationLabel,
-          tempDisplay: Math.round(Number(current.temperature_2m || 0)) + '°',
-          feelsLikeDisplay: Math.round(Number(current.apparent_temperature || current.temperature_2m || 0)) + '°',
-          rainChanceDisplay: Math.round(baseRain) + '%',
-          windDisplay: Math.round(Number(current.wind_speed_10m || 0)) + ' mph',
-          humidityDisplay: Math.round(Number(current.relative_humidity_2m || 0)) + '%',
-          visibilityDisplay: miles(current.visibility || 0) + ' mi',
-          summary: weatherCodeSummary(current.weather_code || 0),
-          sunrise: (wx.daily && wx.daily.sunrise && wx.daily.sunrise[0]) ? String(wx.daily.sunrise[0]).split('T')[1].slice(0,5) : '',
-          sunset: (wx.daily && wx.daily.sunset && wx.daily.sunset[0]) ? String(wx.daily.sunset[0]).split('T')[1].slice(0,5) : '',
-          weatherCode: Number(current.weather_code || 0),
-          rainChance: baseRain,
-          windMph: Number(current.wind_speed_10m || 0),
-          gustMph: Number(current.wind_gusts_10m || 0),
-          risk: risk,
-          nowSub: weatherCodeShort(current.weather_code || 0),
-          laterLabel: (times[idxLater] ? new Date(times[idxLater]).toLocaleTimeString([], { hour:'numeric' }) : 'Later').replace(':00',''),
-          laterTempDisplay: (temps[idxLater] != null ? Math.round(Number(temps[idxLater])) + '°' : '--'),
-          laterSub: weatherCodeShort(codes[idxLater] || current.weather_code || 0),
-          tonightTempDisplay: (temps[idxTonight] != null ? Math.round(Number(temps[idxTonight])) + '°' : '--'),
-          tonightSub: weatherCodeShort(codes[idxTonight] || current.weather_code || 0)
-        };
+
+        /*
+          v773: Weather data must be loaded through Zummee's backend proxy.
+          Browser-direct Open-Meteo requests were failing with CORS/502 on Netlify,
+          which made the Weather Hub look broken even after weather_zip persisted.
+        */
+        var url = '/.netlify/functions/weather-forecast?zip=' + encodeURIComponent(zip) +
+          (communityName ? ('&community=' + encodeURIComponent(communityName)) : '');
+
+        var res = await fetch(url, {
+          method:'GET',
+          headers:{ 'Accept':'application/json' },
+          cache:'no-store'
+        });
+
+        var payload = null;
+        try{ payload = await res.json(); }catch(_e){ payload = null; }
+
+        if(!res.ok || !payload || !payload.ok || !payload.model){
+          var msg = (payload && (payload.error || payload.message)) || ('Weather proxy failed with status ' + res.status);
+          throw new Error(msg);
+        }
+
+        return payload.model;
       }
       window.loadWeatherHub = async function loadWeatherHub(force){
         var ctx = getActiveCommunityContext();
@@ -7438,6 +7404,20 @@ body[data-theme="dark"] #mh2SignOutModalOverlay .mh2-signout-confirm{
 })();
 </script>
 
+
+<script id="manager-hub-v773-weather-proxy-diagnostics">
+(function(){
+  window.ZummeeWeatherProxyV773Test = async function(zip, community){
+    zip = String(zip || (document.getElementById('weatherZipInput') && document.getElementById('weatherZipInput').value) || '').replace(/\D+/g,'').slice(0,5);
+    community = String(community || (window.currentCommunityName || '') || '').trim();
+    var url = '/.netlify/functions/weather-forecast?zip=' + encodeURIComponent(zip) + (community ? '&community=' + encodeURIComponent(community) : '');
+    var res = await fetch(url, { headers:{Accept:'application/json'}, cache:'no-store' });
+    var json = await res.json().catch(function(){ return null; });
+    console.log('[v773 weather proxy test]', { status:res.status, ok:res.ok, url:url, response:json });
+    return { status:res.status, ok:res.ok, url:url, response:json };
+  };
+})();
+</script>
 </body>
 </html>
 
